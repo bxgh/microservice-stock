@@ -1,9 +1,5 @@
-"""BaoStock API 服务入口"""
 import uuid
 import time
-import logging
-import json
-from datetime import datetime
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Request, HTTPException
@@ -12,30 +8,11 @@ from fastapi.responses import JSONResponse
 import baostock as bs
 
 from app.api import kline, index
+from app.utils.logger import setup_logger
+from app.services.baostock_service import BaoStockService
 
-
-# JSON日志配置
-class JSONFormatter(logging.Formatter):
-    def format(self, record):
-        log_record = {
-            "timestamp": datetime.now().strftime("%Y-%m-%dT%H:%M:%S%z"),
-            "level": record.levelname,
-            "message": record.getMessage(),
-            "logger": record.name,
-        }
-        if hasattr(record, "request_id"):
-            log_record["request_id"] = record.request_id
-        if hasattr(record, "extra_data"):
-            log_record.update(record.extra_data)
-        return json.dumps(log_record, ensure_ascii=False)
-
-
-# 配置日志
-handler = logging.StreamHandler()
-handler.setFormatter(JSONFormatter())
-logging.basicConfig(level=logging.INFO, handlers=[handler])
-logger = logging.getLogger("baostock-api")
-
+# 初始化日志
+logger = setup_logger("baostock-api")
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -44,8 +21,12 @@ async def lifespan(app: FastAPI):
     lg = bs.login()
     if lg.error_code != "0":
         logger.error(f"BaoStock登录失败: {lg.error_msg}")
+        raise RuntimeError(f"BaoStock 连接初始化失败: {lg.error_msg}")
     else:
         logger.info("BaoStock API 服务启动,连接成功")
+    
+    # 初始化 Service
+    app.state.baostock_service = BaoStockService()
     
     yield
     

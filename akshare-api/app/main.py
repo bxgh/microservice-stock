@@ -1,44 +1,23 @@
-"""AkShare API 服务入口"""
 import uuid
 import time
-import logging
-import json
-from datetime import datetime
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Request, HTTPException
 from fastapi.responses import JSONResponse
 
 from app.api import finance, market
+from app.utils.logger import setup_logger
+from app.services.akshare_service import AkShareService
 
-
-# JSON日志配置
-class JSONFormatter(logging.Formatter):
-    def format(self, record):
-        log_record = {
-            "timestamp": datetime.now().strftime("%Y-%m-%dT%H:%M:%S%z"),
-            "level": record.levelname,
-            "message": record.getMessage(),
-            "logger": record.name,
-        }
-        if hasattr(record, "request_id"):
-            log_record["request_id"] = record.request_id
-        if hasattr(record, "extra_data"):
-            log_record.update(record.extra_data)
-        return json.dumps(log_record, ensure_ascii=False)
-
-
-# 配置日志
-handler = logging.StreamHandler()
-handler.setFormatter(JSONFormatter())
-logging.basicConfig(level=logging.INFO, handlers=[handler])
-logger = logging.getLogger("akshare-api")
-
+# 初始化日志
+logger = setup_logger("akshare-api")
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """应用生命周期管理"""
     logger.info("AkShare API 服务启动")
+    # 初始化 Service
+    app.state.akshare_service = AkShareService()
     yield
     logger.info("AkShare API 服务关闭")
 

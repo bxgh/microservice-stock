@@ -1,57 +1,30 @@
-"""PyWencai API 服务入口"""
 import uuid
 import time
-import logging
-import json
-from datetime import datetime
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Request, HTTPException
 from fastapi.responses import JSONResponse
 
 from app.api import query
-from app.utils.rate_limiter import RateLimiter
+from app.utils.logger import setup_logger
+from app.services.wencai_service import WencaiService
 
-
-# JSON日志配置
-class JSONFormatter(logging.Formatter):
-    def format(self, record):
-        log_record = {
-            "timestamp": datetime.now().strftime("%Y-%m-%dT%H:%M:%S%z"),
-            "level": record.levelname,
-            "message": record.getMessage(),
-            "logger": record.name,
-        }
-        if hasattr(record, "request_id"):
-            log_record["request_id"] = record.request_id
-        if hasattr(record, "extra_data"):
-            log_record.update(record.extra_data)
-        return json.dumps(log_record, ensure_ascii=False)
-
-
-# 配置日志
-handler = logging.StreamHandler()
-handler.setFormatter(JSONFormatter())
-logging.basicConfig(level=logging.INFO, handlers=[handler])
-logger = logging.getLogger("pywencai-api")
-
-# 全局频率限制器
-rate_limiter = RateLimiter(max_requests=10, window_seconds=60)
-
+# 初始化日志
+logger = setup_logger("pywencai-api")
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """应用生命周期管理"""
     logger.info("PyWencai API 服务启动")
-    # 存储限流器到app.state供路由使用
-    app.state.rate_limiter = rate_limiter
+    # 初始化 Service (含频率限制与重试机制)
+    app.state.wencai_service = WencaiService()
     yield
     logger.info("PyWencai API 服务关闭")
 
 
 app = FastAPI(
     title="PyWencai API",
-    description="同花顺问财智能选股服务 (注意: 有反爬限制,约30%失败率)",
+    description="同花顺问财自然语言选股数据服务",
     version="1.0.0",
     lifespan=lifespan,
 )
@@ -65,7 +38,14 @@ async def add_request_id_and_logging(request: Request, call_next):
     
     start_time = time.time()
     
-    response = await call_next(request)
+    try:
+        response = await call_next(request)
+    except Exception as e:
+        logger.error(f"Middleware caught error: {e}", extra={"request_id": request_id})
+        return JSONResponse(
+            status_code=500,
+            content={"error": {"code": "INTERNAL_ERROR", "message": str(e), "request_id": request_id}}
+        )
     
     duration_ms = int((time.time() - start_time) * 1000)
     
