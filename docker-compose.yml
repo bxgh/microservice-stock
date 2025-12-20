@@ -1,0 +1,84 @@
+version: "3.8"
+
+services:
+  # AkShare服务 - 财务/估值/龙虎榜数据
+  akshare-api:
+    build: ./akshare-api
+    image: akshare-api:latest
+    container_name: akshare-api
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      - TZ=Asia/Shanghai
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    deploy:
+      resources:
+        limits:
+          memory: 128M
+        reservations:
+          memory: 64M
+    networks:
+      - stock-network
+
+  # BaoStock服务 - K线/指数/行业数据
+  baostock-api:
+    build: ./baostock-api
+    image: baostock-api:latest
+    container_name: baostock-api
+    restart: unless-stopped
+    ports:
+      - "8001:8000"
+    environment:
+      - TZ=Asia/Shanghai
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    deploy:
+      resources:
+        limits:
+          memory: 128M
+        reservations:
+          memory: 64M
+    networks:
+      - stock-network
+
+  # PyWencai服务 - 问财智能选股
+  pywencai-api:
+    build: ./pywencai-api
+    image: pywencai-api:latest
+    container_name: pywencai-api
+    restart: unless-stopped
+    ports:
+      - "8002:8000"
+    environment:
+      - TZ=Asia/Shanghai
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    deploy:
+      resources:
+        limits:
+          memory: 128M
+        reservations:
+          memory: 64M
+    networks:
+      - stock-network
+
+networks:
+  stock-network:
+    driver: bridge
