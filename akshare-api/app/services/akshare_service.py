@@ -32,13 +32,24 @@ class AkShareService:
             
             if df is None or df.empty:
                 return None
-                
-            latest = df.iloc[0]
+            
+            # AkShare 返回长格式数据，每行是一个指标
+            # 提取最新报告期的数据
+            latest_report = df['report_date'].iloc[0] if 'report_date' in df.columns else None
+            
+            # 创建指标映射字典
+            metrics = {}
+            for _, row in df.iterrows():
+                metric_name = row.get('metric_name', '')
+                value = row.get('value')
+                metrics[metric_name] = value
+            
+            # 提取关键财务指标（根据 AkShare 实际字段名）
             return {
-                "total_revenue": float(latest.get("营业总收入", 0)) if latest.get("营业总收入") else None,
-                "net_profit": float(latest.get("净利润", 0)) if latest.get("净利润") else None,
-                "roe": float(latest.get("净资产收益率", 0)) / 100 if latest.get("净资产收益率") else None,
-                "report_date": str(latest.get("报告期", "")) if latest.get("报告期") else None,
+                "total_revenue": metrics.get('operating_income_total'),  # 营业总收入
+                "net_profit": metrics.get('parent_holder_net_profit'),  # 净利润（归母）
+                "roe": metrics.get('index_weighted_avg_roe'),  # 加权平均ROE
+                "report_date": str(latest_report) if latest_report else None,
             }
         except Exception as e:
             logger.error(f"AkShare获取财务摘要失败: symbol={symbol}, error={e}")
