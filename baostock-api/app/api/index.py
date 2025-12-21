@@ -1,4 +1,5 @@
 """指数与行业数据端点"""
+from typing import Optional
 from fastapi import APIRouter, HTTPException, Request
 from app.utils.logger import get_logger
 
@@ -47,18 +48,28 @@ async def get_industry_classify(request: Request):
 
 
 @router.get("/finance/profit/{code}")
-async def get_profit_data(request: Request, code: str):
+async def get_profit_data(
+    request: Request, 
+    code: str,
+    year: Optional[int] = None,
+    quarter: Optional[int] = None
+):
     """
     获取盈利能力数据
     
     - **code**: 股票代码,如 sh.600519
+    - **year**: 年份，不传默认为最新 (如 2024)
+    - **quarter**: 季度 (1-4)，不传默认为最新 (如 3)
     """
     request_id = getattr(request.state, "request_id", "unknown")
     service = request.app.state.baostock_service
     
     try:
-        # 查询 2024 Q3 (示例，实际应根据当前时间动态调整或由参数传入)
-        data = await service.get_profit_data(code=code, year=2024, quarter=3)
+        # 如果未传入，默认查询 2024 Q3 (生产环境应根据当前日期计算最新财报季)
+        target_year = year or 2024
+        target_quarter = quarter or 3
+        
+        data = await service.get_profit_data(code=code, year=target_year, quarter=target_quarter)
         
         if not data:
             raise HTTPException(status_code=404, detail="未找到盈利数据")

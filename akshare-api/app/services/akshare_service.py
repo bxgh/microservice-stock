@@ -1,4 +1,6 @@
 import asyncio
+import math
+from datetime import datetime, date
 from typing import Dict, Any, List, Optional
 import akshare as ak
 from app.utils.logger import get_logger
@@ -12,12 +14,18 @@ class AkShareService:
     """
     
     def _clean_value(self, val: Any) -> Optional[float]:
-        """清洗并转换数值（处理“1.2亿”, “-3.5%”, “None”等）"""
-        if val is None or val is False or str(val).lower() == 'nan' or str(val).lower() == 'none' or str(val).lower() == 'false':
+        """清洗并转换数值（处理“1.2亿”, “-3.5%”, “NaN”, “None”等）"""
+        if val is None or val is False:
             return None
             
+        # 处理数值类型
+        if isinstance(val, (int, float)):
+            if math.isnan(val) or math.isinf(val):
+                return None
+            return float(val)
+            
         s = str(val).strip()
-        if not s:
+        if not s or s.lower() in ['nan', 'none', 'false', '-', '--']:
             return None
             
         try:
@@ -25,17 +33,20 @@ class AkShareService:
             multiplier = 1.0
             if s.endswith('%'):
                 multiplier = 0.01
-                s = s[:-1]
+                s = s[:-1].strip()
             
             # 处理单位
             if s.endswith('亿'):
                 multiplier *= 100000000
-                s = s[:-1]
+                s = s[:-1].strip()
             elif s.endswith('万'):
                 multiplier *= 10000
-                s = s[:-1]
+                s = s[:-1].strip()
                 
-            return float(s) * multiplier
+            final_val = float(s) * multiplier
+            if math.isnan(final_val) or math.isinf(final_val):
+                return None
+            return final_val
         except (ValueError, TypeError):
             return None
 
@@ -123,79 +134,57 @@ class AkShareService:
             row = stock.iloc[0]
             return {
                 "name": row.get("名称", ""),
-                "pe": float(row.get("市盈率-动态", 0)) if row.get("市盈率-动态") else None,
-                "pb": float(row.get("市净率", 0)) if row.get("市净率") else None,
-                "market_cap": float(row.get("总市值", 0)) if row.get("总市值") else None,
-                "price": float(row.get("最新价", 0)) if row.get("最新价") else None,
+                "pe": self._clean_value(row.get("市盈率-动态")),
+                "pb": self._clean_value(row.get("市净率")),
+                "market_cap": self._clean_value(row.get("总市值")),
+                "price": self._clean_value(row.get("最新价")),
             }
         except Exception as e:
             logger.error(f"AkShare获取实时估值失败: symbol={symbol}, error={e}")
             return None
 
-    async def get_valuation_history(self, symbol: str, start_date: Optional[str] = None, end_date: Optional[str] = None) -> List[Dict[str, Any]]:
-        """异步获取历史估值指标"""
-        try:
-            df = await asyncio.to_thread(ak.stock_a_lg_indicator, symbol=symbol)
-            
-            if df is None or df.empty:
-                return []
-                
-            if start_date:
-                df = df[df["trade_date"] >= start_date]
-            if end_date:
-                df = df[df["trade_date"] <= end_date]
-                
-            # 限制返回数量以保证性能
-            df = df.head(100)
-            
-            result = []
-            for _, row in df.iterrows():
-                result.append({
-                    "date": str(row.get("trade_date", "")),
-                    "pe": float(row.get("pe", 0)) if row.get("pe") else None,
-                    "pe_ttm": float(row.get("pe_ttm", 0)) if row.get("pe_ttm") else None,
-                    "pb": float(row.get("pb", 0)) if row.get("pb") else None,
-                    "ps": float(row.get("ps", 0)) if row.get("ps") else None,
-                    "ps_ttm": float(row.get("ps_ttm", 0)) if row.get("ps_ttm") else None,
-                    "total_mv": float(row.get("total_mv", 0)) if row.get("total_mv") else None,
-                })
-            return result
-        except Exception as e:
-            logger.error(f"AkShare获取历史估值失败: symbol={symbol}, error={e}")
-            return []
-
     async def get_lhb_detail(self, start_date: Optional[str] = None, end_date: Optional[str] = None) -> List[Dict[str, Any]]:
-        """异步获取龙虎榜详情
-        
-        Args:
-            start_date: 开始日期，格式 YYYY-MM-DD，可选
-            end_date: 结束日期，格式 YYYY-MM-DD，可选
-            
-        Returns:
-            龙虎榜记录列表，每条记录包含 code, name, close, change_pct 等字段
-            最多返回 50 条记录
-        """
+        """异步获取龙虎榜详情"""
         try:
-            if start_date and end_date:
-                sd = start_date.replace("-", "")
-                ed = end_date.replace("-", "")
-                df = await asyncio.to_thread(ak.stock_lhb_detail_em, start_date=sd, end_date=ed)
-            else:
-                df = await asyncio.to_thread(ak.stock_lhb_detail_em)
+            target_date = start_date
+            
+            # 如果未指定日期，自动获取最近一个交易日
+            if not target_date:
+                try:
+                    trade_days = await asyncio.to_thread(ak.tool_trade_date_hist_sina)
+                    if not trade_days.empty:
+                        # 过滤掉未来的日期
+                        today = date.today()
+                        past_days = trade_days[trade_days['trade_date'] <= today]
+                        if not past_days.empty:
+                            target_date = str(past_days.iloc[-1]['trade_date'])
+                        else:
+                            target_date = datetime.now().strftime("%Y-%m-%d")
+                except Exception as date_e:
+                    logger.warning(f"获取交易日历失败，使用当前日期回退: {date_e}")
+                    target_date = datetime.now().strftime("%Y-%m-%d")
+
+            # 转换格式为 YYYYMMDD
+            sd = target_date.replace("-", "")
+            ed = (end_date or target_date).replace("-", "")
+            
+            logger.info(f"请求龙虎榜详情: start_date={sd}, end_date={ed}")
+            df = await asyncio.to_thread(ak.stock_lhb_detail_em, start_date=sd, end_date=ed)
                 
-            if df is None or df.empty:
+            if df is None or not hasattr(df, 'empty') or df.empty:
+                logger.info(f"龙虎榜详情返回为空: {sd}")
                 return []
                 
-            df = df.head(50)
+            df = df.head(100) # 龙虎榜数据通常较多，适当增加条数
             result = []
             for _, row in df.iterrows():
                 result.append({
                     "code": row.get("代码", ""),
                     "name": row.get("名称", ""),
-                    "close": float(row.get("收盘价", 0)) if row.get("收盘价") else None,
-                    "change_pct": float(row.get("涨跌幅", 0)) if row.get("涨跌幅") else None,
-                    "turnover_rate": float(row.get("换手率", 0)) if row.get("换手率") else None,
-                    "net_buy": float(row.get("龙虎榜净买额", 0)) if row.get("龙虎榜净买额") else None,
+                    "close": self._clean_value(row.get("收盘价")),
+                    "change_pct": self._clean_value(row.get("涨跌幅")),
+                    "turnover_rate": self._clean_value(row.get("换手率")),
+                    "net_buy": self._clean_value(row.get("龙虎榜净买额")),
                     "reason": row.get("上榜原因", ""),
                     "date": str(row.get("上榜日", "")),
                 })
@@ -245,11 +234,11 @@ class AkShareService:
                 result.append({
                     "code": row.get("代码", ""),
                     "name": row.get("名称", ""),
-                    "price": float(row.get("最新价", 0)) if row.get("最新价") else None,
-                    "change_pct": float(row.get("涨跌幅", 0)) if row.get("涨跌幅") else None,
-                    "volume": float(row.get("成交量", 0)) if row.get("成交量") else None,
-                    "amount": float(row.get("成交额", 0)) if row.get("成交额") else None,
-                    "turnover_rate": float(row.get("换手率", 0)) if row.get("换手率") else None,
+                    "price": self._clean_value(row.get("最新价")),
+                    "change_pct": self._clean_value(row.get("涨跌幅")),
+                    "volume": self._clean_value(row.get("成交量")),
+                    "amount": self._clean_value(row.get("成交额")),
+                    "turnover_rate": self._clean_value(row.get("换手率")),
                 })
             return result
         except Exception as e:

@@ -7,7 +7,7 @@ from fastapi.responses import JSONResponse
 
 import baostock as bs
 
-from app.api import kline, index
+from app.api import kline, index, valuation
 from app.utils.logger import setup_logger
 from app.services.baostock_service import BaoStockService
 
@@ -111,3 +111,4 @@ async def health_check():
 # 注册路由
 app.include_router(kline.router, prefix="/api/v1", tags=["K线数据"])
 app.include_router(index.router, prefix="/api/v1", tags=["指数与行业"])
+app.include_router(valuation.router, prefix="/api/v1", tags=["估值数据"])

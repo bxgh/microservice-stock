@@ -103,13 +103,15 @@ class BaoStockService:
                 
                 # 实际中 baostock 提供的指数成分股接口可能不同，这里以现有设计为准
                 # 或根据实际接口 query_sz50_stocks / query_hs300_stocks 等
-                if "300" in index_code:
+                # 标准化识别指数类型
+                if index_code in ["sh.000300", "sz.399300"] or "300" in index_code:
                     rs = await asyncio.to_thread(bs.query_hs300_stocks)
-                elif "50" in index_code:
+                elif index_code in ["sh.000016"] or "50" in index_code:
                     rs = await asyncio.to_thread(bs.query_sz50_stocks)
-                elif "500" in index_code:
+                elif index_code in ["sh.000905", "sz.399005"] or "500" in index_code:
                     rs = await asyncio.to_thread(bs.query_zz500_stocks)
                 else:
+                    logger.warning(f"不支持的指数代码: {index_code}")
                     return []
                 
                 def fetch_all(rs_obj):
@@ -173,6 +175,70 @@ class BaoStockService:
             except Exception as e:
                 logger.error(f"BaoStock获取行业分类异常: {e}")
                 return []
+
+    async def get_valuation_history(
+        self, 
+        code: str, 
+        start_date: str = "2020-01-01", 
+        end_date: str = ""
+    ) -> List[Dict[str, Any]]:
+        """获取历史估值数据 (PE/PB)
+        
+        Args:
+            code: 股票代码
+            start_date: 开始日期
+            end_date: 结束日期
+            
+        Returns:
+            历史估值列表，包含以下字段:
+            - date: 交易日期 (YYYY-MM-DD)
+            - price: 收盘价 (除权后)
+            - pe: 滚动市盈率 (PE-TTM)
+            - pb: 市净率 (PB-MRQ)
+            - ps: 市销率 (PS-TTM)
+        """
+        if not code.startswith(("sh.", "sz.")):
+            code = f"sh.{code}" if code.startswith("6") else f"sz.{code}"
+            
+        async with self.lock:
+            try:
+                rs = await asyncio.to_thread(
+                    bs.query_history_k_data_plus,
+                    code=code,
+                    fields="date,close,peTTM,pbMRQ,psTTM",
+                    start_date=start_date,
+                    end_date=end_date,
+                    frequency="d",
+                    adjustflag="3"
+                )
+                
+                if rs.error_code != "0":
+                    logger.error(f"BaoStock查询估值失败: {rs.error_msg}")
+                    return []
+                
+                def _fetch_all(rs_obj):
+                    data = []
+                    while rs_obj.next():
+                        data.append(rs_obj.get_row_data())
+                    return data
+                
+                rows = await asyncio.to_thread(_fetch_all, rs)
+                
+                result = []
+                for row in rows:
+                    result.append({
+                        "date": row[0],
+                        "price": float(row[1]) if row[1] else None,
+                        "pe": float(row[2]) if row[2] else None,
+                        "pb": float(row[3]) if row[3] else None,
+                        "ps": float(row[4]) if row[4] else None,
+                    })
+                return result
+            except Exception as e:
+                logger.error(f"BaoStock获取历史估值异常: {e}")
+                return []
+
+
     
     async def get_profit_data(self, code: str, year: int, quarter: int) -> Optional[Dict[str, Any]]:
         """获取盈利能力数据

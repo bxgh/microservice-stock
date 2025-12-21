@@ -62,35 +62,3 @@ async def get_valuation(request: Request, code: str):
         logger.error(f"获取估值数据失败: code={code}, error={e}", extra={"request_id": request_id})
         raise HTTPException(status_code=500, detail=f"获取估值数据失败: {str(e)}")
 
-
-@router.get("/valuation/{code}/history")
-async def get_valuation_history(
-    request: Request,
-    code: str,
-    start_date: Optional[str] = Query(None, description="开始日期 YYYY-MM-DD"),
-    end_date: Optional[str] = Query(None, description="结束日期 YYYY-MM-DD"),
-):
-    """
-    获取股票历史估值数据
-    
-    - **code**: 股票代码,如 600519
-    - **start_date**: 开始日期
-    - **end_date**: 结束日期
-    """
-    request_id = getattr(request.state, "request_id", "unknown")
-    service = request.app.state.akshare_service
-    
-    try:
-        result = await service.get_valuation_history(code, start_date, end_date)
-        
-        if not result:
-            raise HTTPException(status_code=404, detail="未找到历史估值数据")
-        
-        logger.info(f"获取历史估值成功: code={code}, count={len(result)}", extra={"request_id": request_id})
-        return result
-        
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.error(f"获取历史估值失败: code={code}, error={e}", extra={"request_id": request_id})
-        raise HTTPException(status_code=500, detail=f"获取历史估值失败: {str(e)}")

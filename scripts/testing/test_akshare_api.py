@@ -8,7 +8,7 @@ import time
 import json
 from typing import Dict, Any
 
-BASE_URL = "http://localhost:8001/api/v1"
+BASE_URL = "http://124.221.80.250:8003/api/v1"
 
 # ANSI 颜色
 GREEN = "\033[92m"
@@ -66,7 +66,8 @@ def test_finance_api(code: str = "600519"):
     print_info(f"测试: {endpoint} (贵州茅台)")
     
     try:
-        resp = requests.get(f"{BASE_URL}{endpoint}", timeout=30)
+        # 显式禁用代理以防止 18118 干扰
+        resp = requests.get(f"{BASE_URL}{endpoint}", timeout=30, proxies={"http": None, "https": None})
         if resp.status_code != 200:
             print_error(f"HTTP {resp.status_code}: {resp.text}")
             return False
@@ -88,7 +89,8 @@ def test_valuation_api(code: str = "600519"):
     print_info(f"测试: {endpoint}")
     
     try:
-        resp = requests.get(f"{BASE_URL}{endpoint}", timeout=30)
+        # 显式禁用代理以防止 18118 干扰
+        resp = requests.get(f"{BASE_URL}{endpoint}", timeout=30, proxies={"http": None, "https": None})
         if resp.status_code != 200:
             print_error(f"HTTP {resp.status_code}: {resp.text}")
             return False
@@ -133,7 +135,8 @@ def test_dragon_tiger_api():
     print_info(f"测试: {endpoint}")
     
     try:
-        resp = requests.get(f"{BASE_URL}{endpoint}", timeout=30)
+        # 显式禁用代理以防止 18118 干扰
+        resp = requests.get(f"{BASE_URL}{endpoint}", timeout=30, proxies={"http": None, "https": None})
         if resp.status_code != 200:
             print_error(f"HTTP {resp.status_code}: {resp.text}")
             return False
@@ -156,7 +159,8 @@ def test_industry_api(code: str = "600519"):
     print_info(f"测试: {endpoint}")
     
     try:
-        resp = requests.get(f"{BASE_URL}{endpoint}", timeout=30)
+        # 显式禁用代理以防止 18118 干扰
+        resp = requests.get(f"{BASE_URL}{endpoint}", timeout=30, proxies={"http": None, "https": None})
         if resp.status_code != 200:
             print_error(f"HTTP {resp.status_code}: {resp.text}")
             return False
@@ -200,11 +204,13 @@ def main():
     print(f"{BLUE}{'='*60}{RESET}\n")
     
     # 等待服务启动
-    print_info("检查服务状态...")
-    max_retries = 10
+    print_info(f"检查服务状态: {BASE_URL.replace('/api/v1', '')}/health")
+    max_retries = 5
+    health_url = f"{BASE_URL.replace('/api/v1', '')}/health"
     for i in range(max_retries):
         try:
-            resp = requests.get(f"http://localhost:8001/health", timeout=2)
+            # 绕开本地环境变量中的代理
+            resp = requests.get(health_url, timeout=5, proxies={"http": None, "https": None})
             if resp.status_code == 200:
                 print_success("服务已就绪\n")
                 break
