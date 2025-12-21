@@ -11,46 +11,91 @@ class AkShareService:
     提供对 AkShare 库的异步封装，所有同步 I/O 操作通过 asyncio.to_thread 在线程池中执行。
     """
     
+    def _clean_value(self, val: Any) -> Optional[float]:
+        """清洗并转换数值（处理“1.2亿”, “-3.5%”, “None”等）"""
+        if val is None or val is False or str(val).lower() == 'nan' or str(val).lower() == 'none' or str(val).lower() == 'false':
+            return None
+            
+        s = str(val).strip()
+        if not s:
+            return None
+            
+        try:
+            # 处理百分比
+            multiplier = 1.0
+            if s.endswith('%'):
+                multiplier = 0.01
+                s = s[:-1]
+            
+            # 处理单位
+            if s.endswith('亿'):
+                multiplier *= 100000000
+                s = s[:-1]
+            elif s.endswith('万'):
+                multiplier *= 10000
+                s = s[:-1]
+                
+            return float(s) * multiplier
+        except (ValueError, TypeError):
+            return None
+
     async def get_financial_abstract(self, symbol: str) -> Optional[Dict[str, Any]]:
         """异步获取财务摘要
         
-        Args:
-            symbol: 股票代码，如 "600519"
-            
-        Returns:
-            财务摘要字典，包含 total_revenue, net_profit, roe, report_date 字段
-            如果查询失败或数据不存在，返回 None
-            
-        Example:
-            >>> service = AkShareService()
-            >>> result = await service.get_financial_abstract("600519")
-            >>> print(result["net_profit"])
+        支持多种 AkShare 返回格式（长格式、宽格式、中英文指标名）。
         """
         try:
-            # 使用 to_thread 在线程池中执行同步 I/O 库
             df = await asyncio.to_thread(ak.stock_financial_abstract_ths, symbol=symbol)
             
             if df is None or df.empty:
                 return None
             
-            # AkShare 返回长格式数据，每行是一个指标
-            # 提取最新报告期的数据
-            latest_report = df['report_date'].iloc[0] if 'report_date' in df.columns else None
-            
-            # 创建指标映射字典
-            metrics = {}
-            for _, row in df.iterrows():
-                metric_name = row.get('metric_name', '')
-                value = row.get('value')
-                metrics[metric_name] = value
-            
-            # 提取关键财务指标（根据 AkShare 实际字段名）
-            return {
-                "total_revenue": metrics.get('operating_income_total'),  # 营业总收入
-                "net_profit": metrics.get('parent_holder_net_profit'),  # 净利润（归母）
-                "roe": metrics.get('index_weighted_avg_roe'),  # 加权平均ROE
-                "report_date": str(latest_report) if latest_report else None,
+            result = {
+                "total_revenue": None,
+                "net_profit": None,
+                "roe": None,
+                "report_date": None,
             }
+
+            # 格式 A: 长格式 (report_date, metric_name, value ...)
+            if 'metric_name' in df.columns and 'value' in df.columns:
+                latest_report = df['report_date'].iloc[0] if 'report_date' in df.columns else None
+                result["report_date"] = str(latest_report) if latest_report else None
+                
+                # 指标映射 (英文 -> 结果键)
+                mapping = {
+                    'operating_income_total': 'total_revenue',
+                    'parent_holder_net_profit': 'net_profit',
+                    'index_weighted_avg_roe': 'roe',
+                }
+                
+                for _, row in df.iterrows():
+                    m_name = row.get('metric_name')
+                    if m_name in mapping:
+                        result[mapping[m_name]] = self._clean_value(row.get('value'))
+
+            # 格式 B: 宽格式 (报告期, 营业总收入, 净利润 ...)
+            else:
+                # 确定最新一行（通常是首行或尾行，根据日期判断）
+                # 为了稳妥，按日期排序
+                date_col = '报告期' if '报告期' in df.columns else ('report_date' if 'report_date' in df.columns else None)
+                if date_col:
+                    df = df.sort_values(by=date_col, ascending=False)
+                    latest = df.iloc[0]
+                    result["report_date"] = str(latest[date_col])
+                    
+                    # 字段映射 (中文 -> 结果键)
+                    mapping = {
+                        '营业总收入': 'total_revenue',
+                        '净利润': 'net_profit',
+                        '净资产收益率': 'roe',
+                    }
+                    
+                    for cn_name, key in mapping.items():
+                        if cn_name in df.columns:
+                            result[key] = self._clean_value(latest[cn_name])
+
+            return result
         except Exception as e:
             logger.error(f"AkShare获取财务摘要失败: symbol={symbol}, error={e}")
             return None
