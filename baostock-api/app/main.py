@@ -7,7 +7,7 @@ from fastapi.responses import JSONResponse
 
 import baostock as bs
 
-from app.api import kline, index, valuation, sync
+from app.api import kline, index, valuation, sync, scheduler as scheduler_api
 from app.utils.logger import setup_logger
 from app.utils.database import db
 from app.services.baostock_service import BaoStockService
@@ -33,8 +33,61 @@ async def lifespan(app: FastAPI):
         await db.connect()
     except Exception as e:
         logger.error(f"数据库连接池启动失败: {e}")
+    
+    # 初始化并启动调度器
+    scheduler = None
+    try:
+        from app.scheduler import TaskScheduler, set_scheduler_instance
+        from app.scheduler.config import SCHEDULER_CONFIG
+        from app.scheduler.jobs import (
+            daily_kline_sync_job,
+            daily_adjust_factor_sync_job,
+            health_check_job
+        )
+        
+        if SCHEDULER_CONFIG["enabled"]:
+            scheduler = TaskScheduler(timezone=SCHEDULER_CONFIG["timezone"])
+            set_scheduler_instance(scheduler)
+            
+            # 注册定时任务
+            kline_config = SCHEDULER_CONFIG["jobs"]["daily_kline_sync"]
+            if kline_config["enabled"]:
+                scheduler.add_daily_job(
+                    func=daily_kline_sync_job,
+                    hour=kline_config["hour"],
+                    minute=kline_config["minute"],
+                    job_id="daily_kline_sync"
+                )
+            
+            adjust_config = SCHEDULER_CONFIG["jobs"]["daily_adjust_factor_sync"]
+            if adjust_config["enabled"]:
+                scheduler.add_daily_job(
+                    func=daily_adjust_factor_sync_job,
+                    hour=adjust_config["hour"],
+                    minute=adjust_config["minute"],
+                    job_id="daily_adjust_factor_sync"
+                )
+            
+            health_config = SCHEDULER_CONFIG["jobs"]["health_check"]
+            if health_config["enabled"]:
+                scheduler.add_interval_job(
+                    func=health_check_job,
+                    seconds=health_config["interval_seconds"],
+                    job_id="hourly_health_check"
+                )
+            
+            await scheduler.start()
+            logger.info("任务调度器已启动")
+            logger.info(f"已配置的调度任务: {[job['id'] for job in scheduler.get_jobs()]}")
+    except Exception as e:
+        logger.error(f"调度器初始化失败: {e}", exc_info=True)
 
     yield
+    
+    # 关闭调度器
+    if scheduler:
+        logger.info("正在关闭任务调度器...")
+        await scheduler.stop()
     
     # 关闭数据库连接池
     await db.disconnect()
@@ -133,3 +186,4 @@ app.include_router(kline.router, prefix="/api/v1", tags=["K线数据"])
 app.include_router(index.router, prefix="/api/v1", tags=["指数与行业"])
 app.include_router(valuation.router, prefix="/api/v1", tags=["估值数据"])
 app.include_router(sync.router, prefix="/api/v1", tags=["数据同步"])
+app.include_router(scheduler_api.router, prefix="/api/v1", tags=["任务调度"])
