@@ -170,18 +170,49 @@ class BaoStockService:
         if not code.startswith(("sh.", "sz.")):
             code = f"sh.{code}" if code.startswith("6") else f"sz.{code}"
 
-        # 0. 增量同步逻辑：检查数据库中已有的最新日期
+        # 0. 智能增量同步逻辑：检查数据库中已有的数据范围
+        original_start_date = start_date
+        needs_historical = False
+        needs_recent = False
+        
         if use_db_latest:
             try:
-                res = await db.execute("SELECT MAX(trade_date) FROM stock_kline_daily WHERE code=%s", (code,))
+                res = await db.execute(
+                    "SELECT MIN(trade_date), MAX(trade_date) FROM stock_kline_daily WHERE code=%s", 
+                    (code,)
+                )
                 if res and res[0][0]:
                     import datetime
-                    latest_date = res[0][0]
-                    # 如果最新日期存在，则从下一天开始抓取
-                    start_date = (latest_date + datetime.timedelta(days=1)).strftime("%Y-%m-%d")
-                    logger.debug(f"股票 {code} 增量同步，起点调整为: {start_date}")
+                    db_min_date = res[0][0]
+                    db_max_date = res[0][1]
+                    param_start = datetime.datetime.strptime(original_start_date, "%Y-%m-%d").date()
+                    today = datetime.date.today()
+                    
+                    # 判断1：是否需要补充历史数据（参数起点早于库中最早日期）
+                    if param_start < db_min_date:
+                        needs_historical = True
+                        logger.info(f"股票 {code} 需要补充历史数据: {param_start} ~ {db_min_date - datetime.timedelta(days=1)}")
+                    
+                    # 判断2：是否需要补充最新数据（库中最新日期早于今天）
+                    if db_max_date < today - datetime.timedelta(days=1):
+                        needs_recent = True
+                        recent_start = db_max_date + datetime.timedelta(days=1)
+                        logger.info(f"股票 {code} 需要补充最新数据: {recent_start} ~ 今天")
+                    
+                    # 策略：优先补充历史，再补充最新
+                    # 本次调用仅处理历史部分，最新部分由下次调用处理
+                    if needs_historical:
+                        end_date = (db_min_date - datetime.timedelta(days=1)).strftime("%Y-%m-%d")
+                        logger.info(f"股票 {code} 本次补充历史: {original_start_date} ~ {end_date}")
+                    elif needs_recent:
+                        start_date = (db_max_date + datetime.timedelta(days=1)).strftime("%Y-%m-%d")
+                        logger.info(f"股票 {code} 本次补充最新: {start_date} ~ 今天")
+                    else:
+                        logger.debug(f"股票 {code} 数据已是最新，无需同步")
+                        return {"success": True, "count": 0, "message": "数据已是最新"}
+                        
             except Exception as e:
-                logger.warning(f"获取股票 {code} 最新日期失败，回退到原始 start_date={start_date}: {e}")
+                logger.warning(f"获取股票 {code} 日期范围失败，使用原始参数 start_date={original_start_date}: {e}")
             
         try:
             # 1. 抓取数据
