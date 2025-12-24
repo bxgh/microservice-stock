@@ -31,11 +31,12 @@ async def get_valuation_history(
             end_date=end_date or ""
         )
         
-        if not result:
+        history = result.get("history", [])
+        if not history:
             logger.warning(f"未获取到估值数据: code={code}", extra={"request_id": request_id})
-            return []
+            return {"history": [], "statistics": {}}
             
-        logger.info(f"获取历史估值成功: code={code}, count={len(result)}", extra={"request_id": request_id})
+        logger.info(f"获取历史估值成功: code={code}, count={len(history)}", extra={"request_id": request_id})
         return result
         
     except Exception as e:

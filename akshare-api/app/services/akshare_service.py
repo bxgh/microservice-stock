@@ -169,13 +169,34 @@ class AkShareService:
             ed = (end_date or target_date).replace("-", "")
             
             logger.info(f"请求龙虎榜详情: start_date={sd}, end_date={ed}")
-            df = await asyncio.to_thread(ak.stock_lhb_detail_em, start_date=sd, end_date=ed)
+            try:
+                df = await asyncio.to_thread(ak.stock_lhb_detail_em, start_date=sd, end_date=ed)
+            except Exception as ak_e:
+                logger.warning(f"AkShare 原始龙虎榜调用出错: {ak_e}, 可能是数据尚未更新")
+                df = None
                 
+            # 如果今日数据为空且未指定结束日期，尝试回退到上一个交易日
+            if (df is None or (hasattr(df, 'empty') and df.empty)) and not end_date:
+                try:
+                    trade_days = await asyncio.to_thread(ak.tool_trade_date_hist_sina)
+                    today = date.today()
+                    past_days = trade_days[trade_days['trade_date'] < today] # 严格小于今天
+                    if not past_days.empty:
+                        prev_date = str(past_days.iloc[-1]['trade_date']).replace("-", "")
+                        logger.info(f"今日数据未更新，尝试回退至上一交易日: {prev_date}")
+                        try:
+                            df = await asyncio.to_thread(ak.stock_lhb_detail_em, start_date=prev_date, end_date=prev_date)
+                        except Exception as fallback_ak_e:
+                            logger.error(f"龙虎榜回退调用失败: {fallback_ak_e}")
+                            df = None
+                except Exception as fallback_e:
+                    logger.error(f"龙虎榜回退逻辑计算失败: {fallback_e}")
+
             if df is None or not hasattr(df, 'empty') or df.empty:
-                logger.info(f"龙虎榜详情返回为空: {sd}")
+                logger.info(f"龙虎榜详情最终返回为空")
                 return []
                 
-            df = df.head(100) # 龙虎榜数据通常较多，适当增加条数
+            df = df.head(100)
             result = []
             for _, row in df.iterrows():
                 result.append({
@@ -190,7 +211,7 @@ class AkShareService:
                 })
             return result
         except Exception as e:
-            logger.error(f"AkShare获取龙虎榜失败: error={e}")
+            logger.error(f"AkShare获取龙虎榜总成失败: error={e}")
             return []
 
     async def get_individual_info(self, symbol: str) -> Dict[str, Any]:
@@ -244,3 +265,108 @@ class AkShareService:
         except Exception as e:
             logger.error(f"AkShare获取热门排行失败: error={e}")
             return []
+
+    async def get_full_financial_report(self, symbol: str) -> Optional[Dict[str, Any]]:
+        """获取全量财务指标 (EPIC-002)
+        
+        通过整合资产负债表、利润表和现金流量表，提供计算型指标（EBITDA, FCF等）。
+        """
+        try:
+            # 统一 symbol 格式
+            s = str(symbol)
+            if not (s.startswith("SH") or s.startswith("SZ") or s.startswith("BJ")):
+                if s.startswith("6") or s.startswith("9") or s.startswith("11"): s = "SH" + s
+                else: s = "SZ" + s
+            
+            logger.info(f"开始获取全量财务报表: {s}")
+            
+            # 并发获取三张表 (使用 report_em 接口，包含最新未审计数据)
+            tasks = [
+                asyncio.to_thread(ak.stock_balance_sheet_by_report_em, symbol=s),
+                asyncio.to_thread(ak.stock_profit_sheet_by_report_em, symbol=s),
+                asyncio.to_thread(ak.stock_cash_flow_sheet_by_report_em, symbol=s)
+            ]
+            dfs = await asyncio.gather(*tasks)
+            df_bs, df_ps, df_cf = dfs
+            
+            if df_bs is None or df_bs.empty or df_ps is None or df_ps.empty or df_cf is None or df_cf.empty:
+                logger.warning(f"未能获取完整的三大报表数据: {s}")
+                return None
+            
+            # 获取最新一期的报告日期 (首行)
+            bs_latest = df_bs.iloc[0]
+            ps_latest = df_ps.iloc[0]
+            cf_latest = df_cf.iloc[0]
+            
+            report_date = str(bs_latest.get("REPORT_DATE_NAME", bs_latest.get("REPORT_DATE", "")))
+            
+            # --- 映射核心字段 ---
+            res = {
+                "report_date": report_date.split(" ")[0] if report_date else None,
+                # 资产负债 (BS)
+                "total_assets": self._clean_value(bs_latest.get("TOTAL_ASSETS")),
+                "total_liabilities": self._clean_value(bs_latest.get("TOTAL_LIABILITIES")),
+                "total_equity": self._clean_value(bs_latest.get("TOTAL_PARENT_EQUITY", bs_latest.get("TOTAL_EQUITY"))),
+                "monetary_funds": self._clean_value(bs_latest.get("MONETARYFUNDS")),
+                "inventory": self._clean_value(bs_latest.get("INVENTORY")),
+                "accounts_receivable": self._clean_value(bs_latest.get("NOTE_ACCOUNTS_RECE")),
+                "goodwill": self._clean_value(bs_latest.get("GOODWILL")),
+                "short_term_loans": self._clean_value(bs_latest.get("SHORT_LOAN")),
+                "long_term_loans": self._clean_value(bs_latest.get("LONG_LOAN")),
+                "bond_payable": self._clean_value(bs_latest.get("BOND_PAYABLE")),
+                
+                # 利润表 (PS)
+                "operating_income": self._clean_value(ps_latest.get("TOTAL_OPERATE_INCOME")),
+                "operating_cost": self._clean_value(ps_latest.get("OPERATE_COST")),
+                "selling_expenses": self._clean_value(ps_latest.get("SALE_EXPENSE")),
+                "administrative_expenses": self._clean_value(ps_latest.get("MANAGE_EXPENSE")),
+                "finance_expenses": self._clean_value(ps_latest.get("FINANCE_EXPENSE")),
+                "research_expenses": self._clean_value(ps_latest.get("RESEARCH_EXPENSE")),
+                "operating_profit": self._clean_value(ps_latest.get("OPERATE_PROFIT")),
+                "total_profit": self._clean_value(ps_latest.get("TOTAL_PROFIT")),
+                "net_profit": self._clean_value(ps_latest.get("NETPROFIT", ps_latest.get("NET_PROFIT"))),
+                "parent_net_profit": self._clean_value(ps_latest.get("PARENT_NETPROFIT", ps_latest.get("PARENT_NET_PROFIT"))),
+                
+                # 现金流 (CF)
+                "net_operating_cash_flow": self._clean_value(cf_latest.get("NETCASH_OPERATE")),
+                "net_investing_cash_flow": self._clean_value(cf_latest.get("NETCASH_INVEST")),
+                "net_financing_cash_flow": self._clean_value(cf_latest.get("NETCASH_FINANCE")),
+                "capex": self._clean_value(cf_latest.get("CONSTRUCT_LONG_ASSET")),
+            }
+            
+            # --- 计算派生指标 ---
+            # 1. 毛利
+            if res["operating_income"] is not None and res["operating_cost"] is not None:
+                res["gross_profit"] = res["operating_income"] - res["operating_cost"]
+            else:
+                res["gross_profit"] = None
+                
+            # 2. EBIT (Total Profit + Interest Expense)
+            # 这里的利息支出通常取 FE_INTEREST_EXPENSE
+            interest_expense = self._clean_value(ps_latest.get("FE_INTEREST_EXPENSE")) or 0
+            if res["total_profit"] is not None:
+                res["ebit"] = res["total_profit"] + interest_expense
+            else:
+                res["ebit"] = None
+                
+            # 3. EBITDA (EBIT + Depreciation + Amortization)
+            depr = self._clean_value(cf_latest.get("FA_IR_DEPR")) or 0
+            amort1 = self._clean_value(cf_latest.get("IA_AMORTIZE")) or 0
+            amort2 = self._clean_value(cf_latest.get("LPE_AMORTIZE")) or 0
+            amort_all = depr + amort1 + amort2
+            
+            if res["ebit"] is not None:
+                res["ebitda"] = res["ebit"] + amort_all
+            else:
+                res["ebitda"] = None
+                
+            # 4. FCF (Net Operating Cash Flow - CAPEX)
+            if res["net_operating_cash_flow"] is not None:
+                res["fcf"] = res["net_operating_cash_flow"] - (res["capex"] or 0)
+            else:
+                res["fcf"] = None
+                
+            return res
+        except Exception as e:
+            logger.error(f"AkShare获取全量财务指标失败: symbol={symbol}, error={e}", exc_info=True)
+            return None

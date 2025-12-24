@@ -36,31 +36,32 @@ async def add_request_id_and_logging(request: Request, call_next):
     request_id = str(uuid.uuid4())[:8]
     request.state.request_id = request_id
     
-    start_time = time.time()
+    # 设置 ContextVar 用于日志追踪
+    from app.utils.logger import request_id_var
+    token = request_id_var.set(request_id)
     
+    start_time = time.time()
     try:
         response = await call_next(request)
-    except Exception as e:
-        logger.error(f"Middleware caught error: {e}", extra={"request_id": request_id})
-        return JSONResponse(
-            status_code=500,
-            content={"error": {"code": "INTERNAL_ERROR", "message": str(e), "request_id": request_id}}
-        )
-    
-    duration_ms = int((time.time() - start_time) * 1000)
-    
-    log_data = {
-        "request_id": request_id,
-        "method": request.method,
-        "path": request.url.path,
-        "status": response.status_code,
-        "duration_ms": duration_ms,
-        "client_ip": request.client.host if request.client else "unknown",
-    }
-    logger.info(f"Request completed", extra={"extra_data": log_data, "request_id": request_id})
-    
-    response.headers["X-Request-ID"] = request_id
-    return response
+        
+        duration_ms = int((time.time() - start_time) * 1000)
+        
+        # 记录请求日志
+        log_data = {
+            "request_id": request_id,
+            "method": request.method,
+            "path": request.url.path,
+            "status": response.status_code,
+            "duration_ms": duration_ms,
+            "client_ip": request.client.host if request.client else "unknown",
+        }
+        logger.info(f"Request completed", extra={"extra_data": log_data, "request_id": request_id})
+        
+        response.headers["X-Request-ID"] = request_id
+        return response
+    finally:
+        # 重置 ContextVar
+        request_id_var.reset(token)
 
 
 @app.exception_handler(HTTPException)

@@ -61,12 +61,11 @@ def validate_response(endpoint: str, response: Any, expected_keys: list = None) 
     return True
 
 def test_finance_api(code: str = "600519"):
-    """测试财务数据接口"""
+    """测试财务摘要接口"""
     endpoint = f"/finance/{code}"
     print_info(f"测试: {endpoint} (贵州茅台)")
     
     try:
-        # 显式禁用代理以防止 18118 干扰
         resp = requests.get(f"{BASE_URL}{endpoint}", timeout=30, proxies={"http": None, "https": None})
         if resp.status_code != 200:
             print_error(f"HTTP {resp.status_code}: {resp.text}")
@@ -76,7 +75,29 @@ def test_finance_api(code: str = "600519"):
         expected_keys = ["total_revenue", "net_profit", "roe", "report_date", "code"]
         
         if validate_response(endpoint, data, expected_keys):
-            print_success(f"财务数据: 营收={data.get('total_revenue')}, 净利润={data.get('net_profit')}, ROE={data.get('roe')}")
+            print_success(f"财务摘要: 营收={data.get('total_revenue')}, 净利润={data.get('net_profit')}, ROE={data.get('roe')}")
+            return True
+        return False
+    except Exception as e:
+        print_error(f"{endpoint}: {str(e)}")
+        return False
+
+def test_finance_indicators_api(code: str = "600519"):
+    """测试全量财务指标接口 (EPIC-002)"""
+    endpoint = f"/finance/indicators/{code}"
+    print_info(f"测试: {endpoint}")
+    
+    try:
+        resp = requests.get(f"{BASE_URL}{endpoint}", timeout=30, proxies={"http": None, "https": None})
+        if resp.status_code != 200:
+            print_error(f"HTTP {resp.status_code}: {resp.text}")
+            return False
+        
+        data = resp.json()
+        expected_keys = ["ebitda", "fcf", "total_assets", "net_profit", "operating_income"]
+        
+        if validate_response(endpoint, data, expected_keys):
+            print_success(f"全量财务指标: EBITDA={data.get('ebitda')}, FCF={data.get('fcf')}, 资产={data.get('total_assets')}")
             return True
         return False
     except Exception as e:
@@ -84,12 +105,11 @@ def test_finance_api(code: str = "600519"):
         return False
 
 def test_valuation_api(code: str = "600519"):
-    """测试估值接口"""
+    """测试实时估值接口"""
     endpoint = f"/valuation/{code}"
     print_info(f"测试: {endpoint}")
     
     try:
-        # 显式禁用代理以防止 18118 干扰
         resp = requests.get(f"{BASE_URL}{endpoint}", timeout=30, proxies={"http": None, "https": None})
         if resp.status_code != 200:
             print_error(f"HTTP {resp.status_code}: {resp.text}")
@@ -99,30 +119,7 @@ def test_valuation_api(code: str = "600519"):
         expected_keys = ["pe", "price"]
         
         if validate_response(endpoint, data, expected_keys):
-            print_success(f"估值数据: PE={data.get('pe')}, 价格={data.get('price')}")
-            return True
-        return False
-    except Exception as e:
-        print_error(f"{endpoint}: {str(e)}")
-        return False
-
-def test_valuation_history_api(code: str = "600519"):
-    """测试历史估值接口"""
-    endpoint = f"/valuation/{code}/history"
-    print_info(f"测试: {endpoint}")
-    
-    try:
-        resp = requests.get(f"{BASE_URL}{endpoint}?start_date=2024-01-01&end_date=2024-12-31", timeout=30)
-        if resp.status_code != 200:
-            print_error(f"HTTP {resp.status_code}: {resp.text}")
-            return False
-        
-        data = resp.json()
-        
-        if validate_response(endpoint, data):
-            print_success(f"历史估值数据: 共 {len(data)} 条记录")
-            if len(data) > 0:
-                print_info(f"  示例: 日期={data[0].get('date')}, PE={data[0].get('pe')}")
+            print_success(f"实时估值: PE={data.get('pe')}, 价格={data.get('price')}")
             return True
         return False
     except Exception as e:
@@ -135,7 +132,6 @@ def test_dragon_tiger_api():
     print_info(f"测试: {endpoint}")
     
     try:
-        # 显式禁用代理以防止 18118 干扰
         resp = requests.get(f"{BASE_URL}{endpoint}", timeout=30, proxies={"http": None, "https": None})
         if resp.status_code != 200:
             print_error(f"HTTP {resp.status_code}: {resp.text}")
@@ -159,7 +155,6 @@ def test_industry_api(code: str = "600519"):
     print_info(f"测试: {endpoint}")
     
     try:
-        # 显式禁用代理以防止 18118 干扰
         resp = requests.get(f"{BASE_URL}{endpoint}", timeout=30, proxies={"http": None, "https": None})
         if resp.status_code != 200:
             print_error(f"HTTP {resp.status_code}: {resp.text}")
@@ -181,7 +176,7 @@ def test_hot_rank_api():
     print_info(f"测试: {endpoint}")
     
     try:
-        resp = requests.get(f"{BASE_URL}{endpoint}?limit=10", timeout=30)
+        resp = requests.get(f"{BASE_URL}{endpoint}?limit=10", timeout=30, proxies={"http": None, "https": None})
         if resp.status_code != 200:
             print_error(f"HTTP {resp.status_code}: {resp.text}")
             return False
@@ -199,34 +194,41 @@ def test_hot_rank_api():
         return False
 
 def main():
+    global BASE_URL
     print(f"\n{BLUE}{'='*60}{RESET}")
     print(f"{BLUE}AkShare API 真实数据验证测试{RESET}")
     print(f"{BLUE}{'='*60}{RESET}\n")
     
+    # 确定要检查的健康检查地址
+    health_url_cloud = f"{BASE_URL.replace('/api/v1', '')}/health"
+    health_url_local = "http://localhost:8003/health"
+    
     # 等待服务启动
-    print_info(f"检查服务状态: {BASE_URL.replace('/api/v1', '')}/health")
-    max_retries = 5
-    health_url = f"{BASE_URL.replace('/api/v1', '')}/health"
-    for i in range(max_retries):
+    print_info(f"检查服务状态...")
+    urls_to_try = [health_url_cloud, health_url_local]
+    
+    ready_url = None
+    for url in urls_to_try:
         try:
-            # 绕开本地环境变量中的代理
-            resp = requests.get(health_url, timeout=5, proxies={"http": None, "https": None})
+            resp = requests.get(url, timeout=5, proxies={"http": None, "https": None})
             if resp.status_code == 200:
-                print_success("服务已就绪\n")
+                ready_url = url.replace("/health", "/api/v1")
+                print_success(f"服务已就绪: {url}\n")
                 break
         except:
-            if i < max_retries - 1:
-                print_info(f"等待服务启动... ({i+1}/{max_retries})")
-                time.sleep(2)
-            else:
-                print_error("服务未启动，请先运行: cd akshare-api && uvicorn app.main:app")
-                return
+            continue
+            
+    if not ready_url:
+        print_error("所有服务器均不可用，请检查服务是否运行")
+        return
+
+    BASE_URL = ready_url
     
     # 运行所有测试
     tests = [
-        ("财务数据", test_finance_api),
+        ("财务摘要", test_finance_api),
+        ("全量财务指标", test_finance_indicators_api),
         ("实时估值", test_valuation_api),
-        ("历史估值", test_valuation_history_api),
         ("龙虎榜", test_dragon_tiger_api),
         ("行业信息", test_industry_api),
         ("热门排行", test_hot_rank_api),

@@ -17,22 +17,24 @@ logger = setup_logger("baostock-api")
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """应用生命周期管理 - 管理BaoStock连接"""
-    # 启动时登录
-    lg = bs.login()
-    if lg.error_code != "0":
-        logger.error(f"BaoStock登录失败: {lg.error_msg}")
-        raise RuntimeError(f"BaoStock 连接初始化失败: {lg.error_msg}")
-    else:
-        logger.info("BaoStock API 服务启动,连接成功")
-    
     # 初始化 Service
-    app.state.baostock_service = BaoStockService()
+    service = BaoStockService()
+    app.state.baostock_service = service
+    
+    # 尝试初始登录 (非强制)
+    try:
+        await service._ensure_connection()
+    except Exception as e:
+        logger.warning(f"BaoStock 初始连接失败: {e}，将在首次请求时重试")
     
     yield
     
     # 关闭时登出
-    bs.logout()
-    logger.info("BaoStock API 服务关闭")
+    try:
+        bs.logout()
+        logger.info("BaoStock API 服务关闭")
+    except:
+        pass
 
 
 app = FastAPI(
@@ -49,24 +51,32 @@ async def add_request_id_and_logging(request: Request, call_next):
     request_id = str(uuid.uuid4())[:8]
     request.state.request_id = request_id
     
+    # 设置 ContextVar 用于日志追踪
+    from app.utils.logger import request_id_var
+    token = request_id_var.set(request_id)
+    
     start_time = time.time()
-    
-    response = await call_next(request)
-    
-    duration_ms = int((time.time() - start_time) * 1000)
-    
-    log_data = {
-        "request_id": request_id,
-        "method": request.method,
-        "path": request.url.path,
-        "status": response.status_code,
-        "duration_ms": duration_ms,
-        "client_ip": request.client.host if request.client else "unknown",
-    }
-    logger.info(f"Request completed", extra={"extra_data": log_data, "request_id": request_id})
-    
-    response.headers["X-Request-ID"] = request_id
-    return response
+    try:
+        response = await call_next(request)
+        
+        duration_ms = int((time.time() - start_time) * 1000)
+        
+        # 记录请求日志
+        log_data = {
+            "request_id": request_id,
+            "method": request.method,
+            "path": request.url.path,
+            "status": response.status_code,
+            "duration_ms": duration_ms,
+            "client_ip": request.client.host if request.client else "unknown",
+        }
+        logger.info(f"Request completed", extra={"extra_data": log_data, "request_id": request_id})
+        
+        response.headers["X-Request-ID"] = request_id
+        return response
+    finally:
+        # 重置 ContextVar
+        request_id_var.reset(token)
 
 
 @app.exception_handler(HTTPException)
