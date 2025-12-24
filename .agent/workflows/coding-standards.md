@@ -7,7 +7,7 @@ description: 股票数据源微服务开发规范 - 编码时自动应用
 ## 技术栈
 - Python 3.12+
 - FastAPI (必须)
-- 基础镜像: python:3.12-alpine
+- 基础镜像: python:3.12-slim
 - 内存限制: ≤128MB
 
 ## 异步规范
@@ -53,6 +53,12 @@ description: 股票数据源微服务开发规范 - 编码时自动应用
 ## 测试要求
 - 框架: pytest + pytest-asyncio
 - 必测: 健康检查、正常流程、异常处理
+- **必须** 在 Docker 容器中执行测试以确保环境一致性
+- **强制质控流程**:
+  1. 代码修改后必须进行健康检查验证 (`GET /health`)
+  2. 必须运行 `scripts/testing/` 下的相关回归测试
+  3. 严禁提交无法通过测试的代码
 
-## Git 提交
+## Git 提交与语言
 - 使用 Conventional Commits: feat/fix/docs/test/refactor
+- **强制要求**: 所有提交说明 (Commit Message)、文档、以及代码注释必须使用 **中文**。
