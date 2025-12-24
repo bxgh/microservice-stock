@@ -7,8 +7,9 @@ from fastapi.responses import JSONResponse
 
 import baostock as bs
 
-from app.api import kline, index, valuation
+from app.api import kline, index, valuation, sync
 from app.utils.logger import setup_logger
+from app.utils.database import db
 from app.services.baostock_service import BaoStockService
 
 # 初始化日志
@@ -27,7 +28,16 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         logger.warning(f"BaoStock 初始连接失败: {e}，将在首次请求时重试")
     
+    # 初始化数据库连接池
+    try:
+        await db.connect()
+    except Exception as e:
+        logger.error(f"数据库连接池启动失败: {e}")
+
     yield
+    
+    # 关闭数据库连接池
+    await db.disconnect()
     
     # 关闭时登出
     try:
@@ -122,3 +132,4 @@ async def health_check():
 app.include_router(kline.router, prefix="/api/v1", tags=["K线数据"])
 app.include_router(index.router, prefix="/api/v1", tags=["指数与行业"])
 app.include_router(valuation.router, prefix="/api/v1", tags=["估值数据"])
+app.include_router(sync.router, prefix="/api/v1", tags=["数据同步"])
