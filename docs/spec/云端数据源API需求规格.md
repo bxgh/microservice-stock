@@ -99,6 +99,10 @@ services:
 | `/api/v1/index/cons/{index}` | GET | 指数成分 | index=sz.399300 |
 | `/api/v1/industry/classify` | GET | 行业分类 | - |
 | `/api/v1/finance/profit/{code}` | GET | 盈利能力 | code=sh.600519 |
+| `/api/v1/sync/kline/{code}` | POST | 同步个股至MySQL | start_date, end_date |
+| `/api/v1/sync/full` | POST | 一键全市场同步 | start_date |
+| `/api/v1/sync/status` | GET | 查看进度 | - |
+| `/api/v1/sync/reset` | POST | 重置进度 | - |
 
 ### 关键参数说明
 

@@ -6,9 +6,13 @@
 
 ### 核心服务端口
 - **8000**: [Stock Dictionary](docs/architecture/架构设计.md#31-akshare-api-8000) (股票词典)
-- **8001**: [BaoStock API](docs/architecture/架构设计.md#32-baostock-api-8001) (历史数据)
+- **8001**: [BaoStock API](docs/architecture/架构设计.md#32-baostock-api-8001) (历史数据 & MySQL 同步)
 - **8002**: [PyWencai API](docs/architecture/架构设计.md#33-pywencai-api-8002) (语义选股)
 - **8003**: [AkShare API](docs/architecture/架构设计.md#31-akshare-api-8000) (实时行情/财务)
+
+### 📊 数据持久化
+- **BaoStock -> MySQL**: 支持全市场 A 股 K 线数据的自动化同步。
+- **特性**: 支持断点续传、增量更新、后台异步索引。
 
 ### 部署
 ```bash
