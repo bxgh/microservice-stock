@@ -195,7 +195,7 @@ class BaoStockService:
                         logger.info(f"股票 {code} 需要补充历史数据: {param_start} ~ {db_min_date - datetime.timedelta(days=1)}")
                     
                     # 判断2：是否需要补充最新数据（库中最新日期早于今天）
-                    if db_max_date < today - datetime.timedelta(days=1):
+                    if db_max_date < today:
                         needs_recent = True
                         recent_start = db_max_date + datetime.timedelta(days=1)
                         logger.info(f"股票 {code} 需要补充最新数据: {recent_start} ~ 今天")
@@ -613,7 +613,7 @@ class BaoStockService:
                         needs_historical = True
                         logger.info(f"股票 {code} 需要补充历史复权因子: {param_start} ~ {db_min_date - datetime.timedelta(days=1)}")
                     
-                    if db_max_date < today - datetime.timedelta(days=1):
+                    if db_max_date < today:
                         needs_recent = True
                         recent_start = db_max_date + datetime.timedelta(days=1)
                         logger.info(f"股票 {code} 需要补充最新复权因子: {recent_start} ~ 今天")
