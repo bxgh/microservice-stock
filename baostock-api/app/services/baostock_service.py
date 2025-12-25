@@ -3,6 +3,8 @@ import time
 from typing import Dict, Any, List, Optional
 import baostock as bs
 import numpy as np
+from concurrent.futures import ProcessPoolExecutor
+from app.services import baostock_worker
 from app.utils.logger import get_logger
 from app.utils.database import db
 
@@ -16,10 +18,28 @@ class BaoStockService:
     """
     
     def __init__(self):
-        self.lock = asyncio.lock = asyncio.Lock()
+        self.lock = asyncio.Lock()
         self._is_logged_in = False
-        self._sync_status = {"running": False, "total": 0, "current": 0, "last_synced": None}
-        self._adjust_sync_status = {"running": False, "total": 0, "current": 0, "last_synced": None}
+        # 初始化 K 线同步进度
+        self._sync_status = {
+            "running": False,
+            "total": 0,
+            "current": 0, 
+            "last_synced": None,
+            "start_time": 0
+        }
+        # 初始化复权因子同步进度
+        self._adjust_sync_status = {
+            "running": False,
+            "total": 0,
+            "current": 0, 
+            "last_synced": None,
+            "start_time": 0
+        }
+        
+        # 初始化多进程池
+        self.process_pool = ProcessPoolExecutor(max_workers=4, initializer=baostock_worker.init_worker)
+        logger.info("初始化多进程池 (ProcessPoolExecutor, 4 workers)...")
 
     async def get_all_a_shares(self) -> List[Dict[str, str]]:
         """获取全市场 A 股代码列表 (排除指数)"""
@@ -51,28 +71,20 @@ class BaoStockService:
             logger.error(f"获取全市场股票列表异常: {e}")
             return []
         
-    def _login(self) -> bool:
-        """同步执行登录逻辑"""
-        try:
-            lg = bs.login()
-            if lg.error_code == "0":
-                logger.info("BaoStock 登录成功")
+    async def _login(self):
+        """线程安全的登录方法"""
+        async with self.lock:
+            if not self._is_logged_in:
+                # 在主进程也保持一个连接 (用于获取股票列表等)
+                await asyncio.to_thread(bs.login)
                 self._is_logged_in = True
-                return True
-            else:
-                logger.error(f"BaoStock 登录失败: {lg.error_msg}")
-                self._is_logged_in = False
-                return False
-        except Exception as e:
-            logger.error(f"BaoStock 登录异常: {e}")
-            self._is_logged_in = False
-            return False
+                logger.info("BaoStock login success (Main Process)")
 
     async def _ensure_connection(self):
         """确保连接处于活跃状态，如果未登录则尝试登录"""
         if not self._is_logged_in:
-            success = await asyncio.to_thread(self._login)
-            if not success:
+            await self._login() # Call the async _login method
+            if not self._is_logged_in:
                 logger.error("无法建立 BaoStock 连接")
 
     async def _execute_with_retry(self, func, *args, **kwargs):
@@ -229,32 +241,39 @@ class BaoStockService:
                 logger.warning(f"获取股票 {code} 日期范围失败，使用原始参数 start_date={original_start_date}: {e}")
             
         try:
-            # 1. 抓取数据
+            # 1. 抓取数据 (Parallel Worker)
             fetch_start = time.time()
-            rs = await self._execute_with_retry(
-                bs.query_history_k_data_plus,
-                code=code,
-                fields="date,code,open,high,low,close,preclose,volume,amount,turn,tradestatus,pctChg",
-                start_date=start_date,
-                end_date=end_date,
-                frequency=frequency,
-                adjustflag=adjust
-            )
             
-            if rs.error_code != "0":
-                return {"success": False, "error": rs.error_msg}
+            loop = asyncio.get_running_loop()
+            # 使用 ProcessPoolExecutor 进行数据抓取，并设置 60秒超时防止挂死
+            try:
+                result = await asyncio.wait_for(
+                    loop.run_in_executor(
+                        self.process_pool,
+                        baostock_worker.fetch_kline_data,
+                        code,
+                        start_date,
+                        end_date if end_date else ""
+                    ),
+                    timeout=60
+                )
+            except asyncio.TimeoutError:
+                logger.error(f"股票 {code} 数据抓取超时 (60s)")
+                return {"success": False, "error": "Fetch Timeout"}
             
-            def fetch_all(rs_obj):
-                data = []
-                while rs_obj.next():
-                    data.append(rs_obj.get_row_data())
-                return data
+            if not result["success"]:
+                return {"success": False, "error": result["error"]}
             
-            rows = await asyncio.to_thread(fetch_all, rs)
+            rows = result["data"]
             fetch_duration = time.time() - fetch_start
             
             if not rows:
-                return {"success": True, "count": 0, "message": "没有新数据需要同步"}
+                logger.debug(f"股票 {code} 无数据 ({start_date} ~ {end_date})")
+                return {
+                    "success": True, 
+                    "count": 0,
+                    "performance": {"fetch_ms": int(fetch_duration * 1000), "write_ms": 0, "total_ms": int(fetch_duration * 1000), "rows_count": 0}
+                }
             
             # 2. 准备数据 (清洗与转换)
             db_rows = []
@@ -657,23 +676,30 @@ class BaoStockService:
         try:
             # 1. 抓取复权因子数据
             fetch_start = time.time()
-            rs = await self._execute_with_retry(
-                bs.query_adjust_factor,
-                code=code,
-                start_date=start_date,
-                end_date=end_date if end_date else ""
-            )
+        try:
+            # 1. 抓取数据 (Parallel Worker)
+            fetch_start = time.time()
             
-            if rs.error_code != "0":
-                return {"success": False, "error": rs.error_msg}
+            loop = asyncio.get_running_loop()
+            try:
+                result = await asyncio.wait_for(
+                    loop.run_in_executor(
+                        self.process_pool,
+                        baostock_worker.fetch_adjust_factor_data,
+                        code,
+                        start_date,
+                        end_date if end_date else ""
+                    ),
+                    timeout=60
+                )
+            except asyncio.TimeoutError:
+                logger.error(f"股票 {code} 复权因子抓取超时 (60s)")
+                return {"success": False, "error": "Fetch Timeout"}
             
-            def fetch_all(rs_obj):
-                data = []
-                while rs_obj.next():
-                    data.append(rs_obj.get_row_data())
-                return data
+            if not result["success"]:
+                return {"success": False, "error": result["error"]}
             
-            rows = await asyncio.to_thread(fetch_all, rs)
+            rows = result["data"]
             fetch_duration = time.time() - fetch_start
             
             if not rows:
