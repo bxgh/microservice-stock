@@ -77,26 +77,34 @@ class BaoStockService:
 
     async def _execute_with_retry(self, func, *args, **kwargs):
         """执行 BaoStock 查询并带有自动重试机制"""
+        timeout = kwargs.pop("timeout", 45)  # 默认 45 秒超时
+        
         async with self.lock:
             await self._ensure_connection()
             try:
-                rs = await asyncio.to_thread(func, *args, **kwargs)
+                rs = await asyncio.wait_for(asyncio.to_thread(func, *args, **kwargs), timeout=timeout)
                 
                 # 检测连接类错误
                 if rs.error_code != "0" and any(msg in rs.error_msg for msg in ["网络", "连接", "reset", "Broken pipe"]):
                     logger.warning(f"检测到连接问题({rs.error_msg})，尝试重新登录并重试...")
                     self._is_logged_in = False
                     await self._ensure_connection()
-                    rs = await asyncio.to_thread(func, *args, **kwargs)
+                    rs = await asyncio.wait_for(asyncio.to_thread(func, *args, **kwargs), timeout=timeout)
                 
                 return rs
+            except asyncio.TimeoutError:
+                logger.error(f"BaoStock 查询超时 ({timeout}s)")
+                # 尝试重置连接以解除潜在的阻塞状态
+                self._is_logged_in = False
+                raise Exception(f"BaoStock Query Timeout ({timeout}s)")
+                
             except Exception as e:
                 if any(msg in str(e).lower() for msg in ["broken pipe", "connection", "reset"]):
                     logger.warning(f"捕获到连接异常: {e}，尝试重新登录并重试...")
                     self._is_logged_in = False
                     await self._ensure_connection()
                     try:
-                        return await asyncio.to_thread(func, *args, **kwargs)
+                        return await asyncio.wait_for(asyncio.to_thread(func, *args, **kwargs), timeout=timeout)
                     except Exception as re:
                         logger.error(f"重试后依然发生异常: {re}")
                         raise re
@@ -387,6 +395,7 @@ class BaoStockService:
         """强制重置同步进度，下次同步将从头开始"""
         await db.execute("UPDATE sync_progress SET last_index=0, status='idle' WHERE task_name='full_market_sync'")
         self._sync_status["current"] = 0
+        self._sync_status["running"] = False
         logger.info("全市场同步进度已重置")
 
     def get_sync_status(self) -> Dict[str, Any]:
