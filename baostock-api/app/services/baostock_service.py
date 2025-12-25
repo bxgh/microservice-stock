@@ -210,7 +210,12 @@ class BaoStockService:
                         logger.info(f"股票 {code} 本次补充最新: {start_date} ~ 今天")
                     else:
                         logger.debug(f"股票 {code} 数据已是最新，无需同步")
-                        return {"success": True, "count": 0, "message": "数据已是最新"}
+                        return {
+                            "success": True, 
+                            "count": 0, 
+                            "message": "数据已是最新",
+                            "performance": {"fetch_ms": 0, "write_ms": 0, "total_ms": 0, "rows_count": 0}
+                        }
                         
             except Exception as e:
                 logger.warning(f"获取股票 {code} 日期范围失败，使用原始参数 start_date={original_start_date}: {e}")
@@ -626,7 +631,12 @@ class BaoStockService:
                         logger.info(f"股票 {code} 本次补充最新复权因子: {start_date} ~ 今天")
                     else:
                         logger.debug(f"股票 {code} 复权因子已是最新，无需同步")
-                        return {"success": True, "count": 0, "message": "复权因子已是最新"}
+                        return {
+                            "success": True, 
+                            "count": 0, 
+                            "message": "复权因子已是最新",
+                            "performance": {"fetch_ms": 0, "write_ms": 0, "total_ms": 0, "rows_count": 0}
+                        }
                         
             except Exception as e:
                 logger.warning(f"获取股票 {code} 复权因子日期范围失败，使用原始参数 start_date={original_start_date}: {e}")
