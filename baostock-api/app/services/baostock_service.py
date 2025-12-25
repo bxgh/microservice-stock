@@ -311,11 +311,15 @@ class BaoStockService:
         if self._sync_status["running"]:
             logger.warning("全市场同步任务已在运行中")
             return
+        
+        self._sync_status["running"] = True
+        logger.info("开始获取全市场股票列表...")
 
         # 1. 获取全市场列表
         stocks = await self.get_all_a_shares()
         if not stocks:
             logger.error("未能获取股票列表，同步终止")
+            self._sync_status["running"] = False
             return
 
         # 2. 从数据库恢复进度
@@ -721,9 +725,13 @@ class BaoStockService:
             logger.warning("全市场复权因子同步任务已在运行中")
             return
 
+        self._adjust_sync_status["running"] = True
+        logger.info("开始获取全市场股票列表(复权因子)...")
+
         stocks = await self.get_all_a_shares()
         if not stocks:
             logger.error("未能获取股票列表，复权因子同步终止")
+            self._adjust_sync_status["running"] = False
             return
 
         # 从数据库恢复进度
