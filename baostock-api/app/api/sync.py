@@ -58,7 +58,14 @@ async def sync_full_market(
     if status["running"]:
         return {"message": "全市场同步任务已在运行中", "status": status}
     
-    background_tasks.add_task(service.sync_all_stocks_kline, start_date=start_date)
+    async def do_full_sync():
+        logger.info(f"后台启动全市场K线同步任务, start_date={start_date}")
+        try:
+            await service.sync_all_stocks_kline(start_date=start_date)
+        except Exception as e:
+            logger.error(f"全市场K线同步启动失败: {e}")
+
+    background_tasks.add_task(do_full_sync)
     
     return {
         "message": "全市场同步任务已启动",
@@ -97,7 +104,14 @@ async def sync_full_market_adjust_factor(
     if status["running"]:
         return {"message": "全市场复权因子同步任务已在运行中", "status": status}
     
-    background_tasks.add_task(service.sync_all_stocks_adjust_factor, start_date=start_date)
+    async def do_full_adjust_sync():
+        logger.info(f"后台启动全市场复权因子同步任务, start_date={start_date}")
+        try:
+            await service.sync_all_stocks_adjust_factor(start_date=start_date)
+        except Exception as e:
+            logger.error(f"全市场复权因子同步启动失败: {e}")
+
+    background_tasks.add_task(do_full_adjust_sync)
     
     return {
         "message": "全市场复权因子同步任务已启动",
