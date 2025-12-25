@@ -232,6 +232,34 @@ class TaskScheduler:
         except Exception as e:
             logger.error(f"恢复任务失败 {job_id}: {e}")
             return False
+
+    async def run_job_now(self, job_id: str) -> bool:
+        """立即执行任务"""
+        job = self.scheduler.get_job(job_id)
+        if not job:
+            return False
+            
+        try:
+            # 获取任务函数和参数
+            func = job.func
+            args = job.args
+            kwargs = job.kwargs
+            
+            logger.info(f"手动触发任务执行: {job_id}")
+            
+            # 异步执行，不阻塞 API
+            if asyncio.iscoroutinefunction(func):
+                asyncio.create_task(func(*args, **kwargs))
+            else:
+                # 同步函数在线程池执行
+                loop = asyncio.get_event_loop()
+                loop.run_in_executor(None, func, *args, **kwargs)
+                
+            return True
+        except Exception as e:
+            logger.error(f"手动触发任务失败 {job_id}: {e}")
+            return False
+
     
     def get_jobs(self) -> List[Dict[str, Any]]:
         """获取所有任务列表"""

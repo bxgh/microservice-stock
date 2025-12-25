@@ -85,3 +85,19 @@ async def resume_job(job_id: str, request: Request):
         raise HTTPException(status_code=400, detail=f"恢复任务失败: {job_id}")
     
     return {"message": f"任务 {job_id} 已恢复"}
+
+
+@router.post("/scheduler/jobs/{job_id}/run")
+async def run_job(job_id: str, request: Request):
+    """立即执行任务"""
+    from app.scheduler import get_scheduler_instance
+    
+    scheduler = get_scheduler_instance()
+    if not scheduler:
+        raise HTTPException(status_code=503, detail="调度器未初始化")
+    
+    success = await scheduler.run_job_now(job_id)
+    if not success:
+        raise HTTPException(status_code=400, detail=f"执行任务失败: {job_id}")
+    
+    return {"message": f"任务 {job_id} 已触发后台执行"}

@@ -41,3 +41,14 @@ You are an expert developer specializing in high-performance, asynchronous Pytho
 - **Language**: All documentation, code comments, and commit messages MUST be in Chinese.
 - **Doc Sync**: Any architecture/API change must be reflected in `docs/` and `README.md` (in Chinese).
 - **Orchestration**: New services MUST be integrated into `docker-compose.yml`.
+## 6. Frontend Standards (Mobile/Web)
+- **Tech Stack**:
+  - **Framework**: Vite + React 18 + TypeScript.
+  - **State Management**: React Query (Server State) + React Context (UI State).
+  - **Styling**: Vanilla CSS + CSS Variables. No Tailwind/Sass unless approved.
+  - **Charts**: Apache ECharts (Complex) or Lightweight Charts (Performance).
+- **Architecture**:
+  - **Component**: Functional Components + Hooks only.
+  - **API**: Use centralized `api/` client with Axios interceptors for standard error handling.
+  - **Performance**: Use `React.memo` and `useCallback` for high-frequency data components (e.g., Ticks/OrderBooks).
+- **Routing**: Client-side routing via React Router v6.
