@@ -82,6 +82,36 @@ async def reset_sync_progress(request: Request):
     await service.reset_sync_progress()
     return {"message": "同步进度已重置"}
 
+@router.post("/sync/adjust_factor/full")
+async def sync_full_market_adjust_factor(
+    request: Request,
+    background_tasks: BackgroundTasks,
+    start_date: Optional[str] = Query("1990-01-01", description="开始日期 YYYY-MM-DD")
+):
+    """
+    一键同步全市场 A 股复权因子数据到 MySQL
+    """
+    service = request.app.state.baostock_service
+    status = service.get_adjust_sync_status()
+    
+    if status["running"]:
+        return {"message": "全市场复权因子同步任务已在运行中", "status": status}
+    
+    background_tasks.add_task(service.sync_all_stocks_adjust_factor, start_date=start_date)
+    
+    return {
+        "message": "全市场复权因子同步任务已启动",
+        "total_estimated": status.get("total", "calculating...")
+    }
+
+@router.get("/sync/adjust_factor/status")
+async def get_adjust_sync_status(request: Request):
+    """
+    获取复权因子同步任务状态
+    """
+    service = request.app.state.baostock_service
+    return service.get_adjust_sync_status()
+
 @router.post("/sync/adjust_factor/{code}")
 async def sync_stock_adjust_factor(
     request: Request,
@@ -114,33 +144,3 @@ async def sync_stock_adjust_factor(
         "message": f"股票 {code} 的复权因子同步任务已提交至后台处理",
         "request_id": request_id
     }
-
-@router.post("/sync/adjust_factor/full")
-async def sync_full_market_adjust_factor(
-    request: Request,
-    background_tasks: BackgroundTasks,
-    start_date: Optional[str] = Query("1990-01-01", description="开始日期 YYYY-MM-DD")
-):
-    """
-    一键同步全市场 A 股复权因子数据到 MySQL
-    """
-    service = request.app.state.baostock_service
-    status = service.get_adjust_sync_status()
-    
-    if status["running"]:
-        return {"message": "全市场复权因子同步任务已在运行中", "status": status}
-    
-    background_tasks.add_task(service.sync_all_stocks_adjust_factor, start_date=start_date)
-    
-    return {
-        "message": "全市场复权因子同步任务已启动",
-        "total_estimated": status.get("total", "calculating...")
-    }
-
-@router.get("/sync/adjust_factor/status")
-async def get_adjust_sync_status(request: Request):
-    """
-    获取复权因子同步任务状态
-    """
-    service = request.app.state.baostock_service
-    return service.get_adjust_sync_status()
