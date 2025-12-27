@@ -1,87 +1,175 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@500;600;700&display=swap');
+
 :root {
-  --primary-color: #2563eb;
-  --bg-color: #f3f4f6;
-  --text-main: #111827;
-  --text-secondary: #6b7280;
-  --red-500: #ef4444;
-  --green-500: #22c55e;
-  --blue-500: #3b82f6;
-  --white: #ffffff;
-  --gray-50: #f9fafb;
-  --gray-100: #f3f4f6;
+  /* Apple Color Palette */
+  --primary: #007AFF;
+  --primary-light: #58A6FF;
+  --secondary: #5856D6;
+  --success: #34C759;
+  --warning: #FF9500;
+  --danger: #FF3B30;
+
+  /* Grays & Neutrals */
+  --bg-deep: #000000;
+  --bg-dark: #0A0A0C;
+  --bg-card: #1C1C1E;
+  --bg-overlay: rgba(28, 28, 30, 0.8);
+
+  --text-primary: #FFFFFF;
+  --text-secondary: #8E8E93;
+  --text-tertiary: #48484A;
+
+  --border: #38383A;
+
+  /* Glassmorphism */
+  --glass: rgba(255, 255, 255, 0.05);
+  --glass-border: rgba(255, 255, 255, 0.1);
+  --blur: blur(20px);
+}
+
+* {
+  box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
 }
 
 body {
   margin: 0;
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-  background-color: var(--bg-color);
-  color: var(--text-main);
+  padding: 0;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  background-color: var(--bg-deep);
+  color: var(--text-primary);
+  line-height: 1.5;
   -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
-/* Utilities (Simulating Tailwind for familiarity but using Native CSS) */
-.min-h-screen { min-height: 100vh; }
-.bg-gray-100 { background-color: var(--gray-100); }
-.bg-white { background-color: var(--white); }
-.bg-gray-50 { background-color: var(--gray-50); }
-.bg-red-100 { background-color: #fee2e2; }
+h1,
+h2,
+h3,
+h4,
+.title {
+  font-family: 'Outfit', sans-serif;
+  font-weight: 700;
+  margin: 0;
+}
 
-.text-red-600 { color: #dc2626; }
-.text-red-500 { color: var(--red-500); }
-.text-green-500 { color: var(--green-500); }
-.text-blue-500 { color: var(--blue-500); }
-.text-gray-900 { color: #111827; }
-.text-gray-800 { color: #1f2937; }
-.text-gray-700 { color: #374151; }
-.text-gray-500 { color: var(--text-secondary); }
-.text-gray-400 { color: #9ca3af; }
+/* Safe Area Handling for iPhone 13 */
+.safe-area-top {
+  padding-top: env(safe-area-inset-top);
+}
 
-.font-bold { font-weight: 700; }
-.font-medium { font-weight: 500; }
-.text-xl { font-size: 1.25rem; }
-.text-lg { font-size: 1.125rem; }
-.text-sm { font-size: 0.875rem; }
-.text-xs { font-size: 0.75rem; }
+.safe-area-bottom {
+  padding-bottom: env(safe-area-inset-bottom);
+}
 
-.p-4 { padding: 1rem; }
-.p-3 { padding: 0.75rem; }
-.py-3 { padding-top: 0.75rem; padding-bottom: 0.75rem; }
-.py-2 { padding-top: 0.5rem; padding-bottom: 0.5rem; }
-.px-4 { padding-left: 1rem; padding-right: 1rem; }
-.mb-4 { margin-bottom: 1rem; }
-.mb-3 { margin-bottom: 0.75rem; }
-.mt-1 { margin-top: 0.25rem; }
-.mr-2 { margin-right: 0.5rem; }
-.mr-1 { margin-right: 0.25rem; }
-.mr-3 { margin-right: 0.75rem; }
-.pb-20 { padding-bottom: 5rem; }
+/* Modern Layouts */
+.app-container {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  padding-bottom: calc(4rem + env(safe-area-inset-bottom));
+}
 
-.flex { display: flex; }
-.flex-col { flex-direction: column; }
-.items-center { align-items: center; }
-.justify-between { justify-content: space-between; }
-.justify-center { justify-content: center; }
-.space-y-3 > * + * { margin-top: 0.75rem; }
+.glass-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 16px;
+  transition: transform 0.2s ease, background 0.2s ease;
+}
 
-.grid { display: grid; }
-.grid-cols-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-.gap-3 { gap: 0.75rem; }
+.glass-card:active {
+  transform: scale(0.98);
+  background: #2C2C2E;
+}
 
-.rounded-lg { border-radius: 0.5rem; }
-.rounded-md { border-radius: 0.375rem; }
-.rounded-full { border-radius: 9999px; }
+/* Premium Buttons */
+button {
+  cursor: pointer;
+  border: none;
+  font-family: inherit;
+  font-weight: 600;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
 
-.shadow-sm { box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05); }
-.border-b { border-bottom: 1px solid; }
-.border-gray-50 { border-color: var(--gray-50); }
-.last\:border-0:last-child { border-bottom: 0; }
+.btn-primary {
+  background: var(--primary);
+  color: white;
+  border-radius: 12px;
+  padding: 12px 24px;
+}
 
-.sticky { position: sticky; }
-.top-0 { top: 0; }
-.z-10 { z-index: 10; }
-.truncate { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.btn-primary:active {
+  background: #0056b3;
+  transform: translateY(1px);
+}
 
-.w-5 { width: 1.25rem; }
-.h-5 { height: 1.25rem; }
-.w-3 { width: 0.75rem; }
-.h-3 { height: 0.75rem; }
+/* Utilities */
+.text-gradient {
+  background: linear-gradient(135deg, var(--primary), var(--secondary));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.price-up {
+  color: var(--success);
+}
+
+.price-down {
+  color: var(--danger);
+}
+
+/* Navigation - Floating Island Dock */
+.floating-island-nav {
+  position: fixed;
+  bottom: calc(1.5rem + env(safe-area-inset-bottom));
+  left: 50%;
+  transform: translateX(-50%);
+  width: calc(100% - 3rem);
+  max-width: 400px;
+  height: 64px;
+  background: rgba(28, 28, 30, 0.7);
+  backdrop-filter: blur(30px);
+  -webkit-backdrop-filter: blur(30px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 32px;
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+  padding: 0 12px;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+  z-index: 1000;
+}
+
+.nav-item {
+  flex: 1;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  color: var(--text-secondary);
+  position: relative;
+  z-index: 2;
+  transition: color 0.3s ease;
+}
+
+.nav-item.active {
+  color: var(--text-primary);
+}
+
+.nav-indicator {
+  position: absolute;
+  height: 48px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 24px;
+  transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  z-index: 1;
+}
+
+/* Custom Scrollbar (Global) */
+::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+}

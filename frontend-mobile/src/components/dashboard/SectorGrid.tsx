@@ -21,12 +21,18 @@ const SectorGrid: React.FC = () => {
                 <h2 className="text-lg font-bold text-gray-800">Hot Sectors</h2>
             </div>
 
-            <div className="grid grid-cols-2 gap-3">
+            <div className="flex overflow-x-auto gap-4 py-2 no-scrollbar -mx-5 px-5">
                 {sectors?.map((sector) => (
-                    <div key={sector.name} className="bg-gray-50 rounded-md p-3 flex flex-col justify-between">
-                        <div className="text-sm font-medium text-gray-700 truncate">{sector.name}</div>
-                        <div className={`text-lg font-bold mt-1 ${sector.change_percent >= 0 ? 'text-red-500' : 'text-green-500'}`}>
-                            {sector.change_percent > 0 ? '+' : ''}{sector.change_percent.toFixed(2)}%
+                    <div key={sector.name} className="flex-shrink-0 w-32 glass-card flex flex-col gap-2">
+                        <span className="text-xs text-secondary font-medium truncate">{sector.name}</span>
+                        <span className={`text-lg font-bold ${sector.change_percent >= 0 ? 'price-up' : 'price-down'}`}>
+                            {sector.change_percent >= 0 ? '+' : ''}{sector.change_percent.toFixed(2)}%
+                        </span>
+                        <div className={`h-1 w-full rounded-full bg-opacity-20 ${sector.change_percent >= 0 ? 'bg-success' : 'bg-danger'}`}>
+                            <div
+                                className={`h-full rounded-full ${sector.change_percent >= 0 ? 'bg-success' : 'bg-danger'}`}
+                                style={{ width: `${Math.min(Math.abs(sector.change_percent) * 20, 100)}%` }}
+                            />
                         </div>
                     </div>
                 ))}

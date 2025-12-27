@@ -3,7 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { marketApi } from '../../api/market';
 import type { HotStock } from '../../types';
-import { TrendingUp, ArrowUp, ArrowDown } from 'lucide-react';
+import { TrendingUp } from 'lucide-react';
 
 const TrendingList: React.FC = () => {
     const navigate = useNavigate();
@@ -23,27 +23,27 @@ const TrendingList: React.FC = () => {
                 <h2 className="text-lg font-bold text-gray-800">Trending Stocks</h2>
             </div>
 
-            <div className="space-y-3">
-                {stocks?.map((stock, index) => (
+            <div className="flex flex-col gap-3">
+                {stocks?.map((stock) => (
                     <div
                         key={stock.code}
                         onClick={() => navigate(`/stock/${stock.code}`)}
-                        className="flex items-center justify-between py-2 border-b border-gray-50 last:border-0 cursor-pointer"
+                        className="glass-card flex items-center justify-between"
                     >
-                        <div className="flex items-center">
-                            <span className={`w-5 h-5 flex items-center justify-center text-xs rounded-full mr-3 ${index < 3 ? 'bg-red-100 text-red-600 font-bold' : 'bg-gray-100 text-gray-500'}`}>
-                                {index + 1}
-                            </span>
-                            <div>
-                                <div className="font-medium text-gray-900">{stock.name}</div>
-                                <div className="text-xs text-gray-400">{stock.code}</div>
+                        <div className="flex items-center gap-4">
+                            <div className="flex flex-col">
+                                <span className="text-base font-bold">{stock.name}</span>
+                                <span className="text-xs text-secondary font-mono tracking-wide">{stock.code}</span>
                             </div>
                         </div>
-
-                        {/* Note: Adjust API might return different field names, assuming change_percent for now */}
-                        <div className={`flex items-center font-medium ${stock.change_percent >= 0 ? 'text-red-500' : 'text-green-500'}`}>
-                            {stock.change_percent > 0 ? <ArrowUp className="w-3 h-3 mr-1" /> : <ArrowDown className="w-3 h-3 mr-1" />}
-                            {Math.abs(stock.change_percent).toFixed(2)}%
+                        <div className="flex flex-col items-end">
+                            <span className="text-base font-bold tabular-nums">{stock.price.toFixed(2)}</span>
+                            <div className={`px-2 py-0.5 rounded text-[10px] font-bold ${stock.change_percent >= 0
+                                ? 'bg-success bg-opacity-10 price-up'
+                                : 'bg-danger bg-opacity-10 price-down'
+                                }`}>
+                                {stock.change_percent >= 0 ? '+' : ''}{stock.change_percent.toFixed(2)}%
+                            </div>
                         </div>
                     </div>
                 ))}

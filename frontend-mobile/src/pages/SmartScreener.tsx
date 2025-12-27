@@ -29,76 +29,95 @@ const SmartScreener: React.FC = () => {
     };
 
     return (
-        <div className="min-h-screen bg-gray-100 flex flex-col">
-            {/* Header */}
-            <header className="bg-white shadow-sm px-4 py-3 sticky top-0 z-10 flex items-center">
-                <button onClick={() => navigate(-1)} className="mr-3">
-                    <ArrowLeft className="w-5 h-5 text-gray-600" />
-                </button>
-                <form onSubmit={handleSearch} className="flex-1 flex items-center bg-gray-100 rounded-full px-4 py-2">
+        <div className="app-container">
+            {/* Header with Search */}
+            <header className="safe-area-top bg-opacity-90 backdrop-blur-md sticky top-0 z-10 p-5 flex flex-col gap-4">
+                <div className="flex items-center gap-4">
+                    <button onClick={() => navigate(-1)} className="p-2 -ml-2">
+                        <ArrowLeft className="w-6 h-6 text-white" />
+                    </button>
+                    <h1 className="text-2xl text-gradient">智能选股</h1>
+                </div>
+
+                <form onSubmit={handleSearch} className="relative group">
+                    <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                        <Search className="h-5 w-5 text-secondary group-focus-within:text-primary transition-colors" />
+                    </div>
                     <input
                         type="text"
-                        className="flex-1 bg-transparent outline-none text-sm text-gray-800 placeholder-gray-400"
-                        placeholder="e.g. ROE>20% and Growth>30%"
+                        className="block w-full bg-card border border-border rounded-2xl py-4 pl-12 pr-12 text-sm text-white placeholder-text-tertiary focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
+                        placeholder="输入选股指令, 如: ROE>20% 且 增长>30%"
                         value={query}
                         onChange={(e) => setQuery(e.target.value)}
                     />
-                    {isPending ? (
-                        <Loader2 className="w-4 h-4 text-primary animate-spin ml-2" />
-                    ) : (
-                        <Search className="w-4 h-4 text-gray-400 ml-2" onClick={() => mutate(query)} />
-                    )}
+                    <div className="absolute inset-y-0 right-0 pr-4 flex items-center">
+                        {isPending ? (
+                            <Loader2 className="h-5 w-5 text-primary animate-spin" />
+                        ) : (
+                            <button type="submit" className="text-primary font-bold text-sm">搜索</button>
+                        )}
+                    </div>
                 </form>
             </header>
 
             {/* Content */}
-            <div className="flex-1 p-4 overflow-auto">
+            <div className="flex-1 px-5 pb-8 overflow-auto">
                 {error && (
-                    <div className="text-center text-red-500 mt-10 text-sm">
-                        Search failed: {error.message}
+                    <div className="bg-danger bg-opacity-10 border border-danger border-opacity-20 rounded-xl p-4 text-danger text-sm flex items-center gap-3">
+                        <div className="w-2 h-2 rounded-full bg-danger animate-pulse" />
+                        搜索失败: {error.message}
                     </div>
                 )}
 
                 {!data && !isPending && !error && (
-                    <div className="text-center text-gray-400 mt-20 text-sm">
-                        Try searching for stocks with natural language.<br />
-                        Ex: "MACD Golden Cross"
+                    <div className="flex flex-col items-center justify-center pt-24 gap-6 opacity-40">
+                        <div className="p-8 rounded-full bg-border">
+                            <Search className="w-12 h-12 text-secondary" />
+                        </div>
+                        <div className="text-center">
+                            <p className="text-base font-semibold">想搜索什么？</p>
+                            <p className="text-xs mt-1 italic">"今日涨停个股" 或 "近期主力净买入前10"</p>
+                        </div>
                     </div>
                 )}
 
                 {data && (
-                    <div className="bg-white rounded-lg shadow-sm overflow-hidden">
-                        <div className="p-3 border-b border-gray-100 text-sm font-bold text-gray-700">
-                            Results ({data.data.length})
+                    <div className="mt-4 flex flex-col gap-4">
+                        <div className="flex justify-between items-center px-1">
+                            <span className="text-xs text-secondary">搜索结果 ({data.data.length})</span>
+                            <span className="text-[10px] text-tertiary">滑动以查看详情</span>
                         </div>
-                        <div className="overflow-x-auto">
-                            <table className="w-full text-sm text-left">
-                                <thead className="text-xs text-gray-500 uppercase bg-gray-50">
-                                    <tr>
-                                        {data.columns.map((col, idx) => (
-                                            <th key={idx} className="px-4 py-3 whitespace-nowrap">{col}</th>
-                                        ))}
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {data.data.map((row, rIdx) => {
-                                        const code = findCode(row, data.columns);
-                                        return (
-                                            <tr
-                                                key={rIdx}
-                                                className={`border-b border-gray-50 hover:bg-gray-50 ${code ? 'cursor-pointer' : ''}`}
-                                                onClick={() => code && navigate(`/stock/${code}`)}
-                                            >
-                                                {row.map((cell, cIdx: number) => (
-                                                    <td key={cIdx} className="px-4 py-3 whitespace-nowrap max-w-xs truncate">
-                                                        {typeof cell === 'object' ? JSON.stringify(cell) : cell}
-                                                    </td>
-                                                ))}
-                                            </tr>
-                                        );
-                                    })}
-                                </tbody>
-                            </table>
+
+                        <div className="glass-card shadow-xl overflow-hidden p-0">
+                            <div className="overflow-x-auto no-scrollbar">
+                                <table className="w-full text-xs text-left">
+                                    <thead className="text-[10px] text-secondary uppercase tracking-wider bg-white bg-opacity-5">
+                                        <tr>
+                                            {data.columns.map((col, idx) => (
+                                                <th key={idx} className="px-5 py-4 font-bold border-b border-border">{col}</th>
+                                            ))}
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-border">
+                                        {data.data.map((row, rIdx) => {
+                                            const code = findCode(row, data.columns);
+                                            return (
+                                                <tr
+                                                    key={rIdx}
+                                                    className={`transition-colors active:bg-white active:bg-opacity-5 ${code ? 'cursor-pointer' : ''}`}
+                                                    onClick={() => code && navigate(`/stock/${code}`)}
+                                                >
+                                                    {row.map((cell, cIdx: number) => (
+                                                        <td key={cIdx} className="px-5 py-4 whitespace-nowrap max-w-[200px] truncate tabular-nums">
+                                                            {typeof cell === 'object' ? JSON.stringify(cell) : String(cell)}
+                                                        </td>
+                                                    ))}
+                                                </tr>
+                                            );
+                                        })}
+                                    </tbody>
+                                </table>
+                            </div>
                         </div>
                     </div>
                 )}

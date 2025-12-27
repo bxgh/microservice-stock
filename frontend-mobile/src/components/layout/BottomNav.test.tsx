@@ -11,8 +11,9 @@ describe('BottomNav', () => {
             </BrowserRouter>
         );
 
-        expect(screen.getByText('Dashboard')).toBeInTheDocument();
-        expect(screen.getByText('Screener')).toBeInTheDocument();
-        expect(screen.getByText('Console')).toBeInTheDocument();
+        expect(screen.getByText('首页')).toBeInTheDocument();
+        expect(screen.getByText('选股')).toBeInTheDocument();
+        expect(screen.getByText('行情')).toBeInTheDocument();
+        expect(screen.getByText('管理')).toBeInTheDocument();
     });
 });

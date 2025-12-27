@@ -39,3 +39,4 @@ Thumbs.db
 # Docker
 docker-compose.override.yml
 *.log
+node_modules

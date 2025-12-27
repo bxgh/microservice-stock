@@ -19,9 +19,9 @@ def query_with_retry(func, *args, **kwargs):
     for attempt in range(2):
         try:
             rs = func(*args, **kwargs)
-            # 检查连接错误
-            if rs.error_code != "0" and any(msg in rs.error_msg for msg in ["网络", "连接", "reset", "Broken pipe"]):
-                logger.warning(f"Worker检测到连接问题({rs.error_msg})，尝试重连...")
+            # 检查连接或认证错误
+            if rs.error_code != "0" and any(msg in rs.error_msg for msg in ["网络", "连接", "reset", "Broken pipe", "用户未登录", "未登录", "网络接收错误", "接收数据异常"]):
+                logger.warning(f"Worker检测到连接问题或认证失效({rs.error_msg})，尝试重连...")
                 bs.login() # 重新登录
                 continue
             return rs

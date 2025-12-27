@@ -44,8 +44,9 @@ export interface StockFinance {
     revenue: number; // 营收
     net_profit: number; // 净利润
     gross_margin: number; // 毛利率
-    net_margin: number; // 净利率
+    net_profit_margin: number; // 净利率
     roe: number;
+    revenue_growth_yoy: number; // 营收同比
     report_date: string;
 }
 
