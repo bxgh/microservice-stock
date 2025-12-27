@@ -1,5 +1,7 @@
 import asyncio
+import datetime
 import time
+import httpx
 from typing import Dict, Any, List, Optional
 import baostock as bs
 import numpy as np
@@ -37,48 +39,60 @@ class BaoStockService:
             "start_time": 0
         }
         
-        # 初始化多进程池
-        self.process_pool = ProcessPoolExecutor(max_workers=4, initializer=baostock_worker.init_worker)
-        logger.info("初始化多进程池 (ProcessPoolExecutor, 4 workers)...")
+        # 初始化线程池，取代进程池以节省内存空间 (设置为 1 以遵守用户对资源的限制)
+        from concurrent.futures import ThreadPoolExecutor
+        self.thread_pool = ThreadPoolExecutor(max_workers=1)
+        logger.info("初始化线程池 (ThreadPoolExecutor, 1 worker)...")
 
     async def get_all_a_shares(self) -> List[Dict[str, str]]:
-        """获取全市场 A 股代码列表 (排除指数)"""
+        """获取全市场 A 股代码列表 (排除指数) - 带回溯重试"""
         import datetime
-        today = datetime.date.today().strftime("%Y-%m-%d")
         
-        try:
-            rs = await self._execute_with_retry(bs.query_all_stock, day=today)
-            if rs.error_code != "0":
-                logger.error(f"无法获取全市场股票列表: {rs.error_msg}")
-                return []
+        for i in range(10): # Try up to 10 days back
+            target_date = (datetime.date.today() - datetime.timedelta(days=i)).strftime("%Y-%m-%d")
             
-            def fetch_all(rs_obj):
-                data = []
-                while rs_obj.next():
-                    row = rs_obj.get_row_data()
-                    # 简单过滤: 忽略指数 (通常名称包含指数或代码特征)
-                    # 更加精准的过滤可以在后续根据 basic_info 细化
-                    code = row[0]
-                    name = row[2]
-                    if code.startswith(("sh.6", "sz.0", "sz.3", "sh.688", "bj.")):
-                        data.append({"code": code, "name": name})
-                return data
-            
-            stocks = await asyncio.to_thread(fetch_all, rs)
-            logger.info(f"获取全市场 A 股列表成功，共 {len(stocks)} 只")
-            return stocks
-        except Exception as e:
-            logger.error(f"获取全市场股票列表异常: {e}")
-            return []
+            try:
+                rs = await self._execute_with_retry(bs.query_all_stock, day=target_date)
+                if rs.error_code != "0":
+                    if i == 0:
+                        logger.warning(f"无法获取日期 {target_date} 的股票列表: {rs.error_msg}")
+                    continue
+                
+                def fetch_all(rs_obj):
+                    data = []
+                    while rs_obj.next():
+                        row = rs_obj.get_row_data()
+                        # 简单过滤: 忽略指数 (通常名称包含指数或代码特征)
+                        code = row[0]
+                        name = row[2]
+                        if code.startswith(("sh.6", "sz.0", "sz.3", "sh.688", "bj.")):
+                            data.append({"code": code, "name": name})
+                    return data
+                
+                stocks = await asyncio.to_thread(fetch_all, rs)
+                if len(stocks) > 0:
+                    if i > 0:
+                        logger.info(f"回溯 {i} 天获取股票列表成功，日期: {target_date}，共 {len(stocks)} 只")
+                    else:
+                        logger.info(f"获取全市场 A 股列表成功，日期: {target_date}，共 {len(stocks)} 只")
+                    return stocks
+                else:
+                    if i == 0:
+                         logger.warning(f"日期 {target_date} 返回 0 只股票，尝试回溯...")
+            except Exception as e:
+                 logger.error(f"获取全市场股票列表异常 (日期 {target_date}): {e}")
+                 # continue to next day
+        
+        logger.error("Failed to fetch stock list after multiple backoff attempts")
+        return []
         
     async def _login(self):
-        """线程安全的登录方法"""
-        async with self.lock:
-            if not self._is_logged_in:
-                # 在主进程也保持一个连接 (用于获取股票列表等)
-                await asyncio.to_thread(bs.login)
-                self._is_logged_in = True
-                logger.info("BaoStock login success (Main Process)")
+        """线程安全的登录方法 (假设外部已持有 lock)"""
+        if not self._is_logged_in:
+            # 在主进程也保持一个连接 (用于获取股票列表等)
+            await asyncio.to_thread(bs.login)
+            self._is_logged_in = True
+            logger.info("BaoStock login success (Main Process)")
 
     async def _ensure_connection(self):
         """确保连接处于活跃状态，如果未登录则尝试登录"""
@@ -97,8 +111,8 @@ class BaoStockService:
                 rs = await asyncio.wait_for(asyncio.to_thread(func, *args, **kwargs), timeout=timeout)
                 
                 # 检测连接类错误
-                if rs.error_code != "0" and any(msg in rs.error_msg for msg in ["网络", "连接", "reset", "Broken pipe"]):
-                    logger.warning(f"检测到连接问题({rs.error_msg})，尝试重新登录并重试...")
+                if rs.error_code != "0" and any(msg in rs.error_msg for msg in ["网络", "连接", "reset", "Broken pipe", "用户未登录", "未登录", "网络接收错误", "接收数据异常"]):
+                    logger.warning(f"检测到连接问题或认证失效({rs.error_msg})，尝试重新登录并重试...")
                     self._is_logged_in = False
                     await self._ensure_connection()
                     rs = await asyncio.wait_for(asyncio.to_thread(func, *args, **kwargs), timeout=timeout)
@@ -121,6 +135,22 @@ class BaoStockService:
                         logger.error(f"重试后依然发生异常: {re}")
                         raise re
                 raise e
+
+    async def get_stock_listing_date(self, code: str) -> Optional[str]:
+        """获取股票上市日期"""
+        try:
+            rs = await self._execute_with_retry(bs.query_stock_basic, code=code)
+            if rs.error_code != "0":
+                return None
+            
+            row = rs.get_row_data()
+            if row and len(row) > 2:
+                # query_stock_basic returns: code, code_name, ipoDate, outDate, type, status
+                return row[2]  # ipoDate
+            return None
+        except Exception as e:
+            logger.warning(f"获取股票 {code} 上市日期失败: {e}")
+            return None
 
     async def get_kline(
         self, 
@@ -179,7 +209,7 @@ class BaoStockService:
     async def sync_kline_to_db(
         self,
         code: str,
-        start_date: str = "2020-01-01",
+        start_date: str = "1990-12-19",
         end_date: str = "",
         frequency: str = "d",
         adjust: str = "2",
@@ -203,62 +233,56 @@ class BaoStockService:
                     (code,)
                 )
                 if res and res[0][0]:
-                    import datetime
                     db_min_date = res[0][0]
                     db_max_date = res[0][1]
                     param_start = datetime.datetime.strptime(original_start_date, "%Y-%m-%d").date()
                     today = datetime.date.today()
                     
-                    # 判断1：是否需要补充历史数据（参数起点早于库中最早日期）
-                    if param_start < db_min_date:
-                        needs_historical = True
-                        logger.info(f"股票 {code} 需要补充历史数据: {param_start} ~ {db_min_date - datetime.timedelta(days=1)}")
-                    
-                    # 判断2：是否需要补充最新数据（库中最新日期早于今天）
-                    if db_max_date < today:
-                        needs_recent = True
-                        recent_start = db_max_date + datetime.timedelta(days=1)
-                        logger.info(f"股票 {code} 需要补充最新数据: {recent_start} ~ 今天")
-                    
-                    # 策略：优先补充历史，再补充最新
-                    # 本次调用仅处理历史部分，最新部分由下次调用处理
-                    if needs_historical:
-                        end_date = (db_min_date - datetime.timedelta(days=1)).strftime("%Y-%m-%d")
-                        logger.info(f"股票 {code} 本次补充历史: {original_start_date} ~ {end_date}")
-                    elif needs_recent:
-                        start_date = (db_max_date + datetime.timedelta(days=1)).strftime("%Y-%m-%d")
-                        logger.info(f"股票 {code} 本次补充最新: {start_date} ~ 今天")
-                    else:
+                    # 尝试获取上市日期以优化判断
+                    ipo_date_str = await self.get_stock_listing_date(code)
+                    if ipo_date_str:
+                         ipo_date = datetime.datetime.strptime(ipo_date_str, "%Y-%m-%d").date()
+                         # 如果请求开始时间早于上市时间，则有效开始时间应为上市时间
+                         if param_start < ipo_date:
+                             param_start = ipo_date
+
+                    if db_max_date >= today and db_min_date <= param_start:
                         logger.debug(f"股票 {code} 数据已是最新，无需同步")
-                        return {
-                            "success": True, 
-                            "count": 0, 
-                            "message": "数据已是最新",
-                            "performance": {"fetch_ms": 0, "write_ms": 0, "total_ms": 0, "rows_count": 0}
-                        }
+                        return { "success": True, "count": 0, "message": "数据已是最新" }
+                    
+                    if param_start < db_min_date:
+                        # 需要补充历史
+                        start_date = original_start_date
+                        logger.info(f"股票 {code} 补充历史及最新: {start_date} ~ 今天")
+                    else:
+                        # 仅需补充最新
+                        start_date = (db_max_date + datetime.timedelta(days=1)).strftime("%Y-%m-%d")
+                        logger.info(f"股票 {code} 补充最新: {start_date} ~ 今天")
                         
             except Exception as e:
-                logger.warning(f"获取股票 {code} 日期范围失败，使用原始参数 start_date={original_start_date}: {e}")
+                logger.warning(f"获取股票 {code} 日期范围失败: {e}")
             
         try:
             # 1. 抓取数据 (Parallel Worker)
             fetch_start = time.time()
             
             loop = asyncio.get_running_loop()
-            # 使用 ProcessPoolExecutor 进行数据抓取，并设置 60秒超时防止挂死
+            # 使用 ThreadPoolExecutor 进行数据抓取，并加锁保证连接安全
             try:
-                result = await asyncio.wait_for(
-                    loop.run_in_executor(
-                        self.process_pool,
-                        baostock_worker.fetch_kline_data,
-                        code,
-                        start_date,
-                        end_date if end_date else ""
-                    ),
-                    timeout=60
-                )
+                async with self.lock:
+                    await self._ensure_connection()
+                    result = await asyncio.wait_for(
+                        loop.run_in_executor(
+                            self.thread_pool,
+                            baostock_worker.fetch_kline_data,
+                            code,
+                            start_date,
+                            end_date if end_date else ""
+                        ),
+                        timeout=120
+                    )
             except asyncio.TimeoutError:
-                logger.error(f"股票 {code} 数据抓取超时 (60s)")
+                logger.error(f"股票 {code} 数据抓取超时 (120s)")
                 return {"success": False, "error": "Fetch Timeout"}
             
             if not result["success"]:
@@ -289,9 +313,9 @@ class BaoStockService:
                     float(row[6]) if row[6] else None,
                     int(float(row[7])) if row[7] else 0,
                     float(row[8]) if row[8] else 0,
-                    float(row[9]) if row[9] else 0,
-                    float(row[11]) if row[11] else 0,
-                    int(row[10]) if row[10] else 1,
+                    float(row[10]) if row[10] else 0,      # turnover (turn) index 10
+                    float(row[12]) if row[12] else 0,      # pct_chg (pctChg) index 12
+                    int(row[11]) if row[11] else 1,        # trade_status (tradestatus) index 11
                 ))
             
             # 3. 批量写入 (Upsert 逻辑)
@@ -333,7 +357,7 @@ class BaoStockService:
             logger.error(f"同步 K 线到数据库异常: {e}", exc_info=True)
             return {"success": False, "error": str(e)}
 
-    async def sync_all_stocks_kline(self, start_date: str = "2020-01-01") -> None:
+    async def sync_all_stocks_kline(self, start_date: str = "1990-12-19") -> None:
         """同步全市场股票 K 线 (支持断点续传)"""
         if self._sync_status["running"]:
             logger.warning("全市场同步任务已在运行中")
@@ -412,14 +436,20 @@ class BaoStockService:
 
     async def reset_sync_progress(self) -> None:
         """强制重置同步进度，下次同步将从头开始"""
-        await db.execute("UPDATE sync_progress SET last_index=0, status='idle' WHERE task_name='full_market_sync'")
+        await db.execute("UPDATE sync_progress SET last_index=0, status='idle'")
         self._sync_status["current"] = 0
         self._sync_status["running"] = False
-        logger.info("全市场同步进度已重置")
+        self._adjust_sync_status["current"] = 0
+        self._adjust_sync_status["running"] = False
+        logger.info("全市场同步进度已全部重置")
 
     def get_sync_status(self) -> Dict[str, Any]:
         """获取当前同步状态"""
         return self._sync_status
+
+    def get_adjust_sync_status(self) -> Dict[str, Any]:
+        """获取复权因子同步状态"""
+        return self._adjust_sync_status
 
 
     async def get_index_cons(self, index_code: str) -> List[Dict[str, Any]]:
@@ -640,60 +670,51 @@ class BaoStockService:
                     (code,)
                 )
                 if res and res[0][0]:
-                    import datetime
                     db_min_date = res[0][0]
                     db_max_date = res[0][1]
                     param_start = datetime.datetime.strptime(original_start_date, "%Y-%m-%d").date()
                     today = datetime.date.today()
+
+                    # 尝试获取上市日期以优化判断
+                    ipo_date_str = await self.get_stock_listing_date(code)
+                    if ipo_date_str:
+                         ipo_date = datetime.datetime.strptime(ipo_date_str, "%Y-%m-%d").date()
+                         if param_start < ipo_date:
+                             param_start = ipo_date
+                    
+                    if db_max_date >= today and db_min_date <= param_start:
+                        logger.debug(f"股票 {code} 复权因子已是最新，无需同步")
+                        return { "success": True, "count": 0, "message": "已是最新" }
                     
                     if param_start < db_min_date:
-                        needs_historical = True
-                        logger.info(f"股票 {code} 需要补充历史复权因子: {param_start} ~ {db_min_date - datetime.timedelta(days=1)}")
-                    
-                    if db_max_date < today:
-                        needs_recent = True
-                        recent_start = db_max_date + datetime.timedelta(days=1)
-                        logger.info(f"股票 {code} 需要补充最新复权因子: {recent_start} ~ 今天")
-                    
-                    if needs_historical:
-                        end_date = (db_min_date - datetime.timedelta(days=1)).strftime("%Y-%m-%d")
-                        logger.info(f"股票 {code} 本次补充历史复权因子: {original_start_date} ~ {end_date}")
-                    elif needs_recent:
-                        start_date = (db_max_date + datetime.timedelta(days=1)).strftime("%Y-%m-%d")
-                        logger.info(f"股票 {code} 本次补充最新复权因子: {start_date} ~ 今天")
+                        start_date = original_start_date
                     else:
-                        logger.debug(f"股票 {code} 复权因子已是最新，无需同步")
-                        return {
-                            "success": True, 
-                            "count": 0, 
-                            "message": "复权因子已是最新",
-                            "performance": {"fetch_ms": 0, "write_ms": 0, "total_ms": 0, "rows_count": 0}
-                        }
+                        start_date = (db_max_date + datetime.timedelta(days=1)).strftime("%Y-%m-%d")
                         
             except Exception as e:
-                logger.warning(f"获取股票 {code} 复权因子日期范围失败，使用原始参数 start_date={original_start_date}: {e}")
+                logger.warning(f"获取股票 {code} 复权因子日期范围失败: {e}")
         
         try:
             # 1. 抓取复权因子数据
             fetch_start = time.time()
-        try:
-            # 1. 抓取数据 (Parallel Worker)
-            fetch_start = time.time()
+
             
             loop = asyncio.get_running_loop()
             try:
-                result = await asyncio.wait_for(
-                    loop.run_in_executor(
-                        self.process_pool,
-                        baostock_worker.fetch_adjust_factor_data,
-                        code,
-                        start_date,
-                        end_date if end_date else ""
-                    ),
-                    timeout=60
-                )
+                async with self.lock:
+                    await self._ensure_connection()
+                    result = await asyncio.wait_for(
+                        loop.run_in_executor(
+                            self.thread_pool,
+                            baostock_worker.fetch_adjust_factor_data,
+                            code,
+                            start_date,
+                            end_date if end_date else ""
+                        ),
+                        timeout=120
+                    )
             except asyncio.TimeoutError:
-                logger.error(f"股票 {code} 复权因子抓取超时 (60s)")
+                logger.error(f"股票 {code} 复权因子抓取超时 (120s)")
                 return {"success": False, "error": "Fetch Timeout"}
             
             if not result["success"]:
@@ -832,6 +853,102 @@ class BaoStockService:
             self._adjust_sync_status["running"] = False
             self._adjust_sync_status["last_synced"] = time.strftime("%Y-%m-%d %H:%M:%S")
 
-    def get_adjust_sync_status(self) -> Dict[str, Any]:
-        """获取复权因子同步状态"""
-        return self._adjust_sync_status
+    async def get_all_container_jobs(self) -> List[Dict[str, Any]]:
+        """聚合全系统所有容器的任务列表"""
+        from app.scheduler import get_scheduler_instance
+        
+        # 1. 获取本地任务
+        all_jobs = []
+        scheduler = get_scheduler_instance()
+        if scheduler:
+            for job in scheduler.get_jobs():
+                job["container"] = "baostock-api"
+                job["display_name"] = f"[BaoStock] {job['name']}"
+                all_jobs.append(job)
+        
+        # 2. 从其他容器抓取任务
+        containers = [
+            {"name": "akshare-api", "url": "http://akshare-api:8000/api/v1/scheduler/jobs"},
+            {"name": "pywencai-api", "url": "http://pywencai-api:8000/api/v1/scheduler/jobs"}
+        ]
+        
+        async with httpx.AsyncClient(timeout=5.0) as client:
+            for container in containers:
+                try:
+                    resp = await client.get(container["url"])
+                    if resp.status_code == 200:
+                        remote_jobs = resp.json().get("jobs", [])
+                        for rj in remote_jobs:
+                            rj["container"] = container["name"]
+                            rj["display_name"] = f"[{container['name'].split('-')[0].capitalize()}] {rj['name']}"
+                            all_jobs.append(rj)
+                except Exception as e:
+                    logger.warning(f"无法抓取容器 {container['name']} 的任务: {e}")
+        
+        return all_jobs
+
+    async def perform_remote_job_action(self, container: str, job_id: str, action: str) -> bool:
+        """转发任务操作指令到指定容器"""
+        if container == "baostock-api":
+            from app.scheduler import get_scheduler_instance
+            scheduler = get_scheduler_instance()
+            if not scheduler: return False
+            if action == "pause": return scheduler.pause_job(job_id)
+            if action == "resume": return scheduler.resume_job(job_id)
+            if action == "run": return await scheduler.run_job_now(job_id)
+            return False
+            
+        # 转发到远程容器
+        url = f"http://{container}:8000/api/v1/scheduler/jobs/{job_id}/{action}"
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            try:
+                resp = await client.post(url)
+                return resp.status_code == 200
+            except Exception as e:
+                logger.error(f"转发操作 {action} 到 {container} 失败: {e}")
+                return False
+
+    async def verify_daily_data_completeness(self, target_date: str = None) -> Dict[str, Any]:
+        """校验每日数据下载完整性"""
+        if not target_date:
+            target_date = datetime.date.today().strftime("%Y-%m-%d")
+            
+        try:
+            # 1. 查询数据库中今日已同步的代码数量
+            sql = "SELECT COUNT(DISTINCT code) FROM stock_kline_daily WHERE trade_date = %s"
+            actual_res = await db.execute(sql, (target_date,))
+            actual_count = actual_res[0][0] if actual_res else 0
+            
+            # 2. 获取市场预期总数 (活跃 A 股)
+            stocks = await self.get_all_a_shares()
+            expected_count = len(stocks)
+            
+            # 3. 计算质量指标
+            completeness = round((actual_count / expected_count * 100), 2) if expected_count > 0 else 0
+            
+            # 基础规则：低于 95% 视为有缺失
+            status = "healthy"
+            if completeness < 95:
+                status = "incomplete"
+            if actual_count == 0:
+                status = "no_data_yet" # 可能是还没到同步时间或今天不开盘
+                
+            # 4. 获取后台同步任务的实时进度
+            sync_status = self.get_sync_status()
+            adjust_status = self.get_adjust_sync_status()
+            
+            return {
+                "date": target_date,
+                "actual_count": actual_count,
+                "expected_count": expected_count,
+                "completeness_pct": completeness,
+                "status": status,
+                "msg": f"今日共同步 {actual_count} 只股票，全市场活跃 A 股预期约为 {expected_count} 只。",
+                "background_tasks": {
+                    "kline_sync": sync_status,
+                    "adjust_factor_sync": adjust_status
+                }
+            }
+        except Exception as e:
+            logger.error(f"校验每日数据完整性异常: {e}")
+            return {"error": str(e)}

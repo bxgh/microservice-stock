@@ -10,7 +10,7 @@ async def sync_stock_kline(
     request: Request,
     code: str,
     background_tasks: BackgroundTasks,
-    start_date: Optional[str] = Query("2020-01-01", description="开始日期 YYYY-MM-DD"),
+    start_date: Optional[str] = Query("1990-12-19", description="开始日期 YYYY-MM-DD"),
     end_date: Optional[str] = Query("", description="结束日期 YYYY-MM-DD (默认至今)"),
     frequency: str = Query("d", description="频率: d, w, m"),
     adjust: str = Query("2", description="复权: 1后复权, 2前复权, 3不复权")
@@ -47,7 +47,7 @@ async def sync_stock_kline(
 async def sync_full_market(
     request: Request,
     background_tasks: BackgroundTasks,
-    start_date: Optional[str] = Query("2020-01-01", description="开始日期 YYYY-MM-DD")
+    start_date: Optional[str] = Query("1990-12-19", description="开始日期 YYYY-MM-DD")
 ):
     """
     一键同步全市场 A 股 K 线数据到 MySQL
@@ -154,7 +154,14 @@ async def sync_stock_adjust_factor(
 
     background_tasks.add_task(do_sync)
     
-    return {
-        "message": f"股票 {code} 的复权因子同步任务已提交至后台处理",
-        "request_id": request_id
-    }
+@router.get("/sync/verify/daily")
+async def verify_daily_sync(
+    request: Request,
+    date: Optional[str] = Query(None, description="要校验的日期 YYYY-MM-DD，默认今天")
+):
+    """
+    核验每日数据下载完整性 (对比全市场 A 股总数)
+    """
+    service = request.app.state.baostock_service
+    report = await service.verify_daily_data_completeness(target_date=date)
+    return report

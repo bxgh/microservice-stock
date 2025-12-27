@@ -25,79 +25,28 @@ async def get_scheduler_status(request: Request):
 
 @router.get("/scheduler/jobs")
 async def list_jobs(request: Request):
-    """获取所有任务列表"""
-    from app.scheduler import get_scheduler_instance
-    
-    scheduler = get_scheduler_instance()
-    if not scheduler:
-        raise HTTPException(status_code=503, detail="调度器未初始化")
-    
-    jobs = scheduler.get_jobs()
+    """获取全系统聚合任务列表"""
+    service = request.app.state.baostock_service
+    jobs = await service.get_all_container_jobs()
     return {
         "total": len(jobs),
         "jobs": jobs
     }
 
 
-@router.get("/scheduler/jobs/{job_id}")
-async def get_job_detail(job_id: str, request: Request):
-    """获取单个任务详情"""
-    from app.scheduler import get_scheduler_instance
+@router.post("/scheduler/jobs/{job_id}/{action}")
+async def handle_job_action(job_id: str, action: str, request: Request, container: str = "baostock-api"):
+    """
+    处理任务操作 (pause, resume, run)
+    支持跨容器转发
+    """
+    if action not in ["pause", "resume", "run"]:
+        raise HTTPException(status_code=400, detail="不支持的操作")
+        
+    service = request.app.state.baostock_service
+    success = await service.perform_remote_job_action(container, job_id, action)
     
-    scheduler = get_scheduler_instance()
-    if not scheduler:
-        raise HTTPException(status_code=503, detail="调度器未初始化")
-    
-    job = scheduler.get_job_detail(job_id)
-    if not job:
-        raise HTTPException(status_code=404, detail=f"任务不存在: {job_id}")
-    
-    return job
-
-
-@router.post("/scheduler/jobs/{job_id}/pause")
-async def pause_job(job_id: str, request: Request):
-    """暂停任务"""
-    from app.scheduler import get_scheduler_instance
-    
-    scheduler = get_scheduler_instance()
-    if not scheduler:
-        raise HTTPException(status_code=503, detail="调度器未初始化")
-    
-    success = scheduler.pause_job(job_id)
     if not success:
-        raise HTTPException(status_code=400, detail=f"暂停任务失败: {job_id}")
+        raise HTTPException(status_code=400, detail=f"对容器 {container} 的任务 {job_id} 执行 {action} 失败")
     
-    return {"message": f"任务 {job_id} 已暂停"}
-
-
-@router.post("/scheduler/jobs/{job_id}/resume")
-async def resume_job(job_id: str, request: Request):
-    """恢复任务"""
-    from app.scheduler import get_scheduler_instance
-    
-    scheduler = get_scheduler_instance()
-    if not scheduler:
-        raise HTTPException(status_code=503, detail="调度器未初始化")
-    
-    success = scheduler.resume_job(job_id)
-    if not success:
-        raise HTTPException(status_code=400, detail=f"恢复任务失败: {job_id}")
-    
-    return {"message": f"任务 {job_id} 已恢复"}
-
-
-@router.post("/scheduler/jobs/{job_id}/run")
-async def run_job(job_id: str, request: Request):
-    """立即执行任务"""
-    from app.scheduler import get_scheduler_instance
-    
-    scheduler = get_scheduler_instance()
-    if not scheduler:
-        raise HTTPException(status_code=503, detail="调度器未初始化")
-    
-    success = await scheduler.run_job_now(job_id)
-    if not success:
-        raise HTTPException(status_code=400, detail=f"执行任务失败: {job_id}")
-    
-    return {"message": f"任务 {job_id} 已触发后台执行"}
+    return {"message": f"操作 {action} 已成功发送至 {container}"}
