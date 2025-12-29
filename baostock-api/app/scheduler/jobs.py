@@ -23,8 +23,8 @@ async def daily_kline_sync_job() -> Dict[str, Any]:
         
         baostock_service = app.state.baostock_service
         
-        # 执行全市场增量同步（start_date 设为较早日期，增量逻辑会自动处理）
-        await baostock_service.sync_all_stocks_kline(start_date="2024-01-01")
+        # 执行全市场增量同步 (收盘批处理模式)
+        await baostock_service.sync_daily_increment()
         
         logger.info("【定时任务】每日K线数据同步完成")
         return {
@@ -55,8 +55,8 @@ async def daily_adjust_factor_sync_job() -> Dict[str, Any]:
         
         baostock_service = app.state.baostock_service
         
-        # 执行全市场复权因子增量同步
-        await baostock_service.sync_all_stocks_adjust_factor(start_date="1990-01-01")
+        # 执行全市场复权因子增量同步 (收盘批处理模式)
+        await baostock_service.sync_daily_adjust_increment()
         
         logger.info("【定时任务】每日复权因子同步完成")
         return {
@@ -70,6 +70,39 @@ async def daily_adjust_factor_sync_job() -> Dict[str, Any]:
             'status': 'error',
             'message': f'复权因子同步失败: {str(e)}'
         }
+
+
+async def daily_comprehensive_sync_job() -> Dict[str, Any]:
+    """全市场每日收盘综合同步流水线 (串行模式)
+    
+    依次同步 K 线数据和复权因子，确保数据一致性并降低并发压力。
+    """
+    try:
+        logger.info("【定时任务】启动全市场综合同步流水线...")
+        
+        from app.main import app
+        baostock_service = app.state.baostock_service
+        
+        # 1. 第一阶段：K 线数据
+        logger.info(">>> 阶段 1/2: 正在执行逐日 K 线增量补齐...")
+        k_res = await baostock_service.sync_daily_increment()
+        
+        # 2. 第二阶段：复权因子
+        logger.info(">>> 阶段 2/2: 正在执行最新复权因子计算与同步...")
+        a_res = await baostock_service.sync_daily_adjust_increment()
+        
+        logger.info("【定时任务】综合流水线全部执行完毕")
+        return {
+            'status': 'success',
+            'message': '每日综合同步成功',
+            'details': {
+                'kline': k_res,
+                'adjust': a_res
+            }
+        }
+    except Exception as e:
+        logger.error(f"【定时任务】综合流水线中途崩溃: {e}", exc_info=True)
+        return {'status': 'error', 'message': f'流水线崩溃: {str(e)}'}
 
 
 async def health_check_job() -> Dict[str, Any]:

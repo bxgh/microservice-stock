@@ -40,8 +40,7 @@ async def lifespan(app: FastAPI):
         from app.scheduler import TaskScheduler, set_scheduler_instance
         from app.scheduler.config import SCHEDULER_CONFIG
         from app.scheduler.jobs import (
-            daily_kline_sync_job,
-            daily_adjust_factor_sync_job,
+            daily_comprehensive_sync_job,
             health_check_job
         )
         
@@ -49,24 +48,13 @@ async def lifespan(app: FastAPI):
             scheduler = TaskScheduler(timezone=SCHEDULER_CONFIG["timezone"])
             set_scheduler_instance(scheduler)
             
-            # 注册定时任务
-            kline_config = SCHEDULER_CONFIG["jobs"]["daily_kline_sync"]
-            if kline_config["enabled"]:
-                scheduler.add_daily_job(
-                    func=daily_kline_sync_job,
-                    hour=kline_config["hour"],
-                    minute=kline_config["minute"],
-                    job_id="daily_kline_sync"
-                )
-            
-            adjust_config = SCHEDULER_CONFIG["jobs"]["daily_adjust_factor_sync"]
-            if adjust_config["enabled"]:
-                scheduler.add_daily_job(
-                    func=daily_adjust_factor_sync_job,
-                    hour=adjust_config["hour"],
-                    minute=adjust_config["minute"],
-                    job_id="daily_adjust_factor_sync"
-                )
+            # 注册定时任务 - 采用综合串行流水线模式 (18:30)
+            scheduler.add_daily_job(
+                func=daily_comprehensive_sync_job,
+                hour=18,
+                minute=30,
+                job_id="daily_comprehensive_sync"
+            )
             
             health_config = SCHEDULER_CONFIG["jobs"]["health_check"]
             if health_config["enabled"]:

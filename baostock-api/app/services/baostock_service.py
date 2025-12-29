@@ -39,8 +39,12 @@ class BaoStockService:
             "start_time": 0
         }
         
-        from concurrent.futures import ThreadPoolExecutor
-        self.thread_pool = ThreadPoolExecutor(max_workers=1)
+        from concurrent.futures import ProcessPoolExecutor
+        # 使用进程池以突破 BaoStock 单连接限制 (每个进程一个连接)
+        # 限制为 2 个 worker 以避免超过 128MB 内存限制
+        self.process_pool = ProcessPoolExecutor(max_workers=2, initializer=baostock_worker.init_worker)
+        # 保留一个线程池用于非连接敏感任务
+        self.thread_pool = self.process_pool 
         
         # 股票列表缓存 (避免频繁查询耗时)
         self._all_a_shares_cache = {
@@ -100,6 +104,88 @@ class BaoStockService:
         
         logger.error("Failed to fetch stock list after multiple backoff attempts")
         return self._all_a_shares_cache["data"] if self._all_a_shares_cache["data"] else []
+
+    async def get_last_trading_day(self, target_date: Optional[str] = None) -> Optional[str]:
+        """获取最近的交易日（已物理闭市且数据可能已发布的日期视角）"""
+        if not target_date:
+            now = datetime.datetime.now()
+            # A 股下午 15:00 收盘，BaoStock 通常 16:00 后数据稳定
+            if now.hour < 16:
+                target_date = (now - datetime.timedelta(days=1)).strftime("%Y-%m-%d")
+            else:
+                target_date = now.strftime("%Y-%m-%d")
+            
+        sql = "SELECT cal_date FROM trade_cal WHERE is_open=1 AND cal_date <= %s ORDER BY cal_date DESC LIMIT 1"
+        res = await db.execute(sql, (target_date,))
+        if res:
+            return res[0][0].strftime("%Y-%m-%d")
+        return None
+
+    async def sync_daily_increment(self, target_date: Optional[str] = None) -> Dict[str, Any]:
+        """全市场每日增量同步 (符合收盘批处理原则)"""
+        if self._sync_status["running"]:
+             return {"success": False, "error": "任务已在运行"}
+
+        # 1. 确定目标日期
+        sync_date = await self.get_last_trading_day(target_date)
+        if not sync_date:
+            return {"success": False, "error": "无法确定目标交易日"}
+        
+        logger.info(f"【增量同步】启动。目标日期: {sync_date}")
+
+        # 2. 抽样校验：检查数据提供方是否已发布当日数据 (以浦发银行为例)
+        sample_code = "sh.600000"
+        try:
+            # 这里的 sync_kline_to_db 必须禁用 db_latest 检查以强制向 BaoStock 发起请求
+            sample_res = await self.sync_kline_to_db(sample_code, start_date=sync_date, end_date=sync_date, use_db_latest=False)
+            if not sample_res.get("success") or sample_res.get("count", 0) == 0:
+                logger.warning(f"数据提供方尚未发布 {sync_date} 的日线数据，任务中止")
+                return {"success": False, "error": "数据源未更新", "target_date": sync_date}
+        except Exception as e:
+            logger.error(f"抽样校验异常: {e}")
+            return {"success": False, "error": "校验失败"}
+
+        # 3. 全局统计：检查本系统数据库中该日数据的覆盖率
+        res = await db.execute("SELECT COUNT(*) FROM stock_kline_daily WHERE trade_date = %s", (sync_date,))
+        existing_count = res[0][0] if res else 0
+        
+        # 获取预期总数 (活跃 A 股)
+        stocks = await self.get_all_a_shares()
+        expected = len(stocks)
+
+        if existing_count >= expected * 0.99:
+            logger.info(f"日期 {sync_date} 的数据覆盖率已达 {existing_count}/{expected}，无需重复同步")
+            return {"success": True, "message": "已是最新", "count": existing_count}
+
+        # 4. 执行定向增量同步
+        logger.info(f"触发 {sync_date} 全市场缺口补齐程序...")
+        # 传递 start_date 等同于 sync_date，使内部逻辑仅关注该日
+        await self.sync_all_stocks_kline(start_date=sync_date)
+        
+        return {"success": True, "message": "同步任务已启动", "target_date": sync_date}
+
+    async def sync_daily_adjust_increment(self, target_date: Optional[str] = None) -> Dict[str, Any]:
+        """全市场每日复权因子增量同步"""
+        if self._adjust_sync_status["running"]:
+             return {"success": False, "error": "任务已在运行"}
+
+        sync_date = await self.get_last_trading_day(target_date)
+        if not sync_date:
+            return {"success": False, "error": "无法确定目标交易日"}
+
+        # 1. 全局统计
+        res = await db.execute("SELECT COUNT(*) FROM stock_adjust_factor WHERE adjust_date = %s", (sync_date,))
+        count = res[0][0] if res else 0
+        
+        stocks = await self.get_all_a_shares()
+        if count >= len(stocks) * 0.99:
+            logger.info(f"日期 {sync_date} 的复权因子已基本完整 ({count}/{len(stocks)})，跳过同步")
+            return {"success": True, "message": "已是最新"}
+
+        # 2. 执行定向同步
+        logger.info(f"开启 {sync_date} 复权因子收盘增量同步...")
+        await self.sync_all_stocks_adjust_factor(start_date=sync_date)
+        return {"success": True, "message": "复权因子同步已启动", "target_date": sync_date}
         
     async def _login(self):
         """线程安全的登录方法 (假设外部已持有 lock)"""
@@ -227,7 +313,10 @@ class BaoStockService:
         end_date: str = "",
         frequency: str = "d",
         adjust: str = "2",
-        use_db_latest: bool = True
+        use_db_latest: bool = True,
+        pre_min_date: Optional[datetime.date] = None,
+        pre_max_date: Optional[datetime.date] = None,
+        pre_ipo_date: Optional[datetime.date] = None
     ) -> Dict[str, Any]:
         """抓取并同步 K 线数据到 MySQL (MySQL 5.7 兼容)"""
         start_process = time.time()
@@ -242,20 +331,30 @@ class BaoStockService:
         
         if use_db_latest:
             try:
-                res = await db.execute(
-                    "SELECT MIN(trade_date), MAX(trade_date) FROM stock_kline_daily WHERE code=%s", 
-                    (code,)
-                )
-                if res and res[0][0]:
-                    db_min_date = res[0][0]
-                    db_max_date = res[0][1]
+                db_min_date = pre_min_date
+                db_max_date = pre_max_date
+                
+                if db_min_date is None:
+                    res = await db.execute(
+                        "SELECT MIN(trade_date), MAX(trade_date) FROM stock_kline_daily WHERE code=%s", 
+                        (code,)
+                    )
+                    if res and res[0][0]:
+                        db_min_date = res[0][0]
+                        db_max_date = res[0][1]
+
+                if db_min_date:
                     param_start = datetime.datetime.strptime(original_start_date, "%Y-%m-%d").date()
                     today = datetime.date.today()
                     
                     # 尝试获取上市日期以优化判断
-                    ipo_date_str = await self.get_stock_listing_date(code)
-                    if ipo_date_str:
-                         ipo_date = datetime.datetime.strptime(ipo_date_str, "%Y-%m-%d").date()
+                    ipo_date = pre_ipo_date
+                    if ipo_date is None:
+                        ipo_date_str = await self.get_stock_listing_date(code)
+                        if ipo_date_str:
+                             ipo_date = datetime.datetime.strptime(ipo_date_str, "%Y-%m-%d").date()
+                    
+                    if ipo_date:
                          # 如果请求开始时间早于上市时间，则有效开始时间应为上市时间
                          if param_start < ipo_date:
                              param_start = ipo_date
@@ -283,18 +382,18 @@ class BaoStockService:
             loop = asyncio.get_running_loop()
             # 使用 ThreadPoolExecutor 进行数据抓取，并加锁保证连接安全
             try:
-                async with self.lock:
-                    await self._ensure_connection()
-                    result = await asyncio.wait_for(
-                        loop.run_in_executor(
-                            self.thread_pool,
-                            baostock_worker.fetch_kline_data,
-                            code,
-                            start_date,
-                            end_date if end_date else ""
-                        ),
-                        timeout=120
-                    )
+                # 抓取数据 (不再对进程池加全局锁，允许并行)
+                await self._ensure_connection() 
+                result = await asyncio.wait_for(
+                    loop.run_in_executor(
+                        self.process_pool,
+                        baostock_worker.fetch_kline_data,
+                        code,
+                        start_date,
+                        end_date if end_date else ""
+                    ),
+                    timeout=120
+                )
             except asyncio.TimeoutError:
                 logger.error(f"股票 {code} 数据抓取超时 (120s)")
                 return {"success": False, "error": "Fetch Timeout"}
@@ -421,38 +520,129 @@ class BaoStockService:
                 (len(stocks),)
             )
     
-            for i in range(last_index, len(stocks)):
-                stock = stocks[i]
-                code = stock["code"]
-                self._sync_status["current"] = i + 1
+            # 4. 批量预取数据库中的已有日期范围
+            logger.info("正在批量预取数据库中的已有日期范围...")
+            db_ranges = {}
+            try:
+                # 仅查询当前股票池中的代码范围
+                range_res = await db.execute("SELECT code, MIN(trade_date), MAX(trade_date) FROM stock_kline_daily GROUP BY code")
+                for r in range_res:
+                    db_ranges[r[0]] = (r[1], r[2])
+                logger.info(f"批量预取完成，获取到 {len(db_ranges)} 只股票的已有范围")
+            except Exception as e:
+                logger.warning(f"批量预取日期范围失败: {e}")
+
+            # 5. 批量预取上市日期 (基于 stock_basic_info 表)
+            logger.info("正在批量预取上市日期...")
+            ipo_dates = {}
+            try:
+                ipo_res = await db.execute("SELECT ts_code, list_date FROM stock_basic_info")
+                for r in ipo_res:
+                    # 转换格式: 000001.SZ -> sz.000001
+                    parts = r[0].split('.')
+                    if len(parts) == 2:
+                        bs_code = f"{parts[1].lower()}.{parts[0]}"
+                        ipo_dates[bs_code] = r[1]
+                logger.info(f"批量预取上市日期完成，共获取 {len(ipo_dates)} 条信息")
+            except Exception as e:
+                logger.warning(f"批量预取上市日期失败: {e}")
+
+            # 6. 筛选真正需要同步的股票，减少协程创建开销
+            stocks_to_sync = []
+            today = datetime.date.today()
+            param_start_date = datetime.datetime.strptime(start_date, "%Y-%m-%d").date()
+            
+            for i, s in enumerate(stocks):
+                if i < last_index: continue
+                code = s["code"]
+                db_min, db_max = db_ranges.get(code, (None, None))
+                ipo_date = ipo_dates.get(code)
                 
-                # 执行同步 (内部已包含增量逻辑)
-                await self.sync_kline_to_db(code=code, start_date=start_date)
+                # 有效开始日期
+                effective_start = param_start_date
+                if ipo_date and effective_start < ipo_date:
+                    effective_start = ipo_date
                 
-                # 每 10 只保存一次持久化进度 (平衡性能与安全性)
-                if (i + 1) % 10 == 0 or (i + 1) == len(stocks):
+                # 检查是否已是最新 (增量同步的核心提速点)
+                if db_max and db_max >= today and db_min and db_min <= effective_start:
+                    continue
+                stocks_to_sync.append((i, s))
+            
+            logger.info(f"全市场检查完成: 总计 {len(stocks)} 只，需要同步 {len(stocks_to_sync)} 只")
+            if not stocks_to_sync:
+                logger.info("所有股票数据已是最新，无需同步")
+                await db.execute("UPDATE sync_progress SET status='completed', last_index=0 WHERE task_name='full_market_sync'")
+                return
+
+            # 7. 并发同步与批量写入
+            loop = asyncio.get_running_loop()
+            sem = asyncio.Semaphore(10)  # 增加并发度至 10 (2个进程 worker + 多个抓取等待)
+            db_buffer = []               # 数据写入缓冲
+            buffer_lock = asyncio.Lock() # 用于同步缓冲操作
+            
+            async def sync_task(idx, stock_info):
+                code = stock_info["code"]
+                async with sem:
+                    # 获取该股票应开始的日期
+                    db_min, db_max = db_ranges.get(code, (None, None))
+                    fetch_start = start_date
+                    if db_max:
+                        fetch_start = (db_max + datetime.timedelta(days=1)).strftime("%Y-%m-%d")
+                    
+                    # 抓取数据 (并发执行网络请求)
+                    result = await asyncio.wait_for(
+                        loop.run_in_executor(
+                            self.process_pool,
+                            baostock_worker.fetch_kline_data,
+                            code,
+                            fetch_start,
+                            ""
+                        ),
+                        timeout=120
+                    )
+                    
+                    if result["success"] and result["data"]:
+                        # 处理结果并加入缓冲区
+                        rows = result["data"]
+                        new_rows = []
+                        for row in rows:
+                            new_rows.append((
+                                row[1], row[0],
+                                float(row[2]) if row[2] else None, float(row[3]) if row[3] else None,
+                                float(row[4]) if row[4] else None, float(row[5]) if row[5] else None,
+                                float(row[6]) if row[6] else None, int(float(row[7])) if row[7] else 0,
+                                float(row[8]) if row[8] else 0, float(row[10]) if row[10] else 0,
+                                float(row[12]) if row[12] else 0, int(row[11]) if row[11] else 1
+                            ))
+                        
+                        async with buffer_lock:
+                            db_buffer.extend(new_rows)
+                            # 缓冲区达到 500 行或任务结束时写入一次数据库
+                            if len(db_buffer) >= 500:
+                                await self._flush_buffer(db_buffer)
+                
+                # 更新索引状态
+                self._sync_status["current"] = idx + 1
+                if (idx + 1) % 10 == 0 or (idx + 1) == len(stocks):
                     await db.execute(
                         "UPDATE sync_progress SET current_code=%s, last_index=%s WHERE task_name='full_market_sync'",
-                        (code, i + 1)
+                        (code, idx + 1)
                     )
-
-                # 每 100 只记录一次日志
-                if (i + 1) % 100 == 0 or (i + 1) == len(stocks):
-                    elapsed = time.time() - self._sync_status["start_time"]
-                    status_msg = f"已处理: {i+1}/{len(stocks)}, 正在同步: {code}, 进度: {(i+1)/len(stocks)*100:.1f}%"
-                    logger.info(f"全市场同步进度: {status_msg}, 已耗时: {elapsed:.2f}s")
-                    
-                    # 更新任务摘要 (V1.2+ 原生支持)
-                    from app.scheduler import get_scheduler_instance
-                    scheduler = get_scheduler_instance()
-                    if scheduler:
-                        scheduler.update_job_summary("daily_kline_sync", status_msg)
                 
-                await asyncio.sleep(0.01)
+                if (idx + 1) % 100 == 0:
+                    logger.info(f"全市场同步进度: {idx+1}/{len(stocks)} ({(idx+1)/len(stocks)*100:.1f}%)")
+
+            # 启动任务
+            tasks = [sync_task(idx, s) for idx, s in stocks_to_sync]
+            await asyncio.gather(*tasks)
+            
+            # 最后刷新缓冲
+            if db_buffer:
+                await self._flush_buffer(db_buffer)
 
             # 完成任务
             await db.execute("UPDATE sync_progress SET status='completed', last_index=0 WHERE task_name='full_market_sync'")
-            logger.info(f"全市场同步任务圆满完成! 共处理 {len(stocks)} 只股票")
+            logger.info(f"全市场同步任务圆满完成! 处理了 {len(stocks_to_sync)} 只股票的新数据")
             
         except Exception as e:
             await db.execute("UPDATE sync_progress SET status='failed' WHERE task_name='full_market_sync'")
@@ -460,6 +650,27 @@ class BaoStockService:
         finally:
             self._sync_status["running"] = False
             self._sync_status["last_synced"] = time.strftime("%Y-%m-%d %H:%M:%S")
+
+    async def _flush_buffer(self, buffer: list):
+        """批量写入数据库的核心方法 (MySQL 5.7 兼容)"""
+        if not buffer: return
+        sql = """
+        INSERT INTO stock_kline_daily 
+            (code, trade_date, open, high, low, close, pre_close, volume, amount, turnover, pct_chg, trade_status)
+        VALUES 
+            (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+        ON DUPLICATE KEY UPDATE
+            open=VALUES(open), high=VALUES(high), low=VALUES(low), close=VALUES(close),
+            pre_close=VALUES(pre_close), volume=VALUES(volume), amount=VALUES(amount),
+            turnover=VALUES(turnover), pct_chg=VALUES(pct_chg), trade_status=VALUES(trade_status)
+        """
+        try:
+            await db.execute_many(sql, buffer)
+            logger.debug(f"批量写入 {len(buffer)} 条数据到数据库")
+            buffer.clear()
+        except Exception as e:
+            logger.error(f"批量写入数据库失败: {e}")
+            buffer.clear()
 
     async def reset_sync_progress(self) -> None:
         """强制重置同步进度，下次同步将从头开始"""
@@ -677,7 +888,10 @@ class BaoStockService:
         code: str,
         start_date: str = "1990-01-01",
         end_date: str = "",
-        use_db_latest: bool = True
+        use_db_latest: bool = True,
+        pre_min_date: Optional[datetime.date] = None,
+        pre_max_date: Optional[datetime.date] = None,
+        pre_ipo_date: Optional[datetime.date] = None
     ) -> Dict[str, Any]:
         """同步复权因子到 MySQL (智能增量逻辑)"""
         start_process = time.time()
@@ -692,20 +906,30 @@ class BaoStockService:
         
         if use_db_latest:
             try:
-                res = await db.execute(
-                    "SELECT MIN(adjust_date), MAX(adjust_date) FROM stock_adjust_factor WHERE code=%s", 
-                    (code,)
-                )
-                if res and res[0][0]:
-                    db_min_date = res[0][0]
-                    db_max_date = res[0][1]
+                db_min_date = pre_min_date
+                db_max_date = pre_max_date
+                
+                if db_min_date is None:
+                    res = await db.execute(
+                        "SELECT MIN(adjust_date), MAX(adjust_date) FROM stock_adjust_factor WHERE code=%s", 
+                        (code,)
+                    )
+                    if res and res[0][0]:
+                        db_min_date = res[0][0]
+                        db_max_date = res[0][1]
+
+                if db_min_date:
                     param_start = datetime.datetime.strptime(original_start_date, "%Y-%m-%d").date()
                     today = datetime.date.today()
 
                     # 尝试获取上市日期以优化判断
-                    ipo_date_str = await self.get_stock_listing_date(code)
-                    if ipo_date_str:
-                         ipo_date = datetime.datetime.strptime(ipo_date_str, "%Y-%m-%d").date()
+                    ipo_date = pre_ipo_date
+                    if ipo_date is None:
+                        ipo_date_str = await self.get_stock_listing_date(code)
+                        if ipo_date_str:
+                             ipo_date = datetime.datetime.strptime(ipo_date_str, "%Y-%m-%d").date()
+                    
+                    if ipo_date:
                          if param_start < ipo_date:
                              param_start = ipo_date
                     
@@ -854,36 +1078,116 @@ class BaoStockService:
                 (len(stocks),)
             )
     
-            for i in range(last_index, len(stocks)):
-                stock = stocks[i]
-                code = stock["code"]
-                self._adjust_sync_status["current"] = i + 1
+            # 4. 批量预取数据库中的已有日期范围
+            logger.info("正在批量预取复权因子已有日期范围...")
+            db_ranges = {}
+            try:
+                range_res = await db.execute("SELECT code, MIN(adjust_date), MAX(adjust_date) FROM stock_adjust_factor GROUP BY code")
+                for r in range_res:
+                    db_ranges[r[0]] = (r[1], r[2])
+            except Exception as e:
+                logger.warning(f"批量预取复权因子范围失败: {e}")
+
+            # 5. 批量预取上市日期
+            logger.info("正在批量预取上市日期...")
+            ipo_dates = {}
+            try:
+                ipo_res = await db.execute("SELECT ts_code, list_date FROM stock_basic_info")
+                for r in ipo_res:
+                    parts = r[0].split('.')
+                    if len(parts) == 2:
+                        bs_code = f"{parts[1].lower()}.{parts[0]}"
+                        ipo_dates[bs_code] = r[1]
+            except Exception as e:
+                logger.warning(f"批量预取上市日期失败: {e}")
+
+            # 4. 筛选真正需要同步的股票
+            stocks_to_sync = []
+            today = datetime.date.today()
+            param_start_date = datetime.datetime.strptime(start_date, "%Y-%m-%d").date()
+            
+            for i, s in enumerate(stocks):
+                if i < last_index: continue
+                code = s["code"]
+                db_min, db_max = db_ranges.get(code, (None, None))
+                ipo_date = ipo_dates.get(code)
                 
-                await self.sync_adjust_factor_to_db(code=code, start_date=start_date)
+                effective_start = param_start_date
+                if ipo_date and effective_start < ipo_date:
+                    effective_start = ipo_date
                 
-                # 每 10 只保存一次持久化进度
-                if (i + 1) % 10 == 0 or (i + 1) == len(stocks):
+                if db_max and db_max >= today and db_min and db_min <= effective_start:
+                    continue
+                stocks_to_sync.append((i, s))
+            
+            logger.info(f"全市场复权因子检查完成: 总计 {len(stocks)} 只，需要同步 {len(stocks_to_sync)} 只")
+            if not stocks_to_sync:
+                logger.info("所有股票复权因子已是最新，无需同步")
+                await db.execute("UPDATE sync_progress SET status='completed', last_index=0 WHERE task_name='full_adjust_factor_sync'")
+                return
+
+            # 6. 并发控制
+            loop = asyncio.get_running_loop()
+            sem = asyncio.Semaphore(10)
+            db_buffer = []
+            buffer_lock = asyncio.Lock()
+            
+            async def adjust_sync_task(idx, stock_info):
+                code = stock_info["code"]
+                async with sem:
+                    db_min, db_max = db_ranges.get(code, (None, None))
+                    fetch_start = start_date
+                    if db_max:
+                        fetch_start = (db_max + datetime.timedelta(days=1)).strftime("%Y-%m-%d")
+                    
+                    # 抓取复权因子数据
+                    result = await asyncio.wait_for(
+                        loop.run_in_executor(
+                            self.process_pool,
+                            baostock_worker.fetch_adjust_factor_data,
+                            code,
+                            fetch_start,
+                            ""
+                        ),
+                        timeout=120
+                    )
+                    
+                    if result["success"] and result["data"]:
+                        rows = result["data"]
+                        new_rows = []
+                        for row in rows:
+                            new_rows.append((
+                                row[0], row[1],
+                                float(row[2]) if row[2] else None,
+                                float(row[3]) if row[3] else None,
+                                float(row[4]) if row[4] else None
+                            ))
+                        
+                        async with buffer_lock:
+                            db_buffer.extend(new_rows)
+                            if len(db_buffer) >= 500:
+                                await self._flush_adjust_buffer(db_buffer)
+                
+                self._adjust_sync_status["current"] = idx + 1
+                if (idx + 1) % 10 == 0 or (idx + 1) == len(stocks):
                     await db.execute(
                         "UPDATE sync_progress SET current_code=%s, last_index=%s WHERE task_name='full_adjust_factor_sync'",
-                        (code, i + 1)
+                        (code, idx + 1)
                     )
 
-                # 每 100 只记录一次日志
-                if (i + 1) % 100 == 0 or (i + 1) == len(stocks):
-                    elapsed = time.time() - self._adjust_sync_status["start_time"]
-                    status_msg = f"已处理: {i+1}/{len(stocks)}, 正在同步: {code}, 进度: {(i+1)/len(stocks)*100:.1f}%"
-                    logger.info(f"全市场复权因子同步进度: {status_msg}, 已耗时: {elapsed:.2f}s")
-                    
-                    from app.scheduler import get_scheduler_instance
-                    scheduler = get_scheduler_instance()
-                    if scheduler:
-                        scheduler.update_job_summary("daily_adjust_factor_sync", status_msg)
-                
-                await asyncio.sleep(0.01)
+                if (idx + 1) % 100 == 0:
+                    logger.info(f"复权因子同步进度: {idx+1}/{len(stocks)} ({(idx+1)/len(stocks)*100:.1f}%)")
+
+            # 启动并发
+            tasks = [adjust_sync_task(idx, s) for idx, s in stocks_to_sync]
+            await asyncio.gather(*tasks)
+            
+            if db_buffer:
+                await self._flush_adjust_buffer(db_buffer)
 
             # 完成任务
             await db.execute("UPDATE sync_progress SET status='completed', last_index=0 WHERE task_name='full_adjust_factor_sync'")
-            logger.info(f"全市场复权因子同步任务圆满完成! 共处理 {len(stocks)} 只股票")
+            logger.info(f"全市场复权因子同步任务圆满完成! 处理了 {len(stocks_to_sync)} 只股票的新数据")
             
         except Exception as e:
             await db.execute("UPDATE sync_progress SET status='failed' WHERE task_name='full_adjust_factor_sync'")
@@ -891,6 +1195,27 @@ class BaoStockService:
         finally:
             self._adjust_sync_status["running"] = False
             self._adjust_sync_status["last_synced"] = time.strftime("%Y-%m-%d %H:%M:%S")
+
+    async def _flush_adjust_buffer(self, buffer: list):
+        """批量写入复权因子的核心方法"""
+        if not buffer: return
+        sql = """
+        INSERT INTO stock_adjust_factor 
+            (code, adjust_date, fore_adjust_factor, back_adjust_factor, adjust_factor)
+        VALUES 
+            (%s, %s, %s, %s, %s)
+        ON DUPLICATE KEY UPDATE
+            fore_adjust_factor=VALUES(fore_adjust_factor), 
+            back_adjust_factor=VALUES(back_adjust_factor), 
+            adjust_factor=VALUES(adjust_factor)
+        """
+        try:
+            await db.execute_many(sql, buffer)
+            logger.debug(f"批量写入 {len(buffer)} 条复权因子数据到数据库")
+            buffer.clear()
+        except Exception as e:
+            logger.error(f"批量写入复权因子失败: {e}")
+            buffer.clear()
 
     async def get_all_container_jobs(self) -> List[Dict[str, Any]]:
         """聚合全系统所有容器的任务列表"""
