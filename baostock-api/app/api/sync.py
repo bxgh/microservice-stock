@@ -165,3 +165,9 @@ async def verify_daily_sync(
     service = request.app.state.baostock_service
     report = await service.verify_daily_data_completeness(target_date=date)
     return report
+
+@router.get("/sync/verify/weekly")
+async def verify_weekly_sync(request: Request):
+    """获取本周数据同步历史分布式统计 (适配 V1.2)"""
+    service = request.app.state.baostock_service
+    return await service.verify_weekly_sync_history()

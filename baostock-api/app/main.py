@@ -7,7 +7,7 @@ from fastapi.responses import JSONResponse
 
 import baostock as bs
 
-from app.api import kline, index, valuation, sync, scheduler as scheduler_api
+from app.api import kline, index, valuation, sync, scheduler as scheduler_api, logs
 from app.utils.logger import setup_logger
 from app.utils.database import db
 from app.services.baostock_service import BaoStockService
@@ -187,3 +187,4 @@ app.include_router(index.router, prefix="/api/v1", tags=["指数与行业"])
 app.include_router(valuation.router, prefix="/api/v1", tags=["估值数据"])
 app.include_router(sync.router, prefix="/api/v1", tags=["数据同步"])
 app.include_router(scheduler_api.router, prefix="/api/v1", tags=["任务调度"])
+app.include_router(logs.router, prefix="/api/v1", tags=["执行日志"])

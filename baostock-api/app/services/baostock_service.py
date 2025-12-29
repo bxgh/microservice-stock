@@ -39,20 +39,31 @@ class BaoStockService:
             "start_time": 0
         }
         
-        # 初始化线程池，取代进程池以节省内存空间 (设置为 1 以遵守用户对资源的限制)
         from concurrent.futures import ThreadPoolExecutor
         self.thread_pool = ThreadPoolExecutor(max_workers=1)
-        logger.info("初始化线程池 (ThreadPoolExecutor, 1 worker)...")
+        
+        # 股票列表缓存 (避免频繁查询耗时)
+        self._all_a_shares_cache = {
+            "data": [],
+            "last_updated": 0,
+            "date_string": None
+        }
+        logger.info("初始化线程池与股票列表缓存...")
 
     async def get_all_a_shares(self) -> List[Dict[str, str]]:
-        """获取全市场 A 股代码列表 (排除指数) - 带回溯重试"""
+        """获取全市场 A 股代码列表 (排除指数) - 带回溯重试与缓存"""
         import datetime
+        now_ts = time.time()
         
-        for i in range(10): # Try up to 10 days back
+        # 1. 检查缓存 (1小时内有效)
+        if self._all_a_shares_cache["data"] and (now_ts - self._all_a_shares_cache["last_updated"] < 3600):
+            return self._all_a_shares_cache["data"]
+            
+        for i in range(5): # 缩短回溯深度至 5 天，避免超时
             target_date = (datetime.date.today() - datetime.timedelta(days=i)).strftime("%Y-%m-%d")
             
             try:
-                rs = await self._execute_with_retry(bs.query_all_stock, day=target_date)
+                rs = await self._execute_with_retry(bs.query_all_stock, day=target_date, timeout=10)
                 if rs.error_code != "0":
                     if i == 0:
                         logger.warning(f"无法获取日期 {target_date} 的股票列表: {rs.error_msg}")
@@ -62,7 +73,6 @@ class BaoStockService:
                     data = []
                     while rs_obj.next():
                         row = rs_obj.get_row_data()
-                        # 简单过滤: 忽略指数 (通常名称包含指数或代码特征)
                         code = row[0]
                         name = row[2]
                         if code.startswith(("sh.6", "sz.0", "sz.3", "sh.688", "bj.")):
@@ -71,6 +81,12 @@ class BaoStockService:
                 
                 stocks = await asyncio.to_thread(fetch_all, rs)
                 if len(stocks) > 0:
+                    # 写入缓存
+                    self._all_a_shares_cache = {
+                        "data": stocks,
+                        "last_updated": now_ts,
+                        "date_string": target_date
+                    }
                     if i > 0:
                         logger.info(f"回溯 {i} 天获取股票列表成功，日期: {target_date}，共 {len(stocks)} 只")
                     else:
@@ -80,11 +96,10 @@ class BaoStockService:
                     if i == 0:
                          logger.warning(f"日期 {target_date} 返回 0 只股票，尝试回溯...")
             except Exception as e:
-                 logger.error(f"获取全市场股票列表异常 (日期 {target_date}): {e}")
-                 # continue to next day
+                logger.error(f"获取全市场股票列表异常 (日期 {target_date}): {e}")
         
         logger.error("Failed to fetch stock list after multiple backoff attempts")
-        return []
+        return self._all_a_shares_cache["data"] if self._all_a_shares_cache["data"] else []
         
     async def _login(self):
         """线程安全的登录方法 (假设外部已持有 lock)"""
@@ -103,14 +118,14 @@ class BaoStockService:
 
     async def _execute_with_retry(self, func, *args, **kwargs):
         """执行 BaoStock 查询并带有自动重试机制"""
-        timeout = kwargs.pop("timeout", 45)  # 默认 45 秒超时
+        timeout = kwargs.pop("timeout", 20)  # 缩短至 20 秒，适配微信端
         
         async with self.lock:
             await self._ensure_connection()
             try:
                 rs = await asyncio.wait_for(asyncio.to_thread(func, *args, **kwargs), timeout=timeout)
                 
-                # 检测连接类错误
+                # 检测连接类错误 (包含 UnicodeDecodeError 触发的异常情况)
                 if rs.error_code != "0" and any(msg in rs.error_msg for msg in ["网络", "连接", "reset", "Broken pipe", "用户未登录", "未登录", "网络接收错误", "接收数据异常"]):
                     logger.warning(f"检测到连接问题或认证失效({rs.error_msg})，尝试重新登录并重试...")
                     self._is_logged_in = False
@@ -120,13 +135,12 @@ class BaoStockService:
                 return rs
             except asyncio.TimeoutError:
                 logger.error(f"BaoStock 查询超时 ({timeout}s)")
-                # 尝试重置连接以解除潜在的阻塞状态
                 self._is_logged_in = False
                 raise Exception(f"BaoStock Query Timeout ({timeout}s)")
-                
-            except Exception as e:
-                if any(msg in str(e).lower() for msg in ["broken pipe", "connection", "reset"]):
-                    logger.warning(f"捕获到连接异常: {e}，尝试重新登录并重试...")
+            except (UnicodeDecodeError, Exception) as e:
+                # 捕获编码异常或连接重置，通常意味着 Pipe 损坏，需要重连
+                if any(msg in str(e).lower() for msg in ["broken pipe", "connection", "reset", "decode", "codec"]):
+                    logger.warning(f"捕获到连接或编码异常: {e}，尝试重新登录并重试...")
                     self._is_logged_in = False
                     await self._ensure_connection()
                     try:
@@ -393,14 +407,20 @@ class BaoStockService:
         })
 
         logger.info(f"开始全市场同步任务，目标共 {len(stocks)} 只股票")
-
+    
+        # 立即上报初始摘要
+        from app.scheduler import get_scheduler_instance
+        scheduler = get_scheduler_instance()
+        if scheduler:
+            scheduler.update_job_summary("daily_kline_sync", f"准备中: 0/{len(stocks)}")
+    
         try:
             # 修改数据库状态为 running
             await db.execute(
                 "UPDATE sync_progress SET status='running', total_count=%s WHERE task_name='full_market_sync'",
                 (len(stocks),)
             )
-
+    
             for i in range(last_index, len(stocks)):
                 stock = stocks[i]
                 code = stock["code"]
@@ -419,7 +439,14 @@ class BaoStockService:
                 # 每 100 只记录一次日志
                 if (i + 1) % 100 == 0 or (i + 1) == len(stocks):
                     elapsed = time.time() - self._sync_status["start_time"]
-                    logger.info(f"全市场同步进度: {i+1}/{len(stocks)} ({(i+1)/len(stocks)*100:.2f}%), 已耗时: {elapsed:.2f}s")
+                    status_msg = f"已处理: {i+1}/{len(stocks)}, 正在同步: {code}, 进度: {(i+1)/len(stocks)*100:.1f}%"
+                    logger.info(f"全市场同步进度: {status_msg}, 已耗时: {elapsed:.2f}s")
+                    
+                    # 更新任务摘要 (V1.2+ 原生支持)
+                    from app.scheduler import get_scheduler_instance
+                    scheduler = get_scheduler_instance()
+                    if scheduler:
+                        scheduler.update_job_summary("daily_kline_sync", status_msg)
                 
                 await asyncio.sleep(0.01)
 
@@ -814,13 +841,19 @@ class BaoStockService:
         })
 
         logger.info(f"开始全市场复权因子同步任务，目标共 {len(stocks)} 只股票")
-
+    
+        # 立即上报初始摘要
+        from app.scheduler import get_scheduler_instance
+        scheduler = get_scheduler_instance()
+        if scheduler:
+            scheduler.update_job_summary("daily_adjust_factor_sync", f"准备中: 0/{len(stocks)}")
+    
         try:
             await db.execute(
                 "UPDATE sync_progress SET status='running', total_count=%s WHERE task_name='full_adjust_factor_sync'",
                 (len(stocks),)
             )
-
+    
             for i in range(last_index, len(stocks)):
                 stock = stocks[i]
                 code = stock["code"]
@@ -838,7 +871,13 @@ class BaoStockService:
                 # 每 100 只记录一次日志
                 if (i + 1) % 100 == 0 or (i + 1) == len(stocks):
                     elapsed = time.time() - self._adjust_sync_status["start_time"]
-                    logger.info(f"全市场复权因子同步进度: {i+1}/{len(stocks)} ({(i+1)/len(stocks)*100:.2f}%), 已耗时: {elapsed:.2f}s")
+                    status_msg = f"已处理: {i+1}/{len(stocks)}, 正在同步: {code}, 进度: {(i+1)/len(stocks)*100:.1f}%"
+                    logger.info(f"全市场复权因子同步进度: {status_msg}, 已耗时: {elapsed:.2f}s")
+                    
+                    from app.scheduler import get_scheduler_instance
+                    scheduler = get_scheduler_instance()
+                    if scheduler:
+                        scheduler.update_job_summary("daily_adjust_factor_sync", status_msg)
                 
                 await asyncio.sleep(0.01)
 
@@ -888,7 +927,7 @@ class BaoStockService:
         return all_jobs
 
     async def perform_remote_job_action(self, container: str, job_id: str, action: str) -> bool:
-        """转发任务操作指令到指定容器"""
+        """转发任务操作指令到指定容器 (适配 V1.2 端点)"""
         if container == "baostock-api":
             from app.scheduler import get_scheduler_instance
             scheduler = get_scheduler_instance()
@@ -898,7 +937,7 @@ class BaoStockService:
             if action == "run": return await scheduler.run_job_now(job_id)
             return False
             
-        # 转发到远程容器
+        # 转发到远程容器: POST /scheduler/jobs/{id}/{action}
         url = f"http://{container}:8000/api/v1/scheduler/jobs/{job_id}/{action}"
         async with httpx.AsyncClient(timeout=10.0) as client:
             try:
@@ -907,6 +946,109 @@ class BaoStockService:
             except Exception as e:
                 logger.error(f"转发操作 {action} 到 {container} 失败: {e}")
                 return False
+
+    async def proxy_container_job_logs(self, container: str, job_id: str, lines: int = 50) -> Dict[str, Any]:
+        """抓取指定容器的任务日志流 (适配 V1.2)"""
+        if container == "baostock-api":
+            from app.scheduler import get_scheduler_instance
+            scheduler = get_scheduler_instance()
+            if not scheduler: return {"logs": ["调度器未初始化"], "summary": "未就绪"}
+            return await scheduler.get_job_logs(job_id, limit=lines)
+            
+        # 转发到远程容器获取日志
+        url = f"http://{container}:8000/api/v1/scheduler/jobs/{job_id}/logs?lines={lines}"
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            try:
+                resp = await client.get(url)
+                if resp.status_code == 200:
+                    data = resp.json()
+                    # 是否已经是 V1.2+ 的结构 (包含 summary 字段)
+                    if isinstance(data, dict) and "summary" in data:
+                        return data
+                    # 如果不是，则手动包装 (兼容旧版本或异常格式)
+                    return {
+                        "logs": data.get("logs", []) if isinstance(data, dict) else [],
+                        "summary": "解析成功"
+                    }
+                return {"logs": [f"远程获取日志失败: {resp.status_code}"], "summary": "未知"}
+            except Exception as e:
+                logger.error(f"代理抓取 {container} 日志失败: {e}")
+                return {"logs": [f"连接远程容器失败: {e}"], "summary": "连接失败"}
+
+    async def verify_weekly_sync_history(self) -> Dict[str, Any]:
+        """获取本周数据同步历史分布式统计 (适配 V1.2) - 对比 ClickHouse 和 MySQL 数据"""
+        try:
+            # 获取最近 7 天的日期范围
+            today = datetime.date.today()
+            seven_days_ago = today - datetime.timedelta(days=7)
+            
+            start_str = seven_days_ago.strftime("%Y-%m-%d")
+            end_str = today.strftime("%Y-%m-%d")
+            
+            # 1. 从执行日志获取 ClickHouse 同步数据
+            clickhouse_sql = """
+                SELECT DATE(execution_time) as exec_date, 
+                       SUM(records_processed) as total_records,
+                       MAX(execution_time) as last_exec_time
+                FROM sync_execution_logs 
+                WHERE task_name = 'kline_daily_sync'
+                  AND DATE(execution_time) >= %s 
+                  AND DATE(execution_time) <= %s
+                GROUP BY DATE(execution_time)
+                ORDER BY exec_date ASC
+            """
+            clickhouse_rows = await db.execute(clickhouse_sql, (start_str, end_str))
+            
+            clickhouse_history = []
+            for row in clickhouse_rows:
+                clickhouse_history.append({
+                    "date": row[0].strftime("%Y-%m-%d 08:00:00") if isinstance(row[0], (datetime.date, datetime.datetime)) else f"{row[0]} 08:00:00",
+                    "count": row[1],
+                    "last_sync_time": row[2].strftime("%Y-%m-%d %H:%M:%S") if row[2] else None
+                })
+            
+            # 2. 从 MySQL 获取实际存储的 K线数据
+            mysql_sql = """
+                SELECT trade_date, COUNT(DISTINCT code) as count 
+                FROM stock_kline_daily USE INDEX (idx_trade_date)
+                WHERE trade_date >= %s AND trade_date <= %s
+                GROUP BY trade_date 
+                ORDER BY trade_date ASC
+            """
+            mysql_rows = await db.execute(mysql_sql, (start_str, end_str))
+            
+            mysql_history = []
+            for row in mysql_rows:
+                mysql_history.append({
+                    "date": f"{row[0].strftime('%Y-%m-%d')} 08:00:00" if isinstance(row[0], (datetime.date, datetime.datetime)) else f"{row[0]} 08:00:00",
+                    "count": row[1]
+                })
+            
+            # 3. 复权因子数据统计
+            adjust_sql = """
+                SELECT adjust_date, COUNT(DISTINCT code) as count 
+                FROM stock_adjust_factor USE INDEX (idx_adjust_date)
+                WHERE adjust_date >= %s AND adjust_date <= %s
+                GROUP BY adjust_date 
+                ORDER BY adjust_date ASC
+            """
+            adjust_rows = await db.execute(adjust_sql, (start_str, end_str))
+            
+            adjust_history = []
+            for row in adjust_rows:
+                adjust_history.append({
+                    "date": f"{row[0].strftime('%Y-%m-%d')} 08:00:00" if isinstance(row[0], (datetime.date, datetime.datetime)) else f"{row[0]} 08:00:00",
+                    "count": row[1]
+                })
+            
+            return {
+                "clickhouse": clickhouse_history,  # ClickHouse 同步的数据
+                "mysql": mysql_history,            # MySQL 实际存储的数据
+                "adjust_factor": adjust_history
+            }
+        except Exception as e:
+            logger.error(f"查询周同步历史失败: {e}")
+            return {"clickhouse": [], "mysql": [], "adjust_factor": [], "error": str(e)}
 
     async def verify_daily_data_completeness(self, target_date: str = None) -> Dict[str, Any]:
         """校验每日数据下载完整性"""

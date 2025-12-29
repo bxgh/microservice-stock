@@ -1,45 +1,21 @@
-"""
-调度器管理 API
-"""
-from typing import Optional
-from fastapi import APIRouter, HTTPException, Request
+from typing import Optional, List
+from fastapi import APIRouter, HTTPException, Request, Query
+from app.scheduler import get_scheduler_instance
 
 router = APIRouter()
 
-
-@router.get("/scheduler/status")
-async def get_scheduler_status(request: Request):
-    """获取调度器状态"""
-    from app.scheduler import get_scheduler_instance
-    
-    scheduler = get_scheduler_instance()
-    if not scheduler:
-        raise HTTPException(status_code=503, detail="调度器未初始化")
-    
-    return {
-        "running": scheduler.is_running,
-        "timezone": scheduler.timezone,
-        "jobs_count": len(scheduler.get_jobs())
-    }
-
-
 @router.get("/scheduler/jobs")
 async def list_jobs(request: Request):
-    """获取全系统聚合任务列表"""
+    """获取跨容器聚合任务列表 (符合规范 V1.2)"""
     service = request.app.state.baostock_service
     jobs = await service.get_all_container_jobs()
     return {
-        "total": len(jobs),
         "jobs": jobs
     }
 
-
 @router.post("/scheduler/jobs/{job_id}/{action}")
-async def handle_job_action(job_id: str, action: str, request: Request, container: str = "baostock-api"):
-    """
-    处理任务操作 (pause, resume, run)
-    支持跨容器转发
-    """
+async def handle_job_action(job_id: str, action: str, request: Request, container: str = Query("baostock-api")):
+    """处理任务动作 (pause, resume, run)"""
     if action not in ["pause", "resume", "run"]:
         raise HTTPException(status_code=400, detail="不支持的操作")
         
@@ -47,6 +23,12 @@ async def handle_job_action(job_id: str, action: str, request: Request, containe
     success = await service.perform_remote_job_action(container, job_id, action)
     
     if not success:
-        raise HTTPException(status_code=400, detail=f"对容器 {container} 的任务 {job_id} 执行 {action} 失败")
-    
-    return {"message": f"操作 {action} 已成功发送至 {container}"}
+        raise HTTPException(status_code=400, detail="操作执行失败")
+        
+    return {"status": "ok", "message": f"Action {action} sent to {container}"}
+
+@router.get("/scheduler/jobs/{job_id}/logs")
+async def get_job_logs(job_id: str, request: Request, container: str = Query("baostock-api"), lines: int = Query(50)):
+    """获取任务实时日志 (支持跨容器转发 + Summary 提取)"""
+    service = request.app.state.baostock_service
+    return await service.proxy_container_job_logs(container, job_id, lines)

@@ -51,4 +51,4 @@ async def get_job_logs(job_id: str, lines: int = Query(50)):
         return {"logs": ["调度器未就绪"], "summary": "未就绪"}
     
     # scheduler.get_job_logs 已经返回 {"logs": [...], "summary": "..."}
-    return await scheduler.get_job_logs(job_id, limit=lines)
+    return scheduler.get_job_logs(job_id, limit=lines)

@@ -1,8 +1,10 @@
 import logging
 import json
+import os
 from datetime import datetime
 import pytz
 from contextvars import ContextVar
+from logging.handlers import RotatingFileHandler
 
 CST = pytz.timezone("Asia/Shanghai")
 
@@ -22,7 +24,6 @@ class JSONFormatter(logging.Formatter):
             "request_id": request_id
         }
         
-        # 提取 extra 参数中的数据
         if hasattr(record, "extra_data"):
             log_record.update(record.extra_data)
             
@@ -32,11 +33,30 @@ def setup_logger(name: str, level=logging.INFO):
     logger = logging.getLogger(name)
     logger.setLevel(level)
     
-    # 避免重复添加 handler
     if not logger.handlers:
-        handler = logging.StreamHandler()
-        handler.setFormatter(JSONFormatter())
-        logger.addHandler(handler)
+        # 1. 控制台输出
+        console_handler = logging.StreamHandler()
+        console_handler.setFormatter(JSONFormatter())
+        logger.addHandler(console_handler)
+        
+        # 2. 文件输出 (为任务日志流提供基础)
+        log_dir = "/app/logs"
+        if not os.path.exists(log_dir):
+            try:
+                os.makedirs(log_dir, exist_ok=True)
+            except:
+                # 兼容非 Docker 环境
+                os.makedirs("logs", exist_ok=True)
+                log_dir = "logs"
+                
+        file_handler = RotatingFileHandler(
+            os.path.join(log_dir, "app.log"),
+            maxBytes=10*1024*1024, # 10MB
+            backupCount=5,
+            encoding="utf-8"
+        )
+        file_handler.setFormatter(JSONFormatter())
+        logger.addHandler(file_handler)
         
     return logger
 
