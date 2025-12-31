@@ -7,10 +7,11 @@ from fastapi.responses import JSONResponse
 
 import baostock as bs
 
-from app.api import kline, index, valuation, sync, scheduler as scheduler_api, logs
+from app.api import kline, index, valuation, sync, scheduler as scheduler_api, logs, collect
 from app.utils.logger import setup_logger
 from app.utils.database import db
 from app.services.baostock_service import BaoStockService
+from app.services.collection_service import CollectionService
 
 # 初始化日志
 logger = setup_logger("baostock-api")
@@ -21,6 +22,10 @@ async def lifespan(app: FastAPI):
     # 初始化 Service
     service = BaoStockService()
     app.state.baostock_service = service
+    
+    # 初始化 CollectionService
+    collection_service = CollectionService(service)
+    app.state.collection_service = collection_service
     
     # 尝试初始登录 (非强制)
     try:
@@ -39,36 +44,40 @@ async def lifespan(app: FastAPI):
     try:
         from app.scheduler import TaskScheduler, set_scheduler_instance
         from app.scheduler.config import SCHEDULER_CONFIG
-        from app.scheduler.jobs import (
-            daily_comprehensive_sync_job,
-            health_check_job
-        )
+        from app.scheduler import jobs as job_funcs
         
         if SCHEDULER_CONFIG["enabled"]:
             scheduler = TaskScheduler(timezone=SCHEDULER_CONFIG["timezone"])
             set_scheduler_instance(scheduler)
             
-            # 注册定时任务 - 采用综合串行流水线模式 (18:30)
-            scheduler.add_daily_job(
-                func=daily_comprehensive_sync_job,
-                hour=18,
-                minute=30,
-                job_id="daily_comprehensive_sync"
-            )
-            
-            health_config = SCHEDULER_CONFIG["jobs"]["health_check"]
-            if health_config["enabled"]:
-                scheduler.add_interval_job(
-                    func=health_check_job,
-                    seconds=health_config["interval_seconds"],
-                    job_id="hourly_health_check"
-                )
+            # 动态注册配置的任务
+            for job_name, config in SCHEDULER_CONFIG["jobs"].items():
+                if not config.get("enabled"): continue
+                
+                # 寻找匹配的函数
+                func = getattr(job_funcs, f"{job_name}_job", None)
+                if not func:
+                    logger.warning(f"找不到任务解析函数: {job_name}_job")
+                    continue
+                
+                if "hour" in config:
+                    scheduler.add_daily_job(
+                        func=func,
+                        hour=config["hour"],
+                        minute=config.get("minute", 0),
+                        job_id=job_name
+                    )
+                elif "interval_seconds" in config:
+                    scheduler.add_interval_job(
+                        func=func,
+                        seconds=config["interval_seconds"],
+                        job_id=job_name
+                    )
             
             await scheduler.start()
-            logger.info("任务调度器已启动")
-            logger.info(f"已配置的调度任务: {[job['id'] for job in scheduler.get_jobs()]}")
+            logger.info("任务调度器配置加载完毕")
     except Exception as e:
-        logger.error(f"调度器初始化失败: {e}", exc_info=True)
+        logger.error(f"调度器启动失败: {e}", exc_info=True)
 
     yield
     
@@ -175,4 +184,5 @@ app.include_router(index.router, prefix="/api/v1", tags=["指数与行业"])
 app.include_router(valuation.router, prefix="/api/v1", tags=["估值数据"])
 app.include_router(sync.router, prefix="/api/v1", tags=["数据同步"])
 app.include_router(scheduler_api.router, prefix="/api/v1", tags=["任务调度"])
+app.include_router(collect.router, prefix="/api/v1", tags=["远程修复"])
 app.include_router(logs.router, prefix="/api/v1", tags=["执行日志"])

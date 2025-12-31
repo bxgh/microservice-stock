@@ -123,46 +123,54 @@ class BaoStockService:
 
     async def sync_daily_increment(self, target_date: Optional[str] = None) -> Dict[str, Any]:
         """全市场每日增量同步 (符合收盘批处理原则)"""
-        if self._sync_status["running"]:
-             return {"success": False, "error": "任务已在运行"}
-
-        # 1. 确定目标日期
-        sync_date = await self.get_last_trading_day(target_date)
-        if not sync_date:
-            return {"success": False, "error": "无法确定目标交易日"}
+        # 1. 确定目标日期并立即执行运行状态保护 (原子操作)
+        async with self.lock:
+            if self._sync_status["running"]:
+                return {"success": False, "error": "任务已在运行"}
+            self._sync_status["running"] = True
+            self._sync_status["start_time"] = time.time()
         
-        logger.info(f"【增量同步】启动。目标日期: {sync_date}")
-
-        # 2. 抽样校验：检查数据提供方是否已发布当日数据 (以浦发银行为例)
-        sample_code = "sh.600000"
         try:
-            # 这里的 sync_kline_to_db 必须禁用 db_latest 检查以强制向 BaoStock 发起请求
+            sync_date = await self.get_last_trading_day(target_date)
+            if not sync_date:
+                return {"success": False, "error": "无法确定目标交易日"}
+            
+            logger.info(f"【增量同步】启动。目标日期: {sync_date}")
+
+            # 2. 抽样校验：检查数据提供方是否已发布当日数据
+            sample_code = "sh.600000"
             sample_res = await self.sync_kline_to_db(sample_code, start_date=sync_date, end_date=sync_date, use_db_latest=False)
             if not sample_res.get("success") or sample_res.get("count", 0) == 0:
                 logger.warning(f"数据提供方尚未发布 {sync_date} 的日线数据，任务中止")
                 return {"success": False, "error": "数据源未更新", "target_date": sync_date}
+
+            # 3. 全局统计：检查本系统数据库中该日数据的覆盖率
+            res = await db.execute("SELECT COUNT(*) FROM stock_kline_daily WHERE trade_date = %s", (sync_date,))
+            existing_count = res[0][0] if res else 0
+            
+            stocks = await self.get_all_a_shares()
+            expected = len(stocks)
+
+            if existing_count >= expected:
+                logger.info(f"日期 {sync_date} 的数据覆盖率已达 100% ({existing_count}/{expected})，无需同步")
+                return {"success": True, "message": "数据已完整", "count": existing_count}
+            
+            if existing_count > 0:
+                logger.info(f"日期 {sync_date} 存在部分缺失 ({existing_count}/{expected})，触发补齐...")
+            else:
+                logger.info(f"日期 {sync_date} 数据尚为空，触发全量同步...")
+
+            # 4. 执行定向增量同步
+            logger.info(f"触发 {sync_date} 全市场缺口补齐程序...")
+            await self.sync_all_stocks_kline(start_date=sync_date)
+            
+            return {"success": True, "message": "同步任务已启动", "target_date": sync_date}
         except Exception as e:
-            logger.error(f"抽样校验异常: {e}")
-            return {"success": False, "error": "校验失败"}
-
-        # 3. 全局统计：检查本系统数据库中该日数据的覆盖率
-        res = await db.execute("SELECT COUNT(*) FROM stock_kline_daily WHERE trade_date = %s", (sync_date,))
-        existing_count = res[0][0] if res else 0
-        
-        # 获取预期总数 (活跃 A 股)
-        stocks = await self.get_all_a_shares()
-        expected = len(stocks)
-
-        if existing_count >= expected * 0.99:
-            logger.info(f"日期 {sync_date} 的数据覆盖率已达 {existing_count}/{expected}，无需重复同步")
-            return {"success": True, "message": "已是最新", "count": existing_count}
-
-        # 4. 执行定向增量同步
-        logger.info(f"触发 {sync_date} 全市场缺口补齐程序...")
-        # 传递 start_date 等同于 sync_date，使内部逻辑仅关注该日
-        await self.sync_all_stocks_kline(start_date=sync_date)
-        
-        return {"success": True, "message": "同步任务已启动", "target_date": sync_date}
+            logger.error(f"【增量同步】执行异常: {e}", exc_info=True)
+            return {"success": False, "error": str(e)}
+        finally:
+            async with self.lock:
+                self._sync_status["running"] = False
 
     async def sync_daily_adjust_increment(self, target_date: Optional[str] = None) -> Dict[str, Any]:
         """全市场每日复权因子增量同步"""
@@ -190,10 +198,15 @@ class BaoStockService:
     async def _login(self):
         """线程安全的登录方法 (假设外部已持有 lock)"""
         if not self._is_logged_in:
-            # 在主进程也保持一个连接 (用于获取股票列表等)
-            await asyncio.to_thread(bs.login)
-            self._is_logged_in = True
-            logger.info("BaoStock login success (Main Process)")
+            # 增加登出以清理可能存在的损坏 Socket
+            await asyncio.to_thread(bs.logout)
+            lg = await asyncio.to_thread(bs.login)
+            if lg.error_code == "0":
+                self._is_logged_in = True
+                logger.info("BaoStock login success (Main Process)")
+            else:
+                self._is_logged_in = False
+                logger.error(f"BaoStock login failed: {lg.error_msg}")
 
     async def _ensure_connection(self):
         """确保连接处于活跃状态，如果未登录则尝试登录"""
@@ -206,35 +219,41 @@ class BaoStockService:
         """执行 BaoStock 查询并带有自动重试机制"""
         timeout = kwargs.pop("timeout", 20)  # 缩短至 20 秒，适配微信端
         
-        async with self.lock:
-            await self._ensure_connection()
-            try:
+        # 精简锁范围：仅在登录和确保连接时加锁
+        if not self._is_logged_in:
+            async with self.lock:
+                await self._ensure_connection()
+        
+        try:
+            # 执行查询不应持有全局锁，避免阻塞其他并发非 BaoStock 任务
+            rs = await asyncio.wait_for(asyncio.to_thread(func, *args, **kwargs), timeout=timeout)
+            
+            # 检测连接类错误
+            if rs.error_code != "0" and any(msg in rs.error_msg for msg in ["网络", "连接", "reset", "Broken pipe", "用户未登录", "未登录"]):
+                logger.warning(f"检测到连接问题或认证失效({rs.error_msg})，尝试重连...")
+                async with self.lock:
+                    self._is_logged_in = False
+                    await self._ensure_connection()
+                # 重试一次
                 rs = await asyncio.wait_for(asyncio.to_thread(func, *args, **kwargs), timeout=timeout)
-                
-                # 检测连接类错误 (包含 UnicodeDecodeError 触发的异常情况)
-                if rs.error_code != "0" and any(msg in rs.error_msg for msg in ["网络", "连接", "reset", "Broken pipe", "用户未登录", "未登录", "网络接收错误", "接收数据异常"]):
-                    logger.warning(f"检测到连接问题或认证失效({rs.error_msg})，尝试重新登录并重试...")
+            return rs
+        except asyncio.TimeoutError:
+            logger.error(f"BaoStock 查询超时 ({timeout}s)")
+            self._is_logged_in = False
+            raise Exception(f"BaoStock Query Timeout ({timeout}s)")
+        except (UnicodeDecodeError, Exception) as e:
+            # 捕获编码异常或连接重置，通常意味着 Pipe 损坏，需要重连
+            if any(msg in str(e).lower() for msg in ["broken pipe", "connection", "reset", "decode", "codec"]):
+                logger.warning(f"捕获到连接或编码异常: {e}，尝试重新登录并重试...")
+                async with self.lock:
                     self._is_logged_in = False
                     await self._ensure_connection()
-                    rs = await asyncio.wait_for(asyncio.to_thread(func, *args, **kwargs), timeout=timeout)
-                
-                return rs
-            except asyncio.TimeoutError:
-                logger.error(f"BaoStock 查询超时 ({timeout}s)")
-                self._is_logged_in = False
-                raise Exception(f"BaoStock Query Timeout ({timeout}s)")
-            except (UnicodeDecodeError, Exception) as e:
-                # 捕获编码异常或连接重置，通常意味着 Pipe 损坏，需要重连
-                if any(msg in str(e).lower() for msg in ["broken pipe", "connection", "reset", "decode", "codec"]):
-                    logger.warning(f"捕获到连接或编码异常: {e}，尝试重新登录并重试...")
-                    self._is_logged_in = False
-                    await self._ensure_connection()
-                    try:
-                        return await asyncio.wait_for(asyncio.to_thread(func, *args, **kwargs), timeout=timeout)
-                    except Exception as re:
-                        logger.error(f"重试后依然发生异常: {re}")
-                        raise re
-                raise e
+                try:
+                    return await asyncio.wait_for(asyncio.to_thread(func, *args, **kwargs), timeout=timeout)
+                except Exception as re:
+                    logger.error(f"重试后依然发生异常: {re}")
+                    raise re
+            raise e
 
     async def get_stock_listing_date(self, code: str) -> Optional[str]:
         """获取股票上市日期"""
