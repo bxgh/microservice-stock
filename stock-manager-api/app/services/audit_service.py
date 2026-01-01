@@ -58,6 +58,39 @@ class AuditService:
                 for row in mysql_res
             }
             
+
+            # 获取 ClickHouse 同步记录（从内网同步日志表）
+            sql_ch = """
+                SELECT execution_time, records_processed, details 
+                FROM sync_execution_logs 
+                WHERE task_name = 'kline_daily_sync' 
+                  AND status = 'SUCCESS'
+                  AND execution_time >= %s
+                  AND details LIKE '%%增量同步完成%%'
+                ORDER BY execution_time DESC
+            """
+            # 扩大查询范围以包含 T+1 执行的日志
+            ch_res = await db.execute(sql_ch, (start_str,))
+            
+            # 处理ClickHouse数据：从 details 中解析业务日期
+            import re
+            ch_counts = {}
+            for row in ch_res:
+                records = row[1]
+                details = row[2]
+                # 匹配 (YYYY-MM-DD ~ YYYY-MM-DD)
+                match = re.search(r'\((\d{4}-\d{2}-\d{2})\s*~\s*(\d{4}-\d{2}-\d{2})\)', details)
+                if match:
+                    # 如果是单日同步，直接记录
+                    if match.group(1) == match.group(2):
+                        biz_date = match.group(1)
+                        if biz_date not in ch_counts:
+                            ch_counts[biz_date] = records
+                    else:
+                        # 如果是多日同步，暂取平均值或记录为多日（目前业务多为单日或补全）
+                        # 此处简化处理，只记录在范围内出现的日期
+                        pass
+            
             # 组装数据
             days = []
             for cal_row in cal_rows:
@@ -69,15 +102,26 @@ class AuditService:
                     continue
                 
                 l2_mysql = mysql_counts.get(d_date, 0)
-                pct = round((l2_mysql / total_baseline * 100), 2) if total_baseline > 0 else 0
-                status = "complete" if pct >= 99 else ("partial" if pct >= 95 else "critical")
+                l3_ch = ch_counts.get(d_date, 0)
+                
+                # 完整性计算：以最终环节 (ClickHouse) 为准，对比基线
+                # 如果 L3 还没做，则反映为不完整
+                pct = round((l3_ch / total_baseline * 100), 2) if total_baseline > 0 else 0
+                
+                # 状态判定
+                if pct >= 99:
+                    status = "complete"
+                elif pct >= 95:
+                    status = "partial"
+                else:
+                    status = "critical"
                 
                 days.append({
                     "date": d_date,
                     "kline": {
                         "l1_baseline": total_baseline,
                         "l2_mysql": l2_mysql,
-                        "l3_clickhouse": l2_mysql,
+                        "l3_clickhouse": l3_ch,
                         "completeness_pct": pct
                     },
                     "overallStatus": status
