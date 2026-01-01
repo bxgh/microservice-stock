@@ -65,21 +65,34 @@ class AuditService:
                 FROM data_quality_reports 
                 WHERE report_type = 'daily' 
                   AND check_time >= %s
+                ORDER BY check_time ASC
             """
             dq_res = await db.execute(sql_dq, (start_str,))
             
-            # 处理质量报告数据：提取业务日期对应的实际数量
+            # 处理质量报告数据
             import json
             ch_counts = {}
             for row in dq_res:
                 try:
                     content = json.loads(row[0])
-                    comp = content.get('checks', {}).get('daily_completeness', {})
+                    checks = content.get('checks', {})
+                    
+                    # 格式1: daily_completeness (单日报告)
+                    comp = checks.get('daily_completeness', {})
                     biz_date = comp.get('date')
                     actual = comp.get('actual')
                     if biz_date and actual is not None:
-                        # 以最新的报告为准
                         ch_counts[biz_date] = actual
+                        
+                    # 格式2: cross_db_consistency (多日对齐报告)
+                    cross = checks.get('cross_db_consistency', {})
+                    details = cross.get('details', [])
+                    for item in details:
+                        b_date = item.get('date')
+                        ch_val = item.get('clickhouse_count')
+                        if b_date and ch_val is not None:
+                            ch_counts[b_date] = ch_val
+                            
                 except Exception as e:
                     logger.warning(f"解析质量报告失败: {e}")
             
