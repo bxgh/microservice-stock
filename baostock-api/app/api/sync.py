@@ -58,12 +58,16 @@ async def sync_full_market(
     if status["running"]:
         return {"message": "全市场同步任务已在运行中", "status": status}
     
+    request_id = getattr(request.state, "request_id", "unknown")
+    
     async def do_full_sync():
+        from app.utils.logger import request_id_var
+        request_id_var.set(request_id)
         logger.info(f"后台启动全市场K线同步任务, start_date={start_date}")
         try:
             await service.sync_all_stocks_kline(start_date=start_date)
         except Exception as e:
-            logger.error(f"全市场K线同步启动失败: {e}")
+            logger.error(f"全市场K线同步失败: {e}")
 
     background_tasks.add_task(do_full_sync)
     
@@ -104,14 +108,18 @@ async def sync_full_market_adjust_factor(
     if status["running"]:
         return {"message": "全市场复权因子同步任务已在运行中", "status": status}
     
-    async def do_full_adjust_sync():
-        logger.info(f"后台启动全市场复权因子同步任务, start_date={start_date}")
+    request_id = getattr(request.state, "request_id", "unknown")
+    
+    async def do_adj_sync():
+        from app.utils.logger import request_id_var
+        request_id_var.set(request_id)
+        logger.info(f"后台启动全市场复权因子同步, start_date={start_date}")
         try:
             await service.sync_all_stocks_adjust_factor(start_date=start_date)
         except Exception as e:
-            logger.error(f"全市场复权因子同步启动失败: {e}")
+            logger.error(f"全市场复权因子同步失败: {e}")
 
-    background_tasks.add_task(do_full_adjust_sync)
+    background_tasks.add_task(do_adj_sync)
     
     return {
         "message": "全市场复权因子同步任务已启动",
@@ -171,3 +179,43 @@ async def verify_weekly_sync(request: Request):
     """获取本周数据同步历史分布式统计 (适配 V1.2)"""
     service = request.app.state.baostock_service
     return await service.verify_weekly_sync_history()
+
+@router.get("/sync/freshness")
+async def get_sync_freshness(request: Request):
+    """获取数据时效性指标 (P0 监控)"""
+    service = request.app.state.baostock_service
+    return await service.get_sync_freshness()
+
+@router.post("/sync/remediate")
+async def post_sync_remediate(
+    request: Request,
+    background_tasks: BackgroundTasks,
+    date: str = Query(..., description="要修复的日期 YYYY-MM-DD"),
+    dataType: str = Query("kline", description="数据类型: kline"),
+    scope: str = Query("incremental", description="范围: incremental (仅补缺) / full (覆盖重跑)")
+):
+    """触发指定日期的数据补偿 (P0 修复)"""
+    service = request.app.state.baostock_service
+    request_id = getattr(request.state, "request_id", "unknown")
+    
+    async def do_remediate():
+        from app.utils.logger import request_id_var
+        request_id_var.set(request_id)
+        logger.info(f"启动补偿任务: date={date}, scope={scope}")
+        try:
+            # 如果是 full，则先删除该日数据 (模拟全量重跑)
+            if scope == "full":
+                await db.execute("DELETE FROM stock_kline_daily WHERE trade_date = %s", (date,))
+            
+            # 无论哪种，都调用增量同步函数对该日期进行填补
+            await service.sync_daily_increment(target_date=date)
+        except Exception as e:
+            logger.error(f"补偿任务失败: {e}")
+
+    background_tasks.add_task(do_remediate)
+    
+    return {
+        "status": "ok",
+        "triggeredJobId": f"remediate_{dataType}_{date.replace('-', '')}",
+        "message": "补偿任务已启动"
+    }

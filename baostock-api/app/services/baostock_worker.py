@@ -22,16 +22,19 @@ def query_with_retry(func, *args, **kwargs):
             # 检查连接或认证错误
             if rs.error_code != "0" and any(msg in rs.error_msg for msg in ["网络", "连接", "reset", "Broken pipe", "用户未登录", "未登录", "网络接收错误", "接收数据异常"]):
                 logger.warning(f"Worker检测到连接问题或认证失效({rs.error_msg})，尝试重连...")
-                bs.login() # 重新登录
-                continue
+                bs.logout()
+                lg = bs.login()
+                if lg.error_code == "0":
+                    continue
+                else:
+                    logger.error(f"Worker重重连失败: {lg.error_msg}")
+                    return {"success": False, "error": f"Connection lost: {lg.error_msg}"}
             return rs
         except Exception as e:
             if any(msg in str(e).lower() for msg in ["broken pipe", "connection", "reset"]):
                 logger.warning(f"Worker捕获到连接异常: {e}，尝试重连...")
-                try:
-                    bs.login()
-                except:
-                    pass
+                bs.logout()
+                bs.login()
                 continue
             raise e
     

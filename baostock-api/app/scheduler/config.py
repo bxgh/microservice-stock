@@ -14,18 +14,25 @@ SCHEDULER_CONFIG: Dict[str, Any] = {
     
     # 任务配置
     "jobs": {
-        # 每日K线增量同步
-        "daily_kline_sync": {
-            "hour": int(os.getenv("DAILY_KLINE_SYNC_HOUR", "18")),
-            "minute": int(os.getenv("DAILY_KLINE_SYNC_MINUTE", "30")),
+        # 每日增量综合同步 (流水线模式)
+        "daily_comprehensive_sync": {
+            "hour": int(os.getenv("DAILY_SYNC_HOUR", "18")),
+            "minute": int(os.getenv("DAILY_SYNC_MINUTE", "30")),
             "enabled": True,
         },
         
-        # 每日复权因子同步
+        # 每日K线增量同步 (单体模式，已合并至流水线，默认禁用)
+        "daily_kline_sync": {
+            "hour": 18,
+            "minute": 30,
+            "enabled": False,
+        },
+        
+        # 每日复权因子同步 (单体模式，已合并至流水线，默认禁用)
         "daily_adjust_factor_sync": {
-            "hour": int(os.getenv("DAILY_ADJUST_SYNC_HOUR", "19")),
-            "minute": int(os.getenv("DAILY_ADJUST_SYNC_MINUTE", "0")),
-            "enabled": True,
+            "hour": 19,
+            "minute": 0,
+            "enabled": False,
         },
         
         # 系统健康检查

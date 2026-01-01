@@ -52,3 +52,4 @@ You are an expert developer specializing in high-performance, asynchronous Pytho
   - **API**: Use centralized `api/` client with Axios interceptors for standard error handling.
   - **Performance**: Use `React.memo` and `useCallback` for high-frequency data components (e.g., Ticks/OrderBooks).
 - **Routing**: Client-side routing via React Router v6.
+## 7. 全程不准使用夸张的词汇。
