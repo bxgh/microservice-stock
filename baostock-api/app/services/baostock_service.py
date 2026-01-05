@@ -506,6 +506,7 @@ class BaoStockService:
         注意: 此方法主要由 sync_daily_increment() 内部调用,
         运行状态锁由父方法管理。API层调用已在路由层做锁检查。
         """
+        self._sync_status["start_time"] = time.time()  # 确保开始时间被记录
         logger.info("开始获取全市场股票列表...")
 
         # 1. 获取全市场列表
@@ -671,6 +672,19 @@ class BaoStockService:
             # 完成任务
             await db.execute("UPDATE sync_progress SET status='completed', last_index=0 WHERE task_name='full_market_sync'")
             logger.info(f"全市场同步任务圆满完成! 处理了 {len(stocks_to_sync)} 只股票的新数据")
+            
+            # [Quality Monitor] 上报同步质量
+            try:
+                duration_ms = int((time.time() - self._sync_status["start_time"]) * 1000)
+                await self._report_sync_quality(
+                    task_name="kline_daily",
+                    trade_date=start_date,
+                    expected=len(stocks),
+                    actual=self._sync_status["current"],
+                    duration_ms=duration_ms
+                )
+            except Exception as e:
+                logger.warning(f"K线同步上报质量失败: {e}")
             
         except Exception as e:
             await db.execute("UPDATE sync_progress SET status='failed' WHERE task_name='full_market_sync'")
@@ -1060,6 +1074,7 @@ class BaoStockService:
         注意: 此方法主要由 sync_daily_adjust_increment() 内部调用,
         运行状态锁由父方法管理。API层调用已在路由层做锁检查。
         """
+        self._adjust_sync_status["start_time"] = time.time()  # 确保开始时间被记录
         logger.info("开始获取全市场股票列表(复权因子)...")
 
         stocks = await self.get_all_a_shares()
@@ -1213,8 +1228,21 @@ class BaoStockService:
 
             # 完成任务
             await db.execute("UPDATE sync_progress SET status='completed', last_index=0 WHERE task_name='full_adjust_factor_sync'")
-            logger.info(f"全市场复权因子同步任务圆满完成! 处理了 {len(stocks_to_sync)} 只股票的新数据")
-            
+            logger.info(f"全市场复权因子同步任务圆满完成! 处理了 {len(stocks_to_sync)} 只股票的数据")
+
+            # [Quality Monitor] 上报同步质量
+            try:
+                duration_ms = int((time.time() - self._adjust_sync_status["start_time"]) * 1000)
+                await self._report_sync_quality(
+                    task_name="adjust_factor_daily",
+                    trade_date=start_date,
+                    expected=len(stocks),
+                    actual=self._adjust_sync_status["current"],
+                    duration_ms=duration_ms
+                )
+            except Exception as e:
+                logger.warning(f"复权因子同步上报质量失败: {e}")
+
         except Exception as e:
             await db.execute("UPDATE sync_progress SET status='failed' WHERE task_name='full_adjust_factor_sync'")
             logger.error(f"全市场复权因子同步任务中途崩溃: {e}", exc_info=True)
@@ -1400,6 +1428,48 @@ class BaoStockService:
         except Exception as e:
             logger.error(f"查询周同步历史失败: {e}")
             return {"clickhouse": [], "mysql": [], "adjust_factor": [], "error": str(e)}
+
+    async def _report_sync_quality(self, task_name: str, trade_date: str, expected: int, actual: int, duration_ms: int):
+        """上报同步质量到 monitoring 数据库"""
+        import os
+        import aiomysql
+        
+        # 计算完整度
+        completeness = round((actual / expected * 100), 2) if expected > 0 else 0
+        
+        # 判定状态
+        status = "SUCCESS"
+        if actual == 0:
+            status = "FAILED"
+        elif completeness < 99.5:
+            status = "INCOMPLETE"
+            
+        try:
+            # 建立并维护独立的连接 (避免污染主业务连接池)
+            conn = await aiomysql.connect(
+                host=os.getenv("DB_HOST"),
+                port=int(os.getenv("DB_PORT", 3306)),
+                user=os.getenv("DB_USER"),
+                password=os.getenv("DB_PASSWORD"),
+                db="monitoring",
+                charset="utf8mb4"
+            )
+            async with conn.cursor() as cur:
+                sql = """
+                INSERT INTO data_sync_monitor (
+                    task_name, trade_date, expected_count, actual_count, 
+                    completeness_pct, status, duration_ms, server
+                ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+                """
+                await cur.execute(sql, (
+                    task_name, trade_date, expected, actual, 
+                    completeness, status, duration_ms, "server41"
+                ))
+                await conn.commit()
+            conn.close()
+            logger.info(f"成功上报同步质量: {task_name}, 日期: {trade_date}, 完整度: {completeness}%")
+        except Exception as e:
+            logger.error(f"上报同步质量异常: {e}")
 
     async def verify_daily_data_completeness(self, target_date: str = None) -> Dict[str, Any]:
         """校验每日数据下载完整性"""
