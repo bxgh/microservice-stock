@@ -23,3 +23,20 @@ async def get_adjust_factor_by_date(date: str = None):
         return await ops_service.get_adjust_factor_by_date(date)
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Internal Error: {e}")
+@router.post("/remediate")
+async def remediate_data(
+    date: str,
+    data_type: str = "kline",
+    scope: str = "incremental"
+):
+    """触发指定日期的数据补偿 (运维补数)
+    
+    Args:
+        date: 要修复的日期 YYYY-MM-DD
+        data_type: 数据类型: kline
+        scope: 范围: incremental (补缺) / full (重跑)
+    """
+    try:
+        return await ops_service.remediate_data(date, data_type, scope)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Internal Error: {e}")

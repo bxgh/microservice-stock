@@ -56,3 +56,27 @@ class OpsService:
         except Exception as e:
             logger.error(f"获取复权因子数据异常: {e}")
             return {"date": date, "count": 0, "error": str(e)}
+    async def remediate_data(self, date: str, data_type: str = "kline", scope: str = "incremental") -> Dict[str, Any]:
+        """触发指定日期的数据补偿
+        
+        Args:
+            date: 日期 YYYY-MM-DD
+            data_type: 数据类型，目前仅支持 kline
+            scope: 范围 incremental/full
+        """
+        from app.utils.http_client import http_client
+        try:
+            params = {
+                "date": date,
+                "dataType": data_type,
+                "scope": scope
+            }
+            result = await http_client.post(
+                "baostock",
+                "/api/v1/sync/remediate",
+                params=params
+            )
+            return result
+        except Exception as e:
+            logger.error(f"触发补偿任务失败: {e}")
+            return {"status": "error", "message": str(e)}

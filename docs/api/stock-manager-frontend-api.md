@@ -500,6 +500,39 @@ const AdjustFactorCard = ({ selectedDate }) => {
 };
 ```
 
+### 3.3 数据补全修复 (Remediate)
+
+**端点**: `POST /api/v1/ops/remediate`
+
+**功能**: 当某天 `L2 MySQL` 数据计数异常（缺失）时，手动触发云端重新抓取特定日期的数据。
+
+**请求参数 (Query)**:
+| 参数 | 类型 | 必选 | 说明 |
+|:---|:---|:---|:---|
+| date | string | 是 | 要修复的日期，格式 `YYYY-MM-DD` |
+| scope | string | 否 | 范围：`incremental` (仅补缺，默认) / `full` (清空重抓) |
+| data_type | string | 否 | 类型：目前仅支持 `kline` |
+
+**响应示例**:
+```json
+{
+  "status": "ok",
+  "triggeredJobId": "remediate_kline_20251229",
+  "message": "补偿任务已启动"
+}
+```
+
+**前端调用建议**:
+```typescript
+const triggerRemediate = async (date: string) => {
+  // 注意：这是一个异步任务，立即返回但工作在后台运行
+  const response = await axios.post('/api/v1/ops/remediate', null, {
+    params: { date, scope: 'incremental' }
+  });
+  return response.data;
+};
+```
+
 ---
 
 ## 4. 调度接口 (Scheduler APIs)
