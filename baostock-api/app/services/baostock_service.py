@@ -174,26 +174,37 @@ class BaoStockService:
 
     async def sync_daily_adjust_increment(self, target_date: Optional[str] = None) -> Dict[str, Any]:
         """全市场每日复权因子增量同步"""
-        if self._adjust_sync_status["running"]:
-             return {"success": False, "error": "任务已在运行"}
-
-        sync_date = await self.get_last_trading_day(target_date)
-        if not sync_date:
-            return {"success": False, "error": "无法确定目标交易日"}
-
-        # 1. 全局统计
-        res = await db.execute("SELECT COUNT(*) FROM stock_adjust_factor WHERE adjust_date = %s", (sync_date,))
-        count = res[0][0] if res else 0
+        # 1. 确定目标日期并立即执行运行状态保护 (原子操作)
+        async with self.lock:
+            if self._adjust_sync_status["running"]:
+                return {"success": False, "error": "任务已在运行"}
+            self._adjust_sync_status["running"] = True
+            self._adjust_sync_status["start_time"] = time.time()
         
-        stocks = await self.get_all_a_shares()
-        if count >= len(stocks) * 0.99:
-            logger.info(f"日期 {sync_date} 的复权因子已基本完整 ({count}/{len(stocks)})，跳过同步")
-            return {"success": True, "message": "已是最新"}
+        try:
+            sync_date = await self.get_last_trading_day(target_date)
+            if not sync_date:
+                return {"success": False, "error": "无法确定目标交易日"}
 
-        # 2. 执行定向同步
-        logger.info(f"开启 {sync_date} 复权因子收盘增量同步...")
-        await self.sync_all_stocks_adjust_factor(start_date=sync_date)
-        return {"success": True, "message": "复权因子同步已启动", "target_date": sync_date}
+            # 2. 全局统计
+            res = await db.execute("SELECT COUNT(*) FROM stock_adjust_factor WHERE adjust_date = %s", (sync_date,))
+            count = res[0][0] if res else 0
+            
+            stocks = await self.get_all_a_shares()
+            if count >= len(stocks) * 0.99:
+                logger.info(f"日期 {sync_date} 的复权因子已基本完整 ({count}/{len(stocks)})，跳过同步")
+                return {"success": True, "message": "已是最新"}
+
+            # 3. 执行定向同步
+            logger.info(f"开启 {sync_date} 复权因子收盘增量同步...")
+            await self.sync_all_stocks_adjust_factor(start_date=sync_date)
+            return {"success": True, "message": "复权因子同步已启动", "target_date": sync_date}
+        except Exception as e:
+            logger.error(f"【复权因子增量同步】执行异常: {e}", exc_info=True)
+            return {"success": False, "error": str(e)}
+        finally:
+            async with self.lock:
+                self._adjust_sync_status["running"] = False
         
     async def _login(self):
         """线程安全的登录方法 (假设外部已持有 lock)"""
@@ -490,19 +501,17 @@ class BaoStockService:
             return {"success": False, "error": str(e)}
 
     async def sync_all_stocks_kline(self, start_date: str = "1990-12-19") -> None:
-        """同步全市场股票 K 线 (支持断点续传)"""
-        if self._sync_status["running"]:
-            logger.warning("全市场同步任务已在运行中")
-            return
+        """同步全市场股票 K 线 (支持断点续传)
         
-        self._sync_status["running"] = True
+        注意: 此方法主要由 sync_daily_increment() 内部调用,
+        运行状态锁由父方法管理。API层调用已在路由层做锁检查。
+        """
         logger.info("开始获取全市场股票列表...")
 
         # 1. 获取全市场列表
         stocks = await self.get_all_a_shares()
         if not stocks:
             logger.error("未能获取股票列表，同步终止")
-            self._sync_status["running"] = False
             return
 
         # 2. 从数据库恢复进度
@@ -667,7 +676,7 @@ class BaoStockService:
             await db.execute("UPDATE sync_progress SET status='failed' WHERE task_name='full_market_sync'")
             logger.error(f"全市场同步任务中途崩溃: {e}", exc_info=True)
         finally:
-            self._sync_status["running"] = False
+            # 注意: running 状态由父方法 sync_daily_increment() 管理
             self._sync_status["last_synced"] = time.strftime("%Y-%m-%d %H:%M:%S")
 
     async def _flush_buffer(self, buffer: list):
@@ -1046,18 +1055,16 @@ class BaoStockService:
             return {"success": False, "error": str(e)}
 
     async def sync_all_stocks_adjust_factor(self, start_date: str = "1990-01-01") -> None:
-        """同步全市场股票复权因子 (支持断点续传)"""
-        if self._adjust_sync_status["running"]:
-            logger.warning("全市场复权因子同步任务已在运行中")
-            return
-
-        self._adjust_sync_status["running"] = True
+        """同步全市场股票复权因子 (支持断点续传)
+        
+        注意: 此方法主要由 sync_daily_adjust_increment() 内部调用,
+        运行状态锁由父方法管理。API层调用已在路由层做锁检查。
+        """
         logger.info("开始获取全市场股票列表(复权因子)...")
 
         stocks = await self.get_all_a_shares()
         if not stocks:
             logger.error("未能获取股票列表，复权因子同步终止")
-            self._adjust_sync_status["running"] = False
             return
 
         # 从数据库恢复进度
@@ -1212,7 +1219,7 @@ class BaoStockService:
             await db.execute("UPDATE sync_progress SET status='failed' WHERE task_name='full_adjust_factor_sync'")
             logger.error(f"全市场复权因子同步任务中途崩溃: {e}", exc_info=True)
         finally:
-            self._adjust_sync_status["running"] = False
+            # 注意: running 状态由父方法 sync_daily_adjust_increment() 管理
             self._adjust_sync_status["last_synced"] = time.strftime("%Y-%m-%d %H:%M:%S")
 
     async def _flush_adjust_buffer(self, buffer: list):
