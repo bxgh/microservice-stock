@@ -16,8 +16,8 @@ SCHEDULER_CONFIG: Dict[str, Any] = {
     "jobs": {
         # 每日增量综合同步 (流水线模式)
         "daily_comprehensive_sync": {
-            "hour": int(os.getenv("DAILY_SYNC_HOUR", "18")),
-            "minute": int(os.getenv("DAILY_SYNC_MINUTE", "30")),
+            "hour": int(os.getenv("DAILY_SYNC_HOUR", "17")),
+            "minute": int(os.getenv("DAILY_SYNC_MINUTE", "00")),
             "enabled": True,
         },
         
