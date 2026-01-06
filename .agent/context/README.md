@@ -1,7 +1,12 @@
+```text
+# Example Code Block
+This is a placeholder for a code example.
+```
+
 # AI 上下文文档索引
 
 > **用途**: AI 开发助手的快速上下文加载入口
-> **更新时间**: 2026-01-07
+> **更新时间**: 2026-01-07 10:30:00
 
 ## 文档列表
 

@@ -63,3 +63,59 @@
 
 所有服务均提供：
 - `GET /health` - 健康检查
+
+---
+
+## 调试示例
+
+### 示例 1: 获取 BaoStock 历史 K 线
+
+**Request:**
+```bash
+curl "http://localhost:8001/api/v1/history/kline/sh.600519?start_date=2024-01-01&frequency=d&adjust=2"
+```
+
+**Response:**
+```json
+[
+  {
+    "date": "2024-01-02",
+    "code": "sh.600519",
+    "open": "1700.00",
+    "high": "1720.00",
+    "low": "1690.00",
+    "close": "1710.00",
+    "volume": "100500",
+    "amount": "172000000",
+    "adjustflag": "2"
+  }
+]
+```
+
+### 示例 2: 获取 AkShare 财务摘要
+
+**Request:**
+```bash
+curl "http://localhost:8003/api/v1/finance/600519"
+```
+
+**Response:**
+```json
+{
+  "code": "600519",
+  "name": "贵州茅台",
+  "total_revenue": 150000000000.0,
+  "net_profit": 75000000000.0,
+  "report_date": "2024-09-30"
+}
+```
+
+---
+
+## 变更历史
+
+| 日期 | 变更内容 | 负责人 |
+|------|----------|--------|
+| 2026-01-07 | 初始创建，收录 25 个端点 | Antigravity AI |
+
+> **最后更新**: 2026-01-07

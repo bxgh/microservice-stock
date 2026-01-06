@@ -65,7 +65,21 @@ CREATE TABLE data_sync_monitor (
 ```bash
 # 查询完整度趋势
 curl "http://localhost:8001/api/v1/sync/verify/weekly"
-
-# 查询时效性
-curl "http://localhost:8001/api/v1/sync/freshness"
 ```
+
+### SQL 调试查询
+
+```sql
+-- 查询最近 7 天的每日同步完整度
+SELECT sync_date, completeness, status, duration_ms 
+FROM data_sync_monitor 
+ORDER BY sync_date DESC LIMIT 7;
+
+-- 查询失败的任务详情
+SELECT * FROM data_sync_monitor 
+WHERE status = 'FAILED' 
+ORDER BY created_at DESC LIMIT 5;
+```
+
+---
+> **最后更新**: 2026-01-07

@@ -5,14 +5,18 @@
 ## 1. 新端点模板
 
 ```python
-"""端点模块"""
+# -*- coding: utf-8 -*-
+"""
+Copyright (c) 2026 Microservice Stock. All rights reserved.
+FileName: endpoint_template.py
+Description: 标准端点模板
+"""
 from typing import Optional
 from fastapi import APIRouter, HTTPException, Query, Request
 from app.utils.logger import get_logger
 
 router = APIRouter()
 logger = get_logger("service-name.api.module")
-
 
 @router.get("/endpoint/{code}")
 async def get_data(
@@ -136,3 +140,6 @@ async def fetch_data():
 async with create_connection() as client:
     return await client.query()
 ```
+
+---
+> **最后更新**: 2026-01-07

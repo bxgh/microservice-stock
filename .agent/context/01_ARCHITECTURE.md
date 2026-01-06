@@ -58,7 +58,37 @@ microservice-stock/
 
 ## 5. 关键约束
 
-- **内存限制**: 每个容器 ≤128MB
+- **内存限制**: 每个容器硬限制 128MB (Reservations: 50MB) (同步`docker-compose.yml`)
+- **CPU 限制**: 每个容器 0.5 核
 - **异步优先**: 所有 I/O 必须使用 async/await
 - **时区**: 固定使用 Asia/Shanghai
 - **日志**: JSON 格式，必须包含 request_id
+
+## 6. 部署与运维
+
+### 标准操作
+
+```bash
+# 启动集群 (后台运行)
+docker compose up -d
+
+# 查看服务状态
+docker compose ps
+
+# 查看实时日志 (含 tail)
+docker compose logs -f --tail=100 baostock-api
+
+# 重启特定服务
+docker compose restart akshare-api
+```
+
+### 资源监控
+
+```bash
+# 查看实时资源占用
+docker stats --format "table {{.Name}}\t{{.CPUPerc}}\t{{.MemUsage}}"
+```
+
+---
+> **最后更新**: 2026-01-07
+> **维护人**: Antigravity AI

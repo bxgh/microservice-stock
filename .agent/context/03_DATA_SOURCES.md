@@ -24,39 +24,61 @@
 
 ## 异常处理规范
 
-### BaoStock
+### BaoStock (TCP 长连接管理)
 ```python
-# 自动重连 + 重试
-async def _ensure_connection(self):
-    async with self.lock:
-        if not self._is_connected():
-            await self._reconnect()
+# 自动重连 + 重试机制
+class BaostockClient:
+    async def _ensure_connection(self):
+        async with self.lock:
+            # 检查连接是否存活
+            if not self.bs.query_history_k_data_plus("sh.600000", ...).error_code == "0":
+                logger.warning("BaoStock连接断开，尝试重连...")
+                self.bs.logout()
+                login_msg = self.bs.login()
+                if login_msg.error_code != "0":
+                    raise ConnectionError(f"重连失败: {login_msg.error_msg}")
 ```
 
-### AkShare
+### AkShare (DataFrame 校验)
 ```python
-# DataFrame 校验
-if df.empty or "code" not in df.columns:
-    raise ValueError("数据格式异常")
+# 数据完整性防御
+if df is None or df.empty:
+    logger.warning(f"AkShare返回空数据: code={code}")
+    return None
+
+if "总市值" not in df.columns:
+    logger.error(f"AkShare字段变更，缺少'总市值': columns={df.columns}")
+    raise ValueError("数据格式不符合预期")
 ```
 
-### PyWencai
-```python
-# 3 次指数退避重试
-MAX_RETRIES = 3
-RETRY_DELAY = 5  # 秒
+## 频率限制实现
 
-for attempt in range(MAX_RETRIES):
-    try:
-        return await wencai_client.query(q)
-    except CaptchaError:
-        await asyncio.sleep(RETRY_DELAY * (2 ** attempt))
+### PyWencai (Token Bucket)
+```python
+import asyncio
+from asyncio import Semaphore
+
+class RateLimiter:
+    """问财限制: ~10次/分钟"""
+    def __init__(self, limit=10, period=60):
+        self.sem = Semaphore(limit)
+        self.period = period
+
+    async def acquire(self):
+        await self.sem.acquire()
+        # 启动后台任务在周期后释放令牌
+        asyncio.create_task(self._release())
+
+    async def _release(self):
+        await asyncio.sleep(self.period)
+        self.sem.release()
+
+# 使用示例
+limiter = RateLimiter()
+async def query(q):
+    await limiter.acquire()
+    return await wencai.get(q)
 ```
 
-## 频率限制
-
-| 数据源 | 限制 | 处理方式 |
-|--------|------|----------|
-| BaoStock | 无明确限制 | 但建议控制并发 |
-| AkShare | 部分接口有限制 | 添加适当延迟 |
-| PyWencai | ~10 次/分钟 | 信号量 + 冷却期 |
+---
+> **最后更新**: 2026-01-07
