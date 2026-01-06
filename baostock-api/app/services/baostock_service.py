@@ -412,8 +412,9 @@ class BaoStockService:
             loop = asyncio.get_running_loop()
             # 使用 ThreadPoolExecutor 进行数据抓取，并加锁保证连接安全
             try:
-                # 抓取数据 (不再对进程池加全局锁，允许并行)
-                await self._ensure_connection() 
+                # 确保连接可用 (加锁)
+                async with self.lock:
+                    await self._ensure_connection() 
                 result = await asyncio.wait_for(
                     loop.run_in_executor(
                         self.process_pool,
@@ -994,18 +995,21 @@ class BaoStockService:
             
             loop = asyncio.get_running_loop()
             try:
+                # 确保连接可用 (加锁)
                 async with self.lock:
-                    await self._ensure_connection()
-                    result = await asyncio.wait_for(
-                        loop.run_in_executor(
-                            self.thread_pool,
-                            baostock_worker.fetch_adjust_factor_data,
-                            code,
-                            start_date,
-                            end_date if end_date else ""
-                        ),
-                        timeout=120
-                    )
+                    await self._ensure_connection() 
+                
+                # 执行抓取 (不加锁)
+                result = await asyncio.wait_for(
+                    loop.run_in_executor(
+                        self.thread_pool,
+                        baostock_worker.fetch_adjust_factor_data,
+                        code,
+                        start_date,
+                        end_date if end_date else ""
+                    ),
+                    timeout=120
+                )
             except asyncio.TimeoutError:
                 logger.error(f"股票 {code} 复权因子抓取超时 (120s)")
                 return {"success": False, "error": "Fetch Timeout"}
