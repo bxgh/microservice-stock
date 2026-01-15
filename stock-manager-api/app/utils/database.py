@@ -1,5 +1,5 @@
-import os
 import aiomysql
+from app.config import settings
 from app.utils.logger import get_logger
 
 logger = get_logger("stock-manager.database")
@@ -14,11 +14,11 @@ class Database:
         if self.pool is None:
             try:
                 self.pool = await aiomysql.create_pool(
-                    host=os.getenv("DB_HOST"),
-                    port=int(os.getenv("DB_PORT", 3306)),
-                    user=os.getenv("DB_USER"),
-                    password=os.getenv("DB_PASSWORD"),
-                    db=os.getenv("DB_NAME"),
+                    host=settings.DB_HOST,
+                    port=settings.DB_PORT,
+                    user=settings.DB_USER,
+                    password=settings.DB_PASSWORD,
+                    db=settings.DB_NAME,
                     minsize=1,
                     maxsize=10,
                     autocommit=True,

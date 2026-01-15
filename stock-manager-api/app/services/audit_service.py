@@ -142,3 +142,34 @@ class AuditService:
         except Exception as e:
             logger.error(f"Audit weekly 异常: {e}")
             return {"error": str(e)}
+
+    async def get_gate_audits(self, trade_date: str = None, limit: int = 50) -> Dict[str, Any]:
+        """获取数据闸门审计记录"""
+        try:
+            params = []
+            sql = "SELECT id, trade_date, gate_id, is_complete, description, created_at FROM data_gate_audits WHERE 1=1"
+            
+            if trade_date:
+                sql += " AND trade_date = %s"
+                params.append(trade_date)
+            
+            sql += " ORDER BY trade_date DESC, created_at DESC LIMIT %s"
+            params.append(limit)
+            
+            rows = await db.execute(sql, tuple(params))
+            
+            results = []
+            for row in rows:
+                results.append({
+                    "id": row[0],
+                    "trade_date": row[1].strftime("%Y-%m-%d") if row[1] else None,
+                    "gate_id": row[2],
+                    "is_complete": bool(row[3]),
+                    "description": row[4],
+                    "created_at": row[5].strftime("%Y-%m-%d %H:%M:%S") if row[5] else None
+                })
+            
+            return {"audits": results}
+        except Exception as e:
+            logger.error(f"Get gate audits 异常: {e}")
+            raise e

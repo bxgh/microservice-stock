@@ -38,3 +38,40 @@ async def get_job_logs(
         return await scheduler_service.get_job_logs(container, job_id, lines)
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Internal Error: {e}")
+
+@router.get("/tasks", tags=["任务"])
+async def get_tasks():
+    """获取任务列表 (适配前端规范)"""
+    try:
+        jobs_data = await scheduler_service.get_all_jobs()
+        jobs = jobs_data.get("jobs", [])
+        
+        # 任务分类逻辑
+        # 盘前: pre_market_gate, heartbeats
+        # 盘中: realtime, monitor
+        # 盘后: comprehensive, sync, remediate
+        def get_category(job_id: str) -> str:
+            job_id = job_id.lower()
+            if any(k in job_id for k in ["pre_market", "heartbeat", "health"]):
+                return "pre_market"
+            if any(k in job_id for k in ["realtime", "monitor", "tick"]):
+                return "mid_market"
+            if any(k in job_id for k in ["sync", "kline", "remediate", "factor", "comprehensive"]):
+                return "post_market"
+            return "post_market" # 默认归类为盘后
+
+        tasks = []
+        for job in jobs:
+            job_id = job.get("id")
+            tasks.append({
+                "id": job_id,
+                "name": job.get("name", job_id),
+                "category": get_category(job_id),
+                "enabled": not job.get("paused", False),
+                "schedule": job.get("trigger", "Unknown"),
+                "next_run": job.get("next_run_time"),
+                "last_status": "SUCCESS" if job.get("next_run_time") else "PENDING"
+            })
+        return {"tasks": tasks}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Internal Error: {e}")

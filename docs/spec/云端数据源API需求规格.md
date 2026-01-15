@@ -9,6 +9,7 @@
 | **akshare-api** | 8000 | 东方财富等 | 财务、估值、龙虎榜、行业 |
 | **baostock-api** | 8001 | baostock.com:10030 | 复权K线、指数成分、盈利能力 |
 | **pywencai-api** | 8002 | 同花顺问财 | 自然语言选股、板块筛选 |
+| **stock-manager-api** | 8004 | 内部聚合 | 调度管理/Dashboard/数据补全 |
 
 ---
 
@@ -200,3 +201,90 @@ HTTP_PROXY=http://192.168.151.18:3128
 - [ ] 错误时返回标准错误格式
 - [ ] 日志包含 request_id
 - [ ] 容器资源 ≤128MB
+
+---
+
+## stock-manager-api (:8004)
+
+### 端点清单
+
+| 端点 | 方法 | 功能 | 示例参数 |
+|------|------|------|----------|
+| `/api/v1/dashboard/overview` | GET | 仪表盘概览 | - |
+| `/api/v1/scheduler/tasks` | GET | 任务列表 | - |
+| `/api/v1/commands` | POST | 触发命令 (Legacy) | task_id, params |
+| `/api/v1/task-commands` | POST | 下达任务指令 | `{task_id, params}` |
+| `/api/v1/task-commands` | GET | 指令队列列表 | status, task_id |
+| `/api/v1/task-commands/{id}` | GET | 指令状态详情 | - |
+
+### 任务分类说明 (Category Mapping)
+
+| 分类 (Category) | 包含关键字 | 场景说明 |
+| :--- | :--- | :--- |
+| `pre_market` | pre_market, heartbeat, health | 盘前校验与系统自检 |
+| `mid_market` | realtime, monitor, tick | 盘中交易数据监控 |
+| `post_market` | sync, kline, comprehensive | 盘后数据同步与清洗 |
+
+### 返回字段示例
+
+**`/api/v1/dashboard/overview`**:
+```json
+{
+  "date": "2026-01-14",
+  "kline_coverage": 98.5,
+  "tick_coverage": 0.0,
+  "kline_status": "ok",
+  "tick_status": "warning",
+  "recent_tasks": [
+    {
+      "task_id": "daily_kline_sync",
+      "status": "SUCCESS",
+      "last_run": "2026-01-14T17:32:00"
+    }
+  ]
+}
+```
+
+**`/api/v1/commands` (POST - Legacy)**:
+```json
+{
+  "command_id": 15,
+  "status": "PENDING",
+  "message": "命令已加入队列"
+}
+```
+
+**`/api/v1/task-commands` (POST)**:
+*Request Body*:
+```json
+{
+  "task_id": "repair_kline",
+  "params": {
+    "date": "20260115"
+  }
+}
+```
+*Response*:
+```json
+{
+  "id": 6,
+  "status": "PENDING",
+  "message": "指令已成功入队"
+}
+```
+
+**`/api/v1/audit/gate`**:
+```json
+{
+  "audits": [
+    {
+      "id": 1,
+      "trade_date": "2026-01-15",
+      "gate_id": "GATE_1",
+      "is_complete": false,
+      "description": "名单:FAIL 心跳:OK 昨日:FAIL",
+      "created_at": "2026-01-15 11:13:21"
+    }
+  ]
+}
+```

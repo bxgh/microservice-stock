@@ -75,34 +75,52 @@ async def daily_adjust_factor_sync_job() -> Dict[str, Any]:
 async def daily_comprehensive_sync_job() -> Dict[str, Any]:
     """全市场每日收盘综合同步流水线 (串行模式)
     
-    依次同步 K 线数据和复权因子，确保数据一致性并降低并发压力。
+    依次同步 K 线数据和复权因子，包含数据未准备好的重试机制。
     """
-    try:
-        logger.info("【定时任务】启动全市场综合同步流水线...")
-        
-        from app.main import app
-        baostock_service = app.state.baostock_service
-        
-        # 1. 第一阶段：K 线数据
-        logger.info(">>> 阶段 1/2: 正在执行逐日 K 线增量补齐...")
-        k_res = await baostock_service.sync_daily_increment()
-        
-        # 2. 第二阶段：复权因子
-        logger.info(">>> 阶段 2/2: 正在执行最新复权因子计算与同步...")
-        a_res = await baostock_service.sync_daily_adjust_increment()
-        
-        logger.info("【定时任务】综合流水线全部执行完毕")
-        return {
-            'status': 'success',
-            'message': '每日综合同步成功',
-            'details': {
-                'kline': k_res,
-                'adjust': a_res
+    import asyncio
+    max_retries = 3
+    retry_interval = 30 * 60 # 30分钟重试一次
+    
+    for attempt in range(max_retries):
+        try:
+            logger.info(f"【定时任务】启动全市场综合同步流水线 (第 {attempt+1} 次尝试)...")
+            
+            from app.main import app
+            baostock_service = app.state.baostock_service
+            
+            # 1. 第一阶段：K 线数据
+            logger.info(">>> 阶段 1/2: 正在执行逐日 K 线增量补齐...")
+            k_res = await baostock_service.sync_daily_increment()
+            
+            # 检查是否因为数据未发布而中止
+            if not k_res.get("success") and k_res.get("error") == "数据源未更新":
+                if attempt < max_retries - 1:
+                    logger.warning(f"数据提供方尚未发布当日数据，{retry_interval // 60} 分钟后进行第 {attempt+2} 次尝试...")
+                    await asyncio.sleep(retry_interval)
+                    continue
+                else:
+                    logger.error("达到最大重试次数，当日数据同步任务遗憾中止")
+                    return k_res
+
+            # 2. 第二阶段：复权因子
+            logger.info(">>> 阶段 2/2: 正在执行最新复权因子计算与同步...")
+            a_res = await baostock_service.sync_daily_adjust_increment()
+            
+            logger.info("【定时任务】综合流水线全部执行完毕")
+            return {
+                'status': 'success',
+                'message': '每日综合同步成功',
+                'details': {
+                    'kline': k_res,
+                    'adjust': a_res
+                }
             }
-        }
-    except Exception as e:
-        logger.error(f"【定时任务】综合流水线中途崩溃: {e}", exc_info=True)
-        return {'status': 'error', 'message': f'流水线崩溃: {str(e)}'}
+        except Exception as e:
+            logger.error(f"【定时任务】综合流水线尝试 {attempt+1} 出错: {e}", exc_info=True)
+            if attempt < max_retries - 1:
+                await asyncio.sleep(60) # 崩溃类错误 1 分钟后快速重试
+                continue
+            return {'status': 'error', 'message': f'流水线崩溃: {str(e)}'}
 
 
 async def health_check_job() -> Dict[str, Any]:

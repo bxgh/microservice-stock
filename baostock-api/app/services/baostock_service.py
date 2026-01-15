@@ -67,7 +67,7 @@ class BaoStockService:
             target_date = (datetime.date.today() - datetime.timedelta(days=i)).strftime("%Y-%m-%d")
             
             try:
-                rs = await self._execute_with_retry(bs.query_all_stock, day=target_date, timeout=10)
+                rs = await self._execute_with_retry(bs.query_all_stock, day=target_date, timeout=30)
                 if rs.error_code != "0":
                     if i == 0:
                         logger.warning(f"无法获取日期 {target_date} 的股票列表: {rs.error_msg}")
@@ -149,6 +149,10 @@ class BaoStockService:
             existing_count = res[0][0] if res else 0
             
             stocks = await self.get_all_a_shares()
+            if not stocks:
+                logger.error("无法获取有效的 A 股市场列表，同步中止以保护现有数据")
+                return {"success": False, "error": "获取股票列表失败"}
+                
             expected = len(stocks)
 
             if existing_count >= expected:
@@ -191,6 +195,10 @@ class BaoStockService:
             count = res[0][0] if res else 0
             
             stocks = await self.get_all_a_shares()
+            if not stocks:
+                logger.error("无法获取有效的 A 股市场列表(复权因子)，同步中止")
+                return {"success": False, "error": "获取股票列表失败"}
+
             if count >= len(stocks) * 0.99:
                 logger.info(f"日期 {sync_date} 的复权因子已基本完整 ({count}/{len(stocks)})，跳过同步")
                 return {"success": True, "message": "已是最新"}
@@ -1438,12 +1446,27 @@ class BaoStockService:
         import os
         import aiomysql
         
+        # [Security] 真核验：无视传入的 actual，直接查询数据库获取物理入库行数
+        real_actual = 0
+        try:
+            if "kline" in task_name:
+                sql = "SELECT COUNT(*) FROM stock_kline_daily WHERE trade_date = %s"
+                res = await db.execute(sql, (trade_date,))
+                real_actual = res[0][0] if res else 0
+            elif "adjust" in task_name:
+                sql = "SELECT COUNT(*) FROM stock_adjust_factor WHERE adjust_date = %s"
+                res = await db.execute(sql, (trade_date,))
+                real_actual = res[0][0] if res else 0
+        except Exception as e:
+            logger.warning(f"核验物理入库数量失败，将回退使用逻辑计数: {e}")
+            real_actual = actual
+
         # 计算完整度
-        completeness = round((actual / expected * 100), 2) if expected > 0 else 0
+        completeness = round((real_actual / expected * 100), 2) if expected > 0 else 0
         
         # 判定状态
         status = "SUCCESS"
-        if actual == 0:
+        if real_actual == 0:
             status = "FAILED"
         elif completeness < 99.5:
             status = "INCOMPLETE"
@@ -1466,7 +1489,7 @@ class BaoStockService:
                 ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
                 """
                 await cur.execute(sql, (
-                    task_name, trade_date, expected, actual, 
+                    task_name, trade_date, expected, real_actual, 
                     completeness, status, duration_ms, "server41"
                 ))
                 await conn.commit()

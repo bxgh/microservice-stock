@@ -32,7 +32,9 @@ async def sync_stock_kline(
             adjust=adjust
         )
         if result["success"]:
-            logger.info(f"同步任务成功: {code}, 数量={result['count']}, 耗时={result['performance']['total_ms']}ms", extra={"request_id": request_id})
+            perf = result.get("performance", {})
+            total_ms = perf.get("total_ms", 0)
+            logger.info(f"同步任务成功: {code}, 数量={result['count']}, 耗时={total_ms}ms", extra={"request_id": request_id})
         else:
             logger.error(f"同步任务失败: {code}, 原因={result.get('error')}", extra={"request_id": request_id})
 
@@ -218,4 +220,28 @@ async def post_sync_remediate(
         "status": "ok",
         "triggeredJobId": f"remediate_{dataType}_{date.replace('-', '')}",
         "message": "补偿任务已启动"
+    }
+@router.post("/sync/run_pipeline")
+async def run_sync_pipeline(
+    request: Request,
+    background_tasks: BackgroundTasks
+):
+    """
+    手动立即触发全市场综合同步流水线
+    """
+    request_id = getattr(request.state, "request_id", "unknown")
+    
+    async def do_pipeline():
+        from app.scheduler.jobs import daily_comprehensive_sync_job
+        from app.utils.logger import request_id_var
+        request_id_var.set(request_id)
+        logger.info(">>> [Manual] 启动综合同步流水线...")
+        await daily_comprehensive_sync_job()
+    
+    background_tasks.add_task(do_pipeline)
+    
+    return {
+        "status": "ok",
+        "message": "全市场综合同步流水线已启动",
+        "request_id": request_id
     }
