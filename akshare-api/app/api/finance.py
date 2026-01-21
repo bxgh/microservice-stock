@@ -89,3 +89,50 @@ async def get_finance_indicators(request: Request, code: str):
         logger.error(f"获取财务指标失败: code={code}, error={e}", extra={"request_id": request_id})
         raise HTTPException(status_code=500, detail=f"获取财务指标失败: {str(e)}")
 
+
+@router.get("/shareholder/{code}")
+async def get_shareholder(request: Request, code: str, all: bool = Query(False, description="是否获取所有历史数据")):
+    """
+    获取股东信息 (户数 + 前十大)
+    
+    - **code**: 股票代码,如 600519
+    - **all**: 如果为 true, 将返回上市以来的所有股东户数及前十大股东记录
+    """
+    request_id = getattr(request.state, "request_id", "unknown")
+    service = request.app.state.akshare_service
+    
+    try:
+        data = await service.get_shareholder_info(code, all_history=all)
+        
+        # Check if data empty? service returns dict with list inside.
+        if not data:
+            # Even if empty dict, return it?
+             pass 
+        
+        logger.info(f"获取股东信息成功: code={code}, all={all}", extra={"request_id": request_id})
+        return data
+        
+    except Exception as e:
+        logger.error(f"获取股东信息失败: code={code}, error={e}", extra={"request_id": request_id})
+        raise HTTPException(status_code=500, detail=f"获取股东信息失败: {str(e)}")
+
+
+@router.get("/dividend/{code}")
+async def get_dividend(request: Request, code: str):
+    """
+    获取分红配股历史
+    
+    - **code**: 股票代码,如 600519
+    """
+    request_id = getattr(request.state, "request_id", "unknown")
+    service = request.app.state.akshare_service
+    
+    try:
+        data = await service.get_dividend_history(code)
+        logger.info(f"获取分红配股信息成功: code={code}, count={len(data)}", extra={"request_id": request_id})
+        return data
+        
+    except Exception as e:
+        logger.error(f"获取分红配股信息失败: code={code}, error={e}", extra={"request_id": request_id})
+        raise HTTPException(status_code=500, detail=f"获取分红配股信息失败: {str(e)}")
+

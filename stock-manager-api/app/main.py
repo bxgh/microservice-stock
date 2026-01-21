@@ -5,7 +5,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI, Request, HTTPException
 from fastapi.responses import JSONResponse
 
-from app.api import metadata, audit, scheduler, ops, system, dashboard, commands, task_commands, data_audit
+from app.api import metadata, audit, scheduler, ops, system, dashboard, commands, task_commands, data_audit, shareholders
 from app.utils.logger import setup_logger, request_id_var
 from app.utils.database import db
 from app.utils.http_client import http_client
@@ -112,3 +112,5 @@ app.include_router(dashboard.router, prefix="/api/v1/dashboard", tags=["仪表�
 app.include_router(commands.router, prefix="/api/v1/commands", tags=["命令"])
 app.include_router(task_commands.router, prefix="/api/v1/task-commands", tags=["任务指令"])
 app.include_router(data_audit.router, prefix="/api/v1/data-audits", tags=["数据审计"])
+app.include_router(shareholders.router, prefix="/api/v1/shareholders", tags=["股东数据"])
+

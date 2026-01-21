@@ -1,5 +1,7 @@
 import asyncio
 import math
+import gc
+import httpx
 from datetime import datetime, date
 from typing import Dict, Any, List, Optional
 import akshare as ak
@@ -112,36 +114,46 @@ class AkShareService:
             return None
 
     async def get_valuation_spot(self, symbol: str) -> Optional[Dict[str, Any]]:
-        """异步获取实时估值
-        
-        Args:
-            symbol: 股票代码，如 "600519"
-            
-        Returns:
-            实时估值字典，包含 name, pe, pb, market_cap, price 字段
-            如果查询失败或股票不存在，返回 None
-        """
+        """异步获取实时估值 (优化版: 直接调用接口, 避免 OOM)"""
         try:
-            df = await asyncio.to_thread(ak.stock_zh_a_spot_em)
+            # 转换代码格式 6xxxx -> 1.6xxxx, 0xxxx -> 0.0xxxx
+            secid = ""
+            code = symbol
+            if "." in symbol:
+                code = symbol.split(".")[-1]
             
-            if df is None or df.empty:
-                return None
+            if code.startswith("6") or code.startswith("11") or code.startswith("9"):
+                secid = f"1.{code}"
+            else:
+                secid = f"0.{code}"
+            
+            url = f"https://push2.eastmoney.com/api/qt/stock/get?secid={secid}&fields=f57,f58,f162,f167,f116,f43"
+            
+            async with httpx.AsyncClient(timeout=10.0) as client:
+                resp = await client.get(url)
+                if resp.status_code != 200:
+                    return None
                 
-            stock = df[df["代码"] == symbol]
-            if stock.empty:
-                return None
+                data_json = resp.json()
+                if not data_json or "data" not in data_json or not data_json["data"]:
+                    return None
                 
-            row = stock.iloc[0]
-            return {
-                "name": row.get("名称", ""),
-                "pe": self._clean_value(row.get("市盈率-动态")),
-                "pb": self._clean_value(row.get("市净率")),
-                "market_cap": self._clean_value(row.get("总市值")),
-                "price": self._clean_value(row.get("最新价")),
-            }
+                d = data_json["data"]
+                # f58=名称, f43=最新价, f162=PE-动, f167=PB, f116=总市值
+                # EM 价格/PE/PB 通常带 2 位小数(即 *100)
+                return {
+                    "name": d.get("f58", ""),
+                    "pe": self._clean_value(d.get("f162")) / 100.0 if d.get("f162") is not None else None,
+                    "pb": self._clean_value(d.get("f167")) / 100.0 if d.get("f167") is not None else None,
+                    "market_cap": self._clean_value(d.get("f116")),
+                    "price": self._clean_value(d.get("f43")) / 100.0 if d.get("f43") is not None else None,
+                }
         except Exception as e:
-            logger.error(f"AkShare获取实时估值失败: symbol={symbol}, error={e}")
+            logger.error(f"直接获取实时估值失败: symbol={symbol}, error={e}")
+            # 如果直调失败, 且内存允许, 尝试回退到 ak (极小概率成功)
             return None
+        finally:
+            gc.collect()
 
     async def get_lhb_detail(self, start_date: Optional[str] = None, end_date: Optional[str] = None) -> List[Dict[str, Any]]:
         """异步获取龙虎榜详情"""
@@ -235,36 +247,40 @@ class AkShareService:
             return {}
 
     async def get_hot_rank(self, limit: int = 50) -> List[Dict[str, Any]]:
-        """异步获取热门排行(以成交额为准)
-        
-        Args:
-            limit: 返回数量限制，默认 50
-            
-        Returns:
-            热门股票列表，按成交额降序排列
-            每条记录包含 code, name, price, change_pct, volume, amount 等字段
-        """
+        """异步获取热门排行(以成交额为准) - 优化版"""
         try:
-            df = await asyncio.to_thread(ak.stock_zh_a_spot_em)
-            if df is None or df.empty:
-                return []
+            # 使用更专用的热门板块/排行接口, 避免拉取全量 5000+ 股票
+            # 这里如果不允许直连, 只能用 ak.stock_zh_a_spot_em. 
+            # 为了内存安全, 直接调用 EM 接口获取排行
+            url = f"https://push2.eastmoney.com/api/qt/clist/get?pn=1&pz={limit}&po=1&np=1&ut=bd1d9ddb04089700cf9c27f6f7426281&fltt=2&invt=2&fid=f6&fs=m:0+t:6,m:0+t:80,m:1+t:2,m:1+t:23,m:0+t:7,m:1+t:3&fields=f12,f14,f2,f3,f5,f6,f8"
+            
+            async with httpx.AsyncClient(timeout=10.0) as client:
+                resp = await client.get(url)
+                if resp.status_code != 200:
+                    return []
                 
-            df = df.sort_values("成交额", ascending=False).head(limit)
-            result = []
-            for _, row in df.iterrows():
-                result.append({
-                    "code": row.get("代码", ""),
-                    "name": row.get("名称", ""),
-                    "price": self._clean_value(row.get("最新价")),
-                    "change_pct": self._clean_value(row.get("涨跌幅")),
-                    "volume": self._clean_value(row.get("成交量")),
-                    "amount": self._clean_value(row.get("成交额")),
-                    "turnover_rate": self._clean_value(row.get("换手率")),
-                })
-            return result
+                data_json = resp.json()
+                if not data_json or "data" not in data_json or "diff" not in data_json["data"]:
+                    return []
+                
+                result = []
+                for d in data_json["data"]["diff"]:
+                    # f12=代码, f14=名称, f2=最新价, f3=涨跌幅, f5=成交量, f6=成交额, f8=换手
+                    result.append({
+                        "code": d.get("f12", ""),
+                        "name": d.get("f14", ""),
+                        "price": self._clean_value(d.get("f2")) / 100.0 if d.get("f2") is not None else None,
+                        "change_pct": self._clean_value(d.get("f3")) / 100.0 if d.get("f3") is not None else None,
+                        "volume": self._clean_value(d.get("f5")),
+                        "amount": self._clean_value(d.get("f6")),
+                        "turnover_rate": self._clean_value(d.get("f8")) / 100.0 if d.get("f8") is not None else None,
+                    })
+                return result
         except Exception as e:
-            logger.error(f"AkShare获取热门排行失败: error={e}")
+            logger.error(f"快速获取热门排行失败: error={e}")
             return []
+        finally:
+            gc.collect()
 
     async def get_full_financial_report(self, symbol: str) -> Optional[Dict[str, Any]]:
         """获取全量财务指标 (EPIC-002)
@@ -370,3 +386,211 @@ class AkShareService:
         except Exception as e:
             logger.error(f"AkShare获取全量财务指标失败: symbol={symbol}, error={e}", exc_info=True)
             return None
+
+    async def get_capital_flow(self, symbol: str) -> List[Dict[str, Any]]:
+        """获取个股资金流向"""
+        try:
+            # 判断市场
+            market = "sh" if symbol.startswith("6") or symbol.startswith("9") else "sz"
+            # AkShare individual fund flow
+            df = await asyncio.to_thread(ak.stock_individual_fund_flow, stock=symbol, market=market)
+            if df is None or df.empty:
+                return []
+            
+            # Use recent 30 days
+            df = df.head(30)
+            result = []
+            for _, row in df.iterrows():
+                result.append({
+                    "date": str(row.get("日期", "")),
+                    "close": self._clean_value(row.get("收盘价")),
+                    "change_pct": self._clean_value(row.get("涨跌幅")),
+                    "main_net_inflow": self._clean_value(row.get("主力净流入-净额")),
+                    "main_net_inflow_pct": self._clean_value(row.get("主力净流入-净占比")),
+                    "super_large_net_inflow": self._clean_value(row.get("超大单净流入-净额")),
+                    "large_net_inflow": self._clean_value(row.get("大单净流入-净额")),
+                    "medium_net_inflow": self._clean_value(row.get("中单净流入-净额")),
+                    "small_net_inflow": self._clean_value(row.get("小单净流入-净额")),
+                })
+            return result
+        except Exception as e:
+            logger.error(f"AkShare获取资金流向失败: symbol={symbol}, error={e}")
+            return []
+
+    async def get_block_trade(self, date: str) -> List[Dict[str, Any]]:
+        """获取大宗交易"""
+        try:
+            df = await asyncio.to_thread(ak.stock_dzjy_mrtj, date=date)
+            if df is None or df.empty:
+                return []
+            
+            result = []
+            for _, row in df.iterrows():
+                result.append({
+                    "code": row.get("证券代码", ""),
+                    "name": row.get("证券简称", ""),
+                    "price": self._clean_value(row.get("成交价")),
+                    "volume": self._clean_value(row.get("成交量")),
+                    "amount": self._clean_value(row.get("成交额")),
+                    "buyer": row.get("买方营业部", ""),
+                    "seller": row.get("卖方营业部", ""),
+                    "date": str(row.get("交易日期", "")),
+                })
+            return result
+        except Exception as e:
+            logger.error(f"AkShare获取大宗交易失败: date={date}, error={e}")
+            return []
+
+    async def get_margin_data(self, symbol: str) -> List[Dict[str, Any]]:
+        """获取融资融券数据"""
+        try:
+            # 判断市场 (简易逻辑)
+            # 6开头为沪市，其他暂认为深市/其他
+            is_sh = str(symbol).startswith("6") or str(symbol).startswith("9")
+            
+            # 东方财富接口往往不要sh/sz前缀, 只要纯数字
+            code = symbol
+            if "." in code:
+                code = code.split(".")[-1]
+            
+            if symbol.startswith("6"):
+                df = await asyncio.to_thread(ak.stock_margin_detail_sse, symbol=symbol)
+            else:
+                df = await asyncio.to_thread(ak.stock_margin_detail_szse, symbol=symbol)
+                
+            if df is None or df.empty:
+                return []
+                
+            # Recent 30 records
+            df = df.head(30)
+            
+            result = []
+            for _, row in df.iterrows():
+                op_date = row.get("信用交易日期") or row.get("日期")
+                result.append({
+                    "date": str(op_date),
+                    # 融资 (Financing)
+                    "financing_balance": self._clean_value(row.get("融资余额")),
+                    "financing_buy": self._clean_value(row.get("融资买入额")),
+                    "financing_repay": self._clean_value(row.get("融资偿还额")),
+                    # 融券 (Securities Lending)
+                    "lending_balance": self._clean_value(row.get("融券余额") or row.get("融券余量")), 
+                    "lending_sell": self._clean_value(row.get("融券卖出量")), 
+                    "lending_repay": self._clean_value(row.get("融券偿还量")),
+                })
+            return result
+        except Exception as e:
+            logger.error(f"AkShare获取融资融券失败: symbol={symbol}, error={e}")
+            return []
+
+    async def get_shareholder_info(self, symbol: str, all_history: bool = False) -> Dict[str, Any]:
+        """获取股东信息 (户数 + 前十大) - 优化版: 直接调用接口避免 OOM
+        
+        :param symbol: 股票代码
+        :param all_history: 是否获取上市以来的所有数据 (默认为 False, 仅获取最近/最新)
+        """
+        result = {
+            "holder_count_history": [],
+            "top10_holders": []
+        }
+        
+        # 统一代码
+        code = symbol.split(".")[-1] if "." in symbol else symbol
+        
+        # Determine page size based on history request
+        # 5000 records cover ~1000 years for quarterly data (4 * 1000 = 4000)
+        page_size_count = 5000 if all_history else 10
+        page_size_holders = 5000 if all_history else 20
+        
+        async with httpx.AsyncClient(timeout=15.0) as client:
+            # 1. 股东户数历史
+            try:
+                url_count = f"https://datacenter-web.eastmoney.com/api/data/v1/get?reportName=RPT_F10_EH_HOLDERNUM&columns=ALL&filter=(SECURITY_CODE%3D%22{code}%22)&pageNumber=1&pageSize={page_size_count}"
+                resp = await client.get(url_count)
+                if resp.status_code == 200:
+                    data_json = resp.json()
+                    if data_json.get("success") and "result" in data_json and data_json["result"]:
+                        items = data_json["result"].get("data", [])
+                        for item in items:
+                            result["holder_count_history"].append({
+                                "date": item.get("END_DATE", "")[:10] if item.get("END_DATE") else "",
+                                "count": item.get("HOLDER_TOTAL_NUM"),
+                                "change": item.get("TOTAL_NUM_RATIO"),
+                                "avg_market_cap": item.get("AVG_HOLD_AMT"),
+                            })
+            except Exception as e:
+                logger.warning(f"直接获取股东户数失败: code={code}, error={e}")
+
+            # 2. 前十大自由流通股东
+            try:
+                url_top10 = f"https://datacenter-web.eastmoney.com/api/data/v1/get?reportName=RPT_F10_EH_FREEHOLDERS&columns=ALL&filter=(SECURITY_CODE%3D%22{code}%22)&pageNumber=1&pageSize={page_size_holders}"
+                resp = await client.get(url_top10)
+                if resp.status_code == 200:
+                    data_json = resp.json()
+                    if data_json.get("success") and "result" in data_json and data_json["result"]:
+                        items = data_json["result"].get("data", [])
+                        
+                        if items:
+                            # 如果请求全量历史，直接返回所有记录
+                            if all_history:
+                                for item in items:
+                                    result["top10_holders"].append({
+                                        "rank": item.get("HOLDER_RANK"),
+                                        "holder_name": item.get("HOLDER_NAME"),
+                                        "share_type": "流通A股",
+                                        "hold_count": item.get("HOLD_NUM"),
+                                        "hold_pct": item.get("FREE_HOLDNUM_RATIO"),
+                                        "change": item.get("HOLD_NUM_CHANGE"), 
+                                        "time": item.get("END_DATE", "")[:10] if item.get("END_DATE") else ""
+                                    })
+                            else:
+                                # 否则只取最新一期
+                                latest_date = items[0].get("END_DATE")
+                                for item in items:
+                                    if item.get("END_DATE") == latest_date:
+                                        result["top10_holders"].append({
+                                            "rank": item.get("HOLDER_RANK"),
+                                            "holder_name": item.get("HOLDER_NAME"),
+                                            "share_type": "流通A股",
+                                            "hold_count": item.get("HOLD_NUM"),
+                                            "hold_pct": item.get("FREE_HOLDNUM_RATIO"),
+                                            "change": item.get("HOLD_NUM_CHANGE"), 
+                                            "time": item.get("END_DATE", "")[:10] if item.get("END_DATE") else ""
+                                        })
+            except Exception as e:
+                logger.warning(f"直接获取前十大股东失败: code={code}, error={e}")
+                
+        gc.collect() # 显式回收
+        return result
+
+    async def get_dividend_history(self, symbol: str) -> List[Dict[str, Any]]:
+        """获取分红配股历史"""
+        try:
+            # 东方财富接口往往不要sh/sz前缀
+            code = symbol
+            if "." in code:
+                code = code.split(".")[-1]
+                
+            # 增加 20 秒超时保护
+            df = await asyncio.wait_for(
+                asyncio.to_thread(ak.stock_fhps_detail_em, symbol=code),
+                timeout=20.0
+            )
+            if df is None or df.empty:
+                return []
+                
+            result = []
+            for _, row in df.iterrows():
+                result.append({
+                    "report_date": str(row.get("报告期", "")), 
+                    "plan_date": str(row.get("业绩披露日", "")),
+                    "bonus_share_ratio": self._clean_value(row.get("送转股份-送转总比例")), 
+                    "cash_dividend_ratio": self._clean_value(row.get("现金分红-现金分红比例")), 
+                    "record_date": str(row.get("股权登记日", "")),
+                    "ex_date": str(row.get("除权除息日", "")),
+                    "progress": row.get("方案进度", ""),
+                })
+            return result
+        except Exception as e:
+            logger.error(f"AkShare获取分红配送失败: symbol={symbol}, error={e}")
+            return []

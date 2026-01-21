@@ -6,10 +6,10 @@
 
 | 服务名 | 端口 | 数据源 | 核心功能 |
 |--------|------|--------|----------|
-| **akshare-api** | 8000 | 东方财富等 | 财务、估值、龙虎榜、行业 |
-| **baostock-api** | 8001 | baostock.com:10030 | 复权K线、指数成分、盈利能力 |
+| **stock-manager-api** | 8000 | 内部聚合 | 调度管理/Dashboard/数据补全 |
+| **baostock-api** | 8001 | baostock.com:10030 | 复权K线、指数成分、盈利能力、历史估值 |
 | **pywencai-api** | 8002 | 同花顺问财 | 自然语言选股、板块筛选 |
-| **stock-manager-api** | 8004 | 内部聚合 | 调度管理/Dashboard/数据补全 |
+| **akshare-api** | 8003 | 东方财富等 | 财务、估值、龙虎榜、行业 |
 
 ---
 
@@ -22,7 +22,7 @@
 version: "3.8"
 services:
   <service>-api:
-    image: python:3.12-alpine
+    image: python:3.12-slim
     restart: unless-stopped
     ports:
       - "<port>:8000"
@@ -51,18 +51,23 @@ services:
 
 ---
 
-## akshare-api (:8000)
+## akshare-api (:8003)
 
 ### 端点清单
 
 | 端点 | 方法 | 功能 | 示例参数 |
 |------|------|------|----------|
-| `/api/v1/finance/{code}` | GET | 财务报表 | code=600519 |
-| `/api/v1/valuation/{code}` | GET | 估值指标 | code=600519 |
-| `/api/v1/valuation/{code}/history` | GET | 历史估值 | start_date, end_date |
+| `/api/v1/finance/{code}` | GET | 财务报表摘要 | code=600519 |
+| `/api/v1/finance/indicators/{code}` | GET | 全量财务指标 (EPIC-002) | code=600519 |
+| `/api/v1/valuation/{code}` | GET | 实时估值 | code=600519 |
 | `/api/v1/dragon_tiger/daily` | GET | 龙虎榜 | date=2024-01-15 |
 | `/api/v1/industry/stock/{code}` | GET | 个股行业 | code=600519 |
 | `/api/v1/rank/hot` | GET | 热门排行 | limit=50 |
+| `/api/v1/capital_flow/{code}` | GET | 资金流向 | code=600519 |
+| `/api/v1/block_trade/daily` | GET | 大宗交易 | date=2024-01-15 |
+| `/api/v1/margin/{code}` | GET | 融资融券 | code=600519 |
+| `/api/v1/shareholder/{code}` | GET | 股东信息 | code=600519 |
+| `/api/v1/dividend/{code}` | GET | 分红配股 | code=600519 |
 
 ### 返回字段示例
 
@@ -97,11 +102,13 @@ services:
 | 端点 | 方法 | 功能 | 示例参数 |
 |------|------|------|----------|
 | `/api/v1/history/kline/{code}` | GET | 历史K线 | frequency=d, adjust=2 |
+| `/api/v1/valuation/{code}/history` | GET | 历史估值 (PE/PB) | start_date, end_date |
 | `/api/v1/index/cons/{index}` | GET | 指数成分 | index=sz.399300 |
 | `/api/v1/industry/classify` | GET | 行业分类 | - |
 | `/api/v1/finance/profit/{code}` | GET | 盈利能力 | code=sh.600519 |
 | `/api/v1/sync/kline/{code}` | POST | 同步个股至MySQL | start_date, end_date |
 | `/api/v1/sync/full` | POST | 一键全市场同步 | start_date |
+| `/api/v1/sync/remediate` | POST | 数据修复 | date=20240115 |
 | `/api/v1/sync/status` | GET | 查看进度 | - |
 | `/api/v1/sync/reset` | POST | 重置进度 | - |
 
@@ -186,9 +193,10 @@ services:
 
 ```python
 # 环境变量
-AKSHARE_API_URL=http://124.221.80.250:8000
+AKSHARE_API_URL=http://124.221.80.250:8003
 BAOSTOCK_API_URL=http://124.221.80.250:8001
 PYWENCAI_API_URL=http://124.221.80.250:8002
+STOCK_MANAGER_API_URL=http://124.221.80.250:8000
 HTTP_PROXY=http://192.168.151.18:3128
 ```
 
@@ -204,7 +212,7 @@ HTTP_PROXY=http://192.168.151.18:3128
 
 ---
 
-## stock-manager-api (:8004)
+## stock-manager-api (:8000)
 
 ### 端点清单
 
@@ -216,6 +224,8 @@ HTTP_PROXY=http://192.168.151.18:3128
 | `/api/v1/task-commands` | POST | 下达任务指令 | `{task_id, params}` |
 | `/api/v1/task-commands` | GET | 指令队列列表 | status, task_id |
 | `/api/v1/task-commands/{id}` | GET | 指令状态详情 | - |
+| `/api/v1/ops/freshness` | GET | 数据时效性检查 | - |
+| `/api/v1/audit/gate` | GET | 数据门禁审计 | - |
 
 ### 任务分类说明 (Category Mapping)
 
