@@ -108,29 +108,29 @@ async def get_capital_flow(request: Request, code: str):
 async def get_block_trade(
     request: Request,
     date: Optional[str] = Query(None, description="日期 YYYY-MM-DD"),
+    start_date: Optional[str] = Query(None, description="开始日期 YYYY-MM-DD"),
+    end_date: Optional[str] = Query(None, description="结束日期 YYYY-MM-DD"),
 ):
     """
-    获取大宗交易数据
-    
-    - **date**: 若不传则返回最近交易日数据
+    获取大宗交易数据 (支持单日或范围)
     """
     request_id = getattr(request.state, "request_id", "unknown")
     service = request.app.state.akshare_service
     
-    # 默认日期逻辑在 Service 层或这里处理? Service 层 stock_dzjy_mrtj如果不传日期会报错吗?
-    # akshare 接口通常需要日期. 让我们简单点, 如果没传交给 Service 也许能处理? 
-    # Service get_block_trade expecting date.
-    if not date:
-        # 简单默认今天, 或者让前端传. 这里为了友好, 默认今天.
-        from datetime import datetime
-        date = datetime.now().strftime("%Y-%m-%d")
+    if start_date and end_date:
+        s_date, e_date = start_date, end_date
+    else:
+        if not date:
+            from datetime import datetime
+            date = datetime.now().strftime("%Y-%m-%d")
+        s_date, e_date = date, date
         
     try:
-        result = await service.get_block_trade(date)
-        logger.info(f"获取大宗交易成功: date={date}, count={len(result)}", extra={"request_id": request_id})
+        result = await service.get_block_trade(s_date, e_date)
+        logger.info(f"获取大宗交易成功: start={s_date}, end={e_date}, count={len(result)}", extra={"request_id": request_id})
         return result
     except Exception as e:
-        logger.error(f"获取大宗交易失败: date={date}, error={e}", extra={"request_id": request_id})
+        logger.error(f"获取大宗交易失败: start={s_date}, end={e_date}, error={e}", extra={"request_id": request_id})
         raise HTTPException(status_code=500, detail=f"获取大宗交易失败: {str(e)}")
 
 
@@ -151,3 +151,85 @@ async def get_margin_data(request: Request, code: str):
     except Exception as e:
         logger.error(f"获取融资融券失败: code={code}, error={e}", extra={"request_id": request_id})
         raise HTTPException(status_code=500, detail=f"获取融资融券失败: {str(e)}")
+@router.get("/restricted/release")
+async def get_restricted_release(
+    request: Request,
+    start_date: Optional[str] = Query(None, description="开始日期 YYYY-MM-DD"),
+    end_date: Optional[str] = Query(None, description="结束日期 YYYY-MM-DD"),
+):
+    """
+    获取限售股解禁数据
+    """
+    request_id = getattr(request.state, "request_id", "unknown")
+    service = request.app.state.akshare_service
+    
+    from datetime import datetime, timedelta
+    if not start_date:
+        start_date = datetime.now().strftime("%Y-%m-%d")
+    if not end_date:
+        # 默认看未来30天
+        end_date = (datetime.now() + timedelta(days=30)).strftime("%Y-%m-%d")
+        
+    try:
+        result = await service.get_restricted_release(start_date, end_date)
+        logger.info(f"获取限售股解禁成功: start={start_date}, end={end_date}, count={len(result)}", extra={"request_id": request_id})
+        return result
+    except Exception as e:
+        logger.error(f"获取限售股解禁失败: start={start_date}, end={end_date}, error={e}", extra={"request_id": request_id})
+        raise HTTPException(status_code=500, detail=f"获取限售股解禁失败: {str(e)}")
+@router.get("/north/daily")
+async def get_north_funds_daily(
+    request: Request,
+    date: str = Query(..., description="日期 YYYY-MM-DD"),
+):
+    """
+    获取北向资金每日个股统计
+    """
+    request_id = getattr(request.state, "request_id", "unknown")
+    service = request.app.state.akshare_service
+    
+    try:
+        result = await service.get_north_funds_daily(date)
+        logger.info(f"获取北向资金成功: date={date}, count={len(result)}", extra={"request_id": request_id})
+        return result
+    except Exception as e:
+        logger.error(f"获取北向资金失败: date={date}, error={e}", extra={"request_id": request_id})
+        raise HTTPException(status_code=500, detail=f"获取北向资金失败: {str(e)}")
+@router.get("/dragon_tiger/institution")
+async def get_dragon_tiger_inst(
+    request: Request,
+    date: str = Query(..., description="日期 YYYY-MM-DD"),
+):
+    """
+    获取龙虎榜机构统计
+    """
+    request_id = getattr(request.state, "request_id", "unknown")
+    service = request.app.state.akshare_service
+    
+    try:
+        result = await service.get_lhb_inst_stats(date)
+        logger.info(f"获取龙虎榜机构统计成功: date={date}, count={len(result)}", extra={"request_id": request_id})
+        return result
+    except Exception as e:
+        logger.error(f"获取龙虎榜机构统计失败: date={date}, error={e}", extra={"request_id": request_id})
+        raise HTTPException(status_code=500, detail=f"获取龙虎榜机构统计失败: {str(e)}")
+@router.get("/north/history/{code}")
+async def get_north_funds_history(
+    request: Request,
+    code: str,
+    start_date: str = Query(..., description="开始日期 YYYY-MM-DD"),
+    end_date: str = Query(..., description="结束日期 YYYY-MM-DD"),
+):
+    """
+    获取个股北向持股历史
+    """
+    request_id = getattr(request.state, "request_id", "unknown")
+    service = request.app.state.akshare_service
+    
+    try:
+        result = await service.get_north_funds_history(code, start_date, end_date)
+        logger.info(f"获取个股北向历史成功: code={code}, start={start_date}, end={end_date}, count={len(result)}", extra={"request_id": request_id})
+        return result
+    except Exception as e:
+        logger.error(f"获取个股北向历史失败: code={code}, error={e}", extra={"request_id": request_id})
+        raise HTTPException(status_code=500, detail=f"获取个股北向历史失败: {str(e)}")

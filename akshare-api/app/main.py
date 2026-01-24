@@ -5,7 +5,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI, Request, HTTPException
 from fastapi.responses import JSONResponse
 
-from app.api import finance, market, scheduler_api
+from app.api import finance, market, scheduler_api, information
 from app.utils.logger import setup_logger
 from app.services.akshare_service import AkShareService
 from app.scheduler import TaskScheduler, set_scheduler_instance
@@ -105,3 +105,4 @@ async def health_check():
 app.include_router(finance.router, prefix="/api/v1", tags=["财务数据"])
 app.include_router(market.router, prefix="/api/v1", tags=["市场数据"])
 app.include_router(scheduler_api.router, prefix="/api/v1", tags=["任务调度"])
+app.include_router(information.router, prefix="/api/v1", tags=["信息维度"])

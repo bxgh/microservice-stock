@@ -9,7 +9,7 @@ class ContainerClient:
     """容器间 HTTP 客户端"""
     
     def __init__(self):
-        self.client = httpx.AsyncClient(timeout=30.0)
+        self.client = httpx.AsyncClient(timeout=120.0)
         self.base_urls = {
             "baostock": settings.BAOSTOCK_API_URL,
             "akshare": settings.AKSHARE_API_URL,

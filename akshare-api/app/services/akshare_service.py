@@ -417,10 +417,13 @@ class AkShareService:
             logger.error(f"AkShare获取资金流向失败: symbol={symbol}, error={e}")
             return []
 
-    async def get_block_trade(self, date: str) -> List[Dict[str, Any]]:
-        """获取大宗交易"""
+    async def get_block_trade(self, start_date: str, end_date: str) -> List[Dict[str, Any]]:
+        """获取大宗交易每日明细 (日期范围)"""
         try:
-            df = await asyncio.to_thread(ak.stock_dzjy_mrtj, date=date)
+            # 清致日期格式 YYYY-MM-DD -> YYYYMMDD
+            s_date = start_date.replace("-", "")
+            e_date = end_date.replace("-", "")
+            df = await asyncio.to_thread(ak.stock_dzjy_mrmx, symbol="A股", start_date=s_date, end_date=e_date)
             if df is None or df.empty:
                 return []
             
@@ -438,7 +441,7 @@ class AkShareService:
                 })
             return result
         except Exception as e:
-            logger.error(f"AkShare获取大宗交易失败: date={date}, error={e}")
+            logger.error(f"AkShare获取大宗交易失败: start={start_date}, end={end_date}, error={e}")
             return []
 
     async def get_margin_data(self, symbol: str) -> List[Dict[str, Any]]:
@@ -594,3 +597,190 @@ class AkShareService:
         except Exception as e:
             logger.error(f"AkShare获取分红配送失败: symbol={symbol}, error={e}")
             return []
+    async def get_restricted_release(self, start_date: str, end_date: str) -> List[Dict[str, Any]]:
+        """获取限售股解禁数据 (优化版: 使用东财详情接口)"""
+        try:
+            # 清化日期格式 YYYY-MM-DD -> YYYYMMDD
+            s_date = start_date.replace("-", "")
+            e_date = end_date.replace("-", "")
+            
+            df = await asyncio.to_thread(ak.stock_restricted_release_detail_em, start_date=s_date, end_date=e_date)
+            if df is None or df.empty:
+                return []
+            
+            result = []
+            for _, row in df.iterrows():
+                # 已经是 YYYY-MM-DD 格式或需要转换? 
+                # 从之前 dump 看是 "2020-09-04" 这种格式
+                release_date = str(row.get("解禁时间", ""))
+                
+                result.append({
+                    "code": row.get("股票代码", ""),
+                    "name": row.get("股票简称", ""),
+                    "release_date": release_date,
+                    "release_count": self._clean_value(row.get("解禁数量")),
+                    "release_market_cap": self._clean_value(row.get("实际解禁市值")),
+                    "ratio": self._clean_value(row.get("占解禁前流通市值比例")),
+                    "holder_type": row.get("限售股类型", ""),
+                })
+            return result
+        except Exception as e:
+            logger.error(f"AkShare获取限售股解禁失败: start={start_date}, end={end_date}, error={e}")
+            return []
+    async def get_north_funds_daily(self, date: str) -> List[Dict[str, Any]]:
+        """获取北向资金每日个股统计 (Latest via Rank)"""
+        try:
+            # 使用 '今日排行' 获取最新数据的快照
+            # 注意: 这通常只返回最近一个交易日的数据
+            df = await asyncio.to_thread(ak.stock_hsgt_hold_stock_em, market="北向", indicator="今日排行")
+            
+            if df is None or df.empty:
+                return []
+            
+            result = []
+            for _, row in df.iterrows():
+                # Check date match
+                row_date = str(row.get("日期", ""))
+                if row_date != date:
+                    continue
+                    
+                result.append({
+                    "code": row.get("代码", ""),
+                    "name": row.get("名称", ""),
+                    "date": row_date,
+                    "hold_count": self._clean_value(row.get("今日持股-股数")),
+                    "hold_market_cap": self._clean_value(row.get("今日持股-市值")),
+                    "hold_ratio": self._clean_value(row.get("今日持股-占总股本比")), 
+                })
+            return result
+        except Exception as e:
+            logger.error(f"AkShare获取北向资金失败: date={date}, error={e}")
+            return []
+
+    async def get_north_funds_history(self, code: str, start_date: str, end_date: str) -> List[Dict[str, Any]]:
+        """获取个股北向资金持股历史"""
+        try:
+            s_date = start_date.replace("-", "")
+            e_date = end_date.replace("-", "")
+            df = await asyncio.to_thread(ak.stock_hsgt_individual_detail_em, symbol=code, start_date=s_date, end_date=e_date)
+            
+            if df is None or df.empty:
+                return []
+                
+            result = []
+            for _, row in df.iterrows():
+                result.append({
+                    "code": row.get("股票代码", code),
+                    "name": row.get("股票简称", ""),
+                    "date": str(row.get("持股日期", "")),
+                    "hold_count": self._clean_value(row.get("持股数量")),
+                    "hold_market_cap": self._clean_value(row.get("持股市值")),
+                    "hold_ratio": self._clean_value(row.get("持股数量占发行股百分比")),
+                })
+            return result
+        except Exception as e:
+            logger.error(f"AkShare获取个股北向历史失败: code={code}, error={e}")
+            return []
+
+    async def get_lhb_inst_stats(self, date: str) -> List[Dict[str, Any]]:
+        """获取龙虎榜机构买卖统计"""
+        try:
+            clean_date = date.replace("-", "")
+            df = await asyncio.to_thread(ak.stock_lhb_jgmmtj_em, start_date=clean_date, end_date=clean_date)
+            
+            if df is None or df.empty:
+                return []
+            
+            result = []
+            for _, row in df.iterrows():
+                result.append({
+                    "code": row.get("代码", ""),
+                    "name": row.get("名称", ""),
+                    "buy_inst_count": self._clean_value(row.get("买方机构数")),
+                    "sell_inst_count": self._clean_value(row.get("卖方机构数")),
+                    "inst_buy_amt": self._clean_value(row.get("机构买入总额")),
+                    "inst_sell_amt": self._clean_value(row.get("机构卖出总额")),
+                    "inst_net_buy_amt": self._clean_value(row.get("机构买入净额")),
+                })
+            return result
+        except Exception as e:
+            logger.error(f"AkShare获取龙虎榜机构统计失败: date={date}, error={e}")
+            return []
+
+    async def get_analyst_ranks(self, current_date: Optional[str] = None) -> List[Dict[str, Any]]:
+        """获取个股研报评级 (Information Dimension)"""
+        try:
+            df = await asyncio.to_thread(ak.stock_research_report_em)
+            if df is None or df.empty:
+                return []
+            result = []
+            for _, row in df.iterrows():
+                rpt_date = str(row.get("日期", ""))[:10]
+                if current_date and rpt_date != current_date:
+                    continue
+                result.append({
+                    "stock_code": row.get("股票代码", ""),
+                    "report_date": rpt_date,
+                    "analyst": row.get("机构", ""),
+                    "rating": row.get("东财评级", ""),
+                    "change_direction": None, # 该接口无直接变动方向
+                    "target_price": None,
+                    "stock_name": row.get("股票简称", "")
+                })
+            return result
+        except Exception as e:
+            logger.error(f"AkShare Research Report Error: {e}")
+            return []
+
+
+    async def get_performance_forecast(self, period_date: str) -> List[Dict[str, Any]]:
+        """获取业绩预告 (Information Dimension)"""
+        try:
+            df = await asyncio.to_thread(ak.stock_yjyg_em, date=period_date.replace("-", ""))
+            if df is None or df.empty:
+                return []
+            result = []
+            for _, row in df.iterrows():
+                result.append({
+                    "stock_code": row.get("股票代码", ""),
+                    "notice_date": str(row.get("公告日期", ""))[:10],
+                    "report_period": period_date,
+                    "type": row.get("业绩变动", ""),
+                    "growth_range": str(row.get("业绩变动幅度", ""))
+                })
+            return result
+        except Exception as e:
+            logger.error(f"AkShare Forecast Error: {e}")
+            return []
+
+    async def get_sentiment_stats(self, symbol: str) -> Dict[str, Any]:
+        """获取个股今日热度统计 (Information Dimension) - 使用东方财富热度榜"""
+        try:
+            # 格式转换 600519 -> SH600519
+            code = symbol
+            if not code.startswith(("SH", "SZ", "BJ")):
+                if code.startswith("6"): code = "SH" + code
+                else: code = "SZ" + code
+            
+            df = await asyncio.to_thread(ak.stock_hot_rank_detail_em, symbol=code)
+            if df is None or df.empty:
+                return {"post_count": 0, "read_count": 0, "comment_count": 0}
+            
+            # 取最新一条记录 (最后一行)
+            latest = df.iloc[-1]
+            # 我们将排名和粉丝比例映射到 post_count 等字段，以匹配原有 Schema
+            # 排名越前(1最小)，热度越高
+            rank = int(latest.get("排名", 0))
+            new_fans = self._clean_value(latest.get("新晋粉丝")) or 0
+            
+            return {
+                "post_count": 0, # 热度榜无直观帖数，暂设 0
+                "read_count": int(new_fans * 1000000), # 模拟权重
+                "comment_count": 0,
+                "rank_score": rank
+            }
+        except Exception as e:
+            logger.error(f"AkShare Sentiment Error: {symbol}, {e}")
+            return {"post_count": 0, "read_count": 0, "comment_count": 0, "rank_score": 0}
+
+
