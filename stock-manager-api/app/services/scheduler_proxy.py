@@ -22,12 +22,18 @@ class SchedulerProxyService:
         
         return {"jobs": all_jobs}
     
-    async def control_job(self, container: str, job_id: str, action: str) -> Dict[str, Any]:
+    async def control_job(self, container: str, job_id: str, action: str, params: Dict[str, Any] = None) -> Dict[str, Any]:
         """转发任务控制指令"""
         try:
+            # V1.2+ 支持带参数运行
+            json_body = {}
+            if params and action == "run":
+                json_body = {"params": params}
+                
             result = await http_client.post(
                 container,
-                f"/api/v1/scheduler/jobs/{job_id}/{action}"
+                f"/api/v1/scheduler/jobs/{job_id}/{action}",
+                json=json_body
             )
             return result
         except Exception as e:

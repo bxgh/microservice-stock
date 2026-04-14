@@ -25,7 +25,7 @@ SCHEDULER_CONFIG: Dict[str, Any] = {
         "daily_kline_sync": {
             "hour": 18,
             "minute": 30,
-            "enabled": False,
+            "enabled": True,
         },
         
         # 每日复权因子同步 (单体模式，已合并至流水线，默认禁用)

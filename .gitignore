@@ -40,3 +40,11 @@ Thumbs.db
 docker-compose.override.yml
 *.log
 node_modules
+
+# Test and Debug scripts
+test_*.py
+debug_*.py
+check_*.py
+*.txt
+migration.log
+*.db

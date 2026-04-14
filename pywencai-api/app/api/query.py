@@ -10,7 +10,8 @@ logger = get_logger("pywencai-api.api.query")
 class QueryRequest(BaseModel):
     """问财查询请求"""
     q: str = Field(..., description="查询语句,如'今日涨停'")
-    perpage: int = Field(100, ge=1, le=100, description="每页数量")
+    perpage: int = Field(100, ge=1, le=200, description="每页数量")
+    loop: bool = Field(False, description="是否循环分页获取全部结果")
 
 
 @router.post("/query")
@@ -24,7 +25,7 @@ async def wencai_query(request: Request, body: QueryRequest):
     service = request.app.state.wencai_service
     
     try:
-        result = await service.query(q=body.q, perpage=body.perpage)
+        result = await service.query(q=body.q, perpage=body.perpage, loop=body.loop)
         logger.info(f"问财查询成功: q='{body.q}', rows={len(result.get('data', []))}", extra={"request_id": request_id})
         return result
     

@@ -12,6 +12,7 @@
 | `margin` | 融资融券 | ✅ | akshare (8003) | `GET /api/v1/margin/{code}` | ✅ Pass |
 | `shareholder` | 股东数据 | ✅ | akshare (8003) | `GET /api/v1/shareholder/{code}` | ✅ Pass |
 | `dividend` | 分红配股 | ✅ | akshare (8003) | `GET /api/v1/dividend/{code}` | ✅ Pass |
+| `suspension` | 停复牌 | ✅ | akshare (8003) | `GET /api/v1/suspension/daily` | ✅ Pass |
 
 | `announcement` | 公告 | ⚠️ | - | - | - |
 
@@ -138,3 +139,26 @@
       }
     ]
     ```
+
+### 7. 停复牌信息 (`suspension`)
+*   **服务**: `akshare (8003)`
+*   **方法**: `GET /api/v1/suspension/daily`
+*   **参数**: `date` (YYYY-MM-DD，获取指定日期或最新的停牌列表)
+*   **示例**:
+    ```json
+    [
+      {
+        "code": "603980",
+        "name": "吉华集团",
+        "suspension_date": "2026-02-02",
+        "resumption_date": null,
+        "reason": "刊登重要公告",
+        "market": "上交所主板"
+      }
+    ]
+    ```
+
+#### 数据同步 (stock-manager-api)
+*   **同步接口**: `POST /api/v1/suspensions/sync`
+    *   参数: `start_date`, `end_date` (YYYY-MM-DD)
+    *   功能: 从 BaoStock 获取历史每日停牌状态 (`tradeStatus=0`) 并存入 MySQL `stock_suspensions` 表。

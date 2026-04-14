@@ -11,18 +11,26 @@ logger = get_logger("akshare-api.api.market")
 async def get_dragon_tiger_daily(
     request: Request,
     date: Optional[str] = Query(None, description="日期 YYYY-MM-DD,默认最近交易日"),
+    start_date: Optional[str] = Query(None, description="开始日期 YYYY-MM-DD"),
+    end_date: Optional[str] = Query(None, description="结束日期 YYYY-MM-DD"),
 ):
     """
     获取龙虎榜数据
     
-    - **date**: 交易日期,如 2024-01-15
+    - **date**: 单日查询
+    - **start_date/end_date**: 范围查询 (优先)
     """
     request_id = getattr(request.state, "request_id", "unknown")
     service = request.app.state.akshare_service
     
     try:
-        result = await service.get_lhb_detail(date, date)
-        logger.info(f"获取龙虎榜成功: date={date}, count={len(result)}", extra={"request_id": request_id})
+        logger.info(f"DEBUG MARKET: start={start_date}, end={end_date}, date={date}", extra={"request_id": request_id})
+        if start_date and end_date:
+            result = await service.get_lhb_detail(start_date, end_date)
+            logger.info(f"获取龙虎榜(范围)成功: {start_date}~{end_date}, count={len(result)}", extra={"request_id": request_id})
+        else:
+            result = await service.get_lhb_detail(date, date)
+            logger.info(f"获取龙虎榜成功: date={date}, count={len(result)}", extra={"request_id": request_id})
         return result
         
     except Exception as e:
@@ -233,3 +241,25 @@ async def get_north_funds_history(
     except Exception as e:
         logger.error(f"获取个股北向历史失败: code={code}, error={e}", extra={"request_id": request_id})
         raise HTTPException(status_code=500, detail=f"获取个股北向历史失败: {str(e)}")
+
+
+@router.get("/suspension/daily")
+async def get_suspension_daily(
+    request: Request,
+    date: str = Query(..., description="日期 YYYY-MM-DD"),
+):
+    """
+    获取每日停复牌信息
+    
+    注意: 某些数据源可能只返回当前最新的停牌列表，而忽略日期参数。
+    """
+    request_id = getattr(request.state, "request_id", "unknown")
+    service = request.app.state.akshare_service
+    
+    try:
+        result = await service.get_suspension_daily(date)
+        logger.info(f"获取停复牌信息成功: date={date}, count={len(result)}", extra={"request_id": request_id})
+        return result
+    except Exception as e:
+        logger.error(f"获取停复牌信息失败: date={date}, error={e}", extra={"request_id": request_id})
+        raise HTTPException(status_code=500, detail=f"获取停复牌信息失败: {str(e)}")

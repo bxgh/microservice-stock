@@ -13,14 +13,27 @@ async def list_jobs(request: Request):
         "jobs": jobs
     }
 
+from fastapi import APIRouter, HTTPException, Request, Query, Body
+from typing import Optional, List, Dict, Any
+
+# ... (imports)
+
 @router.post("/scheduler/jobs/{job_id}/{action}")
-async def handle_job_action(job_id: str, action: str, request: Request, container: str = Query("baostock-api")):
+async def handle_job_action(
+    job_id: str, 
+    action: str, 
+    request: Request, 
+    container: str = Query("baostock-api"),
+    payload: Dict[str, Any] = Body(None)
+):
     """处理任务动作 (pause, resume, run)"""
     if action not in ["pause", "resume", "run"]:
         raise HTTPException(status_code=400, detail="不支持的操作")
         
+    params = payload.get("params") if payload else None
+    
     service = request.app.state.baostock_service
-    success = await service.perform_remote_job_action(container, job_id, action)
+    success = await service.perform_remote_job_action(container, job_id, action, params=params)
     
     if not success:
         raise HTTPException(status_code=400, detail="操作执行失败")

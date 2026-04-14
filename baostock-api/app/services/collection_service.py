@@ -80,8 +80,8 @@ class CollectionService:
             if clear_existing:
                 logger.info(f"Task[{task_id}] 清除旧数据: {stock_code}", extra=log_extra)
                 # 使用 DELETE 语句清除 MySQL 中的数据
-                # 注意: 表名需与实际一致，这里假设是 stock_kline_daily
-                await db.execute("DELETE FROM stock_kline_daily WHERE code = %s", (stock_code,))
+                std_code = self.bs_service._normalize_to_standard(stock_code)
+                await db.execute("DELETE FROM stock_kline_daily WHERE code = %s", (std_code,))
             
             self._update_task(task_id, "running", progress=10)
             

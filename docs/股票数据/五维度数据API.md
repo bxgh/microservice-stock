@@ -2,6 +2,8 @@
 
 所有接口均由 `stock-manager-api` (Port 8004) 提供，前缀为 `/api/v1/shareholders`。
 
+> **注意**: 为确保跨表关联一致性，所有接口的代码参数（`{code}`）均应遵循标准后缀格式（如 `600519.SH`）。虽然系统会尝试自动转换纯数字代码，但建议调用方优先传入标准格式。
+
 ## 1. 同步接口
 
 ### 1.1 同步单只股票
@@ -12,12 +14,12 @@
   - `all` (bool): 是否同步全量历史。`true` 表示同步上市以来所有数据，`false` (默认) 仅同步近期数据。
 - **示例**:
   ```bash
-  curl -X POST "http://localhost:8004/api/v1/shareholders/sync/600519?all=true"
+  curl -X POST "http://localhost:8004/api/v1/shareholders/sync/600519.SH?all=true"
   ```
 - **响应示例**:
   ```json
   {
-    "code": "600519",
+    "code": "600519.SH",
     "all_history": true,
     "holder_count_synced": 104,
     "top10_synced": 910,
@@ -30,7 +32,7 @@
 - **Body**:
   ```json
   {
-    "codes": ["600519", "000001", "000002"]
+    "codes": ["600519.SH", "000001.SZ", "000002.SZ"]
   }
   ```
 - **Query 参数**: `all` (同上)

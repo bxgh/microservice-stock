@@ -91,11 +91,11 @@ services:
       resources:
         limits:
           cpus: '0.5'
-          memory: 128M
+          memory: 512M
         reservations:
           cpus: '0.1'
           memory: 50M
-    mem_limit: 128m
+    mem_limit: 512m
     cpus: 0.5
     networks:
       - stock-network

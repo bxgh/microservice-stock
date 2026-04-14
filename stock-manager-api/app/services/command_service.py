@@ -41,12 +41,19 @@ class CommandService:
 
     async def get_command_status(self, command_id: int) -> Dict[str, Any]:
         """获取命令状态"""
-        sql = "SELECT id, task_id, status, created_at, executed_at, finished_at, result FROM commands WHERE id = %s"
+        sql = "SELECT id, task_id, status, created_at, executed_at, finished_at, result, params FROM commands WHERE id = %s"
         rows = await db.execute(sql, (command_id,))
         if not rows:
             return None
         
         row = rows[0]
+        params_val = row[7]
+        if isinstance(params_val, str):
+            try:
+                params_val = json.loads(params_val)
+            except:
+                params_val = {}
+                
         return {
             "id": row[0],
             "task_id": row[1],
@@ -54,7 +61,8 @@ class CommandService:
             "created_at": row[3].strftime("%Y-%m-%dT%H:%M:%S") if row[3] else None,
             "executed_at": row[4].strftime("%Y-%m-%dT%H:%M:%S") if row[4] else None,
             "finished_at": row[5].strftime("%Y-%m-%dT%H:%M:%S") if row[5] else None,
-            "result": row[6]
+            "result": row[6],
+            "params": params_val
         }
 
     async def list_commands(self, limit: int = 20) -> List[Dict[str, Any]]:

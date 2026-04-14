@@ -21,6 +21,13 @@ async def lifespan(app: FastAPI):
     # 1. 初始化 Service
     app.state.akshare_service = AkShareService()
     
+    # 0. 初始化数据库
+    from app.utils.database import db
+    try:
+        await db.connect()
+    except Exception as e:
+        logger.error(f"数据库连接失败: {e}")
+    
     # 2. 初始化并启动调度器
     scheduler = TaskScheduler()
     set_scheduler_instance(scheduler)
@@ -30,12 +37,75 @@ async def lifespan(app: FastAPI):
         logger.debug("AkShare 调度器心跳存活")
     
     scheduler.add_interval_job(heartbeat, "akshare_heartbeat", seconds=3600)
+    
+    # 注册每日ETF同步任务 (17:30)
+    from app.scheduler import jobs as job_funcs
+    scheduler.add_daily_job(
+        job_funcs.daily_etf_kline_sync_job,
+        hour=17,
+        minute=30,
+        job_id="daily_etf_kline_sync"
+    )
+
+    # 注册每周元数据同步任务 (周六 02:00)
+    scheduler.add_cron_job(
+        job_funcs.weekly_metadata_sync_job,
+        hour=2,
+        minute=0,
+        day_of_week=5,
+        job_id="weekly_metadata_sync"
+    )
+
+    # 注册每日市场数据同步 (19:00)
+    scheduler.add_daily_job(
+        job_funcs.daily_market_data_sync_job,
+        hour=19,
+        minute=0,
+        job_id="daily_market_data_sync"
+    )
+
+    # 注册每日情绪数据同步 (19:30)
+    scheduler.add_daily_job(
+        job_funcs.daily_sentiment_sync_job,
+        hour=19,
+        minute=30,
+        job_id="daily_sentiment_sync"
+    )
+
+    # 注册每周股票列表同步 (周六 01:00)
+    scheduler.add_cron_job(
+        job_funcs.weekly_stock_list_sync_job,
+        hour=1,
+        minute=0,
+        day_of_week=5,
+        job_id="weekly_stock_list_sync"
+    )
+
+    # 注册每周同花顺板块同步 (周六 03:00)
+    scheduler.add_cron_job(
+        job_funcs.weekly_ths_sector_sync_job,
+        hour=3,
+        minute=0,
+        day_of_week=5,
+        job_id="weekly_ths_sector_sync"
+    )
+
+    # 注册每周限售股解禁同步 (周六 04:00)
+    scheduler.add_cron_job(
+        job_funcs.weekly_restricted_release_job,
+        hour=4,
+        minute=0,
+        day_of_week=5,
+        job_id="weekly_restricted_release"
+    )
+    
     await scheduler.start()
     
     yield
     
     # 关闭调度器
     await scheduler.stop()
+    await db.disconnect()
     logger.info("AkShare API 服务关闭")
 
 
@@ -102,7 +172,13 @@ async def health_check():
 
 
 # 注册路由
+from app.api import finance, market, scheduler_api, information, metadata
+
+# ... (omitted)
+
+# 注册路由
 app.include_router(finance.router, prefix="/api/v1", tags=["财务数据"])
 app.include_router(market.router, prefix="/api/v1", tags=["市场数据"])
 app.include_router(scheduler_api.router, prefix="/api/v1", tags=["任务调度"])
 app.include_router(information.router, prefix="/api/v1", tags=["信息维度"])
+app.include_router(metadata.router, prefix="/api/v1", tags=["元数据管理"])

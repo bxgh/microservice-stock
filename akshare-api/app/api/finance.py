@@ -136,3 +136,22 @@ async def get_dividend(request: Request, code: str):
         logger.error(f"获取分红配股信息失败: code={code}, error={e}", extra={"request_id": request_id})
         raise HTTPException(status_code=500, detail=f"获取分红配股信息失败: {str(e)}")
 
+
+@router.get("/forecast")
+async def get_forecast_data(request: Request, period: str = Query(..., description="报告期 YYYY-MM-DD")):
+    """
+    获取业绩预告
+    """
+    request_id = getattr(request.state, "request_id", "unknown")
+    service = request.app.state.akshare_service
+    
+    try:
+        data = await service.get_performance_forecast(period)
+        # 允许返回空列表
+        if data is None: 
+            data = []
+        logger.info(f"获取业绩预告成功: period={period}, count={len(data)}", extra={"request_id": request_id})
+        return data
+    except Exception as e:
+        logger.error(f"获取业绩预告失败: period={period}, error={e}", extra={"request_id": request_id})
+        raise HTTPException(status_code=500, detail=str(e))

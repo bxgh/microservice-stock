@@ -5,7 +5,10 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI, Request, HTTPException
 from fastapi.responses import JSONResponse
 
-from app.api import metadata, audit, scheduler, ops, system, dashboard, commands, task_commands, data_audit, shareholders, chips, game, information
+from app.api import (
+    metadata, audit, scheduler, ops, system, dashboard, 
+    shareholders, chips, game, information, commands, task_commands, data_audit, suspension
+)
 from app.utils.logger import setup_logger, request_id_var
 from app.utils.database import db
 from app.utils.http_client import http_client
@@ -22,7 +25,45 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         logger.error(f"数据库连接池启动失败: {e}")
     
+    # 初始化并启动调度器
+    scheduler = None
+    try:
+        from app.scheduler import TaskScheduler, set_scheduler_instance
+        from app.scheduler import jobs as job_funcs
+        
+        # 1. 初始化
+        scheduler = TaskScheduler(timezone="Asia/Shanghai")
+        set_scheduler_instance(scheduler)
+        
+        
+        # 2. 注册早盘停牌数据同步任务 (每天 09:15)
+        scheduler.add_daily_job(
+            job_funcs.daily_suspension_morning_sync_job,
+            hour=9,
+            minute=15,
+            job_id="daily_suspension_morning_sync"
+        )
+
+        # 3. 注册早盘业绩预告同步任务 (每天 08:45)
+        scheduler.add_daily_job(
+            job_funcs.daily_performance_forecast_sync_job,
+            hour=8,
+            minute=45,
+            job_id="daily_performance_forecast_sync"
+        )
+        
+        # 3. 启动
+        await scheduler.start()
+        logger.info("Stock-Manager 内部调度器已启动")
+        
+    except Exception as e:
+        logger.error(f"调度器启动失败: {e}", exc_info=True)
+
     yield
+    
+    # 关闭调度器
+    if scheduler:
+        await scheduler.stop()
     
     # 关闭时清理资源
     await db.disconnect()
@@ -106,6 +147,7 @@ async def health_check():
 app.include_router(metadata.router, prefix="/api/v1/metadata", tags=["元数据"])
 app.include_router(audit.router, prefix="/api/v1/audit", tags=["审计"])
 app.include_router(scheduler.router, prefix="/api/v1/scheduler", tags=["调度"])
+app.include_router(suspension.router, prefix="/api/v1", tags=["停牌数据"])
 app.include_router(ops.router, prefix="/api/v1/ops", tags=["运维"])
 app.include_router(system.router, prefix="/api/v1/system", tags=["系统"])
 app.include_router(dashboard.router, prefix="/api/v1/dashboard", tags=["仪表盘"])

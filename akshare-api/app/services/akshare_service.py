@@ -120,7 +120,7 @@ class AkShareService:
             secid = ""
             code = symbol
             if "." in symbol:
-                code = symbol.split(".")[-1]
+                code = symbol.split(".")[0]
             
             if code.startswith("6") or code.startswith("11") or code.startswith("9"):
                 secid = f"1.{code}"
@@ -454,7 +454,7 @@ class AkShareService:
             # 东方财富接口往往不要sh/sz前缀, 只要纯数字
             code = symbol
             if "." in code:
-                code = code.split(".")[-1]
+                code = code.split(".")[0]
             
             if symbol.startswith("6"):
                 df = await asyncio.to_thread(ak.stock_margin_detail_sse, symbol=symbol)
@@ -498,7 +498,7 @@ class AkShareService:
         }
         
         # 统一代码
-        code = symbol.split(".")[-1] if "." in symbol else symbol
+        code = symbol.split(".")[0] if "." in symbol else symbol
         
         # Determine page size based on history request
         # 5000 records cover ~1000 years for quarterly data (4 * 1000 = 4000)
@@ -572,7 +572,7 @@ class AkShareService:
             # 东方财富接口往往不要sh/sz前缀
             code = symbol
             if "." in code:
-                code = code.split(".")[-1]
+                code = code.split(".")[0]
                 
             # 增加 20 秒超时保护
             df = await asyncio.wait_for(
@@ -783,4 +783,30 @@ class AkShareService:
             logger.error(f"AkShare Sentiment Error: {symbol}, {e}")
             return {"post_count": 0, "read_count": 0, "comment_count": 0, "rank_score": 0}
 
+    async def get_suspension_daily(self, date: str) -> List[Dict[str, Any]]:
+        """获取每日停复牌信息 (Currently returns latest suspension list from EM)"""
+        try:
+            # 清洗日期格式 YYYY-MM-DD -> YYYYMMDD
+            clean_date = date.replace("-", "")
+            
+            # Note: ak.stock_tfp_em might ignore the date and return the current active suspension list
+            df = await asyncio.to_thread(ak.stock_tfp_em, date=clean_date)
+            
+            if df is None or df.empty:
+                return []
+            
+            result = []
+            for _, row in df.iterrows():
+                result.append({
+                    "code": row.get("代码", ""),
+                    "name": row.get("名称", ""),
+                    "suspension_date": str(row.get("停牌时间", ""))[:10] if row.get("停牌时间") else None,
+                    "resumption_date": str(row.get("预计复牌时间", ""))[:10] if row.get("预计复牌时间") else None,
+                    "reason": row.get("停牌原因", ""),
+                    "market": row.get("所属市场", ""),
+                })
+            return result
+        except Exception as e:
+            logger.error(f"AkShare获取停复牌信息失败: date={date}, error={e}")
+            return []
 

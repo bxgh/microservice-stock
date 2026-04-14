@@ -240,8 +240,8 @@ class TaskScheduler:
             logger.error(f"恢复任务失败 {job_id}: {e}")
             return False
 
-    async def run_job_now(self, job_id: str) -> bool:
-        """立即执行任务"""
+    async def run_job_now(self, job_id: str, args: tuple = None, kwargs: Dict[str, Any] = None) -> bool:
+        """立即执行任务 (支持动态传参)"""
         job = self.scheduler.get_job(job_id)
         if not job:
             return False
@@ -249,10 +249,12 @@ class TaskScheduler:
         try:
             # 获取任务函数和参数
             func = job.func
-            args = job.args
-            kwargs = job.kwargs
+            job_args = job.args if args is None else args
+            job_kwargs = job.kwargs.copy()
+            if kwargs:
+                job_kwargs.update(kwargs) # 动态参数覆盖默认参数
             
-            logger.info(f"手动触发任务执行: {job_id}")
+            logger.info(f"手动触发任务执行: {job_id}, args={job_args}, kwargs={job_kwargs}")
             
             # 定义包装器来跟踪执行状态
             async def run_and_track():
@@ -261,9 +263,9 @@ class TaskScheduler:
                 self._current_running_jobs.add(job_id)
                 try:
                     if asyncio.iscoroutinefunction(func):
-                        await func(*args, **kwargs)
+                        await func(*job_args, **job_kwargs)
                     else:
-                        await asyncio.to_thread(func, *args, **kwargs)
+                        await asyncio.to_thread(func, *job_args, **job_kwargs)
                 finally:
                     self._current_running_jobs.remove(job_id)
 

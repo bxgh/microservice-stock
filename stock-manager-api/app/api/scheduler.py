@@ -6,9 +6,24 @@ scheduler_service = SchedulerProxyService()
 
 @router.get("/jobs")
 async def get_all_jobs():
-    """获取所有调度任务 (跨容器聚合)"""
+    """获取所有调度任务 (跨容器聚合 + 本地)"""
     try:
-        return await scheduler_service.get_all_jobs()
+        # 1. 获取远程任务
+        result = await scheduler_service.get_all_jobs()
+        remote_jobs = result.get("jobs", [])
+        
+        # 2. 获取本地任务
+        from app.scheduler import get_scheduler_instance
+        local_scheduler = get_scheduler_instance()
+        local_jobs = []
+        if local_scheduler:
+            raw_jobs = local_scheduler.get_jobs()
+            # 格式化为统一结构
+            for job in raw_jobs:
+                job["container"] = "stock-manager" # 标记来源
+                local_jobs.append(job)
+                
+        return {"jobs": local_jobs + remote_jobs}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Internal Error: {e}")
 

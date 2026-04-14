@@ -3,6 +3,7 @@ import logging
 import time
 from typing import Dict, Any, List, Optional
 import pywencai
+import pandas as pd
 from app.utils.logger import get_logger
 
 logger = get_logger("pywencai-api.service")
@@ -31,7 +32,7 @@ class WencaiService:
         await asyncio.sleep(self.window)
         self.semaphore.release()
 
-    async def query(self, q: str, perpage: int = 100) -> Dict[str, Any]:
+    async def query(self, q: str, perpage: int = 100, loop: bool = False) -> Dict[str, Any]:
         """执行问财查询，带重试机制"""
         last_error = None
         
@@ -40,10 +41,10 @@ class WencaiService:
             await self._acquire_quota()
             
             try:
-                logger.info(f"正在执行问财查询: q='{q}', attempt={attempt+1}")
+                logger.info(f"正在执行问财查询: q='{q}', attempt={attempt+1}, loop={loop}")
                 
                 # 使用 to_thread 执行同步阻塞调用
-                res = await asyncio.to_thread(pywencai.get, query=q, perpage=perpage)
+                res = await asyncio.to_thread(pywencai.get, question=q, perpage=perpage, loop=loop)
                 
                 if res is None:
                     return {"columns": [], "data": []}
@@ -52,9 +53,14 @@ class WencaiService:
                 if hasattr(res, 'columns') and hasattr(res, 'values'):
                     if res.empty:
                         return {"columns": [], "data": []}
+                    
+                    # 避免 JSON 不兼容的 NaN 值 (Out of range float values are not JSON compliant)
+                    # 将所有 NaN/NaT 替换为 None
+                    cleaned_df = res.astype(object).where(pd.notnull(res), None)
+                    
                     return {
-                        "columns": res.columns.tolist(),
-                        "data": res.values.tolist(),
+                        "columns": cleaned_df.columns.tolist(),
+                        "data": cleaned_df.values.tolist(),
                     }
                 
                 # 处理 Dict 响应 (如果是问财返回的非表格数据)

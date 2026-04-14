@@ -90,8 +90,18 @@ class TaskScheduler:
             self.scheduler.remove_job(job_id)
             logger.info(f"删除已存在的任务: {job_id}")
         
+        # Extract CronTrigger arguments from kwargs
+        cron_keys = ['day_of_week', 'day', 'month', 'year', 'week', 'start_date', 'end_date', 'jitter']
+        cron_args = {k: kwargs.pop(k) for k in cron_keys if k in kwargs}
+        
         try:
-            trigger = CronTrigger(hour=hour, minute=minute, second=second, timezone=self.timezone)
+            trigger = CronTrigger(
+                hour=hour, 
+                minute=minute, 
+                second=second, 
+                timezone=self.timezone,
+                **cron_args
+            )
             self.scheduler.add_job(
                 func,
                 trigger=trigger,

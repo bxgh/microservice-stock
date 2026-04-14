@@ -58,6 +58,7 @@ async def run_command_background(command_id: int):
         return
     
     task_id = status_info["task_id"]
+    params = status_info.get("params", {})
     
     # 更新状态为 RUNNING
     await db.execute(
@@ -76,9 +77,19 @@ async def run_command_background(command_id: int):
         }
         container = container_map.get(task_id, "baostock")
         
+        # 3. 参数模板替换
+        final_params = params.copy()
+        today_str = datetime.date.today().strftime("%Y-%m-%d")
+        
+        for k, v in final_params.items():
+            if isinstance(v, str) and "{{target_date}}" in v:
+                final_params[k] = v.replace("{{target_date}}", today_str)
+                logger.info(f"Param template substituted: {k} -> {final_params[k]}")
+
         # 触发远程任务的 'run' 操作
         # 注意: 远程任务的 job_id 必须与传入的 task_id 匹配，或者进行转换
-        res = await scheduler_proxy.control_job(container, task_id, "run")
+        # 支持传递参数 (V1.2+)
+        res = await scheduler_proxy.control_job(container, task_id, "run", params=final_params)
         
         # 更新状态为 DONE
         await db.execute(

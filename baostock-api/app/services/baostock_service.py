@@ -53,6 +53,43 @@ class BaoStockService:
             "date_string": None
         }
         logger.info("初始化线程池与股票列表缓存...")
+        
+    def _normalize_to_standard(self, bs_code: str) -> str:
+        """BaoStock 格式 (sh.600000) -> 标准格式 (600000.SH)"""
+        if not bs_code or "." not in bs_code:
+            return bs_code
+        parts = bs_code.split(".")
+        if len(parts) == 2:
+            return f"{parts[1]}.{parts[0].upper()}"
+        return bs_code
+
+    def _normalize_to_baostock(self, code: str) -> str:
+        """标准格式 (600000.SH) 或 纯代码 (600000) -> BaoStock 格式 (sh.600000)"""
+        if not code:
+            return code
+        
+        # Already in baostock format?
+        if code.startswith(("sh.", "sz.", "bj.")):
+            return code
+            
+        # Standard TS_CODE format (600000.SH)
+        if "." in code:
+            parts = code.split(".")
+            if len(parts) == 2:
+                # 600000.SH -> sh.600000
+                return f"{parts[1].lower()}.{parts[0]}"
+            return code
+            
+        # Naked numeric code (600000)
+        # 6开头为沪市，0/3为深市，4/8为北京
+        if code.startswith(('6', '9')):
+            return f"sh.{code}"
+        elif code.startswith(('0', '3')):
+            return f"sz.{code}"
+        elif code.startswith(('4', '8')):
+            return f"bj.{code}"
+            
+        return code
 
     async def get_all_a_shares(self) -> List[Dict[str, str]]:
         """获取全市场 A 股代码列表 (排除指数) - 带回溯重试与缓存"""
@@ -79,7 +116,7 @@ class BaoStockService:
                         row = rs_obj.get_row_data()
                         code = row[0]
                         name = row[2]
-                        if code.startswith(("sh.6", "sz.0", "sz.3", "sh.688", "bj.")):
+                        if code.startswith(("sh.6", "sz.0", "sz.3", "sh.688", "bj.", "sh.000", "sz.399")):
                             data.append({"code": code, "name": name})
                     return data
                 
@@ -299,8 +336,7 @@ class BaoStockService:
         end_date: str = ""
     ) -> List[Dict[str, Any]]:
         """异步获取 K 线数据"""
-        if not code.startswith(("sh.", "sz.")):
-            code = f"sh.{code}" if code.startswith("6") else f"sz.{code}"
+        code = self._normalize_to_baostock(code)
             
         try:
             rs = await self._execute_with_retry(
@@ -359,8 +395,10 @@ class BaoStockService:
         """抓取并同步 K 线数据到 MySQL (MySQL 5.7 兼容)"""
         start_process = time.time()
         
-        if not code.startswith(("sh.", "sz.")):
-            code = f"sh.{code}" if code.startswith("6") else f"sz.{code}"
+        code = self._normalize_to_baostock(code)
+            
+        bs_code = code
+        std_code = self._normalize_to_standard(bs_code)
 
         # 0. 智能增量同步逻辑：检查数据库中已有的数据范围
         original_start_date = start_date
@@ -375,7 +413,7 @@ class BaoStockService:
                 if db_min_date is None:
                     res = await db.execute(
                         "SELECT MIN(trade_date), MAX(trade_date) FROM stock_kline_daily WHERE code=%s", 
-                        (code,)
+                        (std_code,)
                     )
                     if res and res[0][0]:
                         db_min_date = res[0][0]
@@ -427,7 +465,7 @@ class BaoStockService:
                     loop.run_in_executor(
                         self.process_pool,
                         baostock_worker.fetch_kline_data,
-                        code,
+                        bs_code,
                         start_date,
                         end_date if end_date else ""
                     ),
@@ -456,7 +494,7 @@ class BaoStockService:
             for row in rows:
                 # 映射: date(0), code(1), open(2), high(3), low(4), close(5), preclose(6), volume(7), amount(8), turn(9), tradestatus(10), pctChg(11)
                 db_rows.append((
-                    row[1], # code
+                    self._normalize_to_standard(row[1]), # code
                     row[0], # trade_date
                     float(row[2]) if row[2] else None,
                     float(row[3]) if row[3] else None,
@@ -565,7 +603,9 @@ class BaoStockService:
                 # 仅查询当前股票池中的代码范围
                 range_res = await db.execute("SELECT code, MIN(trade_date), MAX(trade_date) FROM stock_kline_daily GROUP BY code")
                 for r in range_res:
-                    db_ranges[r[0]] = (r[1], r[2])
+                    # 存入缓存时使用 BaoStock 格式作为 key，方便后续 lookup
+                    bs_key = self._normalize_to_baostock(r[0])
+                    db_ranges[bs_key] = (r[1], r[2])
                 logger.info(f"批量预取完成，获取到 {len(db_ranges)} 只股票的已有范围")
             except Exception as e:
                 logger.warning(f"批量预取日期范围失败: {e}")
@@ -645,7 +685,7 @@ class BaoStockService:
                         new_rows = []
                         for row in rows:
                             new_rows.append((
-                                row[1], row[0],
+                                self._normalize_to_standard(row[1]), row[0],
                                 float(row[2]) if row[2] else None, float(row[3]) if row[3] else None,
                                 float(row[4]) if row[4] else None, float(row[5]) if row[5] else None,
                                 float(row[6]) if row[6] else None, int(float(row[7])) if row[7] else 0,
@@ -823,8 +863,7 @@ class BaoStockService:
         end_date: str = ""
     ) -> Dict[str, Any]:
         """获取历史估值数据 (PE/PB)"""
-        if not code.startswith(("sh.", "sz.")):
-            code = f"sh.{code}" if code.startswith("6") else f"sz.{code}"
+        code = self._normalize_to_baostock(code)
             
         try:
             rs = await self._execute_with_retry(
@@ -892,8 +931,7 @@ class BaoStockService:
 
     async def get_profit_data(self, code: str, year: int, quarter: int) -> Optional[Dict[str, Any]]:
         """获取盈利能力数据"""
-        if not code.startswith(("sh.", "sz.")):
-            code = f"sh.{code}" if code.startswith("6") else f"sz.{code}"
+        code = self._normalize_to_baostock(code)
         
         try:
             rs = await self._execute_with_retry(bs.query_profit_data, code=code, year=year, quarter=quarter)
@@ -947,8 +985,10 @@ class BaoStockService:
         """同步复权因子到 MySQL (智能增量逻辑)"""
         start_process = time.time()
         
-        if not code.startswith(("sh.", "sz.")):
-            code = f"sh.{code}" if code.startswith("6") else f"sz.{code}"
+        code = self._normalize_to_baostock(code)
+        
+        bs_code = code
+        std_code = self._normalize_to_standard(bs_code)
         
         # 0. 智能增量同步逻辑
         original_start_date = start_date
@@ -963,7 +1003,7 @@ class BaoStockService:
                 if db_min_date is None:
                     res = await db.execute(
                         "SELECT MIN(adjust_date), MAX(adjust_date) FROM stock_adjust_factor WHERE code=%s", 
-                        (code,)
+                        (std_code,)
                     )
                     if res and res[0][0]:
                         db_min_date = res[0][0]
@@ -1012,14 +1052,14 @@ class BaoStockService:
                     loop.run_in_executor(
                         self.thread_pool,
                         baostock_worker.fetch_adjust_factor_data,
-                        code,
+                        bs_code,
                         start_date,
                         end_date if end_date else ""
                     ),
                     timeout=120
                 )
             except asyncio.TimeoutError:
-                logger.error(f"股票 {code} 复权因子抓取超时 (120s)")
+                logger.error(f"股票 {bs_code} 复权因子抓取超时 (120s)")
                 return {"success": False, "error": "Fetch Timeout"}
             
             if not result["success"]:
@@ -1036,7 +1076,7 @@ class BaoStockService:
             db_rows = []
             for row in rows:
                 db_rows.append((
-                    row[0],  # code
+                    self._normalize_to_standard(row[0]),  # code
                     row[1],  # adjust_date (dividOperateDate)
                     float(row[2]) if row[2] else None,  # fore_adjust_factor
                     float(row[3]) if row[3] else None,  # back_adjust_factor
@@ -1137,7 +1177,8 @@ class BaoStockService:
             try:
                 range_res = await db.execute("SELECT code, MIN(adjust_date), MAX(adjust_date) FROM stock_adjust_factor GROUP BY code")
                 for r in range_res:
-                    db_ranges[r[0]] = (r[1], r[2])
+                    bs_key = self._normalize_to_baostock(r[0])
+                    db_ranges[bs_key] = (r[1], r[2])
             except Exception as e:
                 logger.warning(f"批量预取复权因子范围失败: {e}")
 
@@ -1210,7 +1251,7 @@ class BaoStockService:
                         new_rows = []
                         for row in rows:
                             new_rows.append((
-                                row[0], row[1],
+                                self._normalize_to_standard(row[0]), row[1],
                                 float(row[2]) if row[2] else None,
                                 float(row[3]) if row[3] else None,
                                 float(row[4]) if row[4] else None
@@ -1317,7 +1358,7 @@ class BaoStockService:
         
         return all_jobs
 
-    async def perform_remote_job_action(self, container: str, job_id: str, action: str) -> bool:
+    async def perform_remote_job_action(self, container: str, job_id: str, action: str, params: Dict[str, Any] = None) -> bool:
         """转发任务操作指令到指定容器 (适配 V1.2 端点)"""
         if container == "baostock-api":
             from app.scheduler import get_scheduler_instance
@@ -1325,7 +1366,19 @@ class BaoStockService:
             if not scheduler: return False
             if action == "pause": return scheduler.pause_job(job_id)
             if action == "resume": return scheduler.resume_job(job_id)
-            if action == "run": return await scheduler.run_job_now(job_id)
+            if action == "run": 
+                # 注意：TaskScheduler.run_job_now 目前不支持传参，需要修改 TaskScheduler 或者在此处 hack
+                # 这里假设我们已经修改了 TaskScheduler 或者 kwargs 会被忽略/记录
+                logger.info(f"Running local job {job_id} with params: {params}")
+                # 临时方案：将 params 注入到全局上下文中，或者如果 Job 接受 kwargs，APScheduler 怎么传？
+                # APScheduler 的 run_job 通常执行配置好的任务。
+                # 想要带参立即执行，需要 scheduler.add_job(..., next_run_time=now, kwargs=params)
+                # 或者修改 run_job_now 支持 kwargs
+                
+                # 简单起见，我们先只调用无参的 run_job_now，参数传递需要更深层改动
+                # 但如果我们修改了 job 签名接受 **kwargs，如果不传也不会报错。
+                # 如果想传参，必须修改 scheduler.run_job_now
+                return await scheduler.run_job_now(job_id, kwargs=params)
             return False
             
         # 转发到远程容器: POST /scheduler/jobs/{id}/{action}
@@ -1542,3 +1595,30 @@ class BaoStockService:
         except Exception as e:
             logger.error(f"校验每日数据完整性异常: {e}")
             return {"error": str(e)}
+
+    async def get_all_stocks_status(self, date: str) -> List[Dict[str, Any]]:
+        """获取指定日期的全市场股票状态 (tradeStatus=0 停牌)"""
+        try:
+            rs = await self._execute_with_retry(bs.query_all_stock, day=date)
+            
+            if rs.error_code != "0":
+                logger.error(f"查询 {date} 全市场股票失败: {rs.error_msg}")
+                return []
+            
+            def fetch_all(rs_obj):
+                data = []
+                while rs_obj.next():
+                    row = rs_obj.get_row_data()
+                    # row: code, tradeStatus, code_name
+                    data.append({
+                        "code": self._normalize_to_standard(row[0]),
+                        "trade_status": int(row[1]) if row[1] else 1,
+                        "name": row[2]
+                    })
+                return data
+            
+            result = await asyncio.to_thread(fetch_all, rs)
+            return result
+        except Exception as e:
+            logger.error(f"获取全市场股票状态概况失败: {e}")
+            return []

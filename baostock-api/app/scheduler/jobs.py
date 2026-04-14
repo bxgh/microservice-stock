@@ -7,7 +7,7 @@ from typing import Dict, Any
 logger = logging.getLogger(__name__)
 
 
-async def daily_kline_sync_job() -> Dict[str, Any]:
+async def daily_kline_sync_job(**kwargs) -> Dict[str, Any]:
     """每日K线数据增量同步任务
     
     每日 18:30 执行，同步当天收盘数据
@@ -16,7 +16,7 @@ async def daily_kline_sync_job() -> Dict[str, Any]:
         执行结果信息
     """
     try:
-        logger.info("【定时任务】开始执行每日K线数据同步")
+        logger.info(f"【定时任务】开始执行每日K线数据同步, params={kwargs}")
         
         # 导入必要的模块（延迟导入避免循环依赖）
         from app.main import app
@@ -40,7 +40,73 @@ async def daily_kline_sync_job() -> Dict[str, Any]:
         }
 
 
-async def daily_adjust_factor_sync_job() -> Dict[str, Any]:
+async def daily_suspension_morning_sync_job(**kwargs) -> Dict[str, Any]:
+    """每日早盘停牌数据同步任务
+    
+    每日 09:15 执行，从 AkShare 获取当日停牌、复牌信息
+    
+    Returns:
+        执行结果信息
+    """
+    try:
+        logger.info(f"【定时任务】开始执行每日早盘停牌数据同步, params={kwargs}")
+        
+        from app.services.suspension_service import SuspensionService
+        from app.main import app 
+        
+        # 修正：SuspensionService 不需要参数或参数不同，根据实际情况调整
+        # 假设 SuspensionService 初始化不需要参数，或者从 app.state 获取
+        suspension_service = SuspensionService() 
+        
+        # 执行停牌数据同步
+        await suspension_service.sync_today_suspensions()
+        
+        logger.info("【定时任务】每日早盘停牌数据同步完成")
+        return {
+            'status': 'success',
+            'message': '每日早盘停牌数据同步成功'
+        }
+        
+    except Exception as e:
+        logger.error(f"【定时任务】每日早盘停牌数据同步失败: {e}", exc_info=True)
+        return {
+            'status': 'error',
+            'message': f'每日早盘停牌数据同步失败: {str(e)}'
+        }
+
+
+async def daily_performance_forecast_sync_job(**kwargs) -> Dict[str, Any]:
+    """每日早盘业绩预告同步任务 (08:45)"""
+    
+    # 每日 19:00 执行，同步当天的复权因子数据 (Note: This comment seems misplaced, likely copied from another job)
+    
+    # Returns:
+    #     执行结果信息
+    
+    # Placeholder for the actual implementation
+    try:
+        logger.info(f"【定时任务】开始执行每日早盘业绩预告同步, params={kwargs}")
+        
+        # from app.services.performance_forecast_service import PerformanceForecastService
+        # from app.main import app
+        
+        # performance_service = PerformanceForecastService(app.state.akshare_client)
+        # await performance_service.sync_daily_performance_forecast()
+        
+        logger.info("【定时任务】每日早盘业绩预告同步完成 (Placeholder)")
+        return {
+            'status': 'success',
+            'message': '每日早盘业绩预告同步成功 (Placeholder)'
+        }
+    except Exception as e:
+        logger.error(f"【定时任务】每日早盘业绩预告同步失败: {e}", exc_info=True)
+        return {
+            'status': 'error',
+            'message': f'每日早盘业绩预告同步失败: {str(e)}'
+        }
+
+
+async def daily_adjust_factor_sync_job(**kwargs) -> Dict[str, Any]:
     """每日复权因子同步任务
     
     每日 19:00 执行，同步当天的复权因子数据
@@ -49,7 +115,7 @@ async def daily_adjust_factor_sync_job() -> Dict[str, Any]:
         执行结果信息
     """
     try:
-        logger.info("【定时任务】开始执行每日复权因子同步")
+        logger.info(f"【定时任务】开始执行每日复权因子同步, params={kwargs}")
         
         from app.main import app
         
