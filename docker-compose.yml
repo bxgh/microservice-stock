@@ -100,6 +100,40 @@ services:
     networks:
       - stock-network
 
+  # Tushare服务 - 股票基础/日线/指数数据
+  tushare-api:
+    build: ./tushare-api
+    image: tushare-api:latest
+    container_name: tushare-api
+    restart: unless-stopped
+    ports:
+      - "8005:8000"
+    environment:
+      - TZ=Asia/Shanghai
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+      - PYTHONUNBUFFERED=1
+    env_file:
+      - .env
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 60s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+    deploy:
+      resources:
+        limits:
+          cpus: '0.4'
+          memory: 128M
+        reservations:
+          cpus: '0.1'
+          memory: 50M
+    mem_limit: 128m
+    cpus: 0.4
+    networks:
+      - stock-network
+
+
   # Stock Manager - 数据管理中台
   stock-manager:
     build: ./stock-manager-api
@@ -115,6 +149,8 @@ services:
       - BAOSTOCK_API_URL=http://baostock-api:8000
       - AKSHARE_API_URL=http://akshare-api:8000
       - PYWENCAI_API_URL=http://pywencai-api:8000
+      - TUSHARE_API_URL=http://tushare-api:8000
+
     env_file:
       - .env
     healthcheck:
@@ -127,6 +163,8 @@ services:
       - baostock-api
       - akshare-api
       - pywencai-api
+      - tushare-api
+
     deploy:
       resources:
         limits:

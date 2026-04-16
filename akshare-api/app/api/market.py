@@ -263,3 +263,98 @@ async def get_suspension_daily(
     except Exception as e:
         logger.error(f"获取停复牌信息失败: date={date}, error={e}", extra={"request_id": request_id})
         raise HTTPException(status_code=500, detail=f"获取停复牌信息失败: {str(e)}")
+
+
+@router.get("/market/breadth")
+async def get_market_breadth(request: Request):
+    """获取大盘涨跌分布与总市值 (实时)"""
+    request_id = getattr(request.state, "request_id", "unknown")
+    service = request.app.state.akshare_service
+    try:
+        result = await service.get_market_breadth()
+        return result
+    except Exception as e:
+        logger.error(f"获取大盘分化数据失败: {e}", extra={"request_id": request_id})
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/north/flow_summary")
+async def get_north_flow_summary(request: Request):
+    """获取北向资金汇总流向历史"""
+    request_id = getattr(request.state, "request_id", "unknown")
+    service = request.app.state.akshare_service
+    try:
+        result = await service.get_north_fund_flow_summary()
+        return result
+    except Exception as e:
+        logger.error(f"获取北向汇总失败: {e}", extra={"request_id": request_id})
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/index/daily")
+async def get_index_daily(
+    request: Request,
+    symbol: str = Query(..., description="指数代码"),
+    start_date: str = Query("19700101"),
+    end_date: str = Query("20500101")
+):
+    """获取指数日线行情 (A股)"""
+    request_id = getattr(request.state, "request_id", "unknown")
+    service = request.app.state.akshare_service
+    try:
+        result = await service.get_index_daily(symbol, start_date, end_date)
+        return result
+    except Exception as e:
+        logger.error(f"获取指数行情失败: {e}", extra={"request_id": request_id})
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/index/sw_daily")
+async def get_sw_index_daily(
+    request: Request,
+    symbol: str = Query(..., description="申万指数代码")
+):
+    """获取申万行业指数历史日线"""
+    request_id = getattr(request.state, "request_id", "unknown")
+    service = request.app.state.akshare_service
+    try:
+        result = await service.get_sw_index_daily(symbol)
+        return result
+    except Exception as e:
+        logger.error(f"获取申万指数失败: {e}", extra={"request_id": request_id})
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/index/us_daily")
+async def get_us_index_daily(
+    request: Request,
+    symbol: str = Query(".NDX", description="美股指数代码")
+):
+    """获取美股指数历史行情"""
+    request_id = getattr(request.state, "request_id", "unknown")
+    service = request.app.state.akshare_service
+    try:
+        result = await service.get_us_index_daily(symbol)
+        return result
+    except Exception as e:
+        logger.error(f"获取美股指数失败: {e}", extra={"request_id": request_id})
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/fund/etf_daily")
+async def get_etf_daily(
+    request: Request,
+    symbol: str = Query(..., description="ETF代码"),
+    start_date: str = Query("19700101"),
+    end_date: str = Query("20500101")
+):
+    """获取 ETF 日线行情"""
+    request_id = getattr(request.state, "request_id", "unknown")
+    service = request.app.state.akshare_service
+    try:
+        result = await service.get_etf_daily(symbol, start_date, end_date)
+        return result
+    except Exception as e:
+        logger.error(f"获取 ETF 行情失败: {e}", extra={"request_id": request_id})
+        raise HTTPException(status_code=500, detail=str(e))
+

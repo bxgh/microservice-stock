@@ -7,7 +7,8 @@ from fastapi.responses import JSONResponse
 
 from app.api import (
     metadata, audit, scheduler, ops, system, dashboard, 
-    shareholders, chips, game, information, commands, task_commands, data_audit, suspension
+    shareholders, chips, game, information, commands, task_commands, data_audit, suspension,
+    monitor
 )
 from app.utils.logger import setup_logger, request_id_var
 from app.utils.database import db
@@ -158,4 +159,5 @@ app.include_router(shareholders.router, prefix="/api/v1/shareholders", tags=["�
 app.include_router(chips.router, prefix="/api/v1/chips", tags=["筹码维度同步"])
 app.include_router(game.router, prefix="/api/v1/game", tags=["博弈维度同步"])
 app.include_router(information.router, prefix="/api/v1/information", tags=["信息维度同步"])
+app.include_router(monitor.router, prefix="/api/v1/monitor", tags=["监控指标"])
 

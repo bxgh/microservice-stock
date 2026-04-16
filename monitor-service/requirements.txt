@@ -1,0 +1,8 @@
+numpy
+pandas
+aiomysql
+httpx
+pydantic
+pydantic-settings
+python-dotenv
+click

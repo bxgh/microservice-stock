@@ -5,6 +5,7 @@ import httpx
 from datetime import datetime, date
 from typing import Dict, Any, List, Optional
 import akshare as ak
+import pandas as pd
 from app.utils.logger import get_logger
 
 logger = get_logger("akshare-api.service")
@@ -15,20 +16,20 @@ class AkShareService:
     提供对 AkShare 库的异步封装，所有同步 I/O 操作通过 asyncio.to_thread 在线程池中执行。
     """
     
-    def _clean_value(self, val: Any) -> Optional[float]:
+    def _clean_value(self, val: Any, default: Any = None) -> Optional[float]:
         """清洗并转换数值（处理“1.2亿”, “-3.5%”, “NaN”, “None”等）"""
         if val is None or val is False:
-            return None
+            return default
             
         # 处理数值类型
         if isinstance(val, (int, float)):
             if math.isnan(val) or math.isinf(val):
-                return None
+                return default
             return float(val)
             
         s = str(val).strip()
         if not s or s.lower() in ['nan', 'none', 'false', '-', '--']:
-            return None
+            return default
             
         try:
             # 处理百分比
@@ -47,10 +48,10 @@ class AkShareService:
                 
             final_val = float(s) * multiplier
             if math.isnan(final_val) or math.isinf(final_val):
-                return None
+                return default
             return final_val
         except (ValueError, TypeError):
-            return None
+            return default
 
     async def get_financial_abstract(self, symbol: str) -> Optional[Dict[str, Any]]:
         """异步获取财务摘要
@@ -809,4 +810,185 @@ class AkShareService:
         except Exception as e:
             logger.error(f"AkShare获取停复牌信息失败: date={date}, error={e}")
             return []
+
+    async def get_market_breadth(self) -> Dict[str, Any]:
+        """获取大盘涨跌分布与总市值 (实时)"""
+        try:
+            df = await asyncio.to_thread(ak.stock_zh_a_spot_em)
+            if df is None or df.empty:
+                logger.warning("AkShare 返回的大盘数据为空")
+                return {}
+            
+            # 列名参考: ['代码', '名称', '最新价', '涨跌额', '涨跌幅', '成交量', '成交额', '振幅', '最高', '最低', '今开', '昨收', '量比', '换手率', '市盈率-动态', '市净率', '总市值', '流通市值', '涨速', '5分钟涨跌', '60日涨跌幅', '年初至今涨跌幅']
+            # 注意: 部分版本列名可能带索引或稍有不同, 这里尝试多重匹配
+            change_col = '涨跌幅' if '涨跌幅' in df.columns else None
+            mkt_cap_col = '总市值' if '总市值' in df.columns else None
+            turnover_col = '换手率' if '换手率' in df.columns else None
+            
+            if not change_col:
+                logger.warning(f"未找到 '涨跌幅' 列, 现有列: {df.columns.tolist()}")
+                return {}
+
+            # 清洗数据，确保为数值
+            df[change_col] = pd.to_numeric(df[change_col], errors='coerce')
+            df = df.dropna(subset=[change_col])
+
+            advance = len(df[df[change_col] > 0])
+            decline = len(df[df[change_col] < 0])
+            flat = len(df[df[change_col] == 0])
+            
+            total_market_cap = self._clean_value(df[mkt_cap_col].sum()) if mkt_cap_col else 0
+            avg_turnover = self._clean_value(df[turnover_col].mean()) if turnover_col else 0
+            
+            return {
+                "advance": advance,
+                "decline": decline,
+                "flat": flat,
+                "total_market_cap": total_market_cap,
+                "avg_turnover": avg_turnover / 100.0 if avg_turnover is not None else None
+            }
+        except Exception as e:
+            logger.error(f"获取大盘涨跌分布失败: {e}")
+            return {}
+
+    async def get_north_fund_flow_summary(self) -> List[Dict[str, Any]]:
+        """获取沪深港通北向合计资金流向历史 (聚合沪股通与深股通)"""
+        try:
+            # 获取沪股通历史
+            df_sh = await asyncio.to_thread(ak.stock_hsgt_hist_em, symbol="沪股通")
+            # 获取深股通历史
+            df_sz = await asyncio.to_thread(ak.stock_hsgt_hist_em, symbol="深股通")
+            
+            if df_sh is None or df_sh.empty or df_sz is None or df_sz.empty:
+                logger.warning("未能获取完整的沪深北向资金历史")
+                return []
+            
+            # 清洗与列重命名
+            # 列名: ['日期', '当日成交净买额', ...]
+            df_sh = df_sh[['日期', '当日成交净买额']].rename(columns={'当日成交净买额': 'sh'})
+            df_sz = df_sz[['日期', '当日成交净买额']].rename(columns={'当日成交净买额': 'sz'})
+            
+            # 合并
+            df_merged = pd.merge(df_sh, df_sz, on='日期', how='outer').fillna(0)
+            df_merged['total'] = df_merged['sh'] + df_merged['sz']
+            df_merged = df_merged.sort_values('日期', ascending=False)
+            
+            result = []
+            for _, row in df_merged.iterrows():
+                dt = row['日期']
+                dt_str = dt.strftime("%Y-%m-%d") if hasattr(dt, 'strftime') else str(dt)
+                
+                result.append({
+                    "date": dt_str,
+                    "north_net_inflow": float(row['total']) * 100000000 # 亿 -> 元
+                })
+            return result
+        except Exception as e:
+            logger.error(f"获取北向合计资金汇总失败: {e}")
+            return []
+
+    async def get_index_daily(self, symbol: str, start_date: str = "19700101", end_date: str = "20500101") -> List[Dict[str, Any]]:
+        """获取指数日线行情 (A股)"""
+        try:
+            s_date = start_date.replace("-", "")
+            e_date = end_date.replace("-", "")
+            df = await asyncio.to_thread(ak.index_zh_a_hist, symbol=symbol, period="daily", start_date=s_date, end_date=e_date)
+            if df is None or df.empty:
+                return []
+            
+            result = []
+            for _, row in df.iterrows():
+                dt = row.get("日期")
+                dt_str = dt.strftime("%Y-%m-%d") if hasattr(dt, "strftime") else str(dt)
+                result.append({
+                    "date": dt_str,
+                    "open": self._clean_value(row.get("开盘")),
+                    "high": self._clean_value(row.get("最高")),
+                    "low": self._clean_value(row.get("最低")),
+                    "close": self._clean_value(row.get("收盘")),
+                    "volume": self._clean_value(row.get("成交量"), 0),
+                    "amount": self._clean_value(row.get("成交额"), 0)
+                })
+            return result
+        except Exception as e:
+            logger.error(f"获取指数行情失败: symbol={symbol}, error={e}")
+            return []
+
+    async def get_sw_index_daily(self, symbol: str) -> List[Dict[str, Any]]:
+        """获取申万行业指数历史日线"""
+        try:
+            df = await asyncio.to_thread(ak.index_hist_sw, symbol=symbol, period="day")
+            if df is None or df.empty:
+                return []
+            
+            result = []
+            for _, row in df.iterrows():
+                dt = row.get("日期")
+                dt_str = dt.strftime("%Y-%m-%d") if hasattr(dt, "strftime") else str(dt)
+                result.append({
+                    "date": dt_str,
+                    "open": self._clean_value(row.get("开盘")),
+                    "high": self._clean_value(row.get("最高")),
+                    "low": self._clean_value(row.get("最低")),
+                    "close": self._clean_value(row.get("收盘")),
+                    "volume": self._clean_value(row.get("成交量"), 0),
+                    "amount": self._clean_value(row.get("成交额"), 0)
+                })
+            return result
+        except Exception as e:
+            logger.error(f"获取申万指数失败: symbol={symbol}, error={e}")
+            return []
+
+    async def get_us_index_daily(self, symbol: str = ".NDX") -> List[Dict[str, Any]]:
+        """获取美股指数历史行情 (新浪)"""
+        try:
+            df = await asyncio.to_thread(ak.index_us_stock_sina, symbol=symbol)
+            if df is None or df.empty:
+                return []
+            
+            result = []
+            for _, row in df.iterrows():
+                dt = row.get("date") or row.get("日期")
+                dt_str = dt.strftime("%Y-%m-%d") if hasattr(dt, "strftime") else str(dt)
+                result.append({
+                    "date": dt_str,
+                    "open": self._clean_value(row.get("open") or row.get("开盘")),
+                    "high": self._clean_value(row.get("high") or row.get("最高")),
+                    "low": self._clean_value(row.get("low") or row.get("最低")),
+                    "close": self._clean_value(row.get("close") or row.get("收盘")),
+                    "volume": self._clean_value(row.get("volume") or row.get("成交量"), 0)
+                })
+            return result
+        except Exception as e:
+            logger.error(f"获取美股指数失败: symbol={symbol}, error={e}")
+            return []
+
+    async def get_etf_daily(self, symbol: str, start_date: str = "19700101", end_date: str = "20500101") -> List[Dict[str, Any]]:
+        """获取 ETF 日线行情"""
+        try:
+            s_date = start_date.replace("-", "")
+            e_date = end_date.replace("-", "")
+            df = await asyncio.to_thread(ak.fund_etf_hist_em, symbol=symbol, period="daily", start_date=s_date, end_date=e_date)
+            if df is None or df.empty:
+                return []
+            
+            result = []
+            for _, row in df.iterrows():
+                dt = row.get("日期")
+                dt_str = dt.strftime("%Y-%m-%d") if hasattr(dt, "strftime") else str(dt)
+                result.append({
+                    "date": dt_str,
+                    "open": self._clean_value(row.get("开盘")),
+                    "high": self._clean_value(row.get("最高")),
+                    "low": self._clean_value(row.get("最低")),
+                    "close": self._clean_value(row.get("收盘")),
+                    "volume": self._clean_value(row.get("成交量"), 0),
+                    "amount": self._clean_value(row.get("成交额"), 0)
+                })
+            return result
+        except Exception as e:
+            logger.error(f"获取 ETF 行情失败: symbol={symbol}, error={e}")
+            return []
+
+
 
