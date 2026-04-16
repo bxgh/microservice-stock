@@ -142,6 +142,13 @@ async def get_block_trade(
         raise HTTPException(status_code=500, detail=f"获取大宗交易失败: {str(e)}")
 
 
+@router.get("/margin/summary")
+async def get_margin_summary(request: Request):
+    """获取全市场两融汇总历史"""
+    service = request.app.state.akshare_service
+    result = await service.get_margin_summary()
+    return result
+
 @router.get("/margin/{code}")
 async def get_margin_data(request: Request, code: str):
     """

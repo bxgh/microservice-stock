@@ -194,6 +194,36 @@ services:
     networks:
       - stock-network
 
+  # Monitor Service - 监控评分与资金指标同步
+  monitor-service:
+    build: ./monitor-service
+    image: monitor-service:latest
+    container_name: monitor-service
+    restart: unless-stopped
+    ports:
+      - "8006:8000"
+    environment:
+      - TZ=Asia/Shanghai
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+      - PYTHONUNBUFFERED=1
+      - AKSHARE_API_URL=http://akshare-api:8000/api/v1
+    env_file:
+      - .env
+    depends_on:
+      - akshare-api
+    deploy:
+      resources:
+        limits:
+          cpus: '0.4'
+          memory: 256M
+        reservations:
+          cpus: '0.1'
+          memory: 128M
+    mem_limit: 256m
+    cpus: 0.4
+    networks:
+      - stock-network
+
 networks:
   stock-network:
     driver: bridge

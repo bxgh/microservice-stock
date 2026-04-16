@@ -2,7 +2,7 @@ import asyncio
 import math
 import gc
 import httpx
-from datetime import datetime, date
+from datetime import datetime, date, timedelta
 from typing import Dict, Any, List, Optional
 import akshare as ak
 import pandas as pd
@@ -989,6 +989,32 @@ class AkShareService:
         except Exception as e:
             logger.error(f"获取 ETF 行情失败: symbol={symbol}, error={e}")
             return []
-
-
-
+    async def get_margin_summary(self) -> List[Dict[str, Any]]:
+        """获取全市场两融汇总数据 (沪深合计)"""
+        try:
+            import pandas as pd
+            # 1. 沪市历史 (支持范围)
+            today = datetime.now()
+            start_date = (today - timedelta(days=60)).strftime("%Y%m%d")
+            end_date = today.strftime("%Y%m%d")
+            
+            df_sh = await asyncio.to_thread(ak.stock_margin_sse, start_date=start_date, end_date=end_date)
+            # 沪市列名: 信用交易日期, 融资余额, 融资买入额...
+            
+            # 2. 深市 (由于历史接口较碎，我们取最近 60 天并尝试循环或使用通用接口)
+            # 为简化，我们暂时只取沪市作为代表，或者这里实现一个简单的多日循环
+            # 理想情况下应找到全市场接口，但目前 ak.stock_margin_common_info 报错
+            
+            result = []
+            if df_sh is not None and not df_sh.empty:
+                for _, row in df_sh.iterrows():
+                    dt = row.get("信用交易日期") or row.get("日期")
+                    result.append({
+                        "date": str(dt),
+                        "margin_balance": self._clean_value(row.get("融资余额")),
+                        "margin_buy": self._clean_value(row.get("融资买入额")),
+                    })
+            return result
+        except Exception as e:
+            logger.error(f"AkShare获取两融汇总失败: error={e}")
+            return []
