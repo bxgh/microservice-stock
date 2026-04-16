@@ -48,4 +48,24 @@ class AkShareClient:
             resp.raise_for_status()
             return resp.json()
 
+    async def get_lhb_daily(self, date: str):
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            params = {"date": date}
+            resp = await client.get(f"{self.base_url}/dragon_tiger/daily", params=params)
+            resp.raise_for_status()
+            return resp.json()
+
+    async def get_block_trade_daily(self, date: str):
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            params = {"date": date}
+            resp = await client.get(f"{self.base_url}/block_trade/daily", params=params)
+            resp.raise_for_status()
+            return resp.json()
+
+    async def get_margin_summary(self):
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            resp = await client.get(f"{self.base_url}/margin/summary")
+            resp.raise_for_status()
+            return resp.json()
+
 ak_client = AkShareClient()
