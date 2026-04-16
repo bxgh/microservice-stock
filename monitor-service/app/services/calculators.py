@@ -96,6 +96,27 @@ class RelativeStrengthCalculator:
             
         return float(np.mean(growth_prices) / np.mean(value_prices))
 
+class FundsCalculator:
+    """资金面核心指标计算器 (龙虎榜、大宗、两融)"""
+    
+    async def calculate_lhb_net_buy(self, target_date: str) -> float:
+        """计算当日龙虎榜全市场净买入额"""
+        query = "SELECT SUM(net_buy_amt) FROM stock_lhb_daily WHERE trade_date = %s"
+        rows = await db.execute(query, (target_date,))
+        return float(rows[0][0]) if rows and rows[0][0] else 0.0
+
+    async def calculate_block_trade_amount(self, target_date: str) -> float:
+        """计算当日大宗交易总成交额"""
+        query = "SELECT SUM(amount) FROM stock_block_trade WHERE trade_date = %s"
+        rows = await db.execute(query, (target_date,))
+        return float(rows[0][0]) if rows and rows[0][0] else 0.0
+
+    async def calculate_margin_buy(self, target_date: str) -> float:
+        """计算当日融资买入额"""
+        query = "SELECT margin_buy FROM market_margin_summary WHERE trade_date = %s"
+        rows = await db.execute(query, (target_date,))
+        return float(rows[0][0]) if rows and rows[0][0] else 0.0
+
 class MonitorEngine:
     """监控引擎主类，负责调度计算并存储指标"""
     
@@ -104,6 +125,7 @@ class MonitorEngine:
         self.breadth_calc = BreadthCalculator()
         self.rs_calc = RelativeStrengthCalculator()
         self.score_calc = ScoreCalculator()
+        self.funds_calc = FundsCalculator()
 
     async def run_daily_calculation(self, target_date: str):
         """执行每日指标测算"""
@@ -131,12 +153,20 @@ class MonitorEngine:
         rows = await db.execute(query_north, (target_date, target_date))
         north_momentum = float(rows[0][0]) if rows and rows[0][0] else 0.0
         
-        # 2. 存储原始值
+        # 2. 计算新增资金面指标
+        lhb_net_buy = await self.funds_calc.calculate_lhb_net_buy(target_date)
+        bt_amount = await self.funds_calc.calculate_block_trade_amount(target_date)
+        margin_buy = await self.funds_calc.calculate_margin_buy(target_date)
+        
+        # 3. 存储原始值
         raw_indicators = [
             ('industry_dispersion', industry_disp),
             ('market_breadth', ad_ratio),
             ('growth_value_ratio', gv_ratio),
-            ('north_funds_momentum', north_momentum)
+            ('north_funds_momentum', north_momentum),
+            ('lhb_net_buy', lhb_net_buy),
+            ('block_trade_amount', bt_amount),
+            ('margin_buy_amount', margin_buy)
         ]
         
         for name, val in raw_indicators:
@@ -162,19 +192,28 @@ class MonitorEngine:
         )
         scores_dict = {r[0]: r[1] for r in scores_rows if r[1] is not None}
         
-        if len(scores_dict) >= 3:
+        if len(scores_dict) >= 5:
+            # 权重重新分配: 宽度(20%) + 北向(20%) + 游资/大宗(25%) + 杠杆(15%) + 结构/分化(20%)
             total_score = (
-                scores_dict.get('market_breadth', 50) * 0.3 +
-                scores_dict.get('north_funds_momentum', 50) * 0.3 +
-                scores_dict.get('industry_dispersion', 50) * 0.2 +
-                scores_dict.get('growth_value_ratio', 50) * 0.2
+                scores_dict.get('market_breadth', 50) * 0.20 +
+                scores_dict.get('north_funds_momentum', 50) * 0.20 +
+                scores_dict.get('lhb_net_buy', 50) * 0.15 +
+                scores_dict.get('block_trade_amount', 50) * 0.10 +
+                scores_dict.get('margin_buy_amount', 50) * 0.15 +
+                scores_dict.get('industry_dispersion', 50) * 0.10 +
+                scores_dict.get('growth_value_ratio', 50) * 0.10
             )
             
+            status = 'NORMAL'
+            if total_score > 80: status = 'BULL_FEVER'
+            elif total_score > 65: status = 'BULL_ALERT'
+            elif total_score < 35: status = 'BEAR_ALERT'
+
             await db.execute("""
                 INSERT INTO monitor_health_scores (trade_date, total_score, status)
                 VALUES (%s, %s, %s)
-                ON DUPLICATE KEY UPDATE total_score=VALUES(total_score)
-            """, (target_date, total_score, 'NORMAL' if total_score < 75 else 'BULL_ALERT'))
+                ON DUPLICATE KEY UPDATE total_score=VALUES(total_score), status=VALUES(status)
+            """, (target_date, total_score, status))
 
             logger.info(f"日期 {target_date} 指标与综合评分测算完成。总体分: {total_score:.2f}")
 

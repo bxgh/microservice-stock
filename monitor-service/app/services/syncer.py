@@ -11,6 +11,107 @@ class MarketDataSyncer:
     def __init__(self):
         pass
 
+    def _format_ts_code(self, code: str) -> str:
+        """格式化股票代码为 XXXXXX.SH/SZ"""
+        if not code: return code
+        code = str(code)
+        if "." in code: return code
+        if code.startswith('6'): return f"{code}.SH"
+        if code.startswith('0') or code.startswith('3'): return f"{code}.SZ"
+        if code.startswith('8') or code.startswith('4'): return f"{code}.BJ"
+        return code
+
+    async def sync_lhb_daily(self, date: str = None):
+        """同步某日龙虎榜数据"""
+        try:
+            today = date or datetime.now().strftime("%Y-%m-%d")
+            data = await ak_client.get_lhb_daily(today)
+            if not data:
+                logger.info(f"龙虎榜: {today} 无数据")
+                return
+
+            query = """
+                INSERT INTO stock_lhb_daily (ts_code, trade_date, close_price, change_pct, turnover_rate, net_buy_amt, reason)
+                VALUES (%s, %s, %s, %s, %s, %s, %s)
+                ON DUPLICATE KEY UPDATE 
+                close_price=VALUES(close_price), 
+                change_pct=VALUES(change_pct), 
+                net_buy_amt=VALUES(net_buy_amt)
+            """
+            args = []
+            for i in data:
+                args.append((
+                    self._format_ts_code(i.get("code")),
+                    i.get("date") or today,
+                    i.get("close"),
+                    i.get("change_pct"),
+                    i.get("turnover_rate"),
+                    i.get("net_buy"),
+                    i.get("reason")
+                ))
+            await db.execute_many(query, args)
+            logger.info(f"成功同步龙虎榜: {today}, {len(args)} 条")
+        except Exception as e:
+            logger.error(f"同步龙虎榜失败: {today}, {e}")
+
+    async def sync_block_trade_daily(self, date: str = None):
+        """同步某日大宗交易数据"""
+        try:
+            today = date or datetime.now().strftime("%Y-%m-%d")
+            data = await ak_client.get_block_trade_daily(today)
+            if not data:
+                logger.info(f"大宗交易: {today} 无数据")
+                return
+
+            query = """
+                INSERT INTO stock_block_trade (trade_date, ts_code, price, volume, amount, buyer, seller)
+                VALUES (%s, %s, %s, %s, %s, %s, %s)
+                ON DUPLICATE KEY UPDATE 
+                price=VALUES(price), 
+                amount=VALUES(amount)
+            """
+            args = []
+            for i in data:
+                args.append((
+                    i.get("date") or today,
+                    self._format_ts_code(i.get("code")),
+                    i.get("price"),
+                    i.get("volume"),
+                    i.get("amount"),
+                    i.get("buyer"),
+                    i.get("seller")
+                ))
+            await db.execute_many(query, args)
+            logger.info(f"成功同步大宗交易: {today}, {len(args)} 条")
+        except Exception as e:
+            logger.error(f"同步大宗交易失败: {today}, {e}")
+
+    async def sync_margin_summary(self):
+        """同步两融汇总汇总历史 (由于数据量小, 每次全量更新最近 60 天)"""
+        try:
+            data = await ak_client.get_margin_summary()
+            if not data:
+                return
+
+            query = """
+                INSERT INTO market_margin_summary (trade_date, margin_buy, margin_balance)
+                VALUES (%s, %s, %s)
+                ON DUPLICATE KEY UPDATE
+                margin_buy=VALUES(margin_buy),
+                margin_balance=VALUES(margin_balance)
+            """
+            args = []
+            for item in data:
+                args.append((
+                    item.get("date"),
+                    item.get("margin_buy"),
+                    item.get("margin_balance")
+                ))
+            await db.execute_many(query, args)
+            logger.info(f"成功同步两融汇总: {len(args)} 条")
+        except Exception as e:
+            logger.error(f"同步两融汇总失败: {e}")
+
     async def sync_market_stats(self):
         """同步今日大盘统计数据"""
         try:

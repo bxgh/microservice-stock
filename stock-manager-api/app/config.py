@@ -14,6 +14,7 @@ class Settings(BaseSettings):
     BAOSTOCK_API_URL: str = "http://baostock-api:8000"
     AKSHARE_API_URL: str = "http://akshare-api:8000"
     PYWENCAI_API_URL: str = "http://pywencai-api:8000"
+    MONITOR_SERVICE_URL: str = "http://monitor-service:8000"
     
     # 日志级别
     LOG_LEVEL: str = "INFO"

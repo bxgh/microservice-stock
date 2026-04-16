@@ -53,6 +53,22 @@ async def lifespan(app: FastAPI):
             job_id="daily_performance_forecast_sync"
         )
         
+        # 4. 注册资金监测数据定时同步任务 (每天 15:30)
+        scheduler.add_daily_job(
+            job_funcs.daily_monitor_data_sync_job,
+            hour=15,
+            minute=30,
+            job_id="daily_monitor_data_sync"
+        )
+        
+        # 5. 注册监控指标/健康分计算任务 (每天 15:45)
+        scheduler.add_daily_job(
+            job_funcs.daily_monitor_calculate_job,
+            hour=15,
+            minute=45,
+            job_id="daily_monitor_calculate"
+        )
+        
         # 3. 启动
         await scheduler.start()
         logger.info("Stock-Manager 内部调度器已启动")
