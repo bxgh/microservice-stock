@@ -44,3 +44,59 @@ async def daily_performance_forecast_sync_job() -> Dict[str, Any]:
     except Exception as e:
         logger.error(f"业绩预告同步失败: {e}", exc_info=True)
         return {'status': 'error', 'message': str(e)}
+
+async def daily_monitor_data_sync_job() -> Dict[str, Any]:
+    """每日收盘后资金面跨服务同步任务 (15:30)
+    
+    触发 monitor-service 进行龙虎榜、大宗交易、两融数据同步
+    """
+    import httpx
+    from app.config import settings
+    
+    try:
+        logger.info("【定时任务】开始触发资金面监控数据同步")
+        url = f"{settings.MONITOR_SERVICE_URL}/api/v1/sync/daily"
+        
+        async with httpx.AsyncClient(timeout=60.0) as client:
+            resp = await client.post(url)
+            resp.raise_for_status()
+            
+            logger.info("【定时任务】资金面监测数据同步请求已送达")
+            return {
+                'status': 'success',
+                'message': '资金面数据同步请求成功触发'
+            }
+    except Exception as e:
+        logger.error(f"【定时任务】触发资金面同步失败: {e}")
+        return {
+            'status': 'error',
+            'message': f'触发失败: {str(e)}'
+        }
+
+async def daily_monitor_calculate_job() -> Dict[str, Any]:
+    """每日盘后监控指标计算任务 (15:45)
+    
+    触发 monitor-service 进行评分引擎计算
+    """
+    import httpx
+    from app.config import settings
+    
+    try:
+        logger.info("【定时任务】开始触发监控指标计算")
+        url = f"{settings.MONITOR_SERVICE_URL}/api/v1/calculate"
+        
+        async with httpx.AsyncClient(timeout=120.0) as client:
+            resp = await client.post(url)
+            resp.raise_for_status()
+            
+            logger.info("【定时任务】监控指标计算请求已送达")
+            return {
+                'status': 'success',
+                'message': '指标计算任务成功触发'
+            }
+    except Exception as e:
+        logger.error(f"【定时任务】触发指标计算失败: {e}")
+        return {
+            'status': 'error',
+            'message': f'触发失败: {str(e)}'
+        }
