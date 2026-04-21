@@ -146,7 +146,7 @@ class BaoStockService:
         """获取最近的交易日（已物理闭市且数据可能已发布的日期视角）"""
         if not target_date:
             now = datetime.datetime.now()
-            # A 股下午 15:00 收盘，BaoStock 通常 16:00 后数据稳定
+            # A 股下午 15:00 收盘，BaoStock 通常 17:30 后数据开始发布
             if now.hour < 16:
                 target_date = (now - datetime.timedelta(days=1)).strftime("%Y-%m-%d")
             else:
@@ -157,6 +157,27 @@ class BaoStockService:
         if res:
             return res[0][0].strftime("%Y-%m-%d")
         return None
+
+    async def check_source_readiness(self, target_date: Optional[str] = None) -> bool:
+        """检查数据源是否已发布当日 K 线数据"""
+        sync_date = await self.get_last_trading_day(target_date)
+        if not sync_date:
+            return False
+            
+        # 探测样本：浦发银行
+        sample_code = "sh.600000"
+        logger.debug(f"正在探测源端数据是否就绪: {sync_date} ({sample_code})...")
+        
+        # 强制从源端抓取一天的数据，不检查数据库
+        res = await self.sync_kline_to_db(sample_code, start_date=sync_date, end_date=sync_date, use_db_latest=False)
+        
+        is_ready = res.get("success") and res.get("count", 0) > 0
+        if is_ready:
+            logger.info(f"数据源已就绪: {sync_date}")
+        else:
+            logger.debug(f"数据源尚未就绪: {sync_date}")
+            
+        return is_ready
 
     async def sync_daily_increment(self, target_date: Optional[str] = None) -> Dict[str, Any]:
         """全市场每日增量同步 (符合收盘批处理原则)"""

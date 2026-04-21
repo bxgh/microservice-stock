@@ -61,7 +61,7 @@ async def lifespan(app: FastAPI):
                     continue
                 
                 if "hour" in config:
-                    scheduler.add_daily_job(
+                    scheduler.add_cron_job(
                         func=func,
                         hour=config["hour"],
                         minute=config.get("minute", 0),

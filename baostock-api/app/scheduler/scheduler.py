@@ -92,15 +92,21 @@ class TaskScheduler:
         
         try:
             trigger = CronTrigger(hour=hour, minute=minute, second=second, timezone=self.timezone)
+            
+            # 处理名称格式化，支持字符串类型的 cron 表达式
+            h_display = f"{hour:02d}" if isinstance(hour, int) else str(hour)
+            m_display = f"{minute:02d}" if isinstance(minute, int) else str(minute)
+            s_display = f"{second:02d}" if isinstance(second, int) else str(second)
+            
             self.scheduler.add_job(
                 func,
                 trigger=trigger,
                 id=job_id,
-                name=f"{func.__name__}_{hour:02d}:{minute:02d}",
+                name=f"{func.__name__}_{h_display}:{m_display}",
                 replace_existing=True,
                 **kwargs
             )
-            logger.info(f"添加cron任务: {job_id}, 执行时间: {hour:02d}:{minute:02d}:{second:02d}")
+            logger.info(f"添加cron任务: {job_id}, 执行时间: {h_display}:{m_display}:{s_display}")
             return job_id
         except Exception as e:
             logger.error(f"添加cron任务失败: {e}", exc_info=True)

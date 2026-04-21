@@ -138,6 +138,40 @@ async def daily_adjust_factor_sync_job(**kwargs) -> Dict[str, Any]:
         }
 
 
+async def daily_kline_watcher_job() -> Dict[str, Any]:
+    """每日 K 线就绪监测任务 (轮询模式)"""
+    try:
+        from app.main import app
+        from app.utils.database import db
+        import datetime
+        
+        # 1. 确定当前应该同步的日期
+        service = app.state.baostock_service
+        sync_date = await service.get_last_trading_day()
+        if not sync_date:
+            return {"status": "skipped", "message": "未能确定交易日"}
+
+        # 2. 检查数据库，看今日份数据是否已经同步完成
+        # 如果已经有超过 5000 条记录，说明当日任务已在大约 18:00 或之前的轮询中完成了
+        res = await db.execute("SELECT count(*) FROM stock_kline_daily WHERE trade_date = %s", (sync_date,))
+        count = res[0][0] if res else 0
+        if count > 5000:
+            return {"status": "skipped", "message": f"日期 {sync_date} 的数据已存在 ({count}条)，跳过探测"}
+
+        # 3. 探测源端就绪情况
+        is_ready = await service.check_source_readiness(sync_date)
+        if is_ready:
+            logger.info(f"【监测预警】检测到 {sync_date} 数据已发布！启动综合同步流水线...")
+            return await daily_comprehensive_sync_job()
+        else:
+            logger.info(f"【监测中】{sync_date} 数据源仍未就绪，将在下次轮询时重试")
+            return {"status": "waiting", "message": "等待源端更新"}
+
+    except Exception as e:
+        logger.error(f"【定时任务】监测轮询异常: {e}", exc_info=True)
+        return {"status": "error", "message": str(e)}
+
+
 async def daily_comprehensive_sync_job() -> Dict[str, Any]:
     """全市场每日收盘综合同步流水线 (串行模式)
     
