@@ -382,11 +382,179 @@ class AkShareService:
                 res["fcf"] = res["net_operating_cash_flow"] - (res["capex"] or 0)
             else:
                 res["fcf"] = None
-                
             return res
         except Exception as e:
             logger.error(f"AkShare获取全量财务指标失败: symbol={symbol}, error={e}", exc_info=True)
             return None
+
+    async def get_historical_financial_report(self, symbol: str) -> Optional[Dict[str, List[Dict[str, Any]]]]:
+        """获取历史所有维度的财务报表数据 (盈利锚核心数据)
+        
+        返回包含资产负债表、利润表、现金流量表列表的字典。
+        """
+        try:
+            # 统一 symbol 格式
+            s = str(symbol)
+            if not (s.startswith("SH") or s.startswith("SZ") or s.startswith("BJ")):
+                if s.startswith("6") or s.startswith("9") or s.startswith("11"): s = "SH" + s
+                else: s = "SZ" + s
+            
+            logger.info(f"开始获取历史全量财务报表: {s}")
+            
+            # 并发获取三张表
+            tasks = [
+                asyncio.to_thread(ak.stock_balance_sheet_by_report_em, symbol=s),
+                asyncio.to_thread(ak.stock_profit_sheet_by_report_em, symbol=s),
+                asyncio.to_thread(ak.stock_cash_flow_sheet_by_report_em, symbol=s)
+            ]
+            dfs = await asyncio.gather(*tasks)
+            df_bs, df_ps, df_cf = dfs
+            
+            if df_bs is None or df_bs.empty:
+                logger.warning(f"未能获取资产负债表数据: {s}")
+                return None
+
+            # --- 1. 资产负债表处理 ---
+            balance_sheets = []
+            for _, row in df_bs.iterrows():
+                report_date = row.get("REPORT_DATE")
+                notice_date = row.get("NOTICE_DATE")
+                
+                # 清洗日期: 处理 NaN 或非字符串情况
+                clean_report_date = str(report_date).split(" ")[0] if pd.notna(report_date) else None
+                clean_notice_date = str(notice_date).split(" ")[0] if pd.notna(notice_date) else None
+                
+                balance_sheets.append({
+                    "report_date": clean_report_date,
+                    "notice_date": clean_notice_date,
+                    "total_assets": self._clean_value(row.get("TOTAL_ASSETS")),
+                    "total_liabilities": self._clean_value(row.get("TOTAL_LIABILITIES")),
+                    "total_equity": self._clean_value(row.get("TOTAL_EQUITY")),
+                    "total_equity_ato_parent": self._clean_value(row.get("TOTAL_PARENT_EQUITY")),
+                    "monetary_funds": self._clean_value(row.get("MONETARYFUNDS")),
+                    "accounts_receivable": self._clean_value(row.get("NOTE_ACCOUNTS_RECE")),
+                    "inventory": self._clean_value(row.get("INVENTORY")),
+                    "goodwill": self._clean_value(row.get("GOODWILL")),
+                    "short_term_borrowings": self._clean_value(row.get("SHORT_LOAN")),
+                    "long_term_borrowings": self._clean_value(row.get("LONG_LOAN")),
+                    "total_current_assets": self._clean_value(row.get("TOTAL_CURRENT_ASSETS")),
+                    "total_non_current_assets": self._clean_value(row.get("TOTAL_NON_CURRENT_ASSETS")),
+                    "total_current_liabilities": self._clean_value(row.get("TOTAL_CURRENT_LIABILITIES")),
+                    "total_non_current_liabilities": self._clean_value(row.get("TOTAL_NON_CURRENT_LIABILITIES")),
+                })
+
+            # --- 2. 利润表处理 ---
+            income_statements = []
+            if df_ps is not None and not df_ps.empty:
+                for _, row in df_ps.iterrows():
+                    report_date = row.get("REPORT_DATE")
+                    notice_date = row.get("NOTICE_DATE")
+                    clean_report_date = str(report_date).split(" ")[0] if pd.notna(report_date) else None
+                    clean_notice_date = str(notice_date).split(" ")[0] if pd.notna(notice_date) else None
+                    
+                    # 计算 ebit/ebitda (简化逻辑)
+                    total_profit = self._clean_value(row.get("TOTAL_PROFIT"))
+                    interest_exp = self._clean_value(row.get("FE_INTEREST_EXPENSE")) or 0
+                    ebit = (total_profit + interest_exp) if total_profit is not None else None
+                    
+                    income_statements.append({
+                        "report_date": clean_report_date,
+                        "notice_date": clean_notice_date,
+                        "total_revenue": self._clean_value(row.get("TOTAL_OPERATE_INCOME")),
+                        "operating_revenue": self._clean_value(row.get("OPERATE_INCOME")),
+                        "total_operating_cost": self._clean_value(row.get("TOTAL_OPERATE_COST")),
+                        "operating_cost": self._clean_value(row.get("OPERATE_COST")),
+                        "selling_expenses": self._clean_value(row.get("SALE_EXPENSE")),
+                        "administrative_expenses": self._clean_value(row.get("MANAGE_EXPENSE")),
+                        "financial_expenses": self._clean_value(row.get("FINANCE_EXPENSE")),
+                        "research_expenses": self._clean_value(row.get("RESEARCH_EXPENSE")),
+                        "operating_profit": self._clean_value(row.get("OPERATE_PROFIT")),
+                        "total_profit": total_profit,
+                        "net_profit": self._clean_value(row.get("NETPROFIT")),
+                        "parent_net_profit": self._clean_value(row.get("PARENT_NETPROFIT")),
+                        "deducted_net_profit": self._clean_value(row.get("DEDUCT_PARENT_NETPROFIT")),
+                        "ebit": ebit,
+                    })
+
+            # --- 3. 现金流量表处理 ---
+            cash_flows = []
+            if df_cf is not None and not df_cf.empty:
+                for _, row in df_cf.iterrows():
+                    report_date = row.get("REPORT_DATE")
+                    notice_date = row.get("NOTICE_DATE")
+                    clean_report_date = str(report_date).split(" ")[0] if pd.notna(report_date) else None
+                    clean_notice_date = str(notice_date).split(" ")[0] if pd.notna(notice_date) else None
+                    
+                    ocf = self._clean_value(row.get("NETCASH_OPERATE"))
+                    capex = self._clean_value(row.get("CONSTRUCT_LONG_ASSET"))
+                    fcf = (ocf - (capex or 0)) if ocf is not None else None
+                    
+                    cash_flows.append({
+                        "report_date": clean_report_date,
+                        "notice_date": clean_notice_date,
+                        "net_operating_cash_flow": ocf,
+                        "net_investing_cash_flow": self._clean_value(row.get("NETCASH_INVEST")),
+                        "net_financing_cash_flow": self._clean_value(row.get("NETCASH_FINANCE")),
+                        "capex": capex,
+                        "free_cash_flow": fcf,
+                        "cash_and_equivalents_at_end": self._clean_value(row.get("CASH_EQUIVALENTS_END")),
+                    })
+
+            return {
+                "balance_sheets": balance_sheets,
+                "income_statements": income_statements,
+                "cash_flows": cash_flows
+            }
+        except Exception as e:
+            logger.error(f"AkShare获取历史全量财务指标失败: symbol={symbol}, error={e}", exc_info=True)
+            return None
+
+    async def get_financial_analysis_indicators(self, symbol: str) -> List[Dict[str, Any]]:
+        """获取财务分析指标 (ROE, ROA, 毛利率, 资产负债率, EPS等)
+        
+        接口: ak.stock_financial_analysis_indicator_em
+        参数格式要求: 600519.SH / 000001.SZ
+        """
+        try:
+            s = str(symbol)
+            # 转换为 600519.SH 格式
+            if "." not in s:
+                if s.startswith("6") or s.startswith("9") or s.startswith("11"): s = s + ".SH"
+                else: s = s + ".SZ"
+            elif s.startswith("SH") or s.startswith("SZ"):
+                # 处理 SH600519 到 600519.SH
+                prefix = s[:2]
+                code = s[2:]
+                s = f"{code}.{prefix}"
+            
+            logger.info(f"开始获取历史财务分析指标: {s}")
+            df = await asyncio.to_thread(ak.stock_financial_analysis_indicator_em, symbol=s)
+            
+            if df is None or df.empty:
+                logger.warning(f"未能获取财务分析指标数据: {s}")
+                return []
+            
+            result = []
+            for _, row in df.iterrows():
+                report_date = row.get("REPORT_DATE")
+                # 兼容不同格式的日期清洗
+                clean_report_date = str(report_date).split(" ")[0] if pd.notna(report_date) else None
+                
+                result.append({
+                    "report_date": clean_report_date,
+                    "roe": self._clean_value(row.get("ROEJQ")),
+                    "roa": self._clean_value(row.get("ZZCJLL")),
+                    "netprofit_margin": self._clean_value(row.get("XSJLL")),
+                    "grossprofit_margin": self._clean_value(row.get("XSMLL")),
+                    "asset_liab_ratio": self._clean_value(row.get("ZCFZL")),
+                    "current_ratio": self._clean_value(row.get("LD")),
+                    "eps": self._clean_value(row.get("EPSJB")),
+                })
+            
+            return result
+        except Exception as e:
+            logger.error(f"AkShare获取财务分析指标失败: symbol={symbol}, error={e}", exc_info=True)
+            return []
 
     async def get_capital_flow(self, symbol: str) -> List[Dict[str, Any]]:
         """获取个股资金流向"""

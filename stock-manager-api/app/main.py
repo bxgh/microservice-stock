@@ -8,7 +8,7 @@ from fastapi.responses import JSONResponse
 from app.api import (
     metadata, audit, scheduler, ops, system, dashboard, 
     shareholders, chips, game, information, commands, task_commands, data_audit, suspension,
-    monitor
+    monitor, finance
 )
 from app.utils.logger import setup_logger, request_id_var
 from app.utils.database import db
@@ -67,6 +67,14 @@ async def lifespan(app: FastAPI):
             hour=15,
             minute=45,
             job_id="daily_monitor_calculate"
+        )
+        
+        # 6. 注册全市场财务衍生指标同步任务 (每日 02:30)
+        scheduler.add_daily_job(
+            job_funcs.weekly_financial_indicators_sync_job,
+            job_id="daily_finance_indicators_sync",
+            hour=2,
+            minute=30
         )
         
         # 3. 启动
@@ -176,4 +184,6 @@ app.include_router(chips.router, prefix="/api/v1/chips", tags=["筹码维度同�
 app.include_router(game.router, prefix="/api/v1/game", tags=["博弈维度同步"])
 app.include_router(information.router, prefix="/api/v1/information", tags=["信息维度同步"])
 app.include_router(monitor.router, prefix="/api/v1/monitor", tags=["监控指标"])
+app.include_router(finance.router, prefix="/api/v1/finance", tags=["财务数据"])
+
 

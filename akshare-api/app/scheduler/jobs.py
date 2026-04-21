@@ -191,3 +191,39 @@ async def weekly_restricted_release_job() -> Dict[str, Any]:
     except Exception as e:
         logger.error(f"【定时任务】限售股解禁同步失败: {e}", exc_info=True)
         return {'status': 'error', 'message': str(e)}
+
+async def weekly_financial_report_sync_job() -> Dict[str, Any]:
+    """每周财务报表全量同步 (盈利锚核心数据)
+    
+    每周六 05:00 执行
+    """
+    try:
+        logger.info("【定时任务】开始执行每周财务报表数据同步")
+        from app.services.financial_service import FinancialService
+        
+        service = FinancialService()
+        res = await service.sync_all_financial_reports()
+        
+        logger.info(f"财务报表同步结果: {res}")
+        return res
+    except Exception as e:
+        logger.error(f"【定时任务】财务报表同步失败: {e}", exc_info=True)
+        return {'status': 'error', 'message': str(e)}
+
+async def daily_financial_incremental_sync_job() -> Dict[str, Any]:
+    """每日增量财务报表同步 (仅限当日新披露财报)
+    
+    每日 20:00 执行
+    """
+    try:
+        logger.info("【定时任务】开始执行每日增量财务报表同步")
+        from app.services.financial_service import FinancialService
+        
+        service = FinancialService()
+        res = await service.sync_daily_incremental_reports()
+        
+        logger.info(f"增量财务报表同步结果: {res}")
+        return res
+    except Exception as e:
+        logger.error(f"【定时任务】每日增量报表同步失败: {e}", exc_info=True)
+        return {'status': 'error', 'message': str(e)}

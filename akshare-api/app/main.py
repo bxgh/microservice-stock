@@ -98,6 +98,23 @@ async def lifespan(app: FastAPI):
         day_of_week=5,
         job_id="weekly_restricted_release"
     )
+
+    # 注册每周财务报表同步任务 (周六 05:00)
+    scheduler.add_cron_job(
+        job_funcs.weekly_financial_report_sync_job,
+        hour=5,
+        minute=0,
+        day_of_week=5,
+        job_id="weekly_financial_report_sync"
+    )
+
+    # 注册每日增量财务报表同步任务 (20:00)
+    scheduler.add_daily_job(
+        job_funcs.daily_financial_incremental_sync_job,
+        hour=20,
+        minute=0,
+        job_id="daily_financial_incremental_sync"
+    )
     
     await scheduler.start()
     

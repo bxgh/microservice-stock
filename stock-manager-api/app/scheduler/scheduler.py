@@ -91,7 +91,7 @@ class TaskScheduler:
             logger.info(f"删除已存在的任务: {job_id}")
         
         try:
-            trigger = CronTrigger(hour=hour, minute=minute, second=second, timezone=self.timezone)
+            trigger = CronTrigger(hour=hour, minute=minute, second=second, timezone=self.timezone, **kwargs)
             self.scheduler.add_job(
                 func,
                 trigger=trigger,

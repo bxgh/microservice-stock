@@ -90,6 +90,57 @@ async def get_finance_indicators(request: Request, code: str):
         raise HTTPException(status_code=500, detail=f"获取财务指标失败: {str(e)}")
 
 
+@router.get("/finance/historical/{code}")
+async def get_historical_finance(request: Request, code: str):
+    """
+    获取历史全量财务报表 (盈利锚核心数据)
+    
+    返回包含资产负债表、利润表、现金流量表列表。
+    """
+    request_id = getattr(request.state, "request_id", "unknown")
+    service = request.app.state.akshare_service
+    
+    try:
+        data = await service.get_historical_financial_report(code)
+        
+        if not data:
+            raise HTTPException(status_code=404, detail="未找到历史财务数据")
+        
+        data["code"] = code
+        logger.info(f"获取历史财务数据成功: code={code}", extra={"request_id": request_id})
+        return data
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"获取历史财务数据失败: code={code}, error={e}", extra={"request_id": request_id})
+        raise HTTPException(status_code=500, detail=f"获取历史财务数据失败: {str(e)}")
+
+
+@router.get("/finance/analysis-indicators/{code}")
+async def get_analysis_indicators(request: Request, code: str):
+    """
+    获取财务分析指标 (ROE, ROA, 毛利率, EPS等)
+    """
+    request_id = getattr(request.state, "request_id", "unknown")
+    service = request.app.state.akshare_service
+    
+    try:
+        data = await service.get_financial_analysis_indicators(code)
+        if not data:
+            raise HTTPException(status_code=404, detail="未找到财务分析指标数据")
+        
+        return {
+            "code": code,
+            "indicators": data
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"获取财务分析指标失败: code={code}, error={e}", extra={"request_id": request_id})
+        raise HTTPException(status_code=500, detail=f"获取财务分析指标失败: {str(e)}")
+
+
 @router.get("/shareholder/{code}")
 async def get_shareholder(request: Request, code: str, all: bool = Query(False, description="是否获取所有历史数据")):
     """
