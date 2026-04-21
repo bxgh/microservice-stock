@@ -22,8 +22,8 @@ SERVICE_ROUTES = {
     "/monitor": f"http://{VPS_IP}:8006",
 }
 
-# 显式禁用代理，避免环境干扰
-client = httpx.AsyncClient(proxies=None, timeout=30.0)
+# 显式禁用环境变量中的代理干扰
+client = httpx.AsyncClient(trust_env=False, timeout=30.0)
 
 @app.on_event("shutdown")
 async def shutdown_event():
