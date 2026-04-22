@@ -1,101 +1,78 @@
-import httpx
-import logging
-import traceback
-from fastapi import FastAPI, Request, HTTPException
-from fastapi.responses import StreamingResponse, JSONResponse
+import uuid
+import time
+from contextlib import asynccontextmanager
+from fastapi import FastAPI, Request
+from fastapi.responses import JSONResponse
 
-# 配置日志
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger("gateway")
+from app.api import kline
+from app.utils.logger import setup_logger, request_id_var
+from app.utils.database import db
 
-app = FastAPI(title="WXCH Gateway", description="API Gateway for Microservice Stock")
+# 初始化日志
+logger = setup_logger("gateway")
 
-# VPS 内网 IP
-VPS_IP = "10.0.12.7"
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """应用生命周期管理"""
+    # 启动时初始化数据库连接
+    try:
+        await db.connect()
+        logger.info("Gateway service started and DB connected")
+    except Exception as e:
+        logger.error(f"数据库连接池启动失败: {e}")
+    
+    yield
+    
+    # 关闭时清理资源
+    await db.disconnect()
+    logger.info("Gateway service stopped")
 
-SERVICE_ROUTES = {
-    "/baostock": f"http://{VPS_IP}:8001",
-    "/wencai": f"http://{VPS_IP}:8002",
-    "/akshare": f"http://{VPS_IP}:8003",
-    "/manager": f"http://{VPS_IP}:8004",
-    "/tushare": f"http://{VPS_IP}:8005",
-    "/monitor": f"http://{VPS_IP}:8006",
-}
+app = FastAPI(
+    title="WXCH Gateway",
+    description="Direct MySQL API for Microservice Stock",
+    version="2.0.0",
+    lifespan=lifespan,
+)
 
-# 显式禁用环境变量中的代理干扰
-client = httpx.AsyncClient(trust_env=False, timeout=30.0)
-
-@app.on_event("shutdown")
-async def shutdown_event():
-    await client.aclose()
+@app.middleware("http")
+async def add_request_id_and_logging(request: Request, call_next):
+    """添加 request_id 和请求日志"""
+    request_id = str(uuid.uuid4())[:8]
+    request.state.request_id = request_id
+    
+    # 设置 ContextVar
+    token = request_id_var.set(request_id)
+    
+    start_time = time.time()
+    try:
+        response = await call_next(request)
+        
+        duration_ms = int((time.time() - start_time) * 1000)
+        
+        log_data = {
+            "request_id": request_id,
+            "method": request.method,
+            "path": request.url.path,
+            "status": response.status_code,
+            "duration_ms": duration_ms,
+            "client_ip": request.client.host if request.client else "unknown",
+        }
+        logger.info("Request completed", extra={"extra_data": log_data, "request_id": request_id})
+        
+        response.headers["X-Request-ID"] = request_id
+        return response
+    finally:
+        request_id_var.reset(token)
 
 @app.get("/health")
 async def health_check():
-    return {"status": "gateway proxy healthy", "vps_ip": VPS_IP}
+    """健康检查端点"""
+    return {"status": "healthy", "service": "wxch-gateway"}
 
-@app.api_route("/{path:path}", methods=["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS", "HEAD"])
-async def proxy(request: Request, path: str):
-    target_url = None
-    
-    # 路径匹配逻辑
-    for prefix, base_url in SERVICE_ROUTES.items():
-        clean_prefix = prefix.strip('/')
-        if path.startswith(clean_prefix):
-            path_without_prefix = path[len(clean_prefix):]
-            if not path_without_prefix.startswith('/') and path_without_prefix != "":
-                continue # 防止前缀部分匹配，如 /baostocks 匹配到 /baostock
-            target_url = f"{base_url}{path_without_prefix}"
-            break
-            
-    if not target_url:
-        # 默认转发到 manager 或者返回 404
-        target_url = f"http://{VPS_IP}:8004/{path}"
+# 注册路由
+app.include_router(kline.router, prefix="/api/v1/stocks", tags=["股票数据"])
 
-    # 合并查询参数
-    url_str = target_url
-    if request.url.query:
-        url_str = f"{target_url}?{request.url.query}"
-    
-    url = httpx.URL(url_str)
-    
-    # 转发 header
-    headers = dict(request.headers.items())
-    headers.pop("host", None)
-    headers.pop("content-length", None) # httpx 会自动处理
-
-    try:
-        req = client.build_request(
-            request.method,
-            url,
-            headers=headers,
-            content=await request.body()
-        )
-        
-        response = await client.send(req, stream=True)
-        
-        return StreamingResponse(
-            response.aiter_raw(),
-            status_code=response.status_code,
-            headers=dict(response.headers),
-            background=response.aclose
-        )
-    except httpx.RequestError as exc:
-        logger.error(f"Proxy error: {type(exc).__name__} -> {str(exc)}")
-        logger.error(traceback.format_exc())
-        return JSONResponse(
-            status_code=502,
-            content={
-                "error": {
-                    "code": "PROXY_ERROR",
-                    "message": f"Error proxying to {target_url}",
-                    "exception": type(exc).__name__,
-                    "detail": str(exc)
-                }
-            }
-        )
-    except Exception as e:
-        logger.error(f"Internal gateway error: {str(e)}")
-        return JSONResponse(
-            status_code=500,
-            content={"error": {"code": "GATEWAY_INTERNAL_ERROR", "message": str(e)}}
-        )
+# 静态首页或 404 处理
+@app.get("/")
+async def root():
+    return {"message": "WXCH Gateway API v2.0 is running"}
