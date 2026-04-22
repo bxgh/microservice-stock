@@ -17,7 +17,22 @@ class KlineService:
     ) -> List[Dict[str, Any]]:
         """获取日 K 线数据"""
         try:
-            sql = "SELECT trade_date, open, high, low, close, volume, amount, turn FROM stock_kline_daily WHERE code = %s"
+            # 标准化代码格式: 确保为 600519.SH (大写)
+            if "." in code:
+                parts = code.split(".")
+                # 如果是 sh.600519 格式，转换为 600519.SH
+                if len(parts[0]) == 2 and parts[0].isalpha():
+                    code = f"{parts[1]}.{parts[0].upper()}"
+                else:
+                    code = code.upper()
+            elif code.isdigit():
+                # 处理纯数字，尝试补全后缀 (简单逻辑)
+                if code.startswith(('6', '9')):
+                    code = f"{code}.SH"
+                else:
+                    code = f"{code}.SZ"
+            
+            sql = "SELECT trade_date, open, high, low, close, volume, amount, turnover FROM stock_kline_daily WHERE code = %s"
             params = [code]
             
             if start_date:
@@ -44,7 +59,7 @@ class KlineService:
                     "close": float(row[4]),
                     "volume": float(row[5]),
                     "amount": float(row[6]),
-                    "turn": float(row[7]) if row[7] is not None else None
+                    "turnover": float(row[7]) if row[7] is not None else None
                 })
             
             return results

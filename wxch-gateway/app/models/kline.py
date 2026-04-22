@@ -11,7 +11,7 @@ class KlineItem(BaseModel):
     close: float
     volume: float
     amount: float
-    turn: Optional[float] = None
+    turnover: Optional[float] = None
 
 class KlineResponse(BaseModel):
     """K 线接口响应"""
