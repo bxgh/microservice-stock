@@ -41,3 +41,15 @@ class SnapshotData(QuoteBase):
 class SnapshotResponse(BaseModel):
     """快照行情响应"""
     data: SnapshotData
+
+class TimeSharePoint(BaseModel):
+    """分时数据点"""
+    time: str = Field(..., description="时间 (HHMM)")
+    price: float = Field(..., description="当前价格")
+    volume: float = Field(..., description="成交量")
+    amount: float = Field(..., description="成交额")
+
+class TimeShareResponse(BaseModel):
+    """分时行情响应"""
+    code: str
+    data: List[TimeSharePoint]

@@ -1,7 +1,8 @@
 import time
 import asyncio
+import httpx
 import easyquotation
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, List
 from app.utils.logger import get_logger
 
 logger = get_logger("gateway.quote_service")
@@ -29,9 +30,11 @@ class QuoteService:
                 if m in ["ss", "sh"]: m = "sh"
                 return f"{m}{parts[0]}"
         
-        # 纯数字判断
+        # 纯数字判断（沪市: 6/9, 北交所: 4/8, 深市: 其他）
         if code.startswith(('6', '9')):
             return f"sh{code}"
+        elif code.startswith(('4', '8')):
+            return f"bj{code}"
         else:
             return f"sz{code}"
 
@@ -189,5 +192,60 @@ class QuoteService:
             "market_cap": market_cap,
             "float_market_cap": float_market_cap
         }
+
+    async def get_time_share(self, code: str) -> List[Dict[str, Any]]:
+        """获取个股分时行情 (Tencent 源)"""
+        norm_code = self._normalize_code(code)
+        url = f"https://web.ifzq.gtimg.cn/appstock/app/minute/query?code={norm_code}"
+        headers = {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+            "Referer": "https://new.qq.com/"
+        }
+        
+        try:
+            async with httpx.AsyncClient(timeout=10.0, follow_redirects=True) as client:
+                resp = await client.get(url, headers=headers)
+                if resp.status_code != 200:
+                    logger.error(f"Failed to fetch time-share data: {resp.status_code}")
+                    return []
+                
+                data_json = resp.json()
+                if 'data' not in data_json or norm_code not in data_json['data']:
+                    logger.warning(f"No time-share data found for {norm_code}")
+                    return []
+                
+                stock_data = data_json['data'][norm_code]
+                # 腾讯分时路径: data -> [code] -> data -> data
+                # 注意: 有些指数或股票路径可能稍有不同，这里做一个兼容
+                inner_data = stock_data.get('data', {})
+                if isinstance(inner_data, dict):
+                    minute_list = inner_data.get('data', [])
+                else:
+                    # 某些情况下 data 键直接就是列表
+                    minute_list = inner_data if isinstance(inner_data, list) else []
+
+                result = []
+                for item in minute_list:
+                    if not isinstance(item, str):
+                        continue
+                    # 格式: "0930 1408.00 515 72512000.00"
+                    parts = item.split()
+                    if len(parts) < 3:
+                        continue
+                    try:
+                        result.append({
+                            "time": parts[0],
+                            "price": float(parts[1]),
+                            "volume": float(parts[2]),
+                            "amount": float(parts[3]) if len(parts) > 3 else 0.0
+                        })
+                    except (ValueError, IndexError) as parse_err:
+                        # 跳过格式异常的单条数据，不中断整批解析
+                        logger.warning(f"跳过异常分时数据点: {item!r}, 原因: {parse_err}")
+                        continue
+                return result
+        except Exception as e:
+            logger.error(f"Error fetching time-share data: {e}")
+            return []
 
 quote_service = QuoteService()
