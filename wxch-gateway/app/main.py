@@ -4,7 +4,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 
-from app.api import kline
+from app.api import kline, quote
 from app.utils.logger import setup_logger, request_id_var
 from app.utils.database import db
 
@@ -71,6 +71,7 @@ async def health_check():
 
 # 注册路由
 app.include_router(kline.router, prefix="/api/v1/stocks", tags=["股票数据"])
+app.include_router(quote.router, prefix="/api/v1/stocks", tags=["股票数据"])
 
 # 静态首页或 404 处理
 @app.get("/")
