@@ -1,156 +1,193 @@
-import httpx
 import time
+import asyncio
+import easyquotation
 from typing import Dict, Any, Optional
 from app.utils.logger import get_logger
 
 logger = get_logger("gateway.quote_service")
 
-# Tencent 请求头
-_TENCENT_HEADERS = {
-    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-    "Referer": "https://gu.qq.com/"
-}
-
 class QuoteService:
-    """行情服务 - 使用 Tencent (QQ) API 获取实时数据"""
+    """行情服务 - 使用 easyquotation (Tencent 数据源) 获取数据"""
 
-    def _normalize_code_tencent(self, code: str) -> str:
+    def __init__(self):
+        # 使用 tencent 数据源，包含 PE/PB 和市值数据
+        self.quotation = easyquotation.use('tencent')
+
+    def _normalize_code(self, code: str) -> str:
         """
-        标准化代码为 Tencent 格式 (sh600519, bj920002)
+        转换为 easyquotation 格式: sh600519 / sz000001
+        支持 sh.600519 / 600519.SH / 600519
         """
         code = code.strip().lower()
         if "." in code:
             parts = code.split(".")
-            # sh.600519 or 600519.sh
-            if len(parts[0]) == 2 and not parts[0].isdigit():
+            if parts[0] in ["sh", "sz"]:
                 return f"{parts[0]}{parts[1]}"
-            if len(parts[1]) == 2 and not parts[1].isdigit():
-                return f"{parts[1]}{parts[0]}"
-            # Default to SH if unknown suffix but has dot
-            return f"sh{parts[0]}"
+            else:
+                # 600519.sh
+                m = parts[1]
+                if m in ["ss", "sh"]: m = "sh"
+                return f"{m}{parts[0]}"
         
         # 纯数字判断
-        if code.startswith(('6', '9', '5')):
+        if code.startswith(('6', '9')):
             return f"sh{code}"
-        elif code.startswith(('8', '4', '0', '3')):
+        else:
             return f"sz{code}"
-        # 默认
-        return f"sh{code}"
 
-    async def _fetch_tencent_raw(self, tencent_code: str) -> Optional[str]:
-        """从腾讯接口获取原始文本数据"""
-        url = f"https://qt.gtimg.cn/q={tencent_code}"
+    def _fix_encoding(self, text: Any) -> str:
+        """修复可能存在的编码问题"""
+        if not text:
+            return ""
+        if isinstance(text, bytes):
+            return text.decode('gbk', errors='ignore')
+        # 常见情况：GBK 被错误识别为 latin1
         try:
-            async with httpx.AsyncClient(timeout=5.0, verify=False) as client:
-                resp = await client.get(url, headers=_TENCENT_HEADERS)
-                if resp.status_code != 200:
-                    return None
-                # 腾讯接口通常返回 GBK 编码
-                return resp.content.decode("gbk")
-        except Exception as e:
-            logger.error(f"Tencent fetch error: {e}")
+            return text.encode('latin1').decode('gbk')
+        except (UnicodeEncodeError, UnicodeDecodeError):
+            return str(text)
+
+    async def _fetch_data(self, code: str) -> Optional[Dict[str, Any]]:
+        """在线程池中运行同步的 easyquotation 调用"""
+        norm_code = self._normalize_code(code)
+        try:
+            # run_in_executor 需要 running loop (Python 3.10+ 推荐写法)
+            loop = asyncio.get_running_loop()
+            data = await loop.run_in_executor(None, self.quotation.stocks, [norm_code])
+            
+            # easyquotation tencent 源返回的 key 是 600519 (不带前缀)
+            symbol = norm_code[2:]
+            if not data:
+                return None
+            
+            if symbol in data:
+                return data[symbol]
+            if norm_code in data:
+                return data[norm_code]
+                
             return None
-
-    def _parse_tencent_data(self, raw: str) -> Optional[Dict[str, Any]]:
-        """解析腾讯接口返回的波浪号分隔数据"""
-        try:
-            if "=" not in raw:
-                return None
-            data_str = raw.split("=")[1].strip().strip('"').strip(";")
-            items = data_str.split("~")
-            if len(items) < 35:
-                return None
-            
-            def to_float(idx, default=0.0):
-                try:
-                    return float(items[idx]) if items[idx] else default
-                except:
-                    return default
-
-            # 处理时间戳 20260423113120 (idx 30)
-            ts_str = items[30]
-            try:
-                struct_time = time.strptime(ts_str, "%Y%m%d%H%M%S")
-                timestamp = int(time.mktime(struct_time))
-            except:
-                timestamp = int(time.time())
-
-            res = {
-                "code": items[2],
-                "name": items[1],
-                "last": to_float(3),
-                "open": to_float(5),
-                "high": to_float(33),
-                "low": to_float(34),
-                "prev_close": to_float(4),
-                "chg": to_float(31),
-                "chg_pct": to_float(32),
-                "volume": to_float(6),
-                "amount": to_float(37) * 10000, # 腾讯成交额单位是万元
-                "timestamp": timestamp
-            }
-            
-            # 添加盘口数据
-            # 买1-5: 9,11,13,15,17(价), 10,12,14,16,18(量)
-            # 卖1-5: 19,21,23,25,27(价), 20,22,24,26,28(量)
-            bid_ask = {
-                "buy": [
-                    {"price": to_float(9 + i*2), "volume": to_float(10 + i*2)}
-                    for i in range(5)
-                ],
-                "sell": [
-                    {"price": to_float(19 + i*2), "volume": to_float(20 + i*2)}
-                    for i in range(5)
-                ]
-            }
-            res["bid_ask"] = bid_ask
-            
-            # 市值等信息
-            if len(items) > 46:
-                res["pe_dynamic"] = to_float(39)
-                res["pb"] = to_float(46)
-                res["market_cap"] = to_float(45) * 100000000 # 亿 -> 元
-                res["float_market_cap"] = to_float(44) * 100000000 # 亿 -> 元
-            
-            return res
         except Exception as e:
-            logger.error(f"Parse Tencent error: {e}")
+            logger.error(f"Error fetching data from Tencent: {e}")
             return None
 
     async def get_spot(self, code: str) -> Optional[Dict[str, Any]]:
         """获取个股实时行情"""
-        tencent_code = self._normalize_code_tencent(code)
-        raw = await self._fetch_tencent_raw(tencent_code)
-        if not raw:
-            return None
-        
-        data = self._parse_tencent_data(raw)
+        data = await self._fetch_data(code)
         if not data:
             return None
         
-        # 返回 SpotResponse 所需的子集
+        now = data.get("now", 0.0)
+        close = data.get("close", 0.0)
+        chg = round(now - close, 3) if now and close else 0.0
+        chg_pct = round((now / close - 1) * 100, 2) if now and close else 0.0
+
+        # 腾讯源的成交额通常在一些乱码键中，尝试通过数值大小和单位推断
+        amount = 0.0
+        volume = float(data.get("volume") or 0)
+        denom_1 = now * volume
+        denom_100 = denom_1 * 100
+
+        # 寻找可能的成交额字段（通过比值判断，避免除零）
+        if denom_1 > 0:
+            for k, v in data.items():
+                if isinstance(v, (int, float)) and v > 0:
+                    ratio1 = v / denom_1
+                    ratio100 = v / denom_100
+                    if 0.9 < ratio1 < 1.1 or 0.9 < ratio100 < 1.1:
+                        amount = float(v)
+                        break
+
+        if amount == 0 and denom_100 > 0:
+            # 保底方案：按手数估算（每手100股）
+            amount = denom_100
+
         return {
-            "code": data["code"],
-            "name": data["name"],
-            "last": data["last"],
-            "open": data["open"],
-            "high": data["high"],
-            "low": data["low"],
-            "prev_close": data["prev_close"],
-            "chg": data["chg"],
-            "chg_pct": data["chg_pct"],
-            "volume": data["volume"],
-            "amount": data["amount"],
-            "timestamp": data["timestamp"]
+            "code": data.get("code", code),
+            "name": self._fix_encoding(data.get("name", "")),
+            "last": now,
+            "open": data.get("open", 0.0),
+            "high": data.get("high", 0.0),
+            "low": data.get("low", 0.0),
+            "prev_close": close,
+            "chg": chg,
+            "chg_pct": chg_pct,
+            "volume": volume,
+            "amount": amount,
+            "timestamp": int(time.time())
         }
 
     async def get_snapshot(self, code: str) -> Optional[Dict[str, Any]]:
         """获取个股快照行情 (含五档盘口)"""
-        tencent_code = self._normalize_code_tencent(code)
-        raw = await self._fetch_tencent_raw(tencent_code)
-        if not raw:
+        # 只调用一次 _fetch_data，避免重复网络请求
+        data = await self._fetch_data(code)
+        if not data:
             return None
-        
-        return self._parse_tencent_data(raw)
+
+        # 计算涨跌额和涨跌幅
+        now = data.get("now", 0.0)
+        close = data.get("close", 0.0)
+        chg = round(now - close, 3) if now and close else 0.0
+        chg_pct = round((now / close - 1) * 100, 2) if now and close else 0.0
+
+        # 成交额匹配
+        volume = float(data.get("volume") or 0)
+        denom_1 = now * volume
+        denom_100 = denom_1 * 100
+        amount = 0.0
+        if denom_1 > 0:
+            for k, v in data.items():
+                if isinstance(v, (int, float)) and v > 0:
+                    ratio1 = v / denom_1
+                    ratio100 = v / denom_100
+                    if 0.9 < ratio1 < 1.1 or 0.9 < ratio100 < 1.1:
+                        amount = float(v)
+                        break
+        if amount == 0 and denom_100 > 0:
+            amount = denom_100
+
+        # Tencent 源五档字段名为 bid1, bid1_volume ... ask1, ask1_volume
+        bid_ask = {
+            "buy": [
+                {"price": data.get(f"bid{i}", 0.0), "volume": data.get(f"bid{i}_volume", 0.0)}
+                for i in range(1, 6)
+            ],
+            "sell": [
+                {"price": data.get(f"ask{i}", 0.0), "volume": data.get(f"ask{i}_volume", 0.0)}
+                for i in range(1, 6)
+            ]
+        }
+
+        # 市值字段（腾讯源键名可能是乱码，先尝试已知键，再遍历兜底）
+        market_cap = data.get("ֵ") or data.get("market_cap")
+        float_market_cap = data.get("ֵͨ") or data.get("float_market_cap")
+        if not market_cap:
+            for k, v in data.items():
+                if isinstance(v, (int, float)) and v > 100:
+                    decoded = self._fix_encoding(k)
+                    if '值' in decoded:
+                        if '流通' in decoded:
+                            float_market_cap = v
+                        else:
+                            market_cap = v
+
+        return {
+            "code": data.get("code", code),
+            "name": self._fix_encoding(data.get("name", "")),
+            "last": now,
+            "open": data.get("open", 0.0),
+            "high": data.get("high", 0.0),
+            "low": data.get("low", 0.0),
+            "prev_close": close,
+            "chg": chg,
+            "chg_pct": chg_pct,
+            "volume": volume,
+            "amount": amount,
+            "timestamp": int(time.time()),
+            "bid_ask": bid_ask,
+            "pe_dynamic": data.get("PE"),
+            "pb": data.get("PB"),
+            "market_cap": market_cap,
+            "float_market_cap": float_market_cap
+        }
 
 quote_service = QuoteService()
