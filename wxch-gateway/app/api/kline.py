@@ -9,7 +9,7 @@ router = APIRouter()
 async def get_stock_kline(
     code: str,
     frequency: str = Query("d", pattern="^(d|w|m)$"),
-    adjust: str = Query("3", pattern="^(1|2|3)$"),
+    adjust: str = Query("2", pattern="^(1|2|3)$"),
     start_date: Optional[str] = None,
     end_date: Optional[str] = None,
     limit: int = Query(500, ge=1, le=1000)

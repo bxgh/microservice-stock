@@ -23,7 +23,7 @@ class KlineService:
         self, 
         code: str, 
         frequency: str = "d",
-        adjust: str = "3",  # 3: 不复权 (默认), 2: 前复权, 1: 后复权
+        adjust: str = "2",  # 2: 前复权 (默认), 1: 后复权, 3: 不复权
         start_date: Optional[str] = None, 
         end_date: Optional[str] = None, 
         limit: int = 500
