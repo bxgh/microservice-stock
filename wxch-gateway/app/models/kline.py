@@ -9,9 +9,12 @@ class KlineItem(BaseModel):
     high: float
     low: float
     close: float
+    pre_close: Optional[float] = None
     volume: float
     amount: float
     turnover: Optional[float] = None
+    pct_chg: Optional[float] = None
+    trade_status: Optional[int] = None
 
 class KlineResponse(BaseModel):
     """K 线接口响应"""
