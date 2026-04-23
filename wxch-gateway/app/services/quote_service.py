@@ -190,10 +190,16 @@ class QuoteService:
             "pe_dynamic": data.get("PE"),
             "pb": data.get("PB"),
             "market_cap": market_cap,
-            "float_market_cap": float_market_cap
+            "float_market_cap": float_market_cap,
+            "turnover_rate": data.get("turnover"),
+            # easyquotation 涐讫思源仅映射到第 53 位，第 70 位实换手标在该通道无法获取
+            # 前端需要实换手请使用 /time_share 接口
+            "turnover_real": None,
+            # easyquotation 已将腾讯第 49 位解析为 "量比"
+            "quantity_ratio": data.get("量比")
         }
 
-    async def get_time_share(self, code: str) -> List[Dict[str, Any]]:
+    async def get_time_share(self, code: str) -> Dict[str, Any]:
         """获取个股分时行情 (Tencent 源)"""
         norm_code = self._normalize_code(code)
         url = f"https://web.ifzq.gtimg.cn/appstock/app/minute/query?code={norm_code}"
@@ -207,45 +213,72 @@ class QuoteService:
                 resp = await client.get(url, headers=headers)
                 if resp.status_code != 200:
                     logger.error(f"Failed to fetch time-share data: {resp.status_code}")
-                    return []
+                    return {}
                 
                 data_json = resp.json()
                 if 'data' not in data_json or norm_code not in data_json['data']:
                     logger.warning(f"No time-share data found for {norm_code}")
-                    return []
+                    return {}
                 
                 stock_data = data_json['data'][norm_code]
-                # 腾讯分时路径: data -> [code] -> data -> data
-                # 注意: 有些指数或股票路径可能稍有不同，这里做一个兼容
+                # 提取当日统计 (量比、换手、实换手)
+                qt = stock_data.get('qt', {}).get(norm_code, [])
+                turnover_rate = float(qt[38]) if len(qt) > 38 else None
+                turnover_real = float(qt[70]) if len(qt) > 70 else None
+                quantity_ratio = float(qt[49]) if len(qt) > 49 else None
+
+                # 提取分时点位
                 inner_data = stock_data.get('data', {})
                 if isinstance(inner_data, dict):
                     minute_list = inner_data.get('data', [])
                 else:
-                    # 某些情况下 data 键直接就是列表
                     minute_list = inner_data if isinstance(inner_data, list) else []
 
                 result = []
+                prev_vol = 0.0
+                prev_amount = 0.0
                 for item in minute_list:
                     if not isinstance(item, str):
                         continue
-                    # 格式: "0930 1408.00 515 72512000.00"
+                    # 格式: "时间 价格 累积成交量 累积成交额"
                     parts = item.split()
                     if len(parts) < 3:
                         continue
                     try:
+                        curr_price = float(parts[1])
+                        cum_vol = float(parts[2])
+                        cum_amount = float(parts[3]) if len(parts) > 3 else 0.0
+                        
+                        # 计算当前分钟增量
+                        minute_vol = cum_vol - prev_vol
+                        minute_amount = cum_amount - prev_amount
+                        
+                        # 计算均价 (累积成交额 / 累积成交量)
+                        # 注意: 累积成交量单位是“手”，需要 * 100
+                        avg_price = round(cum_amount / (cum_vol * 100), 3) if cum_vol > 0 else curr_price
+
                         result.append({
                             "time": parts[0],
-                            "price": float(parts[1]),
-                            "volume": float(parts[2]),
-                            "amount": float(parts[3]) if len(parts) > 3 else 0.0
+                            "price": curr_price,
+                            "avg_price": avg_price,
+                            "volume": minute_vol,
+                            "amount": minute_amount
                         })
-                    except (ValueError, IndexError) as parse_err:
-                        # 跳过格式异常的单条数据，不中断整批解析
-                        logger.warning(f"跳过异常分时数据点: {item!r}, 原因: {parse_err}")
+                        
+                        prev_vol = cum_vol
+                        prev_amount = cum_amount
+                    except (ValueError, IndexError, ZeroDivisionError) as parse_err:
                         continue
-                return result
+
+                return {
+                    "code": code,
+                    "turnover_rate": turnover_rate,
+                    "turnover_real": turnover_real,
+                    "quantity_ratio": quantity_ratio,
+                    "data": result
+                }
         except Exception as e:
             logger.error(f"Error fetching time-share data: {e}")
-            return []
+            return {}
 
 quote_service = QuoteService()

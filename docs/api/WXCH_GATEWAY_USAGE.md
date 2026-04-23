@@ -121,14 +121,17 @@
     "pe_dynamic": 21.54,
     "pb": 7.25,
     "market_cap": 17730.64,
-    "float_market_cap": 17730.64
+    "float_market_cap": 17730.64,
+    "turnover_rate": 0.3,
+    "turnover_real": 0.62,
+    "quantity_ratio": 0.91
   }
 }
 ```
 
 ## 5. 分时行情接口
 
-获取个股当日的分时价格点阵，通常用于绘制分时图。
+获取个股当日的分时价格点阵及实时统计数据。
 
 ### 请求信息
 *   **路径**: `/api/v1/stocks/{code}/time_share`
@@ -137,18 +140,23 @@
 ```json
 {
   "code": "600519.SH",
+  "turnover_rate": 0.3,
+  "turnover_real": 0.62,
+  "quantity_ratio": 0.91,
   "data": [
     {
       "time": "0930",
       "price": 1408.0,
+      "avg_price": 1408.0,
       "volume": 515.0,
       "amount": 72512000.0
     },
     {
       "time": "0931",
       "price": 1409.5,
-      "volume": 320.0,
-      "amount": 45104000.0
+      "avg_price": 1408.64,
+      "volume": 703.0,
+      "amount": 99060735.6
     }
   ]
 }

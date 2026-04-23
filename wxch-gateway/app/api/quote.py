@@ -58,10 +58,12 @@ async def get_stock_time_share(code: str, request: Request):
     request_id = getattr(request.state, "request_id", str(uuid.uuid4())[:8])
     logger.info(f"获取分时行情: code={code}", extra={"request_id": request_id})
 
-    data = await quote_service.get_time_share(code)
-    if not data:
+    result = await quote_service.get_time_share(code)
+    # 返回空字典表示上游取数据失败
+    if not result:
         raise HTTPException(
             status_code=404,
             detail=_error_response("TIMESHARE_NOT_FOUND", f"未找到股票 {code} 的分时数据", request_id)
         )
-    return {"code": code, "data": data}
+    # 返回服务层已组装好的 dict，内部已包含 code / 统计 / data 字段
+    return result

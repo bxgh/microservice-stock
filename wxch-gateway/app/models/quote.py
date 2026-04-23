@@ -37,6 +37,9 @@ class SnapshotData(QuoteBase):
     pb: Optional[float] = None
     market_cap: Optional[float] = None
     float_market_cap: Optional[float] = None
+    turnover_rate: Optional[float] = Field(None, description="换手率(%)")
+    turnover_real: Optional[float] = Field(None, description="换手(实)(%)")
+    quantity_ratio: Optional[float] = Field(None, description="量比")
 
 class SnapshotResponse(BaseModel):
     """快照行情响应"""
@@ -46,10 +49,14 @@ class TimeSharePoint(BaseModel):
     """分时数据点"""
     time: str = Field(..., description="时间 (HHMM)")
     price: float = Field(..., description="当前价格")
-    volume: float = Field(..., description="成交量")
-    amount: float = Field(..., description="成交额")
+    avg_price: Optional[float] = Field(None, description="均价")
+    volume: float = Field(..., description="成交量 (当前分钟)")
+    amount: float = Field(..., description="成交额 (当前分钟)")
 
 class TimeShareResponse(BaseModel):
     """分时行情响应"""
     code: str
+    turnover_rate: Optional[float] = Field(None, description="今日换手率(%)")
+    turnover_real: Optional[float] = Field(None, description="今日换手(实)(%)")
+    quantity_ratio: Optional[float] = Field(None, description="今日量比")
     data: List[TimeSharePoint]
