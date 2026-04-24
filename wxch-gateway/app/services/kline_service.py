@@ -49,6 +49,8 @@ class KlineService:
                 fetch_limit = limit * 5 + 10
             elif frequency == "m":
                 fetch_limit = limit * 22 + 40
+            elif frequency == "y":
+                fetch_limit = limit * 252 + 500
             
             fetch_limit = min(fetch_limit, 5000)
 
@@ -96,8 +98,8 @@ class KlineService:
                 if factors:
                     self._apply_adjustment(raw_data, factors, adjust)
 
-            # 4. 处理聚合 (周/月)
-            if frequency in ["w", "m"]:
+            # 4. 处理聚合 (周/月/年)
+            if frequency in ["w", "m", "y"]:
                 result = self._aggregate_data(raw_data, frequency)
             else:
                 result = raw_data
@@ -135,8 +137,10 @@ class KlineService:
             if freq == "w":
                 year, week, _ = dt.isocalendar()
                 key = f"{year}-{week:02d}"
-            else:
+            elif freq == "m":
                 key = f"{dt.year}-{dt.month:02d}"
+            else: # freq == "y"
+                key = f"{dt.year}"
             
             if key != last_key and current_group:
                 aggregated.append(self._reduce_group(current_group))
