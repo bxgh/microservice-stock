@@ -98,7 +98,8 @@ class MarketDataService:
                 
                 args.append((
                     i.get("ts_code"), dt_str, i.get("open"), i.get("high"), i.get("low"), i.get("close"),
-                    i.get("pre_close"), pct_chg, i.get("vol"), i.get("amount")
+                    i.get("pre_close"), pct_chg, i.get("vol"), 
+                    float(i.get("amount", 0)) * 1000.0 if i.get("amount") is not None else None
                 ))
             
             await db.execute_many(query, args)
@@ -150,7 +151,8 @@ class MarketDataService:
                 
                 args.append((
                     dt_str, i.get("ts_code"), i.get("open"), i.get("high"), i.get("low"), i.get("close"),
-                    i.get("pre_close"), i.get("change"), pct_chg, i.get("vol"), i.get("amount")
+                    i.get("pre_close"), i.get("change"), pct_chg, i.get("vol"), 
+                    float(i.get("amount", 0)) * 1000.0 if i.get("amount") is not None else None
                 ))
 
             await db.execute_many(query, args)
@@ -208,10 +210,32 @@ class MarketDataService:
             
             suspended_count = total_count - curr_count if total_count > curr_count else 0
 
-            # 2. 计算 60/250 日新高新低 (简化版: 仅针对当日收盘价)
-            # 这里 SQL 较重，建议在 ADS 层或单独异步任务跑。暂设为 0。
-            high_60d = 0
-            low_60d = 0
+            # 2. 计算 60 日新高新低
+            # 获取第 60 个交易日前的日期
+            sql_date_limit = "SELECT DISTINCT trade_date FROM stock_kline_daily WHERE trade_date < %s ORDER BY trade_date DESC LIMIT 59, 1"
+            res_limit = await db.execute(sql_date_limit, (target_date,))
+            start_date_60 = res_limit[0][0] if res_limit else '1970-01-01'
+            
+            sql_high_low = """
+                SELECT 
+                    SUM(CASE WHEN close >= max_60 THEN 1 ELSE 0 END) as h60,
+                    SUM(CASE WHEN close <= min_60 THEN 1 ELSE 0 END) as l60
+                FROM (
+                    SELECT k1.code, k1.close, 
+                           (SELECT MAX(k2.close) FROM stock_kline_daily k2 
+                            WHERE k2.code = k1.code AND k2.trade_date < k1.trade_date 
+                            AND k2.trade_date >= %s) as max_60,
+                           (SELECT MIN(k2.close) FROM stock_kline_daily k2 
+                            WHERE k2.code = k1.code AND k2.trade_date < k1.trade_date 
+                            AND k2.trade_date >= %s) as min_60
+                    FROM stock_kline_daily k1
+                    WHERE k1.trade_date = %s
+                    AND k1.code NOT LIKE '900%%' AND k1.code NOT LIKE '200%%'
+                ) t
+            """
+            res_hl = await db.execute(sql_high_low, (start_date_60, start_date_60, target_date))
+            high_60d = res_hl[0][0] if res_hl and res_hl[0][0] is not None else 0
+            low_60d = res_hl[0][1] if res_hl and res_hl[0][1] is not None else 0
             
             query = """
                 INSERT INTO ods_market_breadth_daily (
@@ -227,7 +251,8 @@ class MarketDataService:
                 down_count=VALUES(down_count), flat_count=VALUES(flat_count),
                 suspended_count=VALUES(suspended_count), up_5pct_count=VALUES(up_5pct_count),
                 down_5pct_count=VALUES(down_5pct_count), up_9pct_count=VALUES(up_9pct_count),
-                down_9pct_count=VALUES(down_9pct_count)
+                down_9pct_count=VALUES(down_9pct_count), high_60d_count=VALUES(high_60d_count),
+                low_60d_count=VALUES(low_60d_count)
             """
             await db.execute(query, (
                 target_date, total_count, up_count, down_count, flat_count,
