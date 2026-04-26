@@ -1,6 +1,9 @@
 import asyncio
 import httpx
-from datetime import datetime, date
+import bisect
+import itertools
+import datetime
+from datetime import date
 from typing import List, Dict, Any, Optional
 from app.utils.database import db
 from app.utils.logger import get_logger
@@ -164,21 +167,7 @@ class MarketDataService:
     async def sync_market_breadth_daily(self, target_date: str):
         """计算并同步当日市场广度到 ods_market_breadth_daily"""
         try:
-            # 1. 从 stock_kline_daily 聚合
-            # 剔除 B 股 (代码以 900 或 200 开头), 剔除新股 (上市 < 60天) - 简化逻辑：只取主板创业板科创板
-            # 剔除长期停牌由 stock_kline_daily 的存在性自然保证(当日无成交不出现在该表或 vol=0)
-            
-            # 先获取总数 (在市且非新股)
-            # 假设 stock_basic_info 有 list_date
-            sql_count = """
-                SELECT COUNT(*) FROM stock_basic_info 
-                WHERE list_status = 'L' 
-                AND list_date <= DATE_SUB(%s, INTERVAL 60 DAY)
-                AND ts_code NOT LIKE '900%%' AND ts_code NOT LIKE '200%%'
-            """
-            res_total = await db.execute(sql_count, (target_date,))
-            total_count = res_total[0][0] if res_total else 0
-
+            # 1. 基础涨跌家数统计
             sql_agg = """
                 SELECT 
                     COUNT(*) as count,
@@ -199,65 +188,104 @@ class MarketDataService:
                 return False
 
             row = res_agg[0]
-            curr_count = row[0]
-            up_count = row[1]
-            down_count = row[2]
-            flat_count = row[3]
-            up_5pct = row[4]
-            down_5pct = row[5]
-            up_9pct = row[6]
-            down_9pct = row[7]
-            
-            suspended_count = total_count - curr_count if total_count > curr_count else 0
+            curr_count, up_count, down_count, flat_count, up_5pct, down_5pct, up_9pct, down_9pct = row
 
-            # 2. 计算 60 日新高新低
-            # 获取第 60 个交易日前的日期
-            sql_date_limit = "SELECT DISTINCT trade_date FROM stock_kline_daily WHERE trade_date < %s ORDER BY trade_date DESC LIMIT 59, 1"
-            res_limit = await db.execute(sql_date_limit, (target_date,))
-            start_date_60 = res_limit[0][0] if res_limit else '1970-01-01'
-            
-            sql_high_low = """
-                SELECT 
-                    SUM(CASE WHEN close >= max_60 THEN 1 ELSE 0 END) as h60,
-                    SUM(CASE WHEN close <= min_60 THEN 1 ELSE 0 END) as l60
-                FROM (
-                    SELECT k1.code, k1.close, 
-                           (SELECT MAX(k2.close) FROM stock_kline_daily k2 
-                            WHERE k2.code = k1.code AND k2.trade_date < k1.trade_date 
-                            AND k2.trade_date >= %s) as max_60,
-                           (SELECT MIN(k2.close) FROM stock_kline_daily k2 
-                            WHERE k2.code = k1.code AND k2.trade_date < k1.trade_date 
-                            AND k2.trade_date >= %s) as min_60
-                    FROM stock_kline_daily k1
-                    WHERE k1.trade_date = %s
-                    AND k1.code NOT LIKE '900%%' AND k1.code NOT LIKE '200%%'
-                ) t
+            # 获取总数 (计算停牌)
+            sql_count = """
+                SELECT COUNT(*) FROM stock_basic_info 
+                WHERE list_status = 'L' AND list_date <= DATE_SUB(%s, INTERVAL 60 DAY)
+                AND ts_code NOT LIKE '900%%' AND ts_code NOT LIKE '200%%'
             """
-            res_hl = await db.execute(sql_high_low, (start_date_60, start_date_60, target_date))
-            high_60d = res_hl[0][0] if res_hl and res_hl[0][0] is not None else 0
-            low_60d = res_hl[0][1] if res_hl and res_hl[0][1] is not None else 0
+            res_total = await db.execute(sql_count, (target_date,))
+            total_count = res_total[0][0] if res_total else 0
+            suspended_count = max(0, total_count - curr_count)
+
+            # 2. 计算 60/250 日新高新低 (使用复权逻辑)
+            sql_date_60 = "SELECT DISTINCT trade_date FROM stock_kline_daily WHERE trade_date < %s ORDER BY trade_date DESC LIMIT 59, 1"
+            res_60 = await db.execute(sql_date_60, (target_date,))
+            start_date_60 = res_60[0][0] if res_60 else '1970-01-01'
+
+            sql_date_250 = "SELECT DISTINCT trade_date FROM stock_kline_daily WHERE trade_date < %s ORDER BY trade_date DESC LIMIT 249, 1"
+            res_250 = await db.execute(sql_date_250, (target_date,))
+            start_date_250 = res_250[0][0] if res_250 else '1970-01-01'
             
+            # 获取复权因子
+            sql_factors = "SELECT code, adjust_date, back_adjust_factor FROM stock_adjust_factor ORDER BY code, adjust_date"
+            factors_res = await db.execute(sql_factors)
+            factors_map = {}
+            for f_code, f_date, f_factor in factors_res:
+                if f_code not in factors_map: factors_map[f_code] = []
+                factors_map[f_code].append((f_date, float(f_factor)))
+
+            # 获取 K 线窗口
+            sql_kline_window = """
+                SELECT code, trade_date, close 
+                FROM stock_kline_daily 
+                WHERE trade_date >= %s AND trade_date <= %s
+                AND code NOT LIKE '900%%' AND code NOT LIKE '200%%'
+                ORDER BY code, trade_date
+            """
+            kline_res = await db.execute(sql_kline_window, (start_date_250, target_date))
+            
+            import bisect, itertools
+            high_60d, low_60d, high_250d, low_250d = 0, 0, 0, 0
+            target_date_obj = datetime.datetime.strptime(target_date, '%Y-%m-%d').date() if isinstance(target_date, str) else target_date
+            try:
+                start_date_60_obj = datetime.datetime.strptime(str(start_date_60), '%Y-%m-%d').date()
+            except:
+                start_date_60_obj = start_date_60
+
+            for code, group in itertools.groupby(kline_res, key=lambda x: x[0]):
+                rows = list(group)
+                if not rows: continue
+                f_list = factors_map.get(code, [(datetime.date(1990, 1, 1), 1.0)])
+                f_dates = [x[0] for x in f_list]
+                
+                adj_rows = []
+                for _, t_date, raw_close in rows:
+                    idx = bisect.bisect_right(f_dates, t_date) - 1
+                    factor = f_list[idx if idx >= 0 else 0][1]
+                    adj_rows.append({'date': t_date, 'adj_close': float(raw_close) * factor})
+                
+                target_row = next((r for r in adj_rows if r['date'] == target_date_obj), None)
+                if not target_row: continue
+                curr_price = target_row['adj_close']
+                
+                hist_250 = [r['adj_close'] for r in adj_rows if r['date'] < target_date_obj]
+                if hist_250:
+                    if curr_price >= max(hist_250): high_250d += 1
+                    if curr_price <= min(hist_250): low_250d += 1
+                
+                hist_60 = [r['adj_close'] for r in adj_rows if r['date'] < target_date_obj and r['date'] >= start_date_60_obj]
+                if hist_60:
+                    if curr_price >= max(hist_60): high_60d += 1
+                    if curr_price <= min(hist_60): low_60d += 1
+
             query = """
                 INSERT INTO ods_market_breadth_daily (
                     trade_date, total_count, up_count, down_count, flat_count, 
                     suspended_count, up_5pct_count, down_5pct_count, 
-                    up_9pct_count, down_9pct_count, high_60d_count, low_60d_count
+                    up_9pct_count, down_9pct_count, high_60d_count, low_60d_count,
+                    high_250d_count, low_250d_count
                 ) VALUES (
                     %s, %s, %s, %s, %s, 
                     %s, %s, %s, 
-                    %s, %s, %s, %s
+                    %s, %s, %s, %s,
+                    %s, %s
                 ) ON DUPLICATE KEY UPDATE
                 total_count=VALUES(total_count), up_count=VALUES(up_count),
                 down_count=VALUES(down_count), flat_count=VALUES(flat_count),
                 suspended_count=VALUES(suspended_count), up_5pct_count=VALUES(up_5pct_count),
                 down_5pct_count=VALUES(down_5pct_count), up_9pct_count=VALUES(up_9pct_count),
                 down_9pct_count=VALUES(down_9pct_count), high_60d_count=VALUES(high_60d_count),
-                low_60d_count=VALUES(low_60d_count)
+                low_60d_count=VALUES(low_60d_count), high_250d_count=VALUES(high_250d_count),
+                low_250d_count=VALUES(low_250d_count)
             """
             await db.execute(query, (
                 target_date, total_count, up_count, down_count, flat_count,
                 suspended_count, up_5pct, down_5pct,
-                up_9pct, down_9pct, high_60d, low_60d
+                up_9pct, down_9pct, high_60d, low_60d,
+                high_250d, low_250d
             ))
             return True
         except Exception as e:

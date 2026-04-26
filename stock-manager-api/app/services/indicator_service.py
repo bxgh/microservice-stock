@@ -72,7 +72,7 @@ class IndicatorService:
             update_turnover_sql = """
                 UPDATE ads_l1_market_overview o
                 SET turnover_total = (
-                    SELECT SUM(k.amount) * 1000 FROM stock_kline_daily k
+                    SELECT SUM(k.amount) FROM stock_kline_daily k
                     JOIN stock_basic_info s ON k.code = s.ts_code
                     WHERE k.trade_date = %s
                 )
@@ -135,7 +135,9 @@ class IndicatorService:
                     o.market_breadth = IF(b.total_count > 0, b.up_count / b.total_count, 0),
                     o.up_down_ratio = IF(b.down_count > 0, b.up_count / b.down_count, 0),
                     o.high_60d_count = b.high_60d_count,
-                    o.low_60d_count = b.low_60d_count
+                    o.low_60d_count = b.low_60d_count,
+                    o.high_250d_count = b.high_250d_count,
+                    o.low_250d_count = b.low_250d_count
                 WHERE o.trade_date = %s
             """
             await db.execute(update_breadth_sql, (target_date,))
