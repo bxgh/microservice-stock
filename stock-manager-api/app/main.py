@@ -6,7 +6,7 @@ from fastapi import FastAPI, Request, HTTPException
 from fastapi.responses import JSONResponse
 
 from app.api import (
-    metadata, audit, scheduler, ops, system, dashboard, 
+    metadata, audit, scheduler, ops, system, dashboard, market_dashboard,
     shareholders, chips, game, information, commands, task_commands, data_audit, suspension,
     monitor, finance
 )
@@ -74,6 +74,14 @@ async def lifespan(app: FastAPI):
             job_funcs.weekly_financial_indicators_sync_job,
             job_id="daily_finance_indicators_sync",
             hour=2,
+            minute=30
+        )
+
+        # 7. 注册市场全景数据同步与计算任务 (每日 19:30)
+        scheduler.add_daily_job(
+            job_funcs.daily_market_overview_sync_job,
+            job_id="daily_market_overview_sync",
+            hour=19,
             minute=30
         )
         
@@ -176,6 +184,7 @@ app.include_router(suspension.router, prefix="/api/v1", tags=["停牌数据"])
 app.include_router(ops.router, prefix="/api/v1/ops", tags=["运维"])
 app.include_router(system.router, prefix="/api/v1/system", tags=["系统"])
 app.include_router(dashboard.router, prefix="/api/v1/dashboard", tags=["仪表盘"])
+app.include_router(market_dashboard.router, prefix="/api/v1/market/dashboard", tags=["市场全景"])
 app.include_router(commands.router, prefix="/api/v1/commands", tags=["命令"])
 app.include_router(task_commands.router, prefix="/api/v1/task-commands", tags=["任务指令"])
 app.include_router(data_audit.router, prefix="/api/v1/data-audits", tags=["数据审计"])
