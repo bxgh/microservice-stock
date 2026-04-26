@@ -33,6 +33,7 @@ class IndicatorService:
                     idx_zz500_close, idx_zz500_pct,
                     idx_zz1000_close,idx_zz1000_pct,
                     idx_zz2000_close,idx_zz2000_pct,
+                    idx_winda_close, idx_winda_pct,
                     compute_version
                 )
                 SELECT
@@ -55,12 +56,14 @@ class IndicatorService:
                     MAX(CASE WHEN ts_code = '000852.SH'  THEN pct_chg END) AS idx_zz1000_pct,
                     MAX(CASE WHEN ts_code = '932000.CSI' THEN close   END) AS idx_zz2000_close,
                     MAX(CASE WHEN ts_code = '932000.CSI' THEN pct_chg END) AS idx_zz2000_pct,
+                    MAX(CASE WHEN ts_code = '000985.CSI' THEN close   END) AS idx_winda_close,
+                    MAX(CASE WHEN ts_code = '000985.CSI' THEN pct_chg END) AS idx_winda_pct,
                     'v1' AS compute_version
                 FROM ods_index_daily
                 WHERE trade_date = %s
                 AND ts_code IN (
                     '000001.SH','399001.SZ','399006.SZ','000688.SH','899050.BJ',
-                    '000300.SH','000905.SH','000852.SH','932000.CSI'
+                    '000300.SH','000905.SH','000852.SH','932000.CSI','000985.CSI'
                 )
             """
             await db.execute(insert_sql, (target_date, target_date))
