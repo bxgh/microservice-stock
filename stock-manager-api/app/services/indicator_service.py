@@ -95,10 +95,16 @@ class IndicatorService:
                           SELECT turnover_total FROM ads_l1_market_overview 
                           WHERE trade_date <= %s ORDER BY trade_date DESC LIMIT 20
                       ) t20
-                  )
+                  ),
+                  turnover_pct_vs_ma20 = (turnover_total / (
+                      SELECT AVG(turnover_total) FROM (
+                          SELECT turnover_total FROM ads_l1_market_overview 
+                          WHERE trade_date <= %s ORDER BY trade_date DESC LIMIT 20
+                      ) t20_pct
+                  )) - 1
                 WHERE o.trade_date = %s
             """
-            await db.execute(update_ma_sql, (target_date, target_date, target_date))
+            await db.execute(update_ma_sql, (target_date, target_date, target_date, target_date))
 
             # 5. 计算分位数 (避开 MySQL 1093 错误: 无法在 UPDATE 中直接子查询同一张表)
             # 先查出当日成交额
