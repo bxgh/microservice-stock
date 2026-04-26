@@ -42,34 +42,76 @@ class TushareService:
     async def get_stock_basic(self, list_status: str = 'L') -> List[Dict[str, Any]]:
         """获取股票基础信息 (120积分)"""
         df = await self._execute('stock_basic', list_status=list_status, fields='ts_code,symbol,name,area,industry,list_date')
-        return df.to_dict(orient='records')
+        import math
+        records = df.to_dict(orient='records')
+        for r in records:
+            for k, v in r.items():
+                if isinstance(v, float) and (math.isnan(v) or math.isinf(v)):
+                    r[k] = None
+        return records
 
     async def get_daily(self, ts_code: str = None, trade_date: str = None, start_date: str = None, end_date: str = None) -> List[Dict[str, Any]]:
         """获取日线行情 (120积分, 非复权)"""
         df = await self._execute('daily', ts_code=ts_code, trade_date=trade_date, start_date=start_date, end_date=end_date)
-        return df.to_dict(orient='records')
+        import math
+        records = df.to_dict(orient='records')
+        for r in records:
+            for k, v in r.items():
+                if isinstance(v, float) and (math.isnan(v) or math.isinf(v)):
+                    r[k] = None
+        return records
 
     async def get_trade_cal(self, exchange: str = '', start_date: str = '', end_date: str = '', is_open: int = None) -> List[Dict[str, Any]]:
         """获取交易日历 (120积分)"""
         df = await self._execute('trade_cal', exchange=exchange, start_date=start_date, end_date=end_date, is_open=is_open)
-        return df.to_dict(orient='records')
+        import math
+        records = df.to_dict(orient='records')
+        for r in records:
+            for k, v in r.items():
+                if isinstance(v, float) and (math.isnan(v) or math.isinf(v)):
+                    r[k] = None
+        return records
 
     async def get_adj_factor(self, ts_code: str = '', trade_date: str = '', start_date: str = '', end_date: str = '') -> List[Dict[str, Any]]:
         """获取复权因子 (120积分)"""
         df = await self._execute('adj_factor', ts_code=ts_code, trade_date=trade_date, start_date=start_date, end_date=end_date)
-        return df.to_dict(orient='records')
+        import math
+        records = df.to_dict(orient='records')
+        for r in records:
+            for k, v in r.items():
+                if isinstance(v, float) and (math.isnan(v) or math.isinf(v)):
+                    r[k] = None
+        return records
 
     async def get_index_basic(self, market: str = '') -> List[Dict[str, Any]]:
         """获取指数基础信息 (200积分)"""
         df = await self._execute('index_basic', market=market)
-        return df.to_dict(orient='records')
+        import math
+        records = df.to_dict(orient='records')
+        for r in records:
+            for k, v in r.items():
+                if isinstance(v, float) and (math.isnan(v) or math.isinf(v)):
+                    r[k] = None
+        return records
 
     async def get_index_daily(self, ts_code: str = '', trade_date: str = '', start_date: str = '', end_date: str = '') -> List[Dict[str, Any]]:
         """获取指数日线行情 (200积分)"""
         df = await self._execute('index_daily', ts_code=ts_code, trade_date=trade_date, start_date=start_date, end_date=end_date)
-        return df.to_dict(orient='records')
+        import math
+        records = df.to_dict(orient='records')
+        for r in records:
+            for k, v in r.items():
+                if isinstance(v, float) and (math.isnan(v) or math.isinf(v)):
+                    r[k] = None
+        return records
 
     async def get_suspend_d(self, ts_code: str = '', trade_date: str = '', start_date: str = '', end_date: str = '') -> List[Dict[str, Any]]:
         """获取每日停复牌信息 (120积分)"""
         df = await self._execute('suspend_d', ts_code=ts_code, trade_date=trade_date, start_date=start_date, end_date=end_date)
-        return df.to_dict(orient='records')
+        import math
+        records = df.to_dict(orient='records')
+        for r in records:
+            for k, v in r.items():
+                if isinstance(v, float) and (math.isnan(v) or math.isinf(v)):
+                    r[k] = None
+        return records
