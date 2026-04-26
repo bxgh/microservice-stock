@@ -275,15 +275,22 @@ class BaoStockService:
     async def _login(self):
         """线程安全的登录方法 (假设外部已持有 lock)"""
         if not self._is_logged_in:
-            # 增加登出以清理可能存在的损坏 Socket
-            await asyncio.to_thread(bs.logout)
-            lg = await asyncio.to_thread(bs.login)
-            if lg.error_code == "0":
-                self._is_logged_in = True
-                logger.info("BaoStock login success (Main Process)")
-            else:
+            try:
+                # 增加登出以清理可能存在的损坏 Socket
+                await asyncio.wait_for(asyncio.to_thread(bs.logout), timeout=15)
+                lg = await asyncio.wait_for(asyncio.to_thread(bs.login), timeout=15)
+                if lg.error_code == "0":
+                    self._is_logged_in = True
+                    logger.info("BaoStock login success (Main Process)")
+                else:
+                    self._is_logged_in = False
+                    logger.error(f"BaoStock login failed: {lg.error_msg}")
+            except asyncio.TimeoutError:
+                logger.error("BaoStock login/logout timed out (15s)")
                 self._is_logged_in = False
-                logger.error(f"BaoStock login failed: {lg.error_msg}")
+            except Exception as e:
+                logger.error(f"BaoStock login error: {e}")
+                self._is_logged_in = False
 
     async def _ensure_connection(self):
         """确保连接处于活跃状态，如果未登录则尝试登录"""

@@ -7,12 +7,9 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(level
 logger = logging.getLogger("baostock-worker")
 
 def init_worker():
-    """工作进程初始化：登录 BaoStock"""
-    try:
-        bs.login()
-        logger.info("Worker process logged in to BaoStock")
-    except Exception as e:
-        logger.error(f"Worker login failed: {e}")
+    """工作进程初始化：不在此处登录以避免挂起"""
+    logger.info("Worker process initialized (lazy login enabled)")
+    # 延迟到 query_with_retry 中处理
 
 def query_with_retry(func, *args, **kwargs):
     """带重试机制的查询"""

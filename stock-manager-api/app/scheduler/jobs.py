@@ -171,3 +171,42 @@ async def weekly_financial_indicators_sync_job() -> Dict[str, Any]:
             'status': 'error',
             'message': error_msg
         }
+
+async def daily_market_overview_sync_job() -> Dict[str, Any]:
+    """每日市场全景数据同步与计算任务 (19:30)"""
+    try:
+        from app.services.market_data_service import MarketDataService
+        from app.services.indicator_service import IndicatorService
+        from app.utils.database import db
+        import datetime
+
+        target_date = datetime.now().strftime("%Y-%m-%d")
+        logger.info(f"【定时任务】开始执行每日市场全景同步: {target_date}")
+
+        market_service = MarketDataService()
+        indicator_service = IndicatorService()
+
+        # 1. 同步指数行情
+        # 获取核心指数列表
+        sql = "SELECT ts_code FROM index_basic WHERE is_core = 1"
+        rows = await db.execute(sql)
+        core_indices = [row[0] for row in rows]
+        
+        for code in core_indices:
+            await market_service.sync_index_daily(ts_code=code, trade_date=target_date)
+        
+        # 2. 同步涨跌停池
+        await market_service.sync_limit_pool(target_date)
+
+        # 3. 计算市场广度
+        await market_service.sync_market_breadth_daily(target_date)
+
+        # 4. 计算 L1 全景指标
+        await indicator_service.calculate_l1_market_overview(target_date)
+
+        logger.info(f"【定时任务】市场全景同步与计算完成: {target_date}")
+        return {'status': 'success', 'message': f'市场全景同步完成: {target_date}'}
+        
+    except Exception as e:
+        logger.error(f"【定时任务】市场全景同步失败: {e}", exc_info=True)
+        return {'status': 'error', 'message': str(e)}

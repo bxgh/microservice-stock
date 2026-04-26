@@ -1157,6 +1157,54 @@ class AkShareService:
         except Exception as e:
             logger.error(f"获取 ETF 行情失败: symbol={symbol}, error={e}")
             return []
+
+    async def get_limit_pool(self, date: str, pool_type: str = 'zt') -> List[Dict[str, Any]]:
+        """获取涨跌停池数据 (东财接口)
+        
+        :param date: 交易日 YYYY-MM-DD
+        :param pool_type: zt(涨停), dt(跌停), zb(炸板), lian(连板)
+        """
+        try:
+            clean_date = date.replace("-", "")
+            if pool_type == 'zt':
+                df = await asyncio.to_thread(ak.stock_zt_pool_em, date=clean_date)
+            elif pool_type == 'dt':
+                df = await asyncio.to_thread(ak.stock_zt_pool_dtgc_em, date=clean_date)
+            elif pool_type == 'zb':
+                df = await asyncio.to_thread(ak.stock_zt_pool_zbgc_em, date=clean_date)
+            elif pool_type == 'lian':
+                df = await asyncio.to_thread(ak.stock_zt_pool_previous_em, date=clean_date)
+            else:
+                raise ValueError(f"Unsupported pool_type: {pool_type}")
+
+            if df is None or df.empty:
+                return []
+
+            result = []
+            for _, row in df.iterrows():
+                # 注意: 不同接口字段名可能略有差异，这里做兼容处理
+                item = {
+                    "code": row.get("代码"),
+                    "name": row.get("名称"),
+                    "close": self._clean_value(row.get("最新价")),
+                    "pct_chg": self._clean_value(row.get("涨跌幅")) / 100.0 if row.get("涨跌幅") is not None else None,
+                    "amount": self._clean_value(row.get("成交额")),
+                    "circ_mv": self._clean_value(row.get("流通市值")),
+                    "turnover_rate": self._clean_value(row.get("换手率")) / 100.0 if row.get("换手率") is not None else None,
+                    "first_limit_time": row.get("首次封板时间"),
+                    "last_limit_time": row.get("最后封板时间"),
+                    "board_height": self._clean_value(row.get("连板数")),
+                    "seal_money": self._clean_value(row.get("封板资金")),
+                    "seal_count": self._clean_value(row.get("封板次数")),
+                    "open_times": self._clean_value(row.get("炸板次数")),
+                    "industry": row.get("所属行业"),
+                }
+                result.append(item)
+            return result
+        except Exception as e:
+            logger.error(f"AkShare获取 {pool_type} 涨跌停池失败: date={date}, error={e}")
+            return []
+
     async def get_margin_summary(self) -> List[Dict[str, Any]]:
         """获取全市场两融汇总数据 (沪深合计)"""
         try:

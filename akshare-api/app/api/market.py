@@ -365,3 +365,21 @@ async def get_etf_daily(
         logger.error(f"获取 ETF 行情失败: {e}", extra={"request_id": request_id})
         raise HTTPException(status_code=500, detail=str(e))
 
+
+@router.get("/market/limit_pool")
+async def get_limit_pool(
+    request: Request,
+    date: str = Query(..., description="日期 YYYY-MM-DD"),
+    pool_type: str = Query("zt", description="池类型: zt(涨停), dt(跌停), zb(炸板), lian(连板)")
+):
+    """获取涨跌停池数据"""
+    request_id = getattr(request.state, "request_id", "unknown")
+    service = request.app.state.akshare_service
+    try:
+        result = await service.get_limit_pool(date, pool_type)
+        logger.info(f"获取涨跌停池成功: date={date}, type={pool_type}, count={len(result)}", extra={"request_id": request_id})
+        return result
+    except Exception as e:
+        logger.error(f"获取涨跌停池失败: date={date}, type={pool_type}, error={e}", extra={"request_id": request_id})
+        raise HTTPException(status_code=500, detail=str(e))
+
