@@ -1,0 +1,992 @@
+可以,而且很值得做——这块功能是把"数据消费"升级为"认知训练"的关键,前面 7 章数据是地基,这章才是房子。
+
+下面是完整的第 8 章方案。
+
+---
+
+# 第 8 章 · 认知训练系统(Cognition Loop)
+
+## 背景与目标
+
+**背景**:第 1-7 章解决了"数据可得性",但用户面对海量数据仍可能停留在被动消费层面。要让数据真正转化为决策能力,必须引入**强制输出 + 闭环校验**机制。本章将"先验假设 → 数据证伪 → 决策日志 → 误判复盘"四个动作产品化。
+
+**目标**:
+- 提供 4 个核心训练工具:**晨间预判**、**每日 3 句话日记**、**决策日志**、**周末误判档案**
+- 自动用客观数据校验主观判断,产出"判断准确率"等量化指标
+- 6 个月数据沉淀后能输出个人认知画像(擅长/盲区/偏差类型)
+
+**范围**:
+- 4 张训练数据表(prediction / journal / decision / review)
+- 1 个评分引擎(对比预判 vs 实际)
+- 4 个小程序页面 + 1 个仪表盘
+- 训练数据与第 1-7 章 ADS 表的关联
+
+**非目标**:
+- 不做下单功能(只记录决策意图,不接券商)
+- 不做社交比较(认知是私有的,不引入排行榜)
+- 不引入 AI 生成判断(用户必须自己写,AI 只做校验和总结)
+
+---
+
+## 一、设计哲学(锁定不变)
+
+### 1.1 核心原则
+
+| 原则 | 说明 |
+|---|---|
+| **强制输出** | 输入数据前先写预判,先写决策再说理由,反过来无效 |
+| **不可编辑历史** | 已提交的预判 / 决策一律只读,只能补充反思,不能改判断 |
+| **客观校验** | 准确率由系统计算,不靠用户自评 |
+| **延迟反馈** | 决策日志的"事后反思"在 5 / 20 日后系统主动 push,避免事后归因 |
+| **盲测优先** | 晨间预判时**默认隐藏**昨日复盘数据,避免被锚定 |
+
+### 1.2 反直觉的设计选择
+
+| 决策 | 选择 | 理由 |
+|---|---|---|
+| 是否允许编辑预判 | 否 | 编辑就破坏了校验闭环,人会下意识改对自己有利的版本 |
+| 是否显示其他用户表现 | 否 | 单用户自我对照才有意义,横向比较引入情绪噪声 |
+| 是否用 AI 自动写预判 | 否 | AI 写的预判等于没写,认知是"输出"塑造的不是"输入" |
+| 反思能否当天写 | 否 | 当天写的反思 80% 是结果归因,5/20 日后才有意义 |
+| 错误判断是否警示 | 否(不直接) | 但会进入"误判档案"周末复盘,避免实时打击信心 |
+
+---
+
+## E1 · 晨间预判工具(Morning Prediction)
+
+> 作为投资者,我希望开盘前 5 分钟内写下今日市场预判,以便建立可校验的先验假设。
+
+### E1-S1 数据表 `train_prediction_morning`
+
+```sql
+CREATE TABLE IF NOT EXISTS train_prediction_morning (
+    pred_id              VARCHAR(32)   NOT NULL                      COMMENT 'UUID',
+    user_id              VARCHAR(32)   NOT NULL,
+    trade_date           DATE          NOT NULL                      COMMENT '预判针对的交易日',
+    submit_time          DATETIME      NOT NULL                      COMMENT '提交时间(必须早于 09:25)',
+
+    -- 1. 整体方向预判(强制三选一)
+    direction            VARCHAR(16)   NOT NULL                      COMMENT 'up/flat/down',
+    direction_confidence TINYINT       NOT NULL                      COMMENT '1-5,1=很不确定 5=非常确定',
+
+    -- 2. 量能预判
+    volume_expect        VARCHAR(16)   NOT NULL                      COMMENT 'expand/flat/shrink',
+
+    -- 3. 主线预判(可选 0-3 个)
+    main_themes          JSON          DEFAULT NULL                  COMMENT '["人工智能","半导体"]',
+
+    -- 4. 风险点预判(自由文本,限 50 字)
+    risk_point           VARCHAR(100)  DEFAULT NULL,
+
+    -- 5. 一句话核心判断(必填,30-100 字)
+    core_judgement       VARCHAR(200)  NOT NULL                      COMMENT '强制输出最重要的一句话',
+
+    -- 6. 预期沪指点位区间(可选)
+    sh_low               DECIMAL(10,2) DEFAULT NULL,
+    sh_high              DECIMAL(10,2) DEFAULT NULL,
+
+    -- 7. 决策倾向(影响仓位的预判)
+    position_intent      VARCHAR(16)   DEFAULT NULL                  COMMENT 'add/keep/reduce/clear',
+
+    -- 8. 数据快照(提交时锁定的关键先验,用于事后回看用户当时看到了什么)
+    context_snapshot     JSON          DEFAULT NULL                  COMMENT '{prev_judgement_score:65, valuation:fair, ...}',
+
+    -- ==== 校验结果(收盘后回填,提交时为 NULL)====
+    actual_direction     VARCHAR(16)   DEFAULT NULL,
+    actual_volume        VARCHAR(16)   DEFAULT NULL,
+    direction_hit        TINYINT(1)    DEFAULT NULL                  COMMENT '1=命中 0=未命中',
+    volume_hit           TINYINT(1)    DEFAULT NULL,
+    theme_hit_count      TINYINT       DEFAULT NULL                  COMMENT '主线命中个数',
+    sh_range_hit         TINYINT(1)    DEFAULT NULL                  COMMENT '点位区间是否覆盖收盘',
+    overall_score        DECIMAL(5,2)  DEFAULT NULL                  COMMENT '0-100 综合得分',
+    verified_at          DATETIME      DEFAULT NULL,
+
+    update_time          TIMESTAMP     DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY (pred_id),
+    UNIQUE KEY uk_user_date (user_id, trade_date),
+    KEY idx_user_time (user_id, trade_date)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='晨间预判表';
+```
+
+### E1-S2 提交规则(关键)
+
+| 规则 | 实现 |
+|---|---|
+| **截止时间** | 09:25 集合竞价后禁止提交,前端按钮置灰 |
+| **唯一性** | `(user_id, trade_date)` 唯一,当日只能提交 1 次 |
+| **盲测模式** | 提交前页面默认折叠"昨日复盘",用户主动展开才显示 |
+| **必填项** | direction / direction_confidence / volume_expect / core_judgement |
+| **快照** | 提交瞬间快照昨日 `app_daily_brief` 写入 `context_snapshot`,作为先验依据 |
+| **不可编辑** | 提交后状态变 `submitted`,前端只读 |
+
+### E1-S3 校验 SQL(收盘后跑,15:30 触发)
+
+```sql
+-- 校验逻辑:对比预判与实际,落 hit 标记和综合分
+UPDATE train_prediction_morning p
+INNER JOIN ads_l1_market_overview m ON p.trade_date = m.trade_date
+SET
+    -- 实际方向(沪指 ±0.3% 内算 flat)
+    p.actual_direction = CASE
+        WHEN m.sh_pct_chg >  0.003 THEN 'up'
+        WHEN m.sh_pct_chg < -0.003 THEN 'down'
+        ELSE 'flat'
+    END,
+
+    -- 实际量能(对比 5 日均量,±10% 内算 flat)
+    p.actual_volume = CASE
+        WHEN m.amount_total / m.amount_ma5 > 1.10 THEN 'expand'
+        WHEN m.amount_total / m.amount_ma5 < 0.90 THEN 'shrink'
+        ELSE 'flat'
+    END,
+
+    -- 命中判断
+    p.direction_hit = (
+        CASE
+            WHEN m.sh_pct_chg >  0.003 THEN 'up'
+            WHEN m.sh_pct_chg < -0.003 THEN 'down'
+            ELSE 'flat'
+        END
+    ) = p.direction,
+
+    p.volume_hit = (
+        CASE
+            WHEN m.amount_total / m.amount_ma5 > 1.10 THEN 'expand'
+            WHEN m.amount_total / m.amount_ma5 < 0.90 THEN 'shrink'
+            ELSE 'flat'
+        END
+    ) = p.volume_expect,
+
+    -- 点位区间命中
+    p.sh_range_hit = CASE
+        WHEN p.sh_low IS NULL OR p.sh_high IS NULL THEN NULL
+        WHEN m.sh_close BETWEEN p.sh_low AND p.sh_high THEN 1
+        ELSE 0
+    END,
+
+    p.verified_at = NOW()
+WHERE p.trade_date = @td
+  AND p.verified_at IS NULL;
+
+-- 主线命中数(JSON 比较,5.7 兼容)
+UPDATE train_prediction_morning p
+SET p.theme_hit_count = (
+    SELECT COUNT(*)
+    FROM ads_l2_industry_daily i
+    WHERE i.trade_date = p.trade_date
+      AND i.theme_label = 'main_theme'
+      AND JSON_CONTAINS(p.main_themes, JSON_QUOTE(i.industry_name))
+)
+WHERE p.trade_date = @td
+  AND p.main_themes IS NOT NULL;
+
+-- 综合得分(加权)
+UPDATE train_prediction_morning
+SET overall_score =
+    COALESCE(direction_hit, 0) * 40        -- 方向 40 分
+  + COALESCE(volume_hit, 0)    * 20         -- 量能 20 分
+  + LEAST(30, COALESCE(theme_hit_count,0) * 15)  -- 主线每个 15 分,封顶 30
+  + COALESCE(sh_range_hit, 0)  * 10         -- 点位 10 分
+WHERE trade_date = @td;
+```
+
+### E1-S4 验收标准
+
+- **Given** 用户在 09:30 提交预判,**When** 系统校验,**Then** 拒绝提交并提示"已超截止时间"
+- **Given** `direction='up' direction_confidence=5`,实际沪指 +0.5%,**When** 校验,**Then** `direction_hit=1` `overall_score >= 40`
+- **Given** 用户当日已提交,**When** 二次提交,**Then** 返回 `409 Conflict`
+- **Given** `main_themes=["半导体"]` 当日主线为 `["半导体","AI"]`,**When** 校验,**Then** `theme_hit_count=1`
+
+---
+
+## E2 · 每日 3 句话日记(Daily Journal)
+
+> 作为投资者,我希望收盘后 2 分钟内写完核心矛盾 / 预期对错 / 明日观察,以便强制输出形成认知。
+
+### E2-S1 数据表 `train_journal_daily`
+
+```sql
+CREATE TABLE IF NOT EXISTS train_journal_daily (
+    journal_id          VARCHAR(32)   NOT NULL,
+    user_id             VARCHAR(32)   NOT NULL,
+    trade_date          DATE          NOT NULL,
+
+    -- 三句话(强制结构,各限 100 字)
+    core_conflict       VARCHAR(200)  NOT NULL                  COMMENT '今日核心矛盾(一句话概括市场)',
+    prediction_review   VARCHAR(200)  NOT NULL                  COMMENT '昨日预期对错(对/错/部分对+原因)',
+    tomorrow_focus      VARCHAR(200)  NOT NULL                  COMMENT '明日观察点',
+
+    -- 自评对错(辅助,系统会用 prediction 表客观校验)
+    self_eval           VARCHAR(16)   DEFAULT NULL              COMMENT 'right/wrong/partial',
+
+    -- 心情标签(可选,用于识别情绪化交易)
+    mood                VARCHAR(16)   DEFAULT NULL              COMMENT 'calm/excited/anxious/regret/fomo',
+
+    -- 关联当日预判
+    related_pred_id     VARCHAR(32)   DEFAULT NULL,
+
+    submit_time         DATETIME      NOT NULL,
+    update_time         TIMESTAMP     DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY (journal_id),
+    UNIQUE KEY uk_user_date (user_id, trade_date),
+    KEY idx_mood (user_id, mood)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='每日 3 句话日记';
+```
+
+### E2-S2 提交规则
+
+- **触发时间**:15:00 收盘后开放,18:00 后系统 push 一次提醒
+- **三句话强制**:任一字段为空不允许提交
+- **字数引导**:30-200 字,< 30 字时前端弹"太短了,再具体一点"
+- **mood 标签**:可选但鼓励填,用于后期分析"焦虑时是否更易判断错"
+
+### E2-S3 验收标准
+
+- **Given** 用户提交时三句话有任一空,**When** 提交,**Then** 前端拦截,后端返回 422
+- **Given** 当日已有预判,**When** 提交日记,**Then** 自动关联 `related_pred_id`
+- **Given** `mood='fomo'` 频率超 30%,**When** 周报生成,**Then** 在认知画像中标记"FOMO 倾向"
+
+---
+
+## E3 · 决策日志(Decision Log)
+
+> 作为投资者,我希望记录每次买卖决策的当时理由,并在 5/20 日后强制反思,以便区分"判断对错"与"运气"。
+
+### E3-S1 数据表 `train_decision_log`
+
+```sql
+CREATE TABLE IF NOT EXISTS train_decision_log (
+    decision_id         VARCHAR(32)   NOT NULL,
+    user_id             VARCHAR(32)   NOT NULL,
+    decision_time       DATETIME      NOT NULL,
+    trade_date          DATE          NOT NULL,
+
+    -- 决策本体
+    action              VARCHAR(16)   NOT NULL                  COMMENT 'buy/sell/add/reduce/hold/watch',
+    ts_code             VARCHAR(12)   DEFAULT NULL              COMMENT '可空,如果是仓位级决策(如清仓所有)',
+    name                VARCHAR(40)   DEFAULT NULL,
+
+    -- 决策依据(强制结构化,3 个槽位)
+    reason_layer        VARCHAR(16)   NOT NULL                  COMMENT '决策属于哪一层:env/theme/rhythm/stock',
+    reason_evidence     JSON          NOT NULL                  COMMENT '量化依据,如 [{indicator:"北向净流入", value:"60亿", source:"L3"}]',
+    reason_text         VARCHAR(300)  NOT NULL                  COMMENT '一句话决策逻辑',
+
+    -- 预期(关键,事后比对)
+    expected_outcome    VARCHAR(200)  NOT NULL                  COMMENT '预期会发生什么,如:5日内涨 8%',
+    expected_horizon    VARCHAR(16)   NOT NULL                  COMMENT '预期周期:1d/5d/20d/60d',
+    stop_loss           VARCHAR(100)  DEFAULT NULL              COMMENT '止损条件,如:跌破 5 日线',
+
+    -- 决策时的关键数据快照
+    price_at_decision   DECIMAL(16,4) DEFAULT NULL,
+    context_snapshot    JSON          DEFAULT NULL              COMMENT '当时市场环境快照',
+
+    -- 仓位变动(可选)
+    position_before     DECIMAL(6,4)  DEFAULT NULL              COMMENT '决策前仓位占比 0-1',
+    position_after      DECIMAL(6,4)  DEFAULT NULL,
+
+    -- ==== 5/20 日后反思(系统 push 触发,反思必须延迟写)====
+    review_5d           TEXT          DEFAULT NULL,
+    review_5d_time      DATETIME      DEFAULT NULL,
+    review_20d          TEXT          DEFAULT NULL,
+    review_20d_time     DATETIME      DEFAULT NULL,
+
+    -- ==== 客观结果(自动计算,5d / 20d 后 cron 写入)====
+    price_5d            DECIMAL(16,4) DEFAULT NULL,
+    return_5d           DECIMAL(10,6) DEFAULT NULL              COMMENT '5日收益率(小数)',
+    price_20d           DECIMAL(16,4) DEFAULT NULL,
+    return_20d          DECIMAL(10,6) DEFAULT NULL,
+
+    -- ==== 判断 vs 结果分类(关键认知诊断)====
+    -- 这个 4 象限分析是核心:好决策不一定有好结果,坏决策也可能蒙对
+    outcome_quadrant    VARCHAR(20)   DEFAULT NULL              COMMENT 'right_judge_right_result / right_judge_wrong_result / wrong_judge_right_result / wrong_judge_wrong_result',
+
+    update_time         TIMESTAMP     DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY (decision_id),
+    KEY idx_user_date (user_id, trade_date),
+    KEY idx_quadrant (user_id, outcome_quadrant)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='决策日志';
+```
+
+### E3-S2 4 象限分析(认知系统的灵魂)
+
+这是整个系统**最重要的功能**,把决策好坏与结果好坏解耦:
+
+```
+                判断质量
+                好            差
+              ┌──────────────┬──────────────┐
+        好    │  应得         │  幸存者偏差   │
+   结    赢   │  Skill        │  Luck        │  ← 危险!容易高估自己
+   果         │  → 强化模式    │  → 警惕,记下  │
+              ├──────────────┼──────────────┤
+        坏    │  运气不佳     │  应输          │
+        亏    │  Bad Luck    │  Mistake      │
+              │  → 别气馁     │  → 改进流程    │
+              └──────────────┴──────────────┘
+```
+
+**分类规则**(系统自动判定):
+
+| 判断质量(基于 reason_evidence 数量与强度) | 结果好坏(基于 return_5d / 20d) |
+|---|---|
+| **好**:reason_evidence 中 ≥ 3 项数据支持,且属于结构性变量(env/theme) | **好**:`return >= expected * 0.5`(达成预期一半以上) |
+| **差**:< 3 项依据,或属于纯叙事(reason_text 含"传闻/听说/感觉"等) | **差**:`return < 0` 或反向 |
+
+**反直觉的关键**:运气好赢(右上)比应得赢(左上)**更危险**——它会让用户重复糟糕的决策模式。系统会专门标记右上象限,周末复盘强制审视。
+
+### E3-S3 5/20 日反思 push 机制
+
+```sql
+-- T+5 / T+20 自动写入客观结果
+UPDATE train_decision_log d
+LEFT JOIN stock_kline_daily k5
+  ON k5.code = SUBSTRING_INDEX(d.ts_code, '.', 1)
+  AND k5.trade_date = (
+      SELECT MIN(cal_date) FROM trade_cal
+      WHERE cal_date > d.trade_date AND is_open = 1
+      ORDER BY cal_date LIMIT 1 OFFSET 4   -- 第 5 个交易日
+  )
+SET
+    d.price_5d = k5.close,
+    d.return_5d = (k5.close - d.price_at_decision) / d.price_at_decision
+WHERE d.return_5d IS NULL
+  AND DATEDIFF(CURDATE(), d.trade_date) >= 7;  -- 至少 7 自然日
+
+-- 4 象限分类
+UPDATE train_decision_log
+SET outcome_quadrant = CASE
+    WHEN judge_quality = 'good' AND return_20d >= 0.05 THEN 'right_judge_right_result'
+    WHEN judge_quality = 'good' AND return_20d <  0    THEN 'right_judge_wrong_result'
+    WHEN judge_quality = 'poor' AND return_20d >= 0.05 THEN 'wrong_judge_right_result'  -- 危险
+    WHEN judge_quality = 'poor' AND return_20d <  0    THEN 'wrong_judge_wrong_result'
+    ELSE 'neutral'
+END
+WHERE return_20d IS NOT NULL AND outcome_quadrant IS NULL;
+```
+
+**push 时机:**
+- **T+5 18:00**:小程序 push「您 5 日前关于 XX 的决策,该写中期反思了」
+- **T+20 18:00**:再次 push,要求写终期反思
+- **反思必须延迟写**:T+0 ~ T+4 期间,反思字段在前端是禁用状态(灰色不可点)
+
+### E3-S4 验收标准
+
+- **Given** 用户在 T+0 想填 review_5d,**When** 操作,**Then** 前端禁用并提示"5 日反思将在 T+5 开放"
+- **Given** 决策的 `reason_evidence` 只有 1 项数据,**When** 自动评判,**Then** `judge_quality='poor'`
+- **Given** `expected_outcome="5日涨8%"`、实际涨 6%,**When** 计算,**Then** `return_5d=0.06` 且达成预期一半以上,标 right_result
+- **Given** 决策属于"右上象限"(蒙对),**When** 周报生成,**Then** 高亮提示"运气成分较大,警惕重复"
+
+---
+
+## E4 · 周末误判档案(Weekly Mistake Review)
+
+> 作为投资者,我希望每周日花 20 分钟系统性回看本周失误,以便积累避坑清单。
+
+### E4-S1 数据表 `train_weekly_review`
+
+```sql
+CREATE TABLE IF NOT EXISTS train_weekly_review (
+    review_id           VARCHAR(32)   NOT NULL,
+    user_id             VARCHAR(32)   NOT NULL,
+    week_start          DATE          NOT NULL                  COMMENT '周一日期',
+    week_end            DATE          NOT NULL                  COMMENT '周五日期',
+
+    -- 系统推送的本周失误(基于 prediction 命中率 + decision 4 象限自动筛选)
+    mistakes_pushed     JSON          NOT NULL                  COMMENT '系统推送的失误清单',
+
+    -- 用户必须挑出最离谱的 1 个深入复盘(强制只选 1 个,逼迫聚焦)
+    biggest_mistake_id  VARCHAR(32)   DEFAULT NULL              COMMENT '关联 pred_id 或 decision_id',
+    mistake_layer       VARCHAR(16)   DEFAULT NULL              COMMENT '错在哪层 env/theme/rhythm/stock',
+    mistake_type        VARCHAR(32)   DEFAULT NULL              COMMENT '错误类型(参见枚举)',
+
+    -- 三个反思槽位(强制结构化)
+    what_was_wrong      VARCHAR(300)  NOT NULL                  COMMENT '当时哪里判断错了',
+    ignored_signal      VARCHAR(300)  NOT NULL                  COMMENT '哪个数据其实给了警告但被忽略',
+    next_time_rule      VARCHAR(300)  NOT NULL                  COMMENT '下次满足什么条件要停下来',
+
+    -- 是否新增到避坑清单
+    add_to_checklist    TINYINT(1)    DEFAULT 0,
+
+    submit_time         DATETIME      NOT NULL,
+    update_time         TIMESTAMP     DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY (review_id),
+    UNIQUE KEY uk_user_week (user_id, week_start)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='周末误判档案';
+
+-- 个人避坑清单(累积式)
+CREATE TABLE IF NOT EXISTS train_personal_checklist (
+    rule_id             VARCHAR(32)   NOT NULL,
+    user_id             VARCHAR(32)   NOT NULL,
+    rule_text           VARCHAR(300)  NOT NULL                  COMMENT '避坑规则',
+    layer               VARCHAR(16)   NOT NULL,
+    mistake_type        VARCHAR(32),
+
+    -- 触发条件(JSON,前端在用户决策时实时检测)
+    trigger_condition   JSON          DEFAULT NULL              COMMENT '如:{indicator:"vix_chg", op:">", value:3}',
+
+    triggered_count     INT           DEFAULT 0                 COMMENT '至今触发次数',
+    last_triggered      DATE          DEFAULT NULL,
+    is_active           TINYINT(1)    DEFAULT 1,
+
+    created_at          DATETIME      NOT NULL,
+    update_time         TIMESTAMP     DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY (rule_id),
+    KEY idx_user_active (user_id, is_active)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='个人避坑清单';
+```
+
+### E4-S2 失误自动筛选规则
+
+系统每周日早上跑批,自动从本周数据中筛出 3-5 条候选失误推给用户:
+
+```sql
+-- 候选失误规则(本周内)
+-- 1. 预判方向错且置信度 ≥ 4 的(高确信但错了)
+-- 2. 决策处于"应输象限"(差判断 + 差结果)的
+-- 3. 决策处于"幸存者偏差象限"(差判断 + 好结果)的 ← 重点警示
+-- 4. 单日 mood 标 fomo/anxious 的决策
+
+SELECT * FROM (
+    -- 高确信但错的预判
+    SELECT pred_id AS source_id, 'overconfident_wrong' AS mistake_type,
+           trade_date, core_judgement AS detail
+    FROM train_prediction_morning
+    WHERE user_id = @uid
+      AND trade_date BETWEEN @week_start AND @week_end
+      AND direction_confidence >= 4
+      AND direction_hit = 0
+
+    UNION ALL
+
+    -- 应输的决策
+    SELECT decision_id, 'mistake_with_loss',
+           trade_date, reason_text
+    FROM train_decision_log
+    WHERE user_id = @uid
+      AND trade_date BETWEEN @week_start AND @week_end
+      AND outcome_quadrant = 'wrong_judge_wrong_result'
+
+    UNION ALL
+
+    -- 幸存者偏差(蒙对)
+    SELECT decision_id, 'lucky_win',
+           trade_date, reason_text
+    FROM train_decision_log
+    WHERE user_id = @uid
+      AND trade_date BETWEEN @week_start AND @week_end
+      AND outcome_quadrant = 'wrong_judge_right_result'
+
+    UNION ALL
+
+    -- 情绪化决策
+    SELECT d.decision_id, CONCAT('emotional_', j.mood),
+           d.trade_date, d.reason_text
+    FROM train_decision_log d
+    INNER JOIN train_journal_daily j ON j.user_id=d.user_id AND j.trade_date=d.trade_date
+    WHERE d.user_id = @uid
+      AND d.trade_date BETWEEN @week_start AND @week_end
+      AND j.mood IN ('fomo','anxious')
+) candidates
+ORDER BY trade_date DESC
+LIMIT 5;
+```
+
+### E4-S3 失误类型枚举(便于聚类分析)
+
+| mistake_type | 含义 | 频次高时的诊断 |
+|---|---|---|
+| `overconfident_wrong` | 高确信但错了 | 信号-置信度脱节 |
+| `mistake_with_loss` | 应输 | 流程性问题 |
+| `lucky_win` | 蒙对 | 警惕重复糟糕模式 |
+| `emotional_fomo` | FOMO 追高 | 情绪化倾向 |
+| `emotional_anxious` | 焦虑割肉 | 抗压能力不足 |
+| `wrong_layer` | 错层决策(用日级数据做月度判断) | 时间尺度混乱 |
+| `single_signal` | 单一指标决策 | 缺少多源印证 |
+| `narrative_driven` | 纯叙事驱动(无量化依据) | 结构 vs 叙事混淆 |
+| `ignored_warning` | 忽视警告信号 | 选择性认知 |
+
+### E4-S4 验收标准
+
+- **Given** 周日 09:00,**When** 系统跑批,**Then** 生成本周候选失误并 push 给用户
+- **Given** 用户尚未提交本周复盘,**When** 周一 09:00,**Then** 锁定上周复盘窗口,提示"已过期,但记录在案"
+- **Given** 用户标记 `add_to_checklist=1`,**When** 提交,**Then** 自动写入 `train_personal_checklist`
+- **Given** 用户当前正在写决策,**When** 检测到匹配某条 checklist,**Then** 弹窗提示"您过去定的规则是 XX,当前是否符合?"
+
+---
+
+## E5 · 认知画像仪表盘(Cognition Dashboard)
+
+> 作为投资者,我希望看到自己 30/90/180 天的认知统计,以便了解擅长 / 盲区。
+
+### E5-S1 关键指标(后端聚合,无新增表,实时算)
+
+#### 准确率类
+- **30 日方向预判准确率**:`SUM(direction_hit) / COUNT(*)`,基准 50%,> 60% 视为有信号
+- **30 日量能预判准确率**
+- **30 日主线命中率**(每个预测主线的命中率)
+- **高确信(4-5)vs 低确信(1-2)的准确率分裂**:理论上应该高确信更准,如果不是说明 calibration 有问题
+
+#### 决策质量类
+- **判断好坏 vs 结果好坏 4 象限分布饼图**
+- **lucky_win 占总盈利决策比例**:>30% 报警(运气成分过大)
+- **mistake_with_loss 占总亏损决策比例**:>50% 提示流程问题
+- **平均判断依据数**(reason_evidence 的 size 平均):应该 ≥ 3
+
+#### 行为模式类
+- **决策时间分布热图**(按小时统计):识别"开盘冲动""尾盘恐慌"
+- **mood 标签词云**:90 天最多的情绪
+- **错误类型频次排行**(前 5):个人最易犯的错
+
+#### 进步类
+- **30/60/90 日预判准确率趋势线**:正向才说明在进步
+- **避坑清单触发命中率**:被规则拦截后实际避免错误的次数
+
+### E5-S2 校准曲线(Calibration Plot)
+
+这是**最有价值的图**之一。横轴是用户的置信度(1-5),纵轴是实际命中率。
+
+- 完美校准:45° 对角线(置信度 80% 时实际命中 80%)
+- 过度自信:曲线在对角线下方(典型问题)
+- 过度保守:曲线在对角线上方
+
+**人脑天生过度自信**,大多数用户的曲线会在右下方塌陷。看到这张图比看任何指标都震撼。
+
+### E5-S3 月度认知报告(自动生成,可选 LLM 润色)
+
+每月 1 号自动生成上月报告,结构固定:
+
+```
+【你的本月认知画像】
+
+整体准确率:XX% (上月 YY%)
+最大优势:量能预判(72% 准确率)
+最大盲区:小盘股主线判断(35% 准确率)
+
+⚠️ 风险提示
+- 高确信预判中有 3 次大错(列出 trade_date)
+- 12 次决策中有 4 次属于"幸存者偏差",建议警惕
+
+✓ 进步信号
+- 决策依据数从 2.1 → 3.4(+62%)
+- 情绪化标签从 18% 降到 9%
+
+【建议下月聚焦】
+- 在做小盘判断时强制等待 5 个维度共振
+- 高确信预判前必填 3 项以上反对证据
+```
+
+---
+
+## E6 · 小程序 5 个页面
+
+### E6-S1 页面结构
+
+```
+新增 Tab:训练
+  ├─ 默认页(根据时间动态切换)
+  │   ├─ 09:00-09:25 → 晨间预判页
+  │   ├─ 15:00-22:00 → 每日日记页
+  │   └─ 周日全天    → 周末复盘页
+  ├─ 决策日志(列表 + 新增)
+  └─ 认知画像(仪表盘)
+```
+
+### E6-S2 晨间预判页 wxml(核心交互)
+
+```xml
+<view class="page-wrap">
+
+  <!-- 倒计时横条 -->
+  <view class="countdown-banner {{countdownClass}}">
+    <text class="countdown-label">距 09:25 截止</text>
+    <text class="countdown-time mono">{{countdownText}}</text>
+  </view>
+
+  <!-- 盲测开关(默认关闭,引导用户先盲判) -->
+  <view class="blind-toggle">
+    <text>展开昨日复盘数据</text>
+    <switch checked="{{showContext}}" bindchange="toggleContext"/>
+  </view>
+  <view class="context-panel" wx:if="{{showContext}}">
+    <!-- 昨日 6 维分项简版 -->
+  </view>
+
+  <!-- 1. 方向 -->
+  <view class="card">
+    <view class="card-side-bar"></view>
+    <view class="q-label">① 今日方向</view>
+    <view class="opt-row">
+      <view class="opt {{form.direction === 'up' ? 'active up' : ''}}" bindtap="setDir" data-val="up">↑ 上涨</view>
+      <view class="opt {{form.direction === 'flat' ? 'active flat' : ''}}" bindtap="setDir" data-val="flat">→ 平盘</view>
+      <view class="opt {{form.direction === 'down' ? 'active down' : ''}}" bindtap="setDir" data-val="down">↓ 下跌</view>
+    </view>
+    <view class="q-sub">置信度</view>
+    <view class="conf-row">
+      <view class="conf-dot {{form.confidence >= item ? 'active' : ''}}"
+            wx:for="{{[1,2,3,4,5]}}" wx:key="*this"
+            bindtap="setConf" data-val="{{item}}">
+        {{item}}
+      </view>
+    </view>
+  </view>
+
+  <!-- 2. 量能 -->
+  <view class="card">
+    <view class="card-side-bar"></view>
+    <view class="q-label">② 量能预期</view>
+    <view class="opt-row">
+      <view class="opt {{form.volume === 'expand' ? 'active' : ''}}" bindtap="setVol" data-val="expand">放量</view>
+      <view class="opt {{form.volume === 'flat' ? 'active' : ''}}" bindtap="setVol" data-val="flat">持平</view>
+      <view class="opt {{form.volume === 'shrink' ? 'active' : ''}}" bindtap="setVol" data-val="shrink">缩量</view>
+    </view>
+  </view>
+
+  <!-- 3. 主线 -->
+  <view class="card">
+    <view class="card-side-bar"></view>
+    <view class="q-label">③ 主线预判(0-3 个)</view>
+    <view class="theme-chips">
+      <view class="chip {{form.themes.includes(item) ? 'active' : ''}}"
+            wx:for="{{themeCandidates}}" wx:key="*this"
+            bindtap="toggleTheme" data-val="{{item}}">
+        {{item}}
+      </view>
+    </view>
+  </view>
+
+  <!-- 4. 一句话核心判断(必填,强制 30+ 字) -->
+  <view class="card">
+    <view class="card-side-bar"></view>
+    <view class="q-label">④ 一句话核心判断 <text class="q-required">*</text></view>
+    <textarea class="ta" placeholder="例:权重护盘但题材熄火,关注半导体能否反包"
+              maxlength="200"
+              value="{{form.core_judgement}}"
+              bindinput="onCoreInput"/>
+    <view class="char-count {{form.core_judgement.length < 30 ? 'warn' : ''}}">
+      {{form.core_judgement.length}} / 200 (至少 30 字)
+    </view>
+  </view>
+
+  <!-- 5. 风险点(可选) -->
+  <view class="card">
+    <view class="card-side-bar"></view>
+    <view class="q-label">⑤ 你最担心的风险点</view>
+    <input class="ipt" placeholder="如:CNH 贬值压力" maxlength="100"
+           value="{{form.risk_point}}" bindinput="onRiskInput"/>
+  </view>
+
+  <!-- 提交按钮 -->
+  <view class="submit-btn-wrap">
+    <button class="submit-btn {{canSubmit ? '' : 'disabled'}}"
+            bindtap="submit" disabled="{{!canSubmit}}">
+      锁定预判 · 不可编辑
+    </button>
+    <view class="submit-tip">提交后无法修改,收盘后系统自动校验</view>
+  </view>
+
+</view>
+```
+
+### E6-S3 关键 wxss 片段
+
+```css
+.countdown-banner {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 16rpx 32rpx;
+  background: var(--bg-card);
+  border-left: 4rpx solid var(--amber);
+  margin-bottom: 16rpx;
+}
+.countdown-banner.urgent { border-left-color: var(--alert); }
+.countdown-banner.expired { border-left-color: var(--weak); opacity: 0.5; }
+.countdown-time {
+  font-size: 36rpx; color: var(--amber); font-weight: 600;
+}
+
+.q-label { font-size: 28rpx; color: var(--ink); margin-bottom: 16rpx; }
+.q-sub   { font-size: 22rpx; color: var(--ink-mute); margin: 16rpx 0 8rpx; }
+.q-required { color: var(--alert); }
+
+.opt-row { display: flex; gap: 12rpx; }
+.opt {
+  flex: 1; text-align: center;
+  padding: 20rpx 0;
+  border: 1rpx solid var(--hair);
+  font-size: 26rpx; color: var(--ink-dim);
+}
+.opt.active { background: var(--bg-elev); border-color: var(--amber); color: var(--amber); }
+.opt.active.up   { border-color: var(--up); color: var(--up); }
+.opt.active.down { border-color: var(--down); color: var(--down); }
+
+.conf-row { display: flex; gap: 8rpx; justify-content: center; }
+.conf-dot {
+  width: 80rpx; height: 80rpx; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  border: 1rpx solid var(--hair);
+  color: var(--ink-mute);
+  font-family: 'SF Mono', monospace;
+}
+.conf-dot.active {
+  background: var(--amber); color: var(--bg);
+  border-color: var(--amber);
+}
+
+.theme-chips { display: flex; flex-wrap: wrap; gap: 12rpx; }
+.chip {
+  padding: 12rpx 24rpx;
+  border: 1rpx solid var(--hair);
+  font-size: 24rpx; color: var(--ink-dim);
+}
+.chip.active { background: var(--amber); color: var(--bg); border-color: var(--amber); }
+
+.submit-btn {
+  width: 100%; padding: 28rpx 0;
+  background: var(--amber); color: var(--bg);
+  font-size: 30rpx; font-weight: 600;
+  border-radius: 4rpx;
+  letter-spacing: 4rpx;
+}
+.submit-btn.disabled { background: var(--hair); color: var(--ink-mute); }
+.submit-tip {
+  text-align: center; font-size: 22rpx; color: var(--ink-mute);
+  margin-top: 12rpx;
+}
+
+.char-count { font-size: 22rpx; color: var(--ink-mute); text-align: right; margin-top: 8rpx; }
+.char-count.warn { color: var(--alert); }
+```
+
+### E6-S4 决策日志页(关键交互:4 象限可视化)
+
+```xml
+<view class="card">
+  <view class="card-side-bar"></view>
+  <view class="card-header">
+    <view class="card-title-cn">决策质量分布</view>
+    <view class="card-title-en">DECISION QUADRANT · 90D</view>
+  </view>
+
+  <!-- 2x2 矩阵 -->
+  <view class="quadrant-grid">
+    <view class="q-cell q-tl" bindtap="filterByQuadrant" data-q="right_judge_right_result">
+      <view class="q-name">应得 ◆</view>
+      <view class="q-count mono">{{stats.skill}}</view>
+      <view class="q-desc">好判断+好结果</view>
+    </view>
+    <view class="q-cell q-tr alert" bindtap="filterByQuadrant" data-q="wrong_judge_right_result">
+      <view class="q-name">幸存者偏差 ⚠</view>
+      <view class="q-count mono">{{stats.lucky}}</view>
+      <view class="q-desc">差判断+好结果</view>
+    </view>
+    <view class="q-cell q-bl" bindtap="filterByQuadrant" data-q="right_judge_wrong_result">
+      <view class="q-name">运气不佳</view>
+      <view class="q-count mono">{{stats.unlucky}}</view>
+      <view class="q-desc">好判断+差结果</view>
+    </view>
+    <view class="q-cell q-br" bindtap="filterByQuadrant" data-q="wrong_judge_wrong_result">
+      <view class="q-name">应输 ◯</view>
+      <view class="q-count mono">{{stats.mistake}}</view>
+      <view class="q-desc">差判断+差结果</view>
+    </view>
+  </view>
+
+  <view class="quadrant-insight">
+    <text wx:if="{{stats.lucky / (stats.lucky + stats.skill) > 0.3}}" class="insight-warn">
+      ⚠ 盈利中 {{luckyRatio}}% 来自运气,警惕重复糟糕模式
+    </text>
+  </view>
+</view>
+```
+
+```css
+.quadrant-grid {
+  display: grid; grid-template-columns: 1fr 1fr;
+  gap: 1rpx; background: var(--hair);
+}
+.q-cell {
+  background: var(--bg-card);
+  padding: 32rpx 24rpx;
+  text-align: center;
+}
+.q-tl { background: rgba(138,181,115,0.08); }   /* 应得,绿调 */
+.q-tr { background: rgba(229,100,79,0.10); }    /* 蒙对,红调 ← 警示 */
+.q-bl { background: rgba(201,147,57,0.05); }    /* 运气不佳,黄调 */
+.q-br { background: rgba(199,90,74,0.05); }     /* 应输,深红 */
+
+.q-name { font-size: 24rpx; color: var(--ink-dim); margin-bottom: 12rpx; }
+.q-count { font-size: 56rpx; color: var(--ink); font-weight: 300; }
+.q-desc { font-size: 20rpx; color: var(--ink-mute); margin-top: 8rpx; }
+
+.q-cell.alert .q-name { color: var(--alert); }
+```
+
+### E6-S5 校准曲线展示
+
+```xml
+<view class="card">
+  <view class="card-side-bar"></view>
+  <view class="card-header">
+    <view class="card-title-cn">置信度校准</view>
+    <view class="card-title-en">CALIBRATION CURVE</view>
+  </view>
+
+  <!-- 用 echarts-for-weixin 画 -->
+  <ec-canvas id="calibChart" canvas-id="calibChart" ec="{{ ec }}"></ec-canvas>
+
+  <view class="calib-summary">
+    <text wx:if="{{calibType === 'overconfident'}}" class="warn">
+      过度自信:你的高确信判断准确率 {{highConfAcc}}%,低于自评的 {{highConfClaim}}%
+    </text>
+    <text wx:if="{{calibType === 'wellcalibrated'}}" class="strong">
+      校准良好:置信度与实际命中率匹配
+    </text>
+  </view>
+</view>
+```
+
+---
+
+## E7 · 数据字典与字段映射
+
+### E7-S1 表清单
+
+| 表名 | 用途 | 主键 | 行数估算/月 |
+|---|---|---|---|
+| `train_prediction_morning` | 晨间预判 | `pred_id` | 22(每日 1 条) |
+| `train_journal_daily` | 每日日记 | `journal_id` | 22 |
+| `train_decision_log` | 决策日志 | `decision_id` | 5-30(因人而异) |
+| `train_weekly_review` | 周末复盘 | `review_id` | 4 |
+| `train_personal_checklist` | 避坑清单 | `rule_id` | 累积约 1-3/月 |
+
+### E7-S2 与第 1-7 章数据的关联
+
+| 训练表字段 | 关联到 | 用途 |
+|---|---|---|
+| `prediction.context_snapshot` | `app_daily_brief` | 提交时锁定先验 |
+| `prediction` 校验 | `ads_l1_market_overview`、`ads_l2_industry_daily` | 客观比对 |
+| `decision.context_snapshot` | `ads_l3_capital_flow`、`ads_l5_*`、`ads_l7_cross_market` | 决策时锁定环境 |
+| `decision` 5/20 日结果 | `stock_kline_daily` | 算 return |
+| `weekly_review` 候选失误 | `train_prediction_morning`、`train_decision_log` | 自动筛选 |
+
+### E7-S3 关键字段口径
+
+| 字段 | 口径 |
+|---|---|
+| `direction='up'` 标准 | 沪指 `pct_chg > 0.003`(0.3% 阈值,内嵌容错带) |
+| `volume='expand'` 标准 | 成交额 / 5 日均量 > 1.10 |
+| `judge_quality='good'` | reason_evidence 项数 ≥ 3 且非纯叙事 |
+| `outcome='good_result'` | `return_20d >= expected * 0.5` |
+| 决策预期周期 | 1d / 5d / 20d / 60d 四档,不允许自定义 |
+| `direction_confidence` | 1-5 整数,> 5 用户高估自己,< 1 不代表反向 |
+
+---
+
+## 二、训练节奏的产品化
+
+把这套体系变成**可坚持**的关键,是节奏设计:
+
+```
+工作日 09:00-09:25   晨间预判       (5 分钟)
+工作日 15:00-18:00   每日日记       (2 分钟)
+工作日 任何时间      决策日志       (按需,3 分钟/次)
+T+5  晚 18:00       中期反思 push  (2 分钟)
+T+20 晚 18:00       终期反思 push  (2 分钟)
+周日 上午 09:00     系统推送候选   (被动)
+周日 任何时间       周末复盘       (15-20 分钟)
+每月 1 号          月度报告生成   (查看 5 分钟)
+```
+
+**总成本:工作日每天 7 分钟 + 周末 20 分钟**,这是认知训练能坚持的关键。超过这个量级用户 3 周必弃用。
+
+---
+
+## 三、6 个月使用路径(必看)
+
+| 阶段 | 时长 | 用户感受 | 系统输出 |
+|---|---|---|---|
+| **冷启动** | 1-30 天 | 写起来累,不知道写啥;数据样本不足 | 只统计基础准确率,不出诊断 |
+| **觉醒期** | 30-60 天 | 看到自己第一张校准曲线时开始震惊 | 出现首个个人盲区识别 |
+| **应用期** | 60-120 天 | 避坑清单首次实时拦截决策 | 准确率出现初步上升 |
+| **稳定期** | 120-180 天 | 形成"看到 X 必查 Y"的反射 | 月度报告出现明显进步斜率 |
+| **进阶期** | 180+ 天 | 工具变隐形,认知已内化 | 报告主要为微调,触发频次降低 |
+
+**这套系统不是"用完即扔"的工具,是 6 个月以上的认知训练基础设施**。
+
+---
+
+## 四、技术依赖
+
+- **MySQL 5.7**:全程兼容,无窗口函数
+- **第 1 章** `ads_l1_market_overview` / `ods_event_limit_pool`:校验预判
+- **第 2 章** `ads_l2_industry_daily.theme_label = 'main_theme'`:校验主线
+- **第 7 章** `app_daily_brief`:context_snapshot 来源
+- **`stock_kline_daily`**:算决策 return
+- **`trade_cal`**:计算 T+5、T+20 准确日期
+- **微信 push 能力**:T+5 / T+20 / 周日早 push
+- **echarts-for-weixin**:校准曲线、4 象限分布
+
+---
+
+## 五、风险与避坑
+
+1. **强制提交可能引发反感**:不能强制截止,改为"过期标灰"+"昨日补录扣分"机制,保留弹性
+2. **样本量不足时的统计噪声**:< 30 个样本不出准确率,只显示"数据积累中,X/30"
+3. **用户撒谎/敷衍**:无法完全解决,但 "core_judgement 30 字下限 + 决策证据 3 项要求" 提高造假成本
+4. **延迟反思忘了写**:T+5 push 后给 3 天窗口,过期归入"未反思"统计,影响月报评分
+5. **mood 标签可能强化情绪**:研究表明命名情绪反而能调节情绪,这点利大于弊
+6. **4 象限分类 false positive**:`judge_quality` 的自动判定可能误伤,允许用户在月度报告手动 override 一次
+7. **周末用户不打开 APP**:周日 push 后允许工作日补录,但本周复盘需在下周一 09:00 前完成
+8. **冷启动期数据少导致仪表盘空荡荡**:前 30 天显示"训练日记本",而非仪表盘
+9. **认知画像可能过度负面打击**:报告中**强制每条负面发现配 1 条进步信号**,平衡心理体验
+10. **用户用了 7 天就不写了的核心问题**:必须在 D+7 / D+14 各推送一次"你的第一份小报告",哪怕样本不足也要让用户尝到甜头 — TBD
+
+---
+
+## 六、里程碑
+
+| 节点 | 交付 |
+|---|---|
+| D+1 | 5 张训练表 DDL 上线 |
+| D+3 | 晨间预判页 + 自动校验 SQL |
+| D+5 | 每日日记 + 决策日志页 |
+| D+7 | T+5 / T+20 push 机制(伪造时间测试) |
+| D+10 | 周末复盘页 + 候选失误筛选 |
+| D+14 | 认知画像基础版(准确率 + 4 象限) |
+| D+21 | 校准曲线 + 月度报告模板 |
+| D+30 | 个人避坑清单实时触发拦截 |
+
+---
+
+## 七、度量指标
+
+### 用户活跃维度
+- **晨间预判完成率**:目标 ≥ 80%(交易日内)
+- **每日日记完成率**:目标 ≥ 70%
+- **决策反思完成率**(T+5 / T+20):目标 ≥ 60%
+- **周末复盘完成率**:目标 ≥ 70%
+
+### 认知改善维度(用户画像内部统计)
+- **方向预判准确率**:6 个月内从 50%(随机)→ 60%
+- **校准曲线 RMSE**:6 个月内下降 30%
+- **决策证据平均数**:从 1.5 → 3.0
+- **lucky_win 占比**:从 35% → 20%
+- **避坑清单触发-避免率**:目标 ≥ 50%(被规则提示后改决策的比例)
+
+### 系统稳定维度
+- **校验 SQL 跑批成功率**:≥ 99%
+- **T+5 / T+20 push 准时率**:误差 < 5 分钟
+- **仪表盘加载时间**:< 800ms
+
+---
+
+## 总结(产品哲学)
+
+这套训练系统的核心理念可以浓缩成一句话:
+
+> **数据让你看到市场,训练系统让你看到自己。**
+
+第 1-7 章解决了"市场长什么样",第 8 章解决"我的认知长什么样"。前者是被动消费,后者是主动塑造。
+
+90% 的散户失败不是因为没数据,是因为**没有反馈闭环**——他们的每一次决策都是孤立的,赢了归功于自己,输了归咎于市场。这套系统的全部价值就一件事:**逼用户看清自己的判断模式**,然后用 6 个月以上的时间,用客观数据慢慢替换掉那些自欺欺人的叙事。
+
+至此 8 章完整闭环:**数据采集(Antigravity)→ 数据分层(L1-L9)→ 数据展示(小程序 5 Tab)→ 认知训练(Tab 6)**。这是一个从"看市场"到"看自己"的完整工具链。

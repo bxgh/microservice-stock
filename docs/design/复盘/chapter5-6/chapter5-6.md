@@ -1,0 +1,2359 @@
+# 盘后复盘体系 · 第 5 + 6 章交付
+
+> **文档主题:** L8 个股异动池 + L6 公告事件 + L9 事件日历
+> **版本:** v1.0
+> **生成日期:** 2026-04-27
+> **依赖前置:** 第 1 / 2 / 3 / 4 章(L1 市场全景、L2 行业风格、L4 情绪连板、L3 资金流向)
+
+---
+
+## 背景
+
+L8 个股异动池是综合 L1 - L4 数据后,从全市场筛出值得关注的个股,是盘后复盘从"市场—结构—资金—情绪"下沉到"个股"的关键漏斗。L6 公告事件与 L9 事件日历则把基本面与日历型催化加进来,给次日观察清单提供事件维度的入口。
+
+## 目标
+
+- 每个交易日 17:00 后,产出当日全 A 异动池(分类 + 综合评分)
+- 每个交易日 17:30 后,产出当日新增公告事件聚合(L6)
+- 每个交易日 17:30 后,产出未来 30 个交易日的事件日历(L9)
+- 小程序提供两屏:**异动池**(分类筛选 + 排序)与**事件日历**(时间轴)
+
+## 范围
+
+- **本章交付:** 表 DDL、指标计算 SQL、小程序前端、数据字典、给 Antigravity 的字段映射
+- **不交付:** 数据采集脚本、历史回补脚本(归 Antigravity)
+
+## 非目标
+
+- 不做实时异动监控(盘中)
+- 不做事件影响的回测与归因(后续独立章节)
+- 不重复 L4 已覆盖的连板梯队(异动池中 `lhb` 仅作为标签关联,不重复造)
+
+---
+
+# 第 5 章 · L8 个股异动池
+
+## Epic E5-1 · 异动类型定义与判定规则
+
+**目标:** 锁定 6 类核心异动 + 1 类辅助标签,定义判定阈值与样本口径。
+
+### Story E5-1-S1 · 异动类型枚举
+
+> 作为复盘者,我希望异动池有清晰的分类标签,以便我能从不同视角(涨跌、量能、突破、上榜)切入。
+
+#### 6 类核心异动
+
+| `anomaly_type` | 中文标签 | 判定逻辑 | 候选数量上限 |
+|---|---|---|---|
+| `top_gainer` | 涨幅榜 | `pct_chg` 排名前 N(剔除一字涨停后单独标识) | 50 |
+| `top_loser` | 跌幅榜 | `pct_chg` 排名后 N | 50 |
+| `high_turnover` | 换手异动 | `turnover_rate > avg(turnover_rate, 20d) × 3` 且 `turnover_rate ≥ 0.10` | 30 |
+| `volume_spike` | 量能爆发 | `volume_ratio ≥ 3` 且 `pct_chg ≥ 0.05` | 30 |
+| `breakout` | 突破新高 | `close ≥ max(close, prev 60/120/250 日)` | 50 |
+| `lhb` | 上龙虎榜 | 当日出现在 `stock_lhb_daily` | 不限 |
+
+#### 辅助标签(不独立成行,叠加在主异动上)
+
+- `has_yz_seat`:游资席位上榜(JOIN `dim_yz_seat`,L3 引入)
+- `is_one_word`:一字涨跌停(`open == close == high == low` 且涨跌停)
+- `is_t_shape`:天地板 / 地天板(参考 L4 异象票,直接取 `ads_l4_sentiment` 结果)
+- `has_event_today`:当日有公告事件(JOIN `ads_l6_event_daily`)
+
+#### 样本剔除口径(全章统一)
+
+```text
+1. 剔除 ST / *ST(name LIKE '%ST%')
+2. 剔除上市 < 60 个交易日(用 trade_cal 计算,不用自然日)
+3. 剔除停牌(stock_suspensions 当日命中)
+4. 剔除 B 股(代码 9xxxxx / 2xxxxx)
+5. 不剔除北交所(8xxxxx / 4xxxxx),但单独排名
+```
+
+### Story E5-1-S2 · 异动评分公式
+
+> 作为复盘者,我希望每条异动有 0-100 综合评分,以便快速排序找重点。
+
+```
+anomaly_score = w1 × score_pct_chg
+              + w2 × score_volume
+              + w3 × score_event
+              + w4 × score_position
+```
+
+| 子项 | 权重 | 计算口径 |
+|---|---|---|
+| `score_pct_chg` | 30 | 涨跌幅绝对值百分位(全 A 当日内,Min-Max 归一 × 100) |
+| `score_volume` | 30 | `volume_ratio` 百分位 × 100,封顶 100 |
+| `score_event` | 20 | 上龙虎榜 +50;游资席位 +30;有公告事件 +20;有 L4 异象 +30(累加封顶 100) |
+| `score_position` | 20 | 距 250 日高点的相对位置:`(close - low_250) / (high_250 - low_250) × 100`,跌幅榜反向 |
+
+**说明:** 评分仅用于同一 `anomaly_type` 内排序,跨类型不做强可比。
+
+---
+
+## Epic E5-2 · 表设计与计算 SQL
+
+### Story E5-2-S1 · `ads_l8_stock_anomaly` 建表
+
+> 作为数据工程师,我希望异动池有一张宽表,以便前端一次拉取就能渲染。
+
+```sql
+-- =====================================================
+-- ads_l8_stock_anomaly · 个股异动池
+-- 粒度:每日 × 个股 × 异动类型,一只股票当日可有多条
+-- =====================================================
+CREATE TABLE IF NOT EXISTS ads_l8_stock_anomaly (
+  trade_date         DATE         NOT NULL                COMMENT '交易日',
+  ts_code            VARCHAR(16)  NOT NULL                COMMENT 'Tushare 代码,带 .SH/.SZ/.BJ',
+  anomaly_type       VARCHAR(20)  NOT NULL                COMMENT '异动类型',
+  rank_in_type       INT          NOT NULL DEFAULT 0      COMMENT '类型内排名,1 起',
+
+  -- 标识
+  stock_name         VARCHAR(32)                          COMMENT '股票名',
+  industry_l1        VARCHAR(32)                          COMMENT '申万一级',
+  concept_tags       JSON                                 COMMENT '所属概念,数组',
+
+  -- 行情快照(全量字段冗余以避免前端 JOIN)
+  close_price        DECIMAL(16, 4)                       COMMENT '收盘价(元)',
+  pct_chg            DECIMAL(10, 6)                       COMMENT '涨跌幅,小数',
+  amount             DECIMAL(20, 2)                       COMMENT '成交额(元)',
+  turnover_rate      DECIMAL(10, 6)                       COMMENT '换手率,小数',
+  volume_ratio       DECIMAL(10, 4)                       COMMENT '量比',
+  total_mv           DECIMAL(20, 2)                       COMMENT '总市值(元)',
+  circ_mv            DECIMAL(20, 2)                       COMMENT '流通市值(元)',
+
+  -- 异动专属指标(因类型而异,JSON 装载)
+  -- 例:high_turnover = {"turn_avg_20": 0.05, "turn_ratio": 4.2}
+  -- 例:breakout      = {"hh_window": 60, "hh_value": 12.34}
+  -- 例:lhb           = {"net_buy_amount": 1.2e8, "yz_seat_count": 3}
+  anomaly_metrics    JSON                                 COMMENT '类型特征指标',
+
+  -- 评分
+  score_pct_chg      DECIMAL(6, 2)                        COMMENT '涨跌幅评分 0-100',
+  score_volume       DECIMAL(6, 2)                        COMMENT '量能评分 0-100',
+  score_event        DECIMAL(6, 2)                        COMMENT '事件评分 0-100',
+  score_position     DECIMAL(6, 2)                        COMMENT '位置评分 0-100',
+  anomaly_score      DECIMAL(6, 2)                        COMMENT '综合评分 0-100',
+
+  -- 标签快照(冗余,避免前端二次 JOIN)
+  has_lhb            TINYINT(1)   NOT NULL DEFAULT 0      COMMENT '当日上龙虎榜',
+  has_yz_seat        TINYINT(1)   NOT NULL DEFAULT 0      COMMENT '当日游资席位',
+  has_event_today    TINYINT(1)   NOT NULL DEFAULT 0      COMMENT '当日有公告事件',
+  is_one_word        TINYINT(1)   NOT NULL DEFAULT 0      COMMENT '一字板',
+  l4_anomaly_tag     VARCHAR(20)                          COMMENT 'L4 异象:tian_di / di_tian / one_word',
+
+  -- 元数据
+  create_time        DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+  PRIMARY KEY (trade_date, ts_code, anomaly_type),
+  KEY idx_date_type_score (trade_date, anomaly_type, anomaly_score),
+  KEY idx_date_industry (trade_date, industry_l1)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='L8 个股异动池';
+```
+
+#### 验收标准 E5-2-S1-AC
+
+- **Given** 表已建好,**When** 插入 `(2026-04-27, 600519.SH, top_gainer)` 一行后再插同 PK 一行,**Then** 应触发主键冲突
+- **Given** 一只票当日同时是 `top_gainer` 和 `lhb`,**When** 插入两条记录,**Then** 都应成功
+- **Given** 北交所代码 `873xxx`,**When** 进入异动池,**Then** `ts_code` 应以 `.BJ` 结尾
+
+---
+
+### Story E5-2-S2 · 计算 SQL · 公共预处理
+
+> 作为数据工程师,我希望计算前先准备一组临时表,以便 6 段判定 SQL 不重复扫表。
+
+#### Task E5-2-S2-T1 · 当日有效股票池
+
+```sql
+-- =====================================================
+-- 准备 1:当日有效股票池(剔除 ST / 新股 / 停牌 / B 股)
+-- 输入参数:@trade_date(本章 SQL 全部用此变量,Antigravity 传入)
+-- =====================================================
+SET @trade_date := '2026-04-27';
+
+DROP TEMPORARY TABLE IF EXISTS tmp_l8_pool;
+CREATE TEMPORARY TABLE tmp_l8_pool (
+  ts_code      VARCHAR(16) NOT NULL,
+  code         VARCHAR(8)  NOT NULL,
+  stock_name   VARCHAR(32),
+  industry_l1  VARCHAR(32),
+  list_date    DATE,
+  PRIMARY KEY (code)
+) ENGINE=Memory;
+
+-- 用 trade_cal 计算上市满 60 个交易日
+INSERT INTO tmp_l8_pool
+SELECT
+  CASE
+    WHEN b.code REGEXP '^(60|68|9[01])' THEN CONCAT(b.code, '.SH')
+    WHEN b.code REGEXP '^(00|30|2[01])' THEN CONCAT(b.code, '.SZ')
+    WHEN b.code REGEXP '^(8[0-9]|4[34])' THEN CONCAT(b.code, '.BJ')
+    ELSE CONCAT(b.code, '.SH')
+  END AS ts_code,
+  b.code,
+  b.name AS stock_name,
+  sw.industry_name AS industry_l1,
+  b.list_date
+FROM stock_basic_info b
+LEFT JOIN stock_industry_sw sw ON sw.code = b.code
+WHERE b.name NOT LIKE '%ST%'
+  AND b.name NOT LIKE '%退%'
+  AND b.code NOT REGEXP '^(2|9)'           -- 剔除 B 股
+  AND (
+    SELECT COUNT(*) FROM trade_cal
+    WHERE cal_date BETWEEN b.list_date AND @trade_date
+      AND is_open = 1
+  ) >= 60
+  AND NOT EXISTS (
+    SELECT 1 FROM stock_suspensions sus
+    WHERE sus.code = b.code
+      AND sus.suspend_date <= @trade_date
+      AND (sus.resume_date IS NULL OR sus.resume_date > @trade_date)
+  );
+```
+
+#### Task E5-2-S2-T2 · 当日行情快照
+
+```sql
+-- =====================================================
+-- 准备 2:当日行情(全字段,从 stock_kline_daily + daily_basic 拼接)
+-- =====================================================
+DROP TEMPORARY TABLE IF EXISTS tmp_l8_quote;
+CREATE TEMPORARY TABLE tmp_l8_quote (
+  ts_code        VARCHAR(16) NOT NULL,
+  code           VARCHAR(8)  NOT NULL,
+  open_price     DECIMAL(16, 4),
+  high_price     DECIMAL(16, 4),
+  low_price      DECIMAL(16, 4),
+  close_price    DECIMAL(16, 4),
+  pre_close      DECIMAL(16, 4),
+  pct_chg        DECIMAL(10, 6),
+  vol            DECIMAL(20, 2),
+  amount         DECIMAL(20, 2),
+  turnover_rate  DECIMAL(10, 6),
+  volume_ratio   DECIMAL(10, 4),
+  total_mv       DECIMAL(20, 2),
+  circ_mv        DECIMAL(20, 2),
+  PRIMARY KEY (code)
+) ENGINE=Memory;
+
+INSERT INTO tmp_l8_quote
+SELECT
+  p.ts_code, p.code,
+  k.open, k.high, k.low, k.close, k.pre_close,
+  k.pct_chg / 100,                   -- 旧表 stock_kline_daily 的 pct_chg 仍为百分比形式,这里转小数
+  k.vol, k.amount,
+  d.turnover_rate / 100,             -- daily_basic.turnover_rate 也是百分比形式
+  d.volume_ratio,
+  d.total_mv * 10000,                -- daily_basic 单位万元 → 元
+  d.circ_mv * 10000
+FROM tmp_l8_pool p
+JOIN stock_kline_daily k ON k.code = p.code AND k.trade_date = @trade_date
+LEFT JOIN daily_basic d ON d.ts_code = p.ts_code AND d.trade_date = @trade_date;
+```
+
+> **TBD:** `stock_kline_daily` 入库口径是否已经按 4.2 节统一改为小数,需 Antigravity 确认。当前 SQL 按"旧表仍是百分比"防御性写,实施时若已统一,移除 `/100`。
+
+#### Task E5-2-S2-T3 · 20 日均换手率
+
+```sql
+-- =====================================================
+-- 准备 3:过去 20 个交易日的平均换手率(用 trade_cal 反查)
+-- =====================================================
+SET @date_20_ago := (
+  SELECT MIN(cal_date) FROM (
+    SELECT cal_date FROM trade_cal
+    WHERE cal_date < @trade_date AND is_open = 1
+    ORDER BY cal_date DESC LIMIT 20
+  ) t
+);
+
+DROP TEMPORARY TABLE IF EXISTS tmp_l8_turn20;
+CREATE TEMPORARY TABLE tmp_l8_turn20 (
+  ts_code       VARCHAR(16) NOT NULL,
+  turn_avg_20   DECIMAL(10, 6),
+  cnt           INT,
+  PRIMARY KEY (ts_code)
+) ENGINE=Memory;
+
+INSERT INTO tmp_l8_turn20
+SELECT
+  d.ts_code,
+  AVG(d.turnover_rate) / 100 AS turn_avg_20,
+  COUNT(*) AS cnt
+FROM daily_basic d
+JOIN tmp_l8_pool p ON p.ts_code = d.ts_code
+WHERE d.trade_date BETWEEN @date_20_ago AND @trade_date
+  AND d.trade_date < @trade_date
+GROUP BY d.ts_code
+HAVING COUNT(*) >= 15;
+```
+
+#### Task E5-2-S2-T4 · 250 日高低与窗口新高
+
+```sql
+-- =====================================================
+-- 准备 4:60/120/250 日窗口最高价 + 最低价
+-- =====================================================
+SET @date_250_ago := (
+  SELECT MIN(cal_date) FROM (
+    SELECT cal_date FROM trade_cal
+    WHERE cal_date < @trade_date AND is_open = 1
+    ORDER BY cal_date DESC LIMIT 250
+  ) t
+);
+
+DROP TEMPORARY TABLE IF EXISTS tmp_l8_window;
+CREATE TEMPORARY TABLE tmp_l8_window (
+  code      VARCHAR(8) NOT NULL,
+  hh_60     DECIMAL(16, 4),
+  hh_120    DECIMAL(16, 4),
+  hh_250    DECIMAL(16, 4),
+  ll_250    DECIMAL(16, 4),
+  PRIMARY KEY (code)
+) ENGINE=Memory;
+
+-- 按 code 一次性聚合三个窗口
+-- MySQL 5.7 用条件聚合代替窗口
+INSERT INTO tmp_l8_window
+SELECT
+  k.code,
+  MAX(CASE WHEN k.trade_date >= (SELECT MIN(cal_date) FROM (
+        SELECT cal_date FROM trade_cal WHERE cal_date < @trade_date AND is_open = 1
+        ORDER BY cal_date DESC LIMIT 60) t60)
+       THEN k.high END) AS hh_60,
+  MAX(CASE WHEN k.trade_date >= (SELECT MIN(cal_date) FROM (
+        SELECT cal_date FROM trade_cal WHERE cal_date < @trade_date AND is_open = 1
+        ORDER BY cal_date DESC LIMIT 120) t120)
+       THEN k.high END) AS hh_120,
+  MAX(k.high) AS hh_250,
+  MIN(k.low)  AS ll_250
+FROM stock_kline_daily k
+JOIN tmp_l8_pool p ON p.code = k.code
+WHERE k.trade_date BETWEEN @date_250_ago AND @trade_date
+  AND k.trade_date < @trade_date
+GROUP BY k.code;
+```
+
+> **性能提示:** 这一步是计算瓶颈。生产环境建议改为 Antigravity 在 ETL 阶段维护一张 `dim_stock_window_extreme`(每日增量),计算时直接查。临时表方案在全 A 5933 只 × 250 日 ≈ 148 万行,内存表能 hold 住但每天重算浪费。**TBD:** 与 Antigravity 对齐是否做物化。
+
+---
+
+### Story E5-2-S3 · 计算 SQL · 6 段异动判定
+
+> 作为数据工程师,我希望每段判定独立可重跑,以便单类型出问题时不影响其他。
+
+#### Task E5-2-S3-T1 · `top_gainer` / `top_loser`
+
+```sql
+-- =====================================================
+-- top_gainer · 涨幅前 50
+-- =====================================================
+SET @rk := 0;
+
+DELETE FROM ads_l8_stock_anomaly
+WHERE trade_date = @trade_date AND anomaly_type = 'top_gainer';
+
+INSERT INTO ads_l8_stock_anomaly (
+  trade_date, ts_code, anomaly_type, rank_in_type,
+  stock_name, industry_l1,
+  close_price, pct_chg, amount, turnover_rate, volume_ratio,
+  total_mv, circ_mv,
+  anomaly_metrics, is_one_word
+)
+SELECT
+  @trade_date,
+  q.ts_code,
+  'top_gainer',
+  @rk := @rk + 1,
+  p.stock_name, p.industry_l1,
+  q.close_price, q.pct_chg, q.amount, q.turnover_rate, q.volume_ratio,
+  q.total_mv, q.circ_mv,
+  JSON_OBJECT(
+    'pct_chg_abs', q.pct_chg,
+    'amount_yi',   ROUND(q.amount / 1e8, 2)
+  ),
+  CASE WHEN q.open_price = q.close_price
+        AND q.high_price = q.low_price
+        AND q.pct_chg >= 0.095
+       THEN 1 ELSE 0 END
+FROM tmp_l8_quote q
+JOIN tmp_l8_pool p ON p.code = q.code
+WHERE q.pct_chg IS NOT NULL
+ORDER BY q.pct_chg DESC, q.amount DESC
+LIMIT 50;
+
+-- =====================================================
+-- top_loser · 跌幅前 50(对称写法,略 ORDER BY ASC)
+-- =====================================================
+SET @rk := 0;
+DELETE FROM ads_l8_stock_anomaly
+WHERE trade_date = @trade_date AND anomaly_type = 'top_loser';
+
+INSERT INTO ads_l8_stock_anomaly (
+  trade_date, ts_code, anomaly_type, rank_in_type,
+  stock_name, industry_l1,
+  close_price, pct_chg, amount, turnover_rate, volume_ratio,
+  total_mv, circ_mv,
+  anomaly_metrics
+)
+SELECT
+  @trade_date,
+  q.ts_code, 'top_loser', @rk := @rk + 1,
+  p.stock_name, p.industry_l1,
+  q.close_price, q.pct_chg, q.amount, q.turnover_rate, q.volume_ratio,
+  q.total_mv, q.circ_mv,
+  JSON_OBJECT('pct_chg_abs', ABS(q.pct_chg))
+FROM tmp_l8_quote q
+JOIN tmp_l8_pool p ON p.code = q.code
+WHERE q.pct_chg IS NOT NULL
+ORDER BY q.pct_chg ASC, q.amount DESC
+LIMIT 50;
+```
+
+#### Task E5-2-S3-T2 · `high_turnover`
+
+```sql
+-- =====================================================
+-- high_turnover · 换手率 > 20 日均 × 3 且 ≥ 10%
+-- =====================================================
+SET @rk := 0;
+DELETE FROM ads_l8_stock_anomaly
+WHERE trade_date = @trade_date AND anomaly_type = 'high_turnover';
+
+INSERT INTO ads_l8_stock_anomaly (
+  trade_date, ts_code, anomaly_type, rank_in_type,
+  stock_name, industry_l1,
+  close_price, pct_chg, amount, turnover_rate, volume_ratio,
+  total_mv, circ_mv, anomaly_metrics
+)
+SELECT
+  @trade_date,
+  q.ts_code, 'high_turnover', @rk := @rk + 1,
+  p.stock_name, p.industry_l1,
+  q.close_price, q.pct_chg, q.amount, q.turnover_rate, q.volume_ratio,
+  q.total_mv, q.circ_mv,
+  JSON_OBJECT(
+    'turn_avg_20', ROUND(t.turn_avg_20, 4),
+    'turn_ratio',  ROUND(q.turnover_rate / t.turn_avg_20, 2)
+  )
+FROM tmp_l8_quote q
+JOIN tmp_l8_pool   p ON p.code = q.code
+JOIN tmp_l8_turn20 t ON t.ts_code = q.ts_code
+WHERE q.turnover_rate >= 0.10
+  AND t.turn_avg_20 > 0
+  AND q.turnover_rate / t.turn_avg_20 >= 3
+ORDER BY (q.turnover_rate / t.turn_avg_20) DESC
+LIMIT 30;
+```
+
+#### Task E5-2-S3-T3 · `volume_spike`
+
+```sql
+-- =====================================================
+-- volume_spike · 量比 ≥ 3 且涨幅 ≥ 5%
+-- =====================================================
+SET @rk := 0;
+DELETE FROM ads_l8_stock_anomaly
+WHERE trade_date = @trade_date AND anomaly_type = 'volume_spike';
+
+INSERT INTO ads_l8_stock_anomaly (
+  trade_date, ts_code, anomaly_type, rank_in_type,
+  stock_name, industry_l1,
+  close_price, pct_chg, amount, turnover_rate, volume_ratio,
+  total_mv, circ_mv, anomaly_metrics
+)
+SELECT
+  @trade_date,
+  q.ts_code, 'volume_spike', @rk := @rk + 1,
+  p.stock_name, p.industry_l1,
+  q.close_price, q.pct_chg, q.amount, q.turnover_rate, q.volume_ratio,
+  q.total_mv, q.circ_mv,
+  JSON_OBJECT('volume_ratio', q.volume_ratio, 'pct_chg', q.pct_chg)
+FROM tmp_l8_quote q
+JOIN tmp_l8_pool p ON p.code = q.code
+WHERE q.volume_ratio >= 3
+  AND q.pct_chg >= 0.05
+ORDER BY q.volume_ratio DESC
+LIMIT 30;
+```
+
+#### Task E5-2-S3-T4 · `breakout`
+
+```sql
+-- =====================================================
+-- breakout · 突破 60/120/250 日新高(取最大窗口)
+-- =====================================================
+SET @rk := 0;
+DELETE FROM ads_l8_stock_anomaly
+WHERE trade_date = @trade_date AND anomaly_type = 'breakout';
+
+INSERT INTO ads_l8_stock_anomaly (
+  trade_date, ts_code, anomaly_type, rank_in_type,
+  stock_name, industry_l1,
+  close_price, pct_chg, amount, turnover_rate, volume_ratio,
+  total_mv, circ_mv, anomaly_metrics
+)
+SELECT
+  @trade_date,
+  q.ts_code, 'breakout', @rk := @rk + 1,
+  p.stock_name, p.industry_l1,
+  q.close_price, q.pct_chg, q.amount, q.turnover_rate, q.volume_ratio,
+  q.total_mv, q.circ_mv,
+  JSON_OBJECT(
+    'hh_window',
+      CASE
+        WHEN q.high_price >= w.hh_250 THEN 250
+        WHEN q.high_price >= w.hh_120 THEN 120
+        WHEN q.high_price >= w.hh_60  THEN 60
+      END,
+    'hh_value',
+      CASE
+        WHEN q.high_price >= w.hh_250 THEN w.hh_250
+        WHEN q.high_price >= w.hh_120 THEN w.hh_120
+        WHEN q.high_price >= w.hh_60  THEN w.hh_60
+      END,
+    'pct_above_hh',
+      ROUND((q.high_price - w.hh_60) / w.hh_60, 4)
+  )
+FROM tmp_l8_quote q
+JOIN tmp_l8_pool   p ON p.code = q.code
+JOIN tmp_l8_window w ON w.code = q.code
+WHERE q.high_price >= w.hh_60
+  AND w.hh_60 IS NOT NULL
+ORDER BY
+  CASE
+    WHEN q.high_price >= w.hh_250 THEN 3
+    WHEN q.high_price >= w.hh_120 THEN 2
+    ELSE 1
+  END DESC,
+  q.amount DESC
+LIMIT 50;
+```
+
+#### Task E5-2-S3-T5 · `lhb`
+
+```sql
+-- =====================================================
+-- lhb · 当日上龙虎榜(直接 JOIN stock_lhb_daily)
+-- =====================================================
+SET @rk := 0;
+DELETE FROM ads_l8_stock_anomaly
+WHERE trade_date = @trade_date AND anomaly_type = 'lhb';
+
+INSERT INTO ads_l8_stock_anomaly (
+  trade_date, ts_code, anomaly_type, rank_in_type,
+  stock_name, industry_l1,
+  close_price, pct_chg, amount, turnover_rate, volume_ratio,
+  total_mv, circ_mv, anomaly_metrics, has_lhb
+)
+SELECT
+  @trade_date,
+  q.ts_code, 'lhb', @rk := @rk + 1,
+  p.stock_name, p.industry_l1,
+  q.close_price, q.pct_chg, q.amount, q.turnover_rate, q.volume_ratio,
+  q.total_mv, q.circ_mv,
+  JSON_OBJECT(
+    'net_buy_amount', l.net_buy_amount,
+    'buy_amount',     l.buy_amount,
+    'sell_amount',    l.sell_amount,
+    'reason',         l.reason
+  ),
+  1
+FROM stock_lhb_daily l
+JOIN tmp_l8_pool   p ON p.code = l.code
+JOIN tmp_l8_quote  q ON q.code = l.code
+WHERE l.trade_date = @trade_date
+ORDER BY ABS(l.net_buy_amount) DESC;
+```
+
+---
+
+### Story E5-2-S4 · 评分回填与标签 enrichment
+
+> 作为数据工程师,我希望评分和标签是计算完所有异动后再回填的,以便能用全集做 Min-Max 归一。
+
+#### Task E5-2-S4-T1 · 评分回填
+
+```sql
+-- =====================================================
+-- 评分回填(单 UPDATE,Min-Max 归一)
+-- =====================================================
+
+-- 先取当日全 A 涨跌幅与量比的极值
+SELECT
+  MIN(pct_chg)     INTO @pct_min FROM tmp_l8_quote;
+SELECT MAX(pct_chg) INTO @pct_max FROM tmp_l8_quote;
+SELECT MAX(volume_ratio) INTO @vr_max FROM tmp_l8_quote
+WHERE volume_ratio IS NOT NULL AND volume_ratio < 100;  -- 防异常值
+
+-- 涨跌幅评分(用绝对值百分位)
+UPDATE ads_l8_stock_anomaly a
+JOIN tmp_l8_quote q ON q.ts_code = a.ts_code
+SET a.score_pct_chg = LEAST(100, GREATEST(0,
+      ABS(q.pct_chg) / GREATEST(ABS(@pct_min), ABS(@pct_max), 0.0001) * 100
+    ))
+WHERE a.trade_date = @trade_date;
+
+-- 量能评分
+UPDATE ads_l8_stock_anomaly a
+JOIN tmp_l8_quote q ON q.ts_code = a.ts_code
+SET a.score_volume = LEAST(100, GREATEST(0,
+      COALESCE(q.volume_ratio, 0) / GREATEST(@vr_max, 1) * 100
+    ))
+WHERE a.trade_date = @trade_date;
+
+-- 事件评分(累加,封顶 100)
+-- 上龙虎榜 +50,游资席位 +30(待 dim_yz_seat 上线后启用),L4 异象 +30
+UPDATE ads_l8_stock_anomaly a
+SET a.score_event = LEAST(100,
+      a.has_lhb        * 50 +
+      a.has_yz_seat    * 30 +
+      a.has_event_today * 20 +
+      CASE WHEN a.l4_anomaly_tag IS NOT NULL THEN 30 ELSE 0 END
+    )
+WHERE a.trade_date = @trade_date;
+
+-- 位置评分
+UPDATE ads_l8_stock_anomaly a
+JOIN tmp_l8_quote  q ON q.ts_code = a.ts_code
+JOIN tmp_l8_window w ON w.code = q.code
+SET a.score_position = CASE
+      WHEN w.hh_250 = w.ll_250 THEN 50
+      WHEN a.anomaly_type = 'top_loser' THEN
+        100 - LEAST(100, GREATEST(0, (q.close_price - w.ll_250) / (w.hh_250 - w.ll_250) * 100))
+      ELSE
+        LEAST(100, GREATEST(0, (q.close_price - w.ll_250) / (w.hh_250 - w.ll_250) * 100))
+    END
+WHERE a.trade_date = @trade_date;
+
+-- 综合评分
+UPDATE ads_l8_stock_anomaly
+SET anomaly_score = ROUND(
+      0.30 * COALESCE(score_pct_chg, 0) +
+      0.30 * COALESCE(score_volume, 0) +
+      0.20 * COALESCE(score_event, 0) +
+      0.20 * COALESCE(score_position, 0), 2)
+WHERE trade_date = @trade_date;
+```
+
+#### Task E5-2-S4-T2 · 标签 enrichment
+
+```sql
+-- =====================================================
+-- 关联 L4 异象、L6 事件、概念标签
+-- 注:L4 / L6 表分别在第 3 / 6 章交付,此处假定字段
+-- =====================================================
+
+-- L4 异象标签(假设 ads_l4_sentiment 有 anomaly_tickets JSON 数组)
+UPDATE ads_l8_stock_anomaly a
+JOIN ads_l4_sentiment s ON s.trade_date = a.trade_date
+SET a.l4_anomaly_tag =
+      CASE
+        WHEN JSON_CONTAINS(s.anomaly_tickets, JSON_QUOTE(a.ts_code), '$.tian_di') THEN 'tian_di'
+        WHEN JSON_CONTAINS(s.anomaly_tickets, JSON_QUOTE(a.ts_code), '$.di_tian') THEN 'di_tian'
+        WHEN JSON_CONTAINS(s.anomaly_tickets, JSON_QUOTE(a.ts_code), '$.one_word') THEN 'one_word'
+        ELSE NULL
+      END
+WHERE a.trade_date = @trade_date;
+
+-- L6 当日事件
+UPDATE ads_l8_stock_anomaly a
+SET a.has_event_today = 1
+WHERE a.trade_date = @trade_date
+  AND EXISTS (
+    SELECT 1 FROM ads_l6_event_daily e
+    WHERE e.trade_date = a.trade_date
+      AND e.ts_code = a.ts_code
+  );
+
+-- 概念标签(从 stock_sector_cons_ths)
+UPDATE ads_l8_stock_anomaly a
+SET a.concept_tags = (
+  SELECT JSON_ARRAYAGG(s.sector_name)
+  FROM stock_sector_cons_ths c
+  JOIN stock_sector_ths s ON s.sector_code = c.sector_code
+  WHERE c.code = SUBSTRING_INDEX(a.ts_code, '.', 1)
+)
+WHERE a.trade_date = @trade_date;
+```
+
+#### 验收标准 E5-2-S4-AC
+
+- **Given** 当日 `top_gainer` 第 1 名,**When** 查询其 `anomaly_score`,**Then** `score_pct_chg` 应接近 100
+- **Given** 一字涨停的票,**When** 查询其 `is_one_word`,**Then** 应为 1
+- **Given** L6 表当日为空,**When** enrichment 执行,**Then** `has_event_today` 全为 0,不报错
+- **Given** 一只票同时进入 5 个异动类型,**When** 查询,**Then** 应有 5 条独立记录,各自评分独立计算
+
+---
+
+## Epic E5-3 · 微信小程序前端
+
+**目标:** 异动池单页:顶部筛选 Tab + 评分排序 + 卡片列表
+
+### Story E5-3-S1 · 异动池主页 wxml
+
+> 作为复盘用户,我希望一屏内能切异动类型并按评分排序看个股,以便快速过滤重点。
+
+#### `pages/anomaly/index.wxml`
+
+```xml
+<view class="page-bg">
+  <!-- 顶部摘要栏 -->
+  <view class="summary-bar">
+    <view class="summary-side-bar"></view>
+    <view class="summary-cn">个股异动池</view>
+    <view class="summary-en">L8 · STOCK ANOMALY POOL</view>
+    <view class="summary-date mono">{{summary.trade_date}}</view>
+  </view>
+
+  <!-- 类型 Tab -->
+  <view class="tab-bar">
+    <view
+      wx:for="{{tabs}}" wx:key="key"
+      class="tab-item {{currentTab === item.key ? 'active' : ''}}"
+      bindtap="onTabTap" data-key="{{item.key}}">
+      <text class="tab-cn">{{item.label}}</text>
+      <text class="tab-count mono">{{item.count}}</text>
+    </view>
+  </view>
+
+  <!-- 排序栏 -->
+  <view class="sort-bar">
+    <view class="sort-item {{sortKey === 'score' ? 'active' : ''}}"
+          bindtap="onSortTap" data-key="score">综合评分</view>
+    <view class="sort-item {{sortKey === 'pct_chg' ? 'active' : ''}}"
+          bindtap="onSortTap" data-key="pct_chg">涨跌幅</view>
+    <view class="sort-item {{sortKey === 'amount' ? 'active' : ''}}"
+          bindtap="onSortTap" data-key="amount">成交额</view>
+    <view class="sort-item {{sortKey === 'turnover_rate' ? 'active' : ''}}"
+          bindtap="onSortTap" data-key="turnover_rate">换手率</view>
+  </view>
+
+  <!-- 列表 -->
+  <view class="anomaly-list">
+    <view wx:for="{{list}}" wx:key="ts_code" class="card">
+      <view class="card-side-bar"></view>
+      <view class="card-row-1">
+        <view class="rank mono">{{index + 1}}</view>
+        <view class="stock-info">
+          <view class="stock-name">{{item.stock_name}}</view>
+          <view class="stock-code mono">{{item.ts_code}}</view>
+        </view>
+        <view class="pct-block {{item.pct_chg >= 0 ? 'up' : 'down'}}">
+          <view class="pct-value mono">{{item.pct_chg >= 0 ? '↑' : '↓'}}{{item.pct_chg_display}}</view>
+          <view class="close-value mono">{{item.close_price}}</view>
+        </view>
+      </view>
+
+      <view class="card-row-2">
+        <view class="metric">
+          <text class="metric-label">成交额</text>
+          <text class="metric-value mono">{{item.amount_display}}</text>
+        </view>
+        <view class="metric">
+          <text class="metric-label">换手率</text>
+          <text class="metric-value mono">{{item.turnover_display}}</text>
+        </view>
+        <view class="metric">
+          <text class="metric-label">量比</text>
+          <text class="metric-value mono">{{item.volume_ratio}}</text>
+        </view>
+        <view class="metric">
+          <text class="metric-label">评分</text>
+          <text class="metric-value mono score">{{item.anomaly_score}}</text>
+        </view>
+      </view>
+
+      <view class="card-row-3">
+        <view class="industry-tag">{{item.industry_l1}}</view>
+        <view wx:for="{{item.concept_tags}}" wx:for-item="cpt" wx:key="*this"
+              class="concept-tag">{{cpt}}</view>
+      </view>
+
+      <view class="card-row-4" wx:if="{{item.has_lhb || item.l4_anomaly_tag || item.has_event_today || item.is_one_word}}">
+        <view class="badge badge-lhb"     wx:if="{{item.has_lhb}}">龙虎榜</view>
+        <view class="badge badge-yz"      wx:if="{{item.has_yz_seat}}">游资</view>
+        <view class="badge badge-event"   wx:if="{{item.has_event_today}}">事件</view>
+        <view class="badge badge-oneword" wx:if="{{item.is_one_word}}">一字</view>
+        <view class="badge badge-tiandi"  wx:if="{{item.l4_anomaly_tag === 'tian_di'}}">天地板</view>
+        <view class="badge badge-ditian"  wx:if="{{item.l4_anomaly_tag === 'di_tian'}}">地天板</view>
+      </view>
+
+      <!-- 异动专属信息(根据 anomaly_type 动态展示) -->
+      <view class="card-row-5" wx:if="{{item.anomaly_extra}}">
+        <text class="extra-label">{{item.anomaly_extra.label}}</text>
+        <text class="extra-value mono">{{item.anomaly_extra.value}}</text>
+      </view>
+    </view>
+  </view>
+</view>
+```
+
+### Story E5-3-S2 · 异动池主页 wxss
+
+```css
+/* pages/anomaly/index.wxss */
+
+page {
+  /* 颜色变量 */
+  --bg: #0f0e0c; --bg-card: #1a1714; --bg-elev: #232019;
+  --ink: #ede3cc; --ink-dim: #b5a98e; --ink-mute: #776d58;
+  --amber: #d4a23e; --amber-bright: #f0c968;
+  --up: #e5644f; --down: #5ca478; --flat: #888888;
+  --strong: #8ab573; --neutral: #c99339; --alert: #d97a3d; --weak: #c85a4a;
+  --hair: #2a2520;
+
+  /* 字号变量 */
+  --fs-xxl: 64rpx; --fs-xl: 48rpx; --fs-lg: 36rpx;
+  --fs-md: 28rpx;  --fs-sm: 24rpx; --fs-xs: 22rpx;
+
+  /* 间距 */
+  --gap-lg: 24rpx; --gap-md: 16rpx; --gap-sm: 8rpx;
+
+  background: var(--bg);
+  color: var(--ink);
+  font-family: -apple-system, 'PingFang SC', 'Microsoft YaHei', sans-serif;
+  min-height: 100vh;
+}
+
+.mono {
+  font-family: 'SF Mono', 'Menlo', 'Courier New', monospace;
+  font-feature-settings: 'tnum';
+}
+.up { color: var(--up); }
+.down { color: var(--down); }
+
+/* 顶部摘要 */
+.summary-bar {
+  position: relative;
+  background: var(--bg-card);
+  padding: 24rpx 24rpx 24rpx 32rpx;
+  border-bottom: 1rpx solid var(--hair);
+}
+.summary-side-bar {
+  position: absolute; top: 24rpx; bottom: 24rpx; left: 0;
+  width: 4rpx; background: var(--amber);
+}
+.summary-cn {
+  font-size: var(--fs-lg); font-weight: 600;
+  color: var(--ink); letter-spacing: 4rpx;
+}
+.summary-en {
+  font-family: 'SF Mono', 'Menlo', monospace;
+  font-size: 20rpx; color: var(--amber); letter-spacing: 4rpx;
+  margin-top: 4rpx;
+}
+.summary-date {
+  font-size: var(--fs-sm); color: var(--ink-dim);
+  margin-top: 8rpx;
+}
+
+/* Tab */
+.tab-bar {
+  display: flex; background: var(--bg-card);
+  border-bottom: 1rpx solid var(--hair);
+  overflow-x: auto;
+}
+.tab-item {
+  padding: 20rpx 28rpx;
+  font-size: var(--fs-md);
+  color: var(--ink-dim);
+  position: relative;
+  white-space: nowrap;
+}
+.tab-item.active { color: var(--amber-bright); }
+.tab-item.active::after {
+  content: ''; position: absolute;
+  bottom: 0; left: 28rpx; right: 28rpx; height: 2rpx;
+  background: var(--amber);
+  transform: scaleX(1); transition: transform 0.2s;
+}
+.tab-cn { margin-right: 8rpx; }
+.tab-count { font-size: var(--fs-xs); color: var(--ink-mute); }
+
+/* 排序栏 */
+.sort-bar {
+  display: flex;
+  background: var(--bg);
+  padding: 12rpx 24rpx;
+  gap: 24rpx;
+  border-bottom: 1rpx solid var(--hair);
+}
+.sort-item {
+  font-size: var(--fs-sm);
+  color: var(--ink-mute);
+  padding: 4rpx 0;
+}
+.sort-item.active {
+  color: var(--amber);
+  border-bottom: 2rpx solid var(--amber);
+}
+
+/* 卡片 */
+.card {
+  position: relative;
+  background: var(--bg-card);
+  margin: var(--gap-md) 0 0;
+  padding: var(--gap-lg) var(--gap-lg) var(--gap-lg) 32rpx;
+  border-radius: 4rpx;
+}
+.card-side-bar {
+  position: absolute; top: 24rpx; bottom: 24rpx; left: 0;
+  width: 4rpx; background: var(--amber);
+}
+
+/* 卡片第 1 行:序号 + 名称 + 涨跌 */
+.card-row-1 {
+  display: flex; align-items: center;
+  margin-bottom: var(--gap-md);
+}
+.rank {
+  font-size: var(--fs-lg); color: var(--ink-mute);
+  width: 60rpx; flex-shrink: 0;
+}
+.stock-info { flex: 1; }
+.stock-name {
+  font-size: 32rpx; font-weight: 600; color: var(--ink);
+}
+.stock-code {
+  font-size: var(--fs-xs); color: var(--ink-mute);
+  margin-top: 4rpx;
+}
+.pct-block { text-align: right; }
+.pct-value {
+  font-size: var(--fs-xl); font-weight: 600;
+  letter-spacing: 1rpx;
+}
+.close-value {
+  font-size: var(--fs-xs); color: var(--ink-mute);
+  margin-top: 4rpx;
+}
+
+/* 卡片第 2 行:四指标 */
+.card-row-2 {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  padding: var(--gap-md) 0;
+  border-top: 1rpx solid var(--hair);
+  border-bottom: 1rpx solid var(--hair);
+}
+.metric { text-align: center; }
+.metric-label {
+  display: block;
+  font-size: var(--fs-xs); color: var(--ink-mute);
+  margin-bottom: 4rpx;
+}
+.metric-value {
+  display: block;
+  font-size: 30rpx; color: var(--ink);
+}
+.metric-value.score { color: var(--amber-bright); font-weight: 600; }
+
+/* 卡片第 3 行:行业 + 概念 */
+.card-row-3 {
+  display: flex; flex-wrap: wrap; gap: 8rpx;
+  margin-top: var(--gap-md);
+}
+.industry-tag, .concept-tag {
+  font-size: var(--fs-xs);
+  padding: 4rpx 12rpx;
+  border: 1rpx solid var(--hair);
+  border-radius: 2rpx;
+}
+.industry-tag {
+  color: var(--amber);
+  border-color: var(--amber);
+}
+.concept-tag { color: var(--ink-dim); }
+
+/* 卡片第 4 行:徽章 */
+.card-row-4 {
+  display: flex; flex-wrap: wrap; gap: 8rpx;
+  margin-top: 12rpx;
+}
+.badge {
+  font-size: 20rpx;
+  padding: 2rpx 10rpx;
+  border-radius: 2rpx;
+  letter-spacing: 1rpx;
+}
+.badge-lhb     { background: var(--alert); color: #fff; }
+.badge-yz      { background: var(--amber); color: #000; }
+.badge-event   { background: var(--neutral); color: #fff; }
+.badge-oneword { background: var(--up); color: #fff; }
+.badge-tiandi  { background: var(--weak); color: #fff; }
+.badge-ditian  { background: var(--strong); color: #fff; }
+
+/* 卡片第 5 行:异动专属补充 */
+.card-row-5 {
+  display: flex; align-items: center;
+  margin-top: 12rpx;
+  padding-top: 12rpx;
+  border-top: 1rpx solid var(--hair);
+}
+.extra-label {
+  font-size: var(--fs-xs); color: var(--ink-mute);
+  margin-right: 12rpx;
+}
+.extra-value {
+  font-size: var(--fs-sm); color: var(--ink-dim);
+}
+```
+
+### Story E5-3-S3 · 数据接口契约
+
+> 作为前端,我希望后端给一个单一接口拉所有异动池数据,以便切 Tab 时只做客户端过滤。
+
+```yaml
+# 接口契约 · 异动池
+endpoint: GET /api/v1/anomaly/pool
+params:
+  trade_date: "2026-04-27"   # YYYY-MM-DD,默认最近一个交易日
+  anomaly_types:             # 可选,数组,不传返回全部
+    - top_gainer
+    - top_loser
+    - high_turnover
+    - volume_spike
+    - breakout
+    - lhb
+  limit: 200                 # 默认 200,最大 500
+
+response:
+  trade_date: "2026-04-27"
+  summary:
+    total_count: 156
+    by_type:
+      top_gainer: 50
+      top_loser: 50
+      high_turnover: 30
+      volume_spike: 12
+      breakout: 8
+      lhb: 6
+  list:
+    - ts_code: "600519.SH"
+      stock_name: "贵州茅台"
+      anomaly_type: "top_gainer"
+      rank_in_type: 1
+      industry_l1: "食品饮料"
+      concept_tags: ["白酒", "MSCI 中国", "上证 50"]
+      close_price: 1685.50
+      pct_chg: 0.0856              # 小数,前端 ×100 显示
+      pct_chg_display: "8.56%"     # 后端预格式化
+      amount: 12500000000          # 元
+      amount_display: "125.0亿"
+      turnover_rate: 0.0421
+      turnover_display: "4.21%"
+      volume_ratio: 3.2
+      anomaly_score: 87.50
+      has_lhb: 1
+      has_yz_seat: 0
+      has_event_today: 1
+      is_one_word: 0
+      l4_anomaly_tag: null
+      anomaly_extra:               # 类型相关,前端可选展示
+        label: "类型涨幅"
+        value: "+8.56%"
+```
+
+#### 验收标准 E5-3-AC
+
+- **Given** Tab 切到"涨幅榜",**When** 列表渲染,**Then** 应只显示 `anomaly_type === 'top_gainer'` 的记录,按 `rank_in_type` 升序
+- **Given** 点击"成交额"排序,**When** 数据重排,**Then** 应客户端排序,不重新发请求
+- **Given** 一只票同时是 `top_gainer` 和 `lhb`,**When** 查看 `top_gainer` Tab,**Then** 卡片底部应有"龙虎榜"徽章
+
+---
+
+## Epic E5-4 · 数据字典与字段映射(L8)
+
+### Story E5-4-S1 · 数据字典
+
+| 字段 | 类型 | 单位 | 含义 | 来源 |
+|---|---|---|---|---|
+| `anomaly_type` | enum | - | `top_gainer`/`top_loser`/`high_turnover`/`volume_spike`/`breakout`/`lhb` | 计算 |
+| `rank_in_type` | int | - | 类型内排名,1 起,值越小越突出 | 计算 |
+| `pct_chg` | decimal(10,6) | 小数 | 涨跌幅,`0.0856 = 8.56%` | `stock_kline_daily` |
+| `volume_ratio` | decimal(10,4) | 倍数 | 量比,无量纲 | `daily_basic` |
+| `anomaly_metrics` | JSON | - | 类型专属指标,见下表 | 计算 |
+| `anomaly_score` | decimal(6,2) | 0-100 | 综合评分 | 计算 |
+| `total_mv` / `circ_mv` | decimal(20,2) | 元 | 总 / 流通市值,**不是万元** | `daily_basic × 10000` |
+
+#### `anomaly_metrics` JSON schema(分类型)
+
+```yaml
+top_gainer:
+  pct_chg_abs:  0.0856     # 涨跌幅绝对值
+  amount_yi:    125.0      # 成交额(亿元,展示用)
+
+high_turnover:
+  turn_avg_20:  0.0123     # 20 日均换手
+  turn_ratio:   4.20       # 当日 / 20 日均
+
+volume_spike:
+  volume_ratio: 5.20
+  pct_chg:      0.0723
+
+breakout:
+  hh_window:    250        # 突破窗口:60 / 120 / 250
+  hh_value:     12.34      # 前期高点价格
+  pct_above_hh: 0.0123     # 当日 high 比前高超出比例
+
+lhb:
+  net_buy_amount: 1.2e8    # 净买入(元)
+  buy_amount:     2.5e8
+  sell_amount:    1.3e8
+  reason:         "日涨幅偏离值达 7%"
+```
+
+### Story E5-4-S2 · 字段映射(给 Antigravity)
+
+> **本章无新 ODS 表,纯计算章节。** 所有数据来源已存在的旧表 + 第 1-4 章新表。
+
+| 旧表 / 新表 | 用途 | 注意 |
+|---|---|---|
+| `stock_kline_daily` | 日线行情 | `code` 不带后缀,需拼接 |
+| `daily_basic` | 估值 + 换手 + 量比 | `turnover_rate` 当前是百分比形式,**入库口径 TBD 待统一** |
+| `stock_basic_info` | 名称、上市日期 | 用于 ST 与新股过滤 |
+| `stock_industry_sw` | 申万一级行业 | 主键 `code`,无后缀 |
+| `stock_sector_cons_ths` | 概念映射 | enrichment 时间复杂度高,建议缓存 |
+| `stock_lhb_daily` | 龙虎榜 | 第 4 章后会接入 `dim_yz_seat` 做游资识别 |
+| `stock_suspensions` | 停牌 | 用于过滤 |
+| `trade_cal` | 交易日历 | 用于上市满 60 日、20 日、250 日窗口计算 |
+| `ads_l4_sentiment` | L4 异象 | 第 3 章交付 |
+| `ads_l6_event_daily` | L6 事件 | 第 6 章交付(本章后半部分) |
+
+---
+
+# 第 6 章 · L6 公告事件 + L9 事件日历
+
+## Epic E6-1 · 新增 ODS 表
+
+**目标:** 5 张新表 + 复用 4 张旧表,覆盖 8 类基本面事件。
+
+### 事件类型全景
+
+| 事件类型 | 主表 | 来源 | 是否新建 |
+|---|---|---|---|
+| 业绩预告 | `stock_performance_forecast` | 旧表(Tushare `forecast`) | 复用 |
+| 业绩快报 | `stock_express` | 旧表 | 复用,**TBD 实际字段需 Antigravity 确认** |
+| 解禁 | `stock_restricted_release` | 旧表(Tushare `share_float`) | 复用 |
+| 增减持 | `ods_event_holdertrade` | Tushare `stk_holdertrade` | **新建** |
+| 分红送转 | `ods_event_dividend` | Tushare `dividend` | **新建** |
+| 回购 | `ods_event_repurchase` | Tushare `repurchase` | **新建** |
+| ST 调整 | `ods_event_st_status` | akshare(交易所公告) | **新建** |
+| 立案 / 监管 | `ods_event_investigation` | akshare(证监会公告) | **新建** |
+
+### Story E6-1-S1 · `ods_event_holdertrade` 增减持
+
+```sql
+-- =====================================================
+-- ods_event_holdertrade · 重要股东增减持(粒度:每条公告记录)
+-- 数据源:Tushare stk_holdertrade
+-- =====================================================
+CREATE TABLE IF NOT EXISTS ods_event_holdertrade (
+  ann_date          DATE         NOT NULL                COMMENT '公告日',
+  ts_code           VARCHAR(16)  NOT NULL                COMMENT '股票代码',
+  holder_name       VARCHAR(128) NOT NULL                COMMENT '股东名',
+  holder_type       VARCHAR(8)                           COMMENT 'C公司/P个人/G高管',
+  in_de             VARCHAR(4)   NOT NULL                COMMENT 'IN增持 / DE减持',
+  change_vol        DECIMAL(20, 2)                       COMMENT '变动股数(股,带正负)',
+  change_ratio      DECIMAL(10, 6)                       COMMENT '占总股本比例,小数',
+  after_share       DECIMAL(20, 2)                       COMMENT '变动后持股(股)',
+  after_ratio       DECIMAL(10, 6)                       COMMENT '变动后占比,小数',
+  avg_price         DECIMAL(16, 4)                       COMMENT '均价(元)',
+  total_share       DECIMAL(20, 2)                       COMMENT '变动时总股本',
+  begin_date        DATE                                 COMMENT '增减持开始日',
+  close_date        DATE                                 COMMENT '增减持结束日',
+  change_amount     DECIMAL(20, 2)                       COMMENT '变动金额(元)= change_vol × avg_price',
+  create_time       DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (ann_date, ts_code, holder_name, in_de),
+  KEY idx_ann_date (ann_date),
+  KEY idx_ts_code (ts_code, ann_date)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='重要股东增减持(ODS)';
+```
+
+> **TBD:** Tushare `stk_holdertrade` 的 `change_vol` 单位为股,但部分接口返回值带正负号、部分用 `in_de` 字段区分,Antigravity 实施时需统一为"`change_vol` 始终为正值,方向看 `in_de`"。
+
+### Story E6-1-S2 · `ods_event_dividend` 分红送转
+
+```sql
+-- =====================================================
+-- ods_event_dividend · 分红送转
+-- 数据源:Tushare dividend
+-- =====================================================
+CREATE TABLE IF NOT EXISTS ods_event_dividend (
+  ts_code         VARCHAR(16) NOT NULL                COMMENT '股票代码',
+  end_date        DATE        NOT NULL                COMMENT '分红年度截止日',
+  ann_date        DATE                                COMMENT '预案公告日',
+  div_proc        VARCHAR(16)                         COMMENT '实施进度:预案/股东大会通过/实施/未通过',
+  stk_div         DECIMAL(10, 6)                      COMMENT '每股送股(股)',
+  stk_bo_rate     DECIMAL(10, 6)                      COMMENT '每股转增(股)',
+  cash_div        DECIMAL(16, 6)                      COMMENT '每股现金分红 · 税前(元)',
+  cash_div_tax    DECIMAL(16, 6)                      COMMENT '每股现金分红 · 税后(元)',
+  record_date     DATE                                COMMENT '股权登记日',
+  ex_date         DATE                                COMMENT '除权除息日',
+  pay_date        DATE                                COMMENT '派息日',
+  div_listdate    DATE                                COMMENT '红股上市日',
+  imp_ann_date    DATE                                COMMENT '实施公告日',
+  base_date       DATE                                COMMENT '基准日',
+  base_share      DECIMAL(20, 2)                      COMMENT '基准股本',
+  total_div_amt   DECIMAL(20, 2)                      COMMENT '分红总额(元)= cash_div × base_share',
+  create_time     DATETIME    NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (ts_code, end_date, div_proc),
+  KEY idx_ann_date (ann_date),
+  KEY idx_ex_date (ex_date)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='分红送转(ODS)';
+```
+
+### Story E6-1-S3 · `ods_event_repurchase` 回购
+
+```sql
+-- =====================================================
+-- ods_event_repurchase · 股份回购
+-- 数据源:Tushare repurchase
+-- =====================================================
+CREATE TABLE IF NOT EXISTS ods_event_repurchase (
+  ts_code        VARCHAR(16) NOT NULL                COMMENT '股票代码',
+  ann_date       DATE        NOT NULL                COMMENT '公告日',
+  end_date       DATE                                COMMENT '截止日',
+  proc_type      VARCHAR(16)                         COMMENT '进度:实施/预案/完成/停止',
+  exp_date       DATE                                COMMENT '过期日',
+  vol            DECIMAL(20, 2)                      COMMENT '回购数量(股)',
+  amount         DECIMAL(20, 2)                      COMMENT '回购金额(元)',
+  high_limit     DECIMAL(16, 4)                      COMMENT '回购价格上限(元)',
+  low_limit      DECIMAL(16, 4)                      COMMENT '回购价格下限(元)',
+  create_time    DATETIME    NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (ts_code, ann_date, proc_type),
+  KEY idx_ann_date (ann_date)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='股份回购(ODS)';
+```
+
+### Story E6-1-S4 · `ods_event_st_status` ST 状态变更
+
+```sql
+-- =====================================================
+-- ods_event_st_status · ST / *ST / 退市风险警示
+-- 数据源:akshare(交易所公告解析)
+-- =====================================================
+CREATE TABLE IF NOT EXISTS ods_event_st_status (
+  ann_date       DATE        NOT NULL                COMMENT '公告日',
+  ts_code        VARCHAR(16) NOT NULL                COMMENT '股票代码',
+  stock_name_old VARCHAR(32)                         COMMENT '变更前股票简称',
+  stock_name_new VARCHAR(32)                         COMMENT '变更后股票简称',
+  st_type        VARCHAR(16) NOT NULL                COMMENT 'ST_ON加帽/ST_OFF摘帽/STAR_ON加星/STAR_OFF摘星/DELIST退市',
+  effective_date DATE                                COMMENT '生效日',
+  reason         VARCHAR(512)                        COMMENT '变更原因',
+  source         VARCHAR(64)                         COMMENT 'SSE/SZSE/BSE',
+  create_time    DATETIME    NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (ann_date, ts_code, st_type),
+  KEY idx_effective_date (effective_date)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='ST 状态变更(ODS)';
+```
+
+> **TBD:** akshare 的接口未必能直接给出"加帽 / 摘帽"的结构化标签,可能需要从公告文本解析。可以让 Antigravity 用规则 + 关键词分类:`('被实施', 'ST') → ST_ON`,`('撤销', 'ST') → ST_OFF`。
+
+### Story E6-1-S5 · `ods_event_investigation` 立案 / 监管
+
+```sql
+-- =====================================================
+-- ods_event_investigation · 立案、警示函、监管措施、处罚
+-- 数据源:akshare 证监会公告 + 交易所通报
+-- =====================================================
+CREATE TABLE IF NOT EXISTS ods_event_investigation (
+  ann_date       DATE        NOT NULL                COMMENT '公告日',
+  ts_code        VARCHAR(16) NOT NULL                COMMENT '股票代码',
+  event_subtype  VARCHAR(32) NOT NULL                COMMENT '子类型:立案调查/警示函/监管措施/纪律处分/行政处罚',
+  target_name    VARCHAR(128)                        COMMENT '当事人:公司/董监高/股东',
+  target_type    VARCHAR(16)                         COMMENT 'COMPANY/PERSON/SHAREHOLDER',
+  description    VARCHAR(1024)                       COMMENT '事由摘要',
+  authority      VARCHAR(64)                         COMMENT '监管主体:CSRC/SSE/SZSE/BSE',
+  source_url     VARCHAR(512)                        COMMENT '原文链接',
+  create_time    DATETIME    NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (ann_date, ts_code, event_subtype, target_name),
+  KEY idx_ann_date (ann_date)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='立案监管处罚(ODS)';
+```
+
+#### 验收标准 E6-1-AC
+
+- **Given** 同一公司同一日有多个不同股东增减持,**When** 入库,**Then** 应有多条记录(主键含 `holder_name`)
+- **Given** 一次回购的"预案 / 实施 / 完成"三阶段,**When** 入库,**Then** 应有 3 条记录(主键含 `proc_type`)
+- **Given** 公司同日加帽 ST 又被立案,**When** 入库到两张表,**Then** 不冲突,事件日表关联时需要做 `UNION`
+
+---
+
+## Epic E6-2 · `ads_l6_event_daily` 当日事件聚合
+
+### Story E6-2-S1 · 表设计
+
+> 作为复盘者,我希望每日事件被规范化为统一结构,以便不同事件类型放在同一个组件渲染。
+
+```sql
+-- =====================================================
+-- ads_l6_event_daily · L6 当日事件聚合
+-- 粒度:每日 × 个股 × 事件类型(一只票当日可有多类事件)
+-- =====================================================
+CREATE TABLE IF NOT EXISTS ads_l6_event_daily (
+  trade_date         DATE         NOT NULL                COMMENT '交易日(=ann_date,用于汇总)',
+  ts_code            VARCHAR(16)  NOT NULL                COMMENT '股票代码',
+  event_type         VARCHAR(20)  NOT NULL                COMMENT '事件大类',
+  event_subtype      VARCHAR(32)                          COMMENT '子类型',
+
+  stock_name         VARCHAR(32),
+  industry_l1        VARCHAR(32),
+  total_mv           DECIMAL(20, 2)                       COMMENT '总市值(元)',
+
+  -- 标准化数值字段(因事件而异)
+  event_value        DECIMAL(20, 4)                       COMMENT '主数值,如金额/股数/比例',
+  event_value_unit   VARCHAR(20)                          COMMENT '单位:元/股/小数比例',
+  event_ratio        DECIMAL(10, 6)                       COMMENT '占比 · 小数(金额/总市值 或 股数/总股本)',
+
+  -- 方向:增持 / 减持,业绩超预期 / 低于,加帽 / 摘帽
+  direction          VARCHAR(8)                           COMMENT 'POS/NEG/NEU',
+
+  -- 重要性
+  importance         VARCHAR(8)   NOT NULL DEFAULT 'mid'  COMMENT 'high/mid/low',
+
+  -- 摘要(给前端展示用)
+  event_summary      VARCHAR(256)                         COMMENT '人类可读摘要',
+
+  -- 原始引用
+  source_table       VARCHAR(64)                          COMMENT '溯源:ods_event_xxx 或旧表',
+  source_pk          VARCHAR(256)                         COMMENT '原表主键 JSON',
+
+  create_time        DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (trade_date, ts_code, event_type, event_subtype),
+  KEY idx_date_type (trade_date, event_type),
+  KEY idx_date_importance (trade_date, importance)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='L6 当日事件聚合';
+```
+
+#### `event_type` 与 `event_subtype` 枚举
+
+| `event_type` | `event_subtype` | `direction` | 说明 |
+|---|---|---|---|
+| `forecast` | `pre_increase` / `pre_decrease` / `loss` / `profit_turn` | POS/NEG/POS | 业绩预告 |
+| `release` | `unrestricted_share` | NEU | 解禁 |
+| `holdertrade` | `increase_company` / `decrease_company` / `increase_exec` / `decrease_exec` | POS/NEG | 增减持 |
+| `dividend` | `cash` / `stock_div` / `transfer` | POS | 分红送转 |
+| `repurchase` | `plan` / `executing` / `completed` | POS | 回购 |
+| `st` | `ST_ON` / `ST_OFF` / `STAR_ON` / `STAR_OFF` / `DELIST` | NEG/POS | ST 调整 |
+| `investigation` | `csrc_filing` / `warning_letter` / `regulatory` / `penalty` | NEG | 立案监管 |
+
+#### `importance` 判定规则
+
+```text
+high:
+  - forecast 净利润变动幅度绝对值 > 50%
+  - holdertrade 单笔变动金额 > 1 亿元 或 占总股本 > 1%
+  - release 解禁市值占总市值 > 10%
+  - investigation 全部
+  - st (ST_ON / DELIST)
+  - repurchase 回购金额 > 1 亿元
+
+mid:
+  - 其他
+
+low:
+  - forecast 净利润变动幅度 < 10%
+  - holdertrade 单笔变动金额 < 100 万
+  - dividend 现金分红 < 100 万
+```
+
+### Story E6-2-S2 · 计算 SQL
+
+> 7 段 INSERT,每段对应一类事件。
+
+#### Task E6-2-S2-T1 · 业绩预告(`forecast`)
+
+```sql
+SET @trade_date := '2026-04-27';
+
+DELETE FROM ads_l6_event_daily
+WHERE trade_date = @trade_date AND event_type = 'forecast';
+
+INSERT INTO ads_l6_event_daily (
+  trade_date, ts_code, event_type, event_subtype,
+  stock_name, industry_l1, total_mv,
+  event_value, event_value_unit, direction, importance,
+  event_summary, source_table, source_pk
+)
+SELECT
+  @trade_date, f.ts_code, 'forecast',
+  CASE
+    WHEN f.type LIKE '%预增%'    THEN 'pre_increase'
+    WHEN f.type LIKE '%预减%'    THEN 'pre_decrease'
+    WHEN f.type LIKE '%首亏%'
+      OR f.type LIKE '%续亏%'
+      OR f.type LIKE '%增亏%'    THEN 'loss'
+    WHEN f.type LIKE '%扭亏%'    THEN 'profit_turn'
+    ELSE 'other'
+  END,
+  b.name, sw.industry_name, db.total_mv * 10000,
+  COALESCE((f.p_change_min + f.p_change_max) / 2, 0) / 100,
+  '小数',
+  CASE
+    WHEN f.type LIKE '%预增%' OR f.type LIKE '%扭亏%' THEN 'POS'
+    WHEN f.type LIKE '%预减%' OR f.type LIKE '%亏%'   THEN 'NEG'
+    ELSE 'NEU'
+  END,
+  CASE
+    WHEN ABS(COALESCE((f.p_change_min + f.p_change_max) / 2, 0)) > 50 THEN 'high'
+    WHEN ABS(COALESCE((f.p_change_min + f.p_change_max) / 2, 0)) > 10 THEN 'mid'
+    ELSE 'low'
+  END,
+  CONCAT(b.name, ' ', f.type, ' 净利润变动 ',
+         ROUND(COALESCE((f.p_change_min + f.p_change_max) / 2, 0), 1), '%'),
+  'stock_performance_forecast',
+  JSON_OBJECT('ts_code', f.ts_code, 'ann_date', f.ann_date, 'end_date', f.end_date)
+FROM stock_performance_forecast f
+JOIN stock_basic_info b   ON b.code = SUBSTRING_INDEX(f.ts_code, '.', 1)
+LEFT JOIN stock_industry_sw sw ON sw.code = b.code
+LEFT JOIN daily_basic db  ON db.ts_code = f.ts_code AND db.trade_date = @trade_date
+WHERE f.ann_date = @trade_date;
+```
+
+#### Task E6-2-S2-T2 · 增减持(`holdertrade`)
+
+```sql
+DELETE FROM ads_l6_event_daily
+WHERE trade_date = @trade_date AND event_type = 'holdertrade';
+
+INSERT INTO ads_l6_event_daily (
+  trade_date, ts_code, event_type, event_subtype,
+  stock_name, industry_l1, total_mv,
+  event_value, event_value_unit, event_ratio,
+  direction, importance,
+  event_summary, source_table, source_pk
+)
+SELECT
+  @trade_date, h.ts_code, 'holdertrade',
+  CASE
+    WHEN h.in_de = 'IN'  AND h.holder_type = 'G' THEN 'increase_exec'
+    WHEN h.in_de = 'IN'                          THEN 'increase_company'
+    WHEN h.in_de = 'DE' AND h.holder_type = 'G' THEN 'decrease_exec'
+    WHEN h.in_de = 'DE'                          THEN 'decrease_company'
+  END,
+  b.name, sw.industry_name, db.total_mv * 10000,
+  ABS(h.change_amount), '元',
+  ABS(h.change_ratio),
+  CASE WHEN h.in_de = 'IN' THEN 'POS' ELSE 'NEG' END,
+  CASE
+    WHEN ABS(h.change_amount) > 1e8 OR ABS(h.change_ratio) > 0.01 THEN 'high'
+    WHEN ABS(h.change_amount) > 1e7                                THEN 'mid'
+    ELSE 'low'
+  END,
+  CONCAT(b.name, ' ',
+         CASE WHEN h.in_de = 'IN' THEN '股东增持' ELSE '股东减持' END,
+         ' ', ROUND(ABS(h.change_amount) / 1e8, 2), ' 亿元'),
+  'ods_event_holdertrade',
+  JSON_OBJECT('ann_date', h.ann_date, 'ts_code', h.ts_code, 'holder', h.holder_name)
+FROM ods_event_holdertrade h
+JOIN stock_basic_info b ON b.code = SUBSTRING_INDEX(h.ts_code, '.', 1)
+LEFT JOIN stock_industry_sw sw ON sw.code = b.code
+LEFT JOIN daily_basic db ON db.ts_code = h.ts_code AND db.trade_date = @trade_date
+WHERE h.ann_date = @trade_date;
+```
+
+#### Task E6-2-S2-T3 · 解禁(`release`)
+
+```sql
+DELETE FROM ads_l6_event_daily
+WHERE trade_date = @trade_date AND event_type = 'release';
+
+-- 解禁特殊:trade_date = float_date(实际解禁日),不是 ann_date
+INSERT INTO ads_l6_event_daily (
+  trade_date, ts_code, event_type, event_subtype,
+  stock_name, industry_l1, total_mv,
+  event_value, event_value_unit, event_ratio,
+  direction, importance,
+  event_summary, source_table, source_pk
+)
+SELECT
+  @trade_date, r.ts_code, 'release', 'unrestricted_share',
+  b.name, sw.industry_name, db.total_mv * 10000,
+  r.float_share * db.close,                     -- 解禁市值 = 股数 × 收盘价
+  '元',
+  r.float_ratio / 100,                          -- 占总股本比例
+  'NEU',
+  CASE
+    WHEN r.float_ratio / 100 > 0.10 THEN 'high'
+    WHEN r.float_ratio / 100 > 0.03 THEN 'mid'
+    ELSE 'low'
+  END,
+  CONCAT(b.name, ' 解禁市值 ',
+         ROUND(r.float_share * db.close / 1e8, 2),
+         ' 亿元,占总股本 ', ROUND(r.float_ratio, 2), '%'),
+  'stock_restricted_release',
+  JSON_OBJECT('ts_code', r.ts_code, 'float_date', r.float_date)
+FROM stock_restricted_release r
+JOIN stock_basic_info b ON b.code = SUBSTRING_INDEX(r.ts_code, '.', 1)
+LEFT JOIN stock_industry_sw sw ON sw.code = b.code
+LEFT JOIN daily_basic db ON db.ts_code = r.ts_code AND db.trade_date = @trade_date
+LEFT JOIN stock_kline_daily k ON k.code = b.code AND k.trade_date = @trade_date
+WHERE r.float_date = @trade_date;
+```
+
+#### Task E6-2-S2-T4 - T7 · 分红 / 回购 / ST / 立案
+
+```sql
+-- =====================================================
+-- T4 · 分红送转(取实施公告 + 除权日两类记录)
+-- =====================================================
+DELETE FROM ads_l6_event_daily
+WHERE trade_date = @trade_date AND event_type = 'dividend';
+
+INSERT INTO ads_l6_event_daily (
+  trade_date, ts_code, event_type, event_subtype,
+  stock_name, industry_l1,
+  event_value, event_value_unit,
+  direction, importance, event_summary, source_table, source_pk
+)
+SELECT
+  @trade_date, d.ts_code, 'dividend',
+  CASE
+    WHEN COALESCE(d.cash_div, 0) > 0 THEN 'cash'
+    WHEN COALESCE(d.stk_div, 0) > 0  THEN 'stock_div'
+    WHEN COALESCE(d.stk_bo_rate, 0) > 0 THEN 'transfer'
+    ELSE 'other'
+  END,
+  b.name, sw.industry_name,
+  COALESCE(d.total_div_amt, 0), '元',
+  'POS',
+  CASE
+    WHEN COALESCE(d.total_div_amt, 0) > 1e9 THEN 'high'
+    WHEN COALESCE(d.total_div_amt, 0) > 1e8 THEN 'mid'
+    ELSE 'low'
+  END,
+  CONCAT(b.name, ' 分红 ', ROUND(COALESCE(d.cash_div, 0), 4),
+         ' 元/股 · 总额 ', ROUND(COALESCE(d.total_div_amt, 0) / 1e8, 2), ' 亿'),
+  'ods_event_dividend',
+  JSON_OBJECT('ts_code', d.ts_code, 'end_date', d.end_date, 'div_proc', d.div_proc)
+FROM ods_event_dividend d
+JOIN stock_basic_info b ON b.code = SUBSTRING_INDEX(d.ts_code, '.', 1)
+LEFT JOIN stock_industry_sw sw ON sw.code = b.code
+WHERE d.imp_ann_date = @trade_date OR d.ex_date = @trade_date;
+
+-- =====================================================
+-- T5 · 回购
+-- =====================================================
+DELETE FROM ads_l6_event_daily
+WHERE trade_date = @trade_date AND event_type = 'repurchase';
+
+INSERT INTO ads_l6_event_daily (
+  trade_date, ts_code, event_type, event_subtype,
+  stock_name, industry_l1,
+  event_value, event_value_unit,
+  direction, importance, event_summary, source_table, source_pk
+)
+SELECT
+  @trade_date, rp.ts_code, 'repurchase',
+  CASE
+    WHEN rp.proc_type LIKE '%预案%' THEN 'plan'
+    WHEN rp.proc_type LIKE '%实施%' THEN 'executing'
+    WHEN rp.proc_type LIKE '%完成%' THEN 'completed'
+    ELSE 'other'
+  END,
+  b.name, sw.industry_name,
+  COALESCE(rp.amount, 0), '元',
+  'POS',
+  CASE
+    WHEN COALESCE(rp.amount, 0) > 1e8 THEN 'high'
+    WHEN COALESCE(rp.amount, 0) > 1e7 THEN 'mid'
+    ELSE 'low'
+  END,
+  CONCAT(b.name, ' 回购 ', rp.proc_type, ' ',
+         ROUND(COALESCE(rp.amount, 0) / 1e8, 2), ' 亿元'),
+  'ods_event_repurchase',
+  JSON_OBJECT('ts_code', rp.ts_code, 'ann_date', rp.ann_date, 'proc_type', rp.proc_type)
+FROM ods_event_repurchase rp
+JOIN stock_basic_info b ON b.code = SUBSTRING_INDEX(rp.ts_code, '.', 1)
+LEFT JOIN stock_industry_sw sw ON sw.code = b.code
+WHERE rp.ann_date = @trade_date;
+
+-- =====================================================
+-- T6 · ST 状态
+-- =====================================================
+DELETE FROM ads_l6_event_daily
+WHERE trade_date = @trade_date AND event_type = 'st';
+
+INSERT INTO ads_l6_event_daily (
+  trade_date, ts_code, event_type, event_subtype,
+  stock_name, industry_l1,
+  direction, importance, event_summary, source_table, source_pk
+)
+SELECT
+  @trade_date, st.ts_code, 'st', st.st_type,
+  b.name, sw.industry_name,
+  CASE
+    WHEN st.st_type IN ('ST_ON', 'STAR_ON', 'DELIST') THEN 'NEG'
+    WHEN st.st_type IN ('ST_OFF', 'STAR_OFF')          THEN 'POS'
+    ELSE 'NEU'
+  END,
+  CASE
+    WHEN st.st_type IN ('ST_ON', 'STAR_ON', 'DELIST') THEN 'high'
+    ELSE 'mid'
+  END,
+  CONCAT(b.name, ' ',
+         CASE st.st_type
+           WHEN 'ST_ON'    THEN '被实施 ST'
+           WHEN 'ST_OFF'   THEN '撤销 ST'
+           WHEN 'STAR_ON'  THEN '被实施 *ST'
+           WHEN 'STAR_OFF' THEN '撤销 *ST'
+           WHEN 'DELIST'   THEN '退市'
+           ELSE st.st_type
+         END,
+         CASE WHEN st.reason IS NOT NULL THEN CONCAT(' · ', LEFT(st.reason, 60)) ELSE '' END),
+  'ods_event_st_status',
+  JSON_OBJECT('ts_code', st.ts_code, 'ann_date', st.ann_date, 'st_type', st.st_type)
+FROM ods_event_st_status st
+JOIN stock_basic_info b ON b.code = SUBSTRING_INDEX(st.ts_code, '.', 1)
+LEFT JOIN stock_industry_sw sw ON sw.code = b.code
+WHERE st.ann_date = @trade_date;
+
+-- =====================================================
+-- T7 · 立案 / 监管
+-- =====================================================
+DELETE FROM ads_l6_event_daily
+WHERE trade_date = @trade_date AND event_type = 'investigation';
+
+INSERT INTO ads_l6_event_daily (
+  trade_date, ts_code, event_type, event_subtype,
+  stock_name, industry_l1,
+  direction, importance, event_summary, source_table, source_pk
+)
+SELECT
+  @trade_date, iv.ts_code, 'investigation', iv.event_subtype,
+  b.name, sw.industry_name,
+  'NEG', 'high',
+  CONCAT(b.name, ' ', iv.event_subtype, ' · ',
+         iv.target_name, ' · ', LEFT(iv.description, 80)),
+  'ods_event_investigation',
+  JSON_OBJECT('ann_date', iv.ann_date, 'ts_code', iv.ts_code,
+              'subtype', iv.event_subtype, 'target', iv.target_name)
+FROM ods_event_investigation iv
+JOIN stock_basic_info b ON b.code = SUBSTRING_INDEX(iv.ts_code, '.', 1)
+LEFT JOIN stock_industry_sw sw ON sw.code = b.code
+WHERE iv.ann_date = @trade_date;
+```
+
+#### 验收标准 E6-2-AC
+
+- **Given** 当日 `stock_performance_forecast` 有 50 条新增,**When** 计算执行,**Then** `ads_l6_event_daily` 应有 50 条 `event_type='forecast'` 记录
+- **Given** 一公司当日同时披露业绩预告 + 增持,**When** 查询,**Then** 应有 2 条 `event_type` 不同的记录
+- **Given** 解禁市值占总市值 > 10%,**When** 查询,**Then** `importance` 应为 `high`
+
+---
+
+## Epic E6-3 · `ads_l9_calendar_upcoming` 事件日历
+
+### Story E6-3-S1 · 表设计
+
+> 作为复盘者,我希望能看未来 30 个交易日的关键日历事件,以便提前布局。
+
+```sql
+-- =====================================================
+-- ads_l9_calendar_upcoming · 未来 N 日事件日历
+-- 粒度:每个未来事件一条,最多覆盖未来 30 个交易日
+-- 每日重算(全表 TRUNCATE → INSERT)
+-- =====================================================
+CREATE TABLE IF NOT EXISTS ads_l9_calendar_upcoming (
+  event_date         DATE         NOT NULL                COMMENT '事件发生日(未来)',
+  event_type         VARCHAR(20)  NOT NULL                COMMENT '类型',
+  event_subtype      VARCHAR(32)                          COMMENT '子类型',
+  ts_code            VARCHAR(16)  NOT NULL                COMMENT '股票代码',
+
+  stock_name         VARCHAR(32),
+  industry_l1        VARCHAR(32),
+
+  event_summary      VARCHAR(256)                         COMMENT '人类可读摘要',
+  importance         VARCHAR(8)   NOT NULL DEFAULT 'mid'  COMMENT 'high/mid/low',
+
+  -- 数值字段
+  event_value        DECIMAL(20, 4)                       COMMENT '主数值',
+  event_value_unit   VARCHAR(20),
+  event_ratio        DECIMAL(10, 6),
+
+  -- 时间维度
+  days_to_event      INT                                  COMMENT '距今交易日数,0=今日',
+
+  source_table       VARCHAR(64),
+  source_pk          VARCHAR(256),
+
+  snapshot_date      DATE         NOT NULL                COMMENT '快照日(每日重算)',
+  create_time        DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+  PRIMARY KEY (event_date, event_type, ts_code, snapshot_date),
+  KEY idx_snap_date (snapshot_date, event_date),
+  KEY idx_importance (snapshot_date, importance)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='L9 未来事件日历';
+```
+
+### Story E6-3-S2 · 计算 SQL
+
+> 4 类前瞻事件:解禁、分红除权、业绩披露窗口、回购到期。
+
+```sql
+-- =====================================================
+-- 计算未来 30 个交易日的窗口边界
+-- =====================================================
+SET @snapshot_date := '2026-04-27';
+SET @date_30_after := (
+  SELECT MAX(cal_date) FROM (
+    SELECT cal_date FROM trade_cal
+    WHERE cal_date > @snapshot_date AND is_open = 1
+    ORDER BY cal_date ASC LIMIT 30
+  ) t
+);
+
+DELETE FROM ads_l9_calendar_upcoming
+WHERE snapshot_date = @snapshot_date;
+
+-- =====================================================
+-- 1) 解禁日历
+-- =====================================================
+INSERT INTO ads_l9_calendar_upcoming (
+  event_date, event_type, event_subtype, ts_code,
+  stock_name, industry_l1, event_summary, importance,
+  event_value, event_value_unit, event_ratio,
+  days_to_event, source_table, source_pk, snapshot_date
+)
+SELECT
+  r.float_date, 'release', 'unrestricted_share', r.ts_code,
+  b.name, sw.industry_name,
+  CONCAT(b.name, ' 解禁 ',
+         ROUND(r.float_share * db.close / 1e8, 2), ' 亿元 · 占 ',
+         ROUND(r.float_ratio, 2), '%'),
+  CASE
+    WHEN r.float_ratio / 100 > 0.10 THEN 'high'
+    WHEN r.float_ratio / 100 > 0.03 THEN 'mid'
+    ELSE 'low'
+  END,
+  r.float_share * db.close, '元', r.float_ratio / 100,
+  (SELECT COUNT(*) FROM trade_cal
+   WHERE cal_date BETWEEN @snapshot_date AND r.float_date AND is_open = 1) - 1,
+  'stock_restricted_release',
+  JSON_OBJECT('ts_code', r.ts_code, 'float_date', r.float_date),
+  @snapshot_date
+FROM stock_restricted_release r
+JOIN stock_basic_info b ON b.code = SUBSTRING_INDEX(r.ts_code, '.', 1)
+LEFT JOIN stock_industry_sw sw ON sw.code = b.code
+LEFT JOIN daily_basic db ON db.ts_code = r.ts_code AND db.trade_date = @snapshot_date
+WHERE r.float_date BETWEEN @snapshot_date AND @date_30_after;
+
+-- =====================================================
+-- 2) 除权除息日历
+-- =====================================================
+INSERT INTO ads_l9_calendar_upcoming (
+  event_date, event_type, event_subtype, ts_code,
+  stock_name, industry_l1, event_summary, importance,
+  event_value, event_value_unit, days_to_event,
+  source_table, source_pk, snapshot_date
+)
+SELECT
+  d.ex_date, 'dividend', 'ex_date', d.ts_code,
+  b.name, sw.industry_name,
+  CONCAT(b.name, ' 除权除息 · 每股 ',
+         ROUND(COALESCE(d.cash_div, 0), 4), ' 元'),
+  CASE
+    WHEN COALESCE(d.total_div_amt, 0) > 1e9 THEN 'high'
+    WHEN COALESCE(d.total_div_amt, 0) > 1e8 THEN 'mid'
+    ELSE 'low'
+  END,
+  COALESCE(d.total_div_amt, 0), '元',
+  (SELECT COUNT(*) FROM trade_cal
+   WHERE cal_date BETWEEN @snapshot_date AND d.ex_date AND is_open = 1) - 1,
+  'ods_event_dividend',
+  JSON_OBJECT('ts_code', d.ts_code, 'end_date', d.end_date),
+  @snapshot_date
+FROM ods_event_dividend d
+JOIN stock_basic_info b ON b.code = SUBSTRING_INDEX(d.ts_code, '.', 1)
+LEFT JOIN stock_industry_sw sw ON sw.code = b.code
+WHERE d.ex_date BETWEEN @snapshot_date AND @date_30_after;
+
+-- =====================================================
+-- 3) 业绩披露窗口(规则化日历,不依赖明确公告)
+-- 季报披露窗口固定:
+--   1Q 4-30 / 中报 8-31 / 3Q 10-31 / 年报 4-30
+-- 我们不到票级,只产出"市场级"提醒,ts_code 标识用 'MARKET'
+-- =====================================================
+INSERT INTO ads_l9_calendar_upcoming (
+  event_date, event_type, event_subtype, ts_code,
+  stock_name, industry_l1, event_summary, importance,
+  days_to_event, source_table, snapshot_date
+)
+SELECT
+  cal.cal_date,
+  'disclosure',
+  CASE
+    WHEN MONTH(cal.cal_date) = 4  AND DAY(cal.cal_date) = 30 THEN 'q1_deadline'
+    WHEN MONTH(cal.cal_date) = 8  AND DAY(cal.cal_date) = 31 THEN 'h1_deadline'
+    WHEN MONTH(cal.cal_date) = 10 AND DAY(cal.cal_date) = 31 THEN 'q3_deadline'
+  END,
+  'MARKET', '全市场', NULL,
+  CASE
+    WHEN MONTH(cal.cal_date) = 4 THEN '一季报披露截止 · 同时年报截止'
+    WHEN MONTH(cal.cal_date) = 8 THEN '中报披露截止'
+    WHEN MONTH(cal.cal_date) = 10 THEN '三季报披露截止'
+  END,
+  'high',
+  (SELECT COUNT(*) FROM trade_cal
+   WHERE cal_date BETWEEN @snapshot_date AND cal.cal_date AND is_open = 1) - 1,
+  'trade_cal',
+  @snapshot_date
+FROM trade_cal cal
+WHERE cal.cal_date BETWEEN @snapshot_date AND @date_30_after
+  AND cal.is_open = 1
+  AND (
+    (MONTH(cal.cal_date) = 4  AND DAY(cal.cal_date) = 30) OR
+    (MONTH(cal.cal_date) = 8  AND DAY(cal.cal_date) = 31) OR
+    (MONTH(cal.cal_date) = 10 AND DAY(cal.cal_date) = 31)
+  );
+
+-- =====================================================
+-- 4) 回购到期(exp_date 在窗口内的)
+-- =====================================================
+INSERT INTO ads_l9_calendar_upcoming (
+  event_date, event_type, event_subtype, ts_code,
+  stock_name, industry_l1, event_summary, importance,
+  event_value, event_value_unit, days_to_event,
+  source_table, source_pk, snapshot_date
+)
+SELECT
+  rp.exp_date, 'repurchase', 'expire', rp.ts_code,
+  b.name, sw.industry_name,
+  CONCAT(b.name, ' 回购方案到期 · 计划 ',
+         ROUND(COALESCE(rp.amount, 0) / 1e8, 2), ' 亿元'),
+  'mid',
+  COALESCE(rp.amount, 0), '元',
+  (SELECT COUNT(*) FROM trade_cal
+   WHERE cal_date BETWEEN @snapshot_date AND rp.exp_date AND is_open = 1) - 1,
+  'ods_event_repurchase',
+  JSON_OBJECT('ts_code', rp.ts_code, 'ann_date', rp.ann_date),
+  @snapshot_date
+FROM ods_event_repurchase rp
+JOIN stock_basic_info b ON b.code = SUBSTRING_INDEX(rp.ts_code, '.', 1)
+LEFT JOIN stock_industry_sw sw ON sw.code = b.code
+WHERE rp.exp_date BETWEEN @snapshot_date AND @date_30_after
+  AND rp.proc_type LIKE '%实施%';
+```
+
+#### 验收标准 E6-3-AC
+
+- **Given** 今日是周五,**When** 查未来 30 个交易日,**Then** `event_date` 应只落在交易日上(除业绩披露截止日外)
+- **Given** 同一只票在窗口内有解禁也有分红,**When** 查询,**Then** 应有 2 条记录
+- **Given** 一只票在 5 个交易日后有解禁,**When** 查询其 `days_to_event`,**Then** 应为 5
+
+---
+
+## Epic E6-4 · 微信小程序前端
+
+### Story E6-4-S1 · 事件日历主页 wxml
+
+> 作为复盘者,我希望事件分两个 Tab:今日事件(L6)和未来日历(L9)。
+
+#### `pages/event/index.wxml`
+
+```xml
+<view class="page-bg">
+  <view class="summary-bar">
+    <view class="summary-side-bar"></view>
+    <view class="summary-cn">事件与日历</view>
+    <view class="summary-en">L6 · L9 · EVENT & CALENDAR</view>
+    <view class="summary-date mono">{{summary.snapshot_date}}</view>
+  </view>
+
+  <!-- 主 Tab -->
+  <view class="tab-bar">
+    <view class="tab-item {{currentMain === 'today' ? 'active' : ''}}"
+          bindtap="onMainTap" data-key="today">
+      <text class="tab-cn">今日事件</text>
+      <text class="tab-count mono">{{summary.today_count}}</text>
+    </view>
+    <view class="tab-item {{currentMain === 'calendar' ? 'active' : ''}}"
+          bindtap="onMainTap" data-key="calendar">
+      <text class="tab-cn">未来日历</text>
+      <text class="tab-count mono">{{summary.upcoming_count}}</text>
+    </view>
+  </view>
+
+  <!-- 子筛选(today 模式) -->
+  <view class="filter-bar" wx:if="{{currentMain === 'today'}}">
+    <view class="filter-chip {{filter === 'all' ? 'active' : ''}}"
+          bindtap="onFilterTap" data-key="all">全部</view>
+    <view class="filter-chip {{filter === 'high' ? 'active' : ''}}"
+          bindtap="onFilterTap" data-key="high">仅高重要性</view>
+    <view class="filter-chip filter-pos {{filter === 'pos' ? 'active' : ''}}"
+          bindtap="onFilterTap" data-key="pos">利好</view>
+    <view class="filter-chip filter-neg {{filter === 'neg' ? 'active' : ''}}"
+          bindtap="onFilterTap" data-key="neg">利空</view>
+  </view>
+
+  <!-- 今日事件列表 -->
+  <view wx:if="{{currentMain === 'today'}}" class="event-list">
+    <view wx:for="{{todayEvents}}" wx:key="*this" class="card">
+      <view class="card-side-bar
+        {{item.direction === 'POS' ? 'side-pos' : ''}}
+        {{item.direction === 'NEG' ? 'side-neg' : ''}}"></view>
+      <view class="card-row-1">
+        <view class="event-type-tag tag-{{item.event_type}}">
+          {{eventTypeLabel[item.event_type]}}
+        </view>
+        <view class="event-importance importance-{{item.importance}}"
+              wx:if="{{item.importance === 'high'}}">重要</view>
+      </view>
+      <view class="event-summary">{{item.event_summary}}</view>
+      <view class="card-row-meta">
+        <text class="meta-stock">{{item.stock_name}}</text>
+        <text class="meta-code mono">{{item.ts_code}}</text>
+        <text class="meta-industry">{{item.industry_l1}}</text>
+      </view>
+      <view class="card-row-value" wx:if="{{item.event_value_display}}">
+        <text class="value-label">金额</text>
+        <text class="value-num mono">{{item.event_value_display}}</text>
+        <text class="value-ratio mono" wx:if="{{item.event_ratio_display}}">
+          · 占比 {{item.event_ratio_display}}
+        </text>
+      </view>
+    </view>
+  </view>
+
+  <!-- 未来日历(时间轴样式) -->
+  <view wx:if="{{currentMain === 'calendar'}}" class="calendar-list">
+    <view wx:for="{{calendarGrouped}}" wx:for-item="dayGroup" wx:key="event_date"
+          class="day-group">
+      <view class="day-header">
+        <text class="day-date mono">{{dayGroup.date_display}}</text>
+        <text class="day-relative">T+{{dayGroup.days_to_event}}</text>
+        <text class="day-count">共 {{dayGroup.events.length}} 条</text>
+      </view>
+      <view wx:for="{{dayGroup.events}}" wx:for-item="evt" wx:key="*this"
+            class="day-event">
+        <view class="day-event-bullet importance-{{evt.importance}}"></view>
+        <view class="day-event-content">
+          <view class="day-event-summary">{{evt.event_summary}}</view>
+          <view class="day-event-meta mono">
+            {{evt.ts_code}} · {{evt.industry_l1}}
+          </view>
+        </view>
+      </view>
+    </view>
+  </view>
+</view>
+```
+
+### Story E6-4-S2 · 事件日历主页 wxss
+
+```css
+/* pages/event/index.wxss */
+@import "/styles/tokens.wxss";    /* 复用全局变量 */
+
+.page-bg { background: var(--bg); min-height: 100vh; }
+
+/* === Summary / Tab / Filter 复用 anomaly 页样式略 === */
+
+/* 筛选 chip */
+.filter-bar {
+  display: flex; padding: 16rpx 24rpx;
+  gap: 12rpx; background: var(--bg);
+  border-bottom: 1rpx solid var(--hair);
+}
+.filter-chip {
+  font-size: var(--fs-xs);
+  padding: 8rpx 20rpx;
+  border: 1rpx solid var(--hair);
+  border-radius: 2rpx;
+  color: var(--ink-mute);
+}
+.filter-chip.active {
+  border-color: var(--amber);
+  color: var(--amber);
+}
+.filter-chip.filter-pos.active { border-color: var(--up); color: var(--up); }
+.filter-chip.filter-neg.active { border-color: var(--down); color: var(--down); }
+
+/* 卡片侧边色条:利好红 / 利空绿 */
+.card-side-bar.side-pos { background: var(--up); }
+.card-side-bar.side-neg { background: var(--down); }
+
+/* 事件类型标签 */
+.event-type-tag {
+  display: inline-block;
+  font-size: 20rpx;
+  padding: 2rpx 12rpx;
+  border-radius: 2rpx;
+  letter-spacing: 1rpx;
+  margin-right: 8rpx;
+}
+.tag-forecast      { background: var(--neutral); color: #fff; }
+.tag-holdertrade   { background: var(--amber); color: #000; }
+.tag-release       { background: var(--alert); color: #fff; }
+.tag-dividend      { background: var(--strong); color: #fff; }
+.tag-repurchase    { background: var(--up); color: #fff; }
+.tag-st            { background: var(--weak); color: #fff; }
+.tag-investigation { background: var(--weak); color: #fff; }
+.tag-disclosure    { background: var(--ink-dim); color: #000; }
+
+/* 重要性 */
+.event-importance {
+  display: inline-block; font-size: 20rpx;
+  padding: 2rpx 8rpx; border-radius: 2rpx;
+  letter-spacing: 1rpx;
+}
+.importance-high { background: var(--up); color: #fff; }
+
+/* 事件摘要 */
+.event-summary {
+  font-size: 30rpx; color: var(--ink);
+  line-height: 1.5;
+  margin: 12rpx 0;
+}
+
+.card-row-meta {
+  display: flex; align-items: center;
+  font-size: var(--fs-xs); color: var(--ink-mute);
+  gap: 12rpx;
+  margin-top: 8rpx;
+}
+.meta-code { color: var(--ink-dim); }
+.meta-industry {
+  border-left: 1rpx solid var(--hair);
+  padding-left: 12rpx;
+}
+
+.card-row-value {
+  display: flex; align-items: baseline;
+  margin-top: 12rpx; padding-top: 12rpx;
+  border-top: 1rpx solid var(--hair);
+}
+.value-label { font-size: var(--fs-xs); color: var(--ink-mute); margin-right: 12rpx; }
+.value-num { font-size: 32rpx; color: var(--amber-bright); }
+.value-ratio { font-size: var(--fs-xs); color: var(--ink-dim); margin-left: 8rpx; }
+
+/* === 时间轴 === */
+.day-group {
+  background: var(--bg-card);
+  margin: var(--gap-md) 0 0;
+  padding: var(--gap-lg);
+  border-left: 4rpx solid var(--amber);
+}
+.day-header {
+  display: flex; align-items: baseline; gap: 16rpx;
+  padding-bottom: 12rpx;
+  border-bottom: 1rpx solid var(--hair);
+  margin-bottom: 16rpx;
+}
+.day-date { font-size: 32rpx; color: var(--amber-bright); letter-spacing: 1rpx; }
+.day-relative { font-size: var(--fs-xs); color: var(--ink-mute); }
+.day-count {
+  font-size: var(--fs-xs); color: var(--ink-mute);
+  margin-left: auto;
+}
+
+.day-event {
+  display: flex; align-items: flex-start;
+  padding: 12rpx 0;
+  border-bottom: 1rpx solid var(--hair);
+}
+.day-event:last-child { border-bottom: none; }
+.day-event-bullet {
+  width: 12rpx; height: 12rpx;
+  border-radius: 50%;
+  margin-top: 12rpx; margin-right: 16rpx;
+  flex-shrink: 0;
+}
+.day-event-bullet.importance-high {
+  background: var(--up); box-shadow: 0 0 8rpx var(--up);
+}
+.day-event-bullet.importance-mid { background: var(--neutral); }
+.day-event-bullet.importance-low { background: var(--ink-mute); }
+
+.day-event-content { flex: 1; }
+.day-event-summary { font-size: var(--fs-md); color: var(--ink); }
+.day-event-meta { font-size: var(--fs-xs); color: var(--ink-mute); margin-top: 4rpx; }
+```
+
+### Story E6-4-S3 · 数据接口契约
+
+```yaml
+# 接口 1 · 今日事件
+endpoint: GET /api/v1/event/today
+params:
+  trade_date: "2026-04-27"
+  event_types: []                  # 可选筛选
+  importance: "high"               # 可选 high/mid/low
+  direction: "POS"                 # 可选 POS/NEG
+response:
+  trade_date: "2026-04-27"
+  summary:
+    total_count: 124
+    by_type: { forecast: 30, holdertrade: 25, ... }
+    by_importance: { high: 18, mid: 60, low: 46 }
+  events:
+    - ts_code: "600519.SH"
+      stock_name: "贵州茅台"
+      event_type: "holdertrade"
+      event_subtype: "increase_company"
+      industry_l1: "食品饮料"
+      direction: "POS"
+      importance: "high"
+      event_summary: "贵州茅台 股东增持 1.20 亿元"
+      event_value: 120000000
+      event_value_display: "1.20亿"
+      event_ratio: 0.0012
+      event_ratio_display: "0.12%"
+
+# 接口 2 · 未来日历
+endpoint: GET /api/v1/event/calendar
+params:
+  snapshot_date: "2026-04-27"
+  days: 30
+response:
+  snapshot_date: "2026-04-27"
+  total_count: 280
+  by_date:
+    - event_date: "2026-04-28"
+      date_display: "04-28 周二"
+      days_to_event: 1
+      events:
+        - ts_code: "002594.SZ"
+          stock_name: "比亚迪"
+          event_type: "release"
+          industry_l1: "汽车"
+          importance: "high"
+          event_summary: "比亚迪 解禁 88.50 亿元 · 占 4.20%"
+        # ...
+```
+
+#### 验收标准 E6-4-AC
+
+- **Given** 切到"未来日历",**When** 列表渲染,**Then** 应按 `event_date` 升序分组,T+0 在最上
+- **Given** 筛选"利好",**When** 列表更新,**Then** 应只剩 `direction === 'POS'` 的记录
+- **Given** 重要性 high 的事件,**When** 渲染,**Then** 卡片左侧色条应是利好红 / 利空绿(而非默认金色)
+
+---
+
+## Epic E6-5 · 数据字典与字段映射(L6 / L9)
+
+### Story E6-5-S1 · 数据字典
+
+| 字段 | 类型 | 单位 | 含义 |
+|---|---|---|---|
+| `event_type` | enum | - | 见上文 7 类 + L9 增 `disclosure` |
+| `direction` | enum | - | `POS`/`NEG`/`NEU` |
+| `importance` | enum | - | `high`/`mid`/`low` |
+| `event_value` | decimal(20,4) | 见 `event_value_unit` | 主数值,金额时为元 |
+| `event_ratio` | decimal(10,6) | 小数 | 占总市值 / 占总股本比例 |
+| `days_to_event` | int | 交易日 | L9 字段,T+0 = 0 |
+| `source_pk` | JSON | - | 原表主键,用于回溯 |
+
+### Story E6-5-S2 · 字段映射给 Antigravity
+
+#### `ods_event_holdertrade` ← Tushare `stk_holdertrade`
+
+```yaml
+api: pro.stk_holdertrade
+freq: daily
+增量字段: ann_date
+回补深度: 5 年
+字段映射:
+  ts_code:        ts_code
+  ann_date:       ann_date         # YYYYMMDD → DATE
+  holder_name:    holder_name
+  holder_type:    holder_type      # C/P/G
+  in_de:          in_de            # IN/DE
+  change_vol:     change_vol       # 股,Tushare 已是数值
+  change_ratio:   change_ratio / 100   # Tushare 是百分比 → 入库小数
+  after_share:    after_share
+  after_ratio:    after_ratio / 100
+  avg_price:      avg_price        # 元
+  total_share:    total_share
+  begin_date:     begin_date
+  close_date:     close_date
+  change_amount:  change_vol * avg_price   # 计算字段
+```
+
+#### `ods_event_dividend` ← Tushare `dividend`
+
+```yaml
+api: pro.dividend
+freq: daily
+增量字段: ann_date / imp_ann_date
+回补深度: 10 年
+字段映射:
+  ts_code:        ts_code
+  end_date:       end_date         # 分红年度截止日
+  ann_date:       ann_date
+  div_proc:       div_proc
+  stk_div:        stk_div          # 每股送股(股)
+  stk_bo_rate:    stk_bo_rate      # 每股转增(股)
+  cash_div:       cash_div         # 每股现金(税前,元)
+  cash_div_tax:   cash_div_tax     # 税后
+  record_date:    record_date
+  ex_date:        ex_date
+  pay_date:       pay_date
+  div_listdate:   div_listdate
+  imp_ann_date:   imp_ann_date
+  base_date:      base_date
+  base_share:     base_share
+  total_div_amt:  cash_div * base_share   # 计算字段
+注意:
+  - Tushare 同一 (ts_code, end_date) 因 div_proc 不同会有多行
+  - cash_div 在仅送股时为 0,不要按 NULL 处理
+```
+
+#### `ods_event_repurchase` ← Tushare `repurchase`
+
+```yaml
+api: pro.repurchase
+freq: daily
+增量字段: ann_date
+回补深度: 5 年
+字段映射:
+  ts_code:    ts_code
+  ann_date:   ann_date
+  end_date:   end_date
+  proc_type:  proc_type
+  exp_date:   exp_date
+  vol:        vol             # 股
+  amount:     amount          # 元
+  high_limit: high_limit
+  low_limit:  low_limit
+```
+
+#### `ods_event_st_status` ← akshare 公告解析
+
+```yaml
+来源:
+  - SSE: stock_zh_a_st_em / 交易所风险警示公告
+  - SZSE: 同上
+  - BSE: 北交所公告
+  - 备选:akshare.stock_zh_a_st_em(每日全市场 ST 列表,做差分得到状态变更)
+
+实施策略(推荐):
+  1. 每日拉取全市场 ST/*ST 名单
+  2. 与昨日名单做差:
+     - 今日有、昨日无 → ST_ON / STAR_ON
+     - 今日无、昨日有 → ST_OFF / STAR_OFF
+  3. 退市单独从交易所退市公告抓
+  4. reason 字段从公告标题正则提取(无需全文 NLP)
+
+字段映射:
+  ann_date:        当前差分日
+  ts_code:         代码 + 后缀
+  stock_name_old:  从昨日快照取
+  stock_name_new:  从今日快照取
+  st_type:         由差分逻辑判定
+  effective_date:  从公告解析,无则与 ann_date 同
+  reason:          公告标题
+  source:          SSE / SZSE / BSE
+```
+
+> **TBD:** akshare 接口稳定性 + 退市分类粒度待 Antigravity 实测。
+
+#### `ods_event_investigation` ← akshare 证监会 + 交易所
+
+```yaml
+来源:
+  - 证监会:akshare 处罚 / 警示函接口(具体接口名待确认)
+  - 交易所:纪律处分公告
+  - 公司公告:T+0 公司被立案的自身公告
+
+字段映射:
+  ann_date:       公告日
+  ts_code:        代码 + 后缀
+  event_subtype:
+    - csrc_filing       立案调查
+    - warning_letter    警示函
+    - regulatory        监管措施
+    - penalty           行政处罚 / 纪律处分
+  target_name:    当事人姓名 / 公司名
+  target_type:    COMPANY / PERSON / SHAREHOLDER
+  description:    事由摘要(取公告前 500 字)
+  authority:      CSRC / SSE / SZSE / BSE
+  source_url:     公告原文链接
+注意:
+  - 立案调查可能针对的是控股股东而非上市公司本身,target_type 必须明确
+  - description 截取规则要避免泄露太长正文(版权)
+```
+
+#### 复用旧表(无需 Antigravity 新增)
+
+```yaml
+stock_performance_forecast:
+  现状:已有数据,Antigravity 维护
+  注意事项:
+    - p_change_min / p_change_max 单位是百分比(整数),L6 计算时不再 /100,直接保留
+    - type 字段中文枚举:预增/预减/续盈/续亏/首亏/扭亏/略增/略减/不确定
+    - 部分公司年报披露同时有快报和预告,业务上同等处理
+
+stock_restricted_release:
+  现状:已有数据
+  注意事项:
+    - float_share 单位是股(非万股),与 Tushare share_float 一致
+    - float_ratio 单位是百分比(整数),L6/L9 计算时 /100 转小数
+```
+
+#### 验收标准 E6-5-AC
+
+- **Given** Antigravity 拉取一周 `stk_holdertrade`,**When** 入库,**Then** `change_ratio` 应为小数(0.0123 而非 1.23)
+- **Given** 一只票一份分红预案 + 实施 + 完成,**When** 入库,**Then** 应有 3 行,主键 `(ts_code, end_date, div_proc)` 不冲突
+- **Given** ST 状态差分实现,**When** 某只票连续 5 日都是 ST,**Then** 仅在第 1 日产生 ST_ON 记录,后续 4 日无变更
+
+---
+
+# 文档尾部
+
+## 技术依赖
+
+| 依赖项 | 状态 | 备注 |
+|---|---|---|
+| 第 1 章 `ads_l1_market_overview` | ✅ 已交付 | L8 评分使用市场背景(可选) |
+| 第 2 章 `ads_l2_industry_daily` | ✅ 已交付 | L8 行业 enrichment |
+| 第 3 章 `ads_l4_sentiment` | ⏳ 同批次或前置 | L8 异象标签依赖 |
+| 第 4 章 `dim_yz_seat` | ⏳ 同批次或前置 | L8 游资识别依赖,缺失时 `has_yz_seat = 0` 不报错 |
+| `stock_lhb_daily` | ✅ 已存在 | L8 / L4 共用 |
+| `stock_performance_forecast` | ✅ 已存在 | L6 复用 |
+| `stock_restricted_release` | ✅ 已存在 | L6 / L9 复用 |
+| `trade_cal` | ✅ 已存在 | L8 / L9 计算窗口必需 |
+
+## 风险与避坑
+
+1. **MySQL 5.7 性能**:`tmp_l8_window` 用条件聚合替代窗口函数,在全 A 5933 只 × 250 日上查询时间在 30s 量级。**建议**:Antigravity 维护 `dim_stock_window_extreme`(每日增量 N 行,扫描全部历史一次),L8 计算时直接 JOIN,延迟可降到秒级。
+
+2. **`change_ratio` 单位陷阱**:Tushare 多个事件接口的"比例"字段单位不统一,有时是百分比有时是小数。本章 ODS 层统一以**小数**入库,采集脚本必须显式 `/100`,否则 L6 重要性判定会全错。
+
+3. **解禁市值快照价**:`ads_l9_calendar_upcoming` 解禁市值用 `snapshot_date` 收盘价估算,实际解禁日股价会变。展示时建议标注"按 04-27 价测算",前端文案需要带这个免责说明。
+
+4. **ST 状态差分跳变**:差分逻辑遇到周末 / 长假后,可能把"假期前已 ST"识别为"假期后新 ST"。修复方法:差分前先做 `name 包含 ST` 的全表对照,只对真正变化的票打 `st_type`。
+
+5. **业绩披露窗口的市场级提醒**:`ts_code = 'MARKET'` 是占位符,前端展示时要做特殊处理(不显示股票代码,文案上挪到日历分组的 day-header 里更合适)。**TBD:** 是否单独建一张 `ads_l9_calendar_market` 区隔个股事件与市场事件,实施时再讨论。
+
+6. **公告事件的"双面性"**:大额减持有时是"利好出尽"或"机构调仓"而非纯利空,direction 是机械判定,前端不要用太重的视觉(色条粗、字体大、emoji)误导用户。当前用细色条 + 文案是相对克制的方案。
+
+7. **L8 评分的 Min-Max 归一**:涨停日 `pct_chg` 上限受限(主板 10%、创业板科创板 20%、ST 5%、北交所 30%),不同板块的票评分会不可比。**待优化:** 改为分板块归一。本章不实现,先用统一公式。
+
+## 里程碑(给 Antigravity 排期参考)
+
+| 里程碑 | 内容 | 预计耗时 |
+|---|---|---|
+| M1 | 5 张新 ODS 表建表 + Tushare 接入(holdertrade / dividend / repurchase) | 1 d |
+| M2 | akshare 接入(ST 差分 + investigation 公告解析) | 2 d |
+| M3 | 历史回补:5 年 holdertrade / repurchase,10 年 dividend | 1 d |
+| M4 | L6 / L8 / L9 计算 SQL 部署 + 调度接入 | 1 d |
+| M5 | 小程序两屏前端联调 | 2 d |
+| M6 | 全链路灰度 1 周 + 校对 | 1 w |
+
+## 度量指标
+
+- **数据完整性**:`ads_l6_event_daily` 当日记录数 vs Tushare 当日 `holdertrade + repurchase + dividend` 记录数和,差异率 < 5%
+- **L9 命中率**:实际 T+1 日发生的解禁事件,提前在 L9 中出现的比例 ≥ 99%
+- **L8 评分稳定性**:同一只票在两次重算之间评分波动 < 5(无数据漂移)
+- **响应延迟**:小程序接口 P99 < 800ms
+
+## 收尾备忘
+
+- 第 5、6 章交付完成后,异动池与事件日历的核心闭环可用
+- 第 7 章是最后一章:跨市场 + 综述 APP,把所有 L1-L9 的 highlights 汇成 `app_daily_brief`
+- 推荐新对话直接做第 7 章,作为项目收尾
