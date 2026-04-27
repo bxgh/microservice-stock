@@ -1,6 +1,9 @@
-from fastapi import FastAPI, BackgroundTasks
+import logging
+import datetime
+from fastapi import FastAPI, BackgroundTasks, Request
 from app.services.syncer import syncer
 from app.services.calculators import monitor_engine
+from app.services.structural_analyzer import structural_analyzer
 from app.utils.database import db
 from app.utils.logger import setup_logger, get_logger
 
@@ -36,9 +39,13 @@ async def sync_daily(background_tasks: BackgroundTasks, date: str = None):
 @app.post("/api/v1/calculate")
 async def calculate(background_tasks: BackgroundTasks, date: str = None):
     """异步执行监控指标计算"""
-    if date:
-        background_tasks.add_task(monitor_engine.run_daily_calculation, date)
-    else:
-        # 默认计算逻辑可通过定时任务调用
-        pass
-    return {"status": "accepted", "message": f"计算任务 ({date or 'latest'}) 已加入后台队列"}
+    if not date:
+        date = datetime.date.today().strftime("%Y-%m-%d")
+
+    # 1. 原有的全市场监控指标
+    background_tasks.add_task(monitor_engine.run_daily_calculation, date)
+    
+    # 2. 新增的结构分化指标 (Chapter 2)
+    background_tasks.add_task(structural_analyzer.run_daily_analysis, date)
+    
+    return {"status": "accepted", "message": f"计算任务 ({date}) 已加入后台队列"}

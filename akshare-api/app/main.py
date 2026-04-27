@@ -64,6 +64,14 @@ async def lifespan(app: FastAPI):
         job_id="daily_market_data_sync"
     )
 
+    # 注册每日 L2 结构分化数据同步 (19:15)
+    scheduler.add_daily_job(
+        job_funcs.daily_l2_structural_sync_job,
+        hour=19,
+        minute=15,
+        job_id="daily_l2_structural_sync"
+    )
+
     # 注册每日情绪数据同步 (19:30)
     scheduler.add_daily_job(
         job_funcs.daily_sentiment_sync_job,

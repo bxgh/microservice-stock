@@ -19,3 +19,11 @@ async def get_market_overview_history(
     """获取全市场行情纵览历史"""
     data = await market_service.get_overview_history(limit)
     return data
+
+@router.get("/structural/latest")
+async def get_latest_structural_analysis():
+    """获取最新的结构分化与行业旋转分析 (Chapter 2)"""
+    data = await market_service.get_latest_structural()
+    if not data:
+        raise HTTPException(status_code=404, detail="未找到结构分析数据")
+    return data

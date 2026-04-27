@@ -383,3 +383,79 @@ async def get_limit_pool(
         logger.error(f"获取涨跌停池失败: date={date}, type={pool_type}, error={e}", extra={"request_id": request_id})
         raise HTTPException(status_code=500, detail=str(e))
 
+@router.get("/index/sw_indicator")
+async def get_sw_index_indicator(
+    request: Request,
+    symbol: str = Query("一级行业", description="申万指数类型: 市场表征, 一级行业, 二级行业, 风格指数"),
+    start_date: str = Query("20000101", description="开始日期 YYYYMMDD"),
+    end_date: str = Query("20500101", description="结束日期 YYYYMMDD")
+):
+    """获取申万行业指数分析数据 (含 PE/PB)"""
+    request_id = getattr(request.state, "request_id", "unknown")
+    service = request.app.state.akshare_service
+    try:
+        result = await service.get_sw_index_analysis(symbol, start_date, end_date)
+        logger.info(f"获取申万指标成功: symbol={symbol}, count={len(result)}", extra={"request_id": request_id})
+        return result
+    except Exception as e:
+        logger.error(f"获取申万指标失败: symbol={symbol}, error={e}", extra={"request_id": request_id})
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/index/concept_ths")
+async def get_concept_ths(
+    request: Request,
+    symbol: str = Query(..., description="概念名称 (如 人造肉)"),
+    start_date: str = Query("20000101", description="开始日期 YYYYMMDD"),
+    end_date: str = Query("20500101", description="结束日期 YYYYMMDD")
+):
+    """获取同花顺概念板块历史日线"""
+    request_id = getattr(request.state, "request_id", "unknown")
+    service = request.app.state.akshare_service
+    try:
+        result = await service.get_concept_index_ths(symbol, start_date, end_date)
+        logger.info(f"获取概念板块行情成功: symbol={symbol}, count={len(result)}", extra={"request_id": request_id})
+        return result
+    except Exception as e:
+        logger.error(f"获取概念板块行情失败: symbol={symbol}, error={e}", extra={"request_id": request_id})
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/index/concept_names")
+async def get_concept_names(request: Request):
+    """获取同花顺概念板块名单"""
+    request_id = getattr(request.state, "request_id", "unknown")
+    service = request.app.state.akshare_service
+    try:
+        result = await service.get_concept_name_ths()
+        logger.info(f"获取概念名单成功: count={len(result)}", extra={"request_id": request_id})
+        return result
+    except Exception as e:
+        logger.error(f"获取概念名单失败: error={e}", extra={"request_id": request_id})
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/index/sw_sync")
+async def sync_sw_index(
+    request: Request,
+    start_date: Optional[str] = Query(None),
+    end_date: Optional[str] = Query(None)
+):
+    """手动同步申万行业数据到 ODS"""
+    from app.services.l2_structural_service import L2StructuralService
+    service = L2StructuralService()
+    result = await service.sync_sw_index_daily(start_date, end_date)
+    return result
+
+
+@router.post("/index/concept_sync")
+async def sync_concept_index(
+    request: Request,
+    start_date: Optional[str] = Query(None),
+    end_date: Optional[str] = Query(None)
+):
+    """手动同步同花顺概念板块数据到 ODS"""
+    from app.services.l2_structural_service import L2StructuralService
+    service = L2StructuralService()
+    result = await service.sync_concept_kline_daily(start_date, end_date)
+    return result

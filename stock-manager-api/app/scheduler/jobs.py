@@ -173,40 +173,58 @@ async def weekly_financial_indicators_sync_job() -> Dict[str, Any]:
         }
 
 async def daily_market_overview_sync_job() -> Dict[str, Any]:
-    """每日市场全景数据同步与计算任务 (19:30)"""
+    """每日市场全景数据同步与计算任务 (19:30)
+    
+    采用 Tushare 优先，BaoStock 兜底的策略
+    """
     try:
         from app.services.market_data_service import MarketDataService
         from app.services.indicator_service import IndicatorService
         from app.utils.database import db
         import datetime
 
-        target_date = datetime.now().strftime("%Y-%m-%d")
-        logger.info(f"【定时任务】开始执行每日市场全景同步: {target_date}")
+        target_date = datetime.datetime.now().strftime("%Y-%m-%d")
+        logger.info(f"【定时任务】启动双源同步流水线: {target_date}")
 
         market_service = MarketDataService()
         indicator_service = IndicatorService()
 
-        # 1. 同步指数行情
-        # 获取核心指数列表
+        # 1. 指数行情同步 (优先 Tushare)
         sql = "SELECT ts_code FROM index_basic WHERE is_core = 1"
         rows = await db.execute(sql)
         core_indices = [row[0] for row in rows]
         
+        index_success = 0
         for code in core_indices:
-            await market_service.sync_index_daily(ts_code=code, trade_date=target_date)
+            count = await market_service.sync_index_daily(ts_code=code, trade_date=target_date)
+            if count > 0: index_success += 1
         
-        # 2. 同步涨跌停池
+        logger.info(f"核心指数同步完成: {index_success}/{len(core_indices)}")
+
+        # 2. 全市场 K 线同步 (优先 Tushare, 失败则触发 BaoStock 异步补齐)
+        # 注意：这里我们使用 trade_date 批量同步
+        kline_count = await market_service.sync_stock_daily(trade_date=target_date)
+        
+        if kline_count == -1:
+            logger.warning("Tushare 同步失败，已触发 BaoStock 降级流水线，等待异步完成...")
+            # 如果是降级模式，后面的广度计算可能会因为数据未就绪而偏差，
+            # 但 monitor-service 会在 BaoStock 完成后再次触发计算。
+        elif kline_count == 0:
+            logger.error("双源同步均未获取到有效 K 线数据")
+        else:
+            logger.info(f"全市场 K 线同步成功: {kline_count} 条")
+
+        # 3. 同步涨跌停池 (AkShare)
         await market_service.sync_limit_pool(target_date)
 
-        # 3. 计算市场广度
+        # 4. 计算市场广度与 L1 全景 (仅当数据基本就绪时)
+        # 如果是降级模式，这里计算的是“当前已有的”部分数据
         await market_service.sync_market_breadth_daily(target_date)
-
-        # 4. 计算 L1 全景指标
         await indicator_service.calculate_l1_market_overview(target_date)
 
-        logger.info(f"【定时任务】市场全景同步与计算完成: {target_date}")
-        return {'status': 'success', 'message': f'市场全景同步完成: {target_date}'}
+        logger.info(f"【定时任务】双源同步与计算流程结束: {target_date}")
+        return {'status': 'success', 'message': f'同步任务已处理: {target_date}'}
         
     except Exception as e:
-        logger.error(f"【定时任务】市场全景同步失败: {e}", exc_info=True)
+        logger.error(f"【定时任务】同步流水线崩溃: {e}", exc_info=True)
         return {'status': 'error', 'message': str(e)}

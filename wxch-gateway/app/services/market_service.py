@@ -1,4 +1,5 @@
 import datetime
+import json
 from typing import List, Dict, Any, Optional
 from app.utils.database import db
 from app.utils.logger import get_logger
@@ -71,5 +72,25 @@ class MarketService:
         except Exception as e:
             logger.error(f"获取市场概览历史失败: {e}")
             return []
+
+    async def get_latest_structural(self) -> Dict[str, Any]:
+        """获取最新的结构分化数据 (Chapter 2)"""
+        try:
+            sql = "SELECT snapshot_payload, summary_text FROM ads_l2_structural_snapshot ORDER BY trade_date DESC LIMIT 1"
+            rows = await db.execute(sql)
+            if not rows:
+                return {}
+            
+            payload_str, summary = rows[0]
+            # 解析 JSON 载荷
+            payload = json.loads(payload_str) if isinstance(payload_str, str) else payload_str
+            
+            if summary:
+                payload["summary"] = summary
+                
+            return payload
+        except Exception as e:
+            logger.error(f"获取最新结构分析快照失败: {e}")
+            return {}
 
 market_service = MarketService()

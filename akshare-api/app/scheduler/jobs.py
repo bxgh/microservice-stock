@@ -227,3 +227,46 @@ async def daily_financial_incremental_sync_job() -> Dict[str, Any]:
     except Exception as e:
         logger.error(f"【定时任务】每日增量报表同步失败: {e}", exc_info=True)
         return {'status': 'error', 'message': str(e)}
+
+
+async def daily_l2_structural_sync_job() -> Dict[str, Any]:
+    """每日 L2 结构分化数据同步 (行业 + 概念)
+    
+    每日 19:15 执行
+    """
+    try:
+        logger.info("【定时任务】开始执行每日 L2 结构分化数据同步")
+        from app.services.l2_structural_service import L2StructuralService
+        
+        service = L2StructuralService()
+        
+        # 1. 申万行业同步
+        res_sw = await service.sync_sw_index_daily()
+        logger.info(f"申万行业同步完成: {res_sw}")
+        
+        # 2. 同轴概念同步
+        res_concept = await service.sync_concept_kline_daily()
+        logger.info(f"概念板块同步完成: {res_concept}")
+        
+        results = {
+            'status': 'success',
+            'details': {
+                'sw': res_sw,
+                'concept': res_concept
+            }
+        }
+    except Exception as e:
+        logger.error(f"【定时任务】L2 结构数据同步失败: {e}", exc_info=True)
+        results = {'status': 'error', 'message': str(e)}
+    
+    # 无论同步成功与否，尝试触发 monitor-service 进行计算 (因为 ODS 可能有部分成功)
+    try:
+        import httpx
+        async with httpx.AsyncClient() as client:
+            # 注意: 内部网络使用 monitor-service:8000
+            resp = await client.post("http://monitor-service:8000/api/v1/calculate", timeout=10)
+            logger.info(f"触发监控服务计算成功: {resp.status_code}")
+    except Exception as e:
+        logger.error(f"触发监控服务计算失败: {e}")
+        
+    return results

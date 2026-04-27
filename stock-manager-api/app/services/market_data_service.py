@@ -63,8 +63,10 @@ class MarketDataService:
             raise
 
     async def sync_stock_daily(self, ts_code: str = '', trade_date: str = '', start_date: str = '', end_date: str = ''):
-        """从 Tushare 同步股票日线行情到 stock_kline_daily"""
+        """同步股票日线行情 (优先 Tushare, 失败则降级至 BaoStock)"""
         try:
+            # 1. 优先尝试从 Tushare 获取
+            logger.info(f"正在通过 Tushare 同步股票日线: {ts_code or trade_date}")
             url = f"{self.tushare_url}/api/v1/stock/daily"
             params = {
                 "ts_code": ts_code,
@@ -77,44 +79,65 @@ class MarketDataService:
                 resp.raise_for_status()
                 data = resp.json().get("data", [])
             
-            if not data:
-                return 0
-
-            query = """
-                INSERT INTO stock_kline_daily (
-                    code, trade_date, open, high, low, close, 
-                    pre_close, pct_chg, volume, amount
-                ) VALUES (
-                    %s, %s, %s, %s, %s, %s, 
-                    %s, %s, %s, %s
-                ) ON DUPLICATE KEY UPDATE
-                open=VALUES(open), high=VALUES(high), low=VALUES(low),
-                close=VALUES(close), pre_close=VALUES(pre_close),
-                pct_chg=VALUES(pct_chg), volume=VALUES(volume), amount=VALUES(amount)
-            """
-            args = []
-            for i in data:
-                d = i.get("trade_date")
-                dt_str = f"{d[:4]}-{d[4:6]}-{d[6:8]}"
-                # Tushare pct_chg 是百分比，转为小数
-                pct_chg = float(i.get("pct_chg", 0)) / 100.0 if i.get("pct_chg") is not None else None
+            if data:
+                # 写入数据库逻辑...
+                await self._save_stock_daily_to_db(data)
+                logger.info(f"Tushare 同步股票日线完成: {len(data)} 条")
+                return len(data)
+            else:
+                logger.warning(f"Tushare 未返回数据: {ts_code or trade_date}, 准备降级至 BaoStock")
+                return await self._sync_stock_daily_baostock_fallback(trade_date)
                 
-                args.append((
-                    i.get("ts_code"), dt_str, i.get("open"), i.get("high"), i.get("low"), i.get("close"),
-                    i.get("pre_close"), pct_chg, i.get("vol"), 
-                    float(i.get("amount", 0)) * 1000.0 if i.get("amount") is not None else None
-                ))
-            
-            await db.execute_many(query, args)
-            logger.info(f"同步股票日线 [{trade_date or ts_code}]: {len(args)} 条")
-            return len(args)
         except Exception as e:
-            logger.error(f"同步股票日线失败: {ts_code or trade_date}, {e}")
-            raise
+            logger.error(f"Tushare 同步异常: {e}, 触发 BaoStock 降级机制")
+            return await self._sync_stock_daily_baostock_fallback(trade_date)
+
+    async def _save_stock_daily_to_db(self, data: List[Dict[str, Any]]):
+        """统一将 Tushare 格式的日线保存到数据库"""
+        query = """
+            INSERT INTO stock_kline_daily (
+                code, trade_date, open, high, low, close, 
+                pre_close, pct_chg, volume, amount
+            ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+            ON DUPLICATE KEY UPDATE
+            open=VALUES(open), high=VALUES(high), low=VALUES(low),
+            close=VALUES(close), pre_close=VALUES(pre_close),
+            pct_chg=VALUES(pct_chg), volume=VALUES(volume), amount=VALUES(amount)
+        """
+        args = []
+        for i in data:
+            d = i.get("trade_date")
+            dt_str = f"{d[:4]}-{d[4:6]}-{d[6:8]}"
+            pct_chg = float(i.get("pct_chg", 0)) / 100.0 if i.get("pct_chg") is not None else None
+            args.append((
+                i.get("ts_code"), dt_str, i.get("open"), i.get("high"), i.get("low"), i.get("close"),
+                i.get("pre_close"), pct_chg, i.get("vol"), 
+                float(i.get("amount", 0)) * 1000.0 if i.get("amount") is not None else None
+            ))
+        await db.execute_many(query, args)
+
+    async def _sync_stock_daily_baostock_fallback(self, trade_date: str):
+        """BaoStock 降级补偿逻辑"""
+        try:
+            logger.info(f"正在通过 BaoStock 执行降级同步: {trade_date}")
+            # 注意: BaoStock 同步是后台异步的，我们触发 remediate
+            url = f"{settings.BAOSTOCK_API_URL}/api/v1/sync/remediate"
+            params = {"date": trade_date, "dataType": "kline", "scope": "incremental"}
+            async with httpx.AsyncClient(timeout=10.0) as client:
+                resp = await client.post(url, params=params)
+                resp.raise_for_status()
+            
+            # 由于是异步触发，我们无法立即获得计数，返回 -1 表示已触发降级
+            logger.info(f"BaoStock 降级同步已触发: {trade_date}")
+            return -1
+        except Exception as e:
+            logger.error(f"BaoStock 降级同步也失败了: {e}")
+            return 0
 
     async def sync_index_daily(self, ts_code: str, start_date: str = '', end_date: str = '', trade_date: str = ''):
-        """从 Tushare 同步指数日线行情到 ods_index_daily"""
+        """同步指数日线行情 (优先 Tushare)"""
         try:
+            logger.info(f"正在通过 Tushare 同步指数日线: {ts_code}")
             url = f"{self.tushare_url}/api/v1/index/daily"
             params = {
                 "ts_code": ts_code,
@@ -127,42 +150,42 @@ class MarketDataService:
                 resp.raise_for_status()
                 data = resp.json().get("data", [])
 
-            if not data:
+            if data:
+                await self._save_index_daily_to_db(data)
+                logger.info(f"Tushare 指数同步完成: {ts_code}, {len(data)} 条")
+                return len(data)
+            else:
+                logger.warning(f"Tushare 指数数据为空: {ts_code}")
+                # TODO: 以后可增加 AkShare 备用逻辑
                 return 0
-
-            query = """
-                INSERT INTO ods_index_daily (
-                    trade_date, ts_code, open, high, low, close, 
-                    pre_close, `change`, pct_chg, vol, amount
-                ) VALUES (
-                    %s, %s, %s, %s, %s, %s, 
-                    %s, %s, %s, %s, %s
-                ) ON DUPLICATE KEY UPDATE
-                open=VALUES(open), high=VALUES(high), low=VALUES(low),
-                close=VALUES(close), pre_close=VALUES(pre_close),
-                `change`=VALUES(`change`), pct_chg=VALUES(pct_chg),
-                vol=VALUES(vol), amount=VALUES(amount)
-            """
-            args = []
-            for i in data:
-                # 转换日期格式 '20260425' -> '2026-04-25'
-                d = i.get("trade_date")
-                dt_str = f"{d[:4]}-{d[4:6]}-{d[6:8]}"
-                
-                # Tushare pct_chg 是百分比，转为小数
-                pct_chg = float(i.get("pct_chg", 0)) / 100.0 if i.get("pct_chg") is not None else None
-                
-                args.append((
-                    dt_str, i.get("ts_code"), i.get("open"), i.get("high"), i.get("low"), i.get("close"),
-                    i.get("pre_close"), i.get("change"), pct_chg, i.get("vol"), 
-                    float(i.get("amount", 0)) * 1000.0 if i.get("amount") is not None else None
-                ))
-
-            await db.execute_many(query, args)
-            return len(args)
         except Exception as e:
-            logger.error(f"同步指数日线失败: {ts_code}, {e}")
-            raise
+            logger.error(f"Tushare 指数同步失败: {ts_code}, {e}")
+            return 0
+
+    async def _save_index_daily_to_db(self, data: List[Dict[str, Any]]):
+        """统一保存指数日线"""
+        query = """
+            INSERT INTO ods_index_daily (
+                trade_date, ts_code, open, high, low, close, 
+                pre_close, `change`, pct_chg, vol, amount
+            ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+            ON DUPLICATE KEY UPDATE
+            open=VALUES(open), high=VALUES(high), low=VALUES(low),
+            close=VALUES(close), pre_close=VALUES(pre_close),
+            `change`=VALUES(`change`), pct_chg=VALUES(pct_chg),
+            vol=VALUES(vol), amount=VALUES(amount)
+        """
+        args = []
+        for i in data:
+            d = i.get("trade_date")
+            dt_str = f"{d[:4]}-{d[4:6]}-{d[6:8]}"
+            pct_chg = float(i.get("pct_chg", 0)) / 100.0 if i.get("pct_chg") is not None else None
+            args.append((
+                dt_str, i.get("ts_code"), i.get("open"), i.get("high"), i.get("low"), i.get("close"),
+                i.get("pre_close"), i.get("change"), pct_chg, i.get("vol"), 
+                float(i.get("amount", 0)) * 1000.0 if i.get("amount") is not None else None
+            ))
+        await db.execute_many(query, args)
 
     async def sync_market_breadth_daily(self, target_date: str):
         """计算并同步当日市场广度到 ods_market_breadth_daily"""
@@ -200,66 +223,67 @@ class MarketDataService:
             total_count = res_total[0][0] if res_total else 0
             suspended_count = max(0, total_count - curr_count)
 
-            # 2. 计算 60/250 日新高新低 (使用复权逻辑)
-            sql_date_60 = "SELECT DISTINCT trade_date FROM stock_kline_daily WHERE trade_date < %s ORDER BY trade_date DESC LIMIT 59, 1"
-            res_60 = await db.execute(sql_date_60, (target_date,))
-            start_date_60 = res_60[0][0] if res_60 else '1970-01-01'
-
+            # 2. 计算 60/250 日新高新低 (分批处理以节省内存)
             sql_date_250 = "SELECT DISTINCT trade_date FROM stock_kline_daily WHERE trade_date < %s ORDER BY trade_date DESC LIMIT 249, 1"
             res_250 = await db.execute(sql_date_250, (target_date,))
             start_date_250 = res_250[0][0] if res_250 else '1970-01-01'
-            
-            # 获取复权因子
-            sql_factors = "SELECT code, adjust_date, back_adjust_factor FROM stock_adjust_factor ORDER BY code, adjust_date"
-            factors_res = await db.execute(sql_factors)
-            factors_map = {}
-            for f_code, f_date, f_factor in factors_res:
-                if f_code not in factors_map: factors_map[f_code] = []
-                factors_map[f_code].append((f_date, float(f_factor)))
 
-            # 获取 K 线窗口
-            sql_kline_window = """
-                SELECT code, trade_date, close 
-                FROM stock_kline_daily 
-                WHERE trade_date >= %s AND trade_date <= %s
-                AND code NOT LIKE '900%%' AND code NOT LIKE '200%%'
-                ORDER BY code, trade_date
-            """
-            kline_res = await db.execute(sql_kline_window, (start_date_250, target_date))
+            sql_date_60 = "SELECT DISTINCT trade_date FROM stock_kline_daily WHERE trade_date < %s ORDER BY trade_date DESC LIMIT 59, 1"
+            res_60 = await db.execute(sql_date_60, (target_date,))
+            start_date_60 = res_60[0][0] if res_60 else '1970-01-01'
             
-            import bisect, itertools
             high_60d, low_60d, high_250d, low_250d = 0, 0, 0, 0
-            target_date_obj = datetime.datetime.strptime(target_date, '%Y-%m-%d').date() if isinstance(target_date, str) else target_date
-            try:
-                start_date_60_obj = datetime.datetime.strptime(str(start_date_60), '%Y-%m-%d').date()
-            except:
-                start_date_60_obj = start_date_60
+            
+            # 分批获取股票列表进行计算
+            sql_all_codes = "SELECT DISTINCT code FROM stock_kline_daily WHERE trade_date = %s"
+            codes_res = await db.execute(sql_all_codes, (target_date,))
+            all_codes = [r[0] for r in codes_res]
+            
+            batch_size = 500
+            for i in range(0, len(all_codes), batch_size):
+                batch_codes = all_codes[i:i+batch_size]
+                
+                # 获取该批次股票的复权因子
+                placeholders = ','.join(['%s'] * len(batch_codes))
+                sql_f = f"SELECT code, adjust_date, back_adjust_factor FROM stock_adjust_factor WHERE code IN ({placeholders}) ORDER BY code, adjust_date"
+                f_res = await db.execute(sql_f, tuple(batch_codes))
+                f_map = {}
+                for f_code, f_date, f_factor in f_res:
+                    if f_code not in f_map: f_map[f_code] = []
+                    f_map[f_code].append((f_date, float(f_factor)))
 
-            for code, group in itertools.groupby(kline_res, key=lambda x: x[0]):
-                rows = list(group)
-                if not rows: continue
-                f_list = factors_map.get(code, [(datetime.date(1990, 1, 1), 1.0)])
-                f_dates = [x[0] for x in f_list]
+                # 获取该批次股票的 K 线窗口
+                sql_k = f"SELECT code, trade_date, close FROM stock_kline_daily WHERE code IN ({placeholders}) AND trade_date >= %s AND trade_date <= %s ORDER BY code, trade_date"
+                k_res = await db.execute(sql_k, tuple(batch_codes + [start_date_250, target_date]))
                 
-                adj_rows = []
-                for _, t_date, raw_close in rows:
-                    idx = bisect.bisect_right(f_dates, t_date) - 1
-                    factor = f_list[idx if idx >= 0 else 0][1]
-                    adj_rows.append({'date': t_date, 'adj_close': float(raw_close) * factor})
-                
-                target_row = next((r for r in adj_rows if r['date'] == target_date_obj), None)
-                if not target_row: continue
-                curr_price = target_row['adj_close']
-                
-                hist_250 = [r['adj_close'] for r in adj_rows if r['date'] < target_date_obj]
-                if hist_250:
-                    if curr_price >= max(hist_250): high_250d += 1
-                    if curr_price <= min(hist_250): low_250d += 1
-                
-                hist_60 = [r['adj_close'] for r in adj_rows if r['date'] < target_date_obj and r['date'] >= start_date_60_obj]
-                if hist_60:
-                    if curr_price >= max(hist_60): high_60d += 1
-                    if curr_price <= min(hist_60): low_60d += 1
+                target_date_obj = datetime.datetime.strptime(target_date, '%Y-%m-%d').date() if isinstance(target_date, str) else target_date
+                try: start_date_60_obj = datetime.datetime.strptime(str(start_date_60), '%Y-%m-%d').date()
+                except: start_date_60_obj = start_date_60
+
+                for code, group in itertools.groupby(k_res, key=lambda x: x[0]):
+                    rows = list(group)
+                    f_list = f_map.get(code, [(datetime.date(1990, 1, 1), 1.0)])
+                    f_dates = [x[0] for x in f_list]
+                    
+                    adj_rows = []
+                    for _, t_date, raw_close in rows:
+                        idx = bisect.bisect_right(f_dates, t_date) - 1
+                        factor = f_list[idx if idx >= 0 else 0][1]
+                        adj_rows.append({'date': t_date, 'adj_close': float(raw_close) * factor})
+                    
+                    target_row = next((r for r in adj_rows if r['date'] == target_date_obj), None)
+                    if not target_row: continue
+                    curr_p = target_row['adj_close']
+                    
+                    hist_250 = [r['adj_close'] for r in adj_rows if r['date'] < target_date_obj]
+                    if hist_250:
+                        if curr_p >= max(hist_250): high_250d += 1
+                        if curr_p <= min(hist_250): low_250d += 1
+                    
+                    hist_60 = [r['adj_close'] for r in adj_rows if r['date'] < target_date_obj and r['date'] >= start_date_60_obj]
+                    if hist_60:
+                        if curr_p >= max(hist_60): high_60d += 1
+                        if curr_p <= min(hist_60): low_60d += 1
 
             query = """
                 INSERT INTO ods_market_breadth_daily (

@@ -1234,3 +1234,97 @@ class AkShareService:
         except Exception as e:
             logger.error(f"AkShare获取两融汇总失败: error={e}")
             return []
+
+    async def get_sw_index_analysis(self, symbol: str = "一级行业", start_date: str = "20240101", end_date: str = "20240101") -> List[Dict[str, Any]]:
+        """获取申万行业指数分析数据 (含 PE/PB)
+        
+        :param symbol: choice of {"市场表征", "一级行业", "二级行业", "风格指数"}
+        """
+        try:
+            # 增加重试逻辑或更严谨的空检查
+            df = await asyncio.to_thread(
+                ak.index_analysis_daily_sw, 
+                symbol=symbol, 
+                start_date=start_date.replace("-", ""), 
+                end_date=end_date.replace("-", "")
+            )
+            if df is None or df.empty:
+                logger.info(f"AkShare 返回申万分析数据为空: symbol={symbol}, date={start_date}")
+                return []
+            
+            # 检查关键列是否存在，防止 AkShare 内部 KeyError
+            if "发布日期" not in df.columns:
+                logger.warning(f"AkShare 返回数据缺少 '发布日期' 列: {df.columns.tolist()}")
+                return []
+
+            result = []
+            for _, row in df.iterrows():
+                pct_val = self._clean_value(row.get("涨跌幅"))
+                dv_val = self._clean_value(row.get("股息率"))
+                
+                result.append({
+                    "date": str(row.get("发布日期", "")),
+                    "code": row.get("指数代码"),
+                    "name": row.get("指数名称"),
+                    "close": self._clean_value(row.get("收盘指数")),
+                    "pct_chg": pct_val / 100.0 if pct_val is not None else None,
+                    "vol": self._clean_value(row.get("成交量")),
+                    "amount": self._clean_value(row.get("成交量")) * self._clean_value(row.get("均价")) if row.get("成交量") and row.get("均价") else None,
+                    "pe": self._clean_value(row.get("市盈率")),
+                    "pb": self._clean_value(row.get("市净率")),
+                    "dv_ratio": dv_val / 100.0 if dv_val is not None else None,
+                })
+            return result
+        except Exception as e:
+            logger.error(f"AkShare获取申万分析失败: symbol={symbol}, error={e}")
+            return []
+
+    async def get_concept_index_ths(self, symbol: str, start_date: str, end_date: str) -> List[Dict[str, Any]]:
+        """获取同花顺概念板块指数历史行情
+        
+        :param symbol: 概念名称 (如 "人造肉")
+        """
+        try:
+            df = await asyncio.to_thread(
+                ak.stock_board_concept_index_ths,
+                symbol=symbol,
+                start_date=start_date.replace("-", ""),
+                end_date=end_date.replace("-", "")
+            )
+            if df is None or df.empty:
+                return []
+            
+            result = []
+            for _, row in df.iterrows():
+                pct_val = self._clean_value(row.get("涨跌幅"))
+                result.append({
+                    "date": str(row.get("日期", "")),
+                    "open": self._clean_value(row.get("开盘")),
+                    "high": self._clean_value(row.get("最高")),
+                    "low": self._clean_value(row.get("最低")),
+                    "close": self._clean_value(row.get("收盘")),
+                    "amount": self._clean_value(row.get("成交额")),
+                    "pct_chg": pct_val / 100.0 if pct_val is not None else None,
+                })
+            return result
+        except Exception as e:
+            logger.error(f"AkShare获取概念板块失败: symbol={symbol}, error={e}")
+            return []
+
+    async def get_concept_name_ths(self) -> List[Dict[str, Any]]:
+        """获取同花顺概念板块名单及 ID"""
+        try:
+            df = await asyncio.to_thread(ak.stock_board_concept_name_ths)
+            if df is None or df.empty:
+                return []
+            
+            result = []
+            for _, row in df.iterrows():
+                result.append({
+                    "name": row.get("name"),
+                    "code": row.get("code")
+                })
+            return result
+        except Exception as e:
+            logger.error(f"AkShare获取概念名单失败: error={e}")
+            return []
