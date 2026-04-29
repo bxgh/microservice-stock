@@ -32,15 +32,15 @@ class StockInfoService:
             return {
                 "analyst_ranks": [
                     {
-                        "date": str(r[0]), "analyst": r[1], "rating": r[2], 
-                        "change": r[3], "target_price": float(r[4]) if r[4] else None
+                        "date": str(r["report_date"]), "analyst": r["analyst"], "rating": r["rating"], 
+                        "change": r["change_direction"], "target_price": float(r["target_price"]) if r["target_price"] else None
                     } for r in ranks
                 ],
                 "forecasts": [
                     {
-                        "notice_date": str(f[0]), "period": str(f[1]), "type": f[2],
-                        "growth_min": float(f[3]) if f[3] else None,
-                        "growth_max": float(f[4]) if f[4] else None
+                        "notice_date": str(f["notice_date"]), "period": str(f["report_period"]), "type": f["type"],
+                        "growth_min": float(f["growth_min"]) if f["growth_min"] else None,
+                        "growth_max": float(f["growth_max"]) if f["growth_max"] else None
                     } for f in forecasts
                 ]
             }
@@ -72,15 +72,15 @@ class StockInfoService:
             return {
                 "income_statements": [
                     {
-                        "period": str(i[0]), "total_revenue": float(i[1]) if i[1] else None,
-                        "net_profit": float(i[3]) if i[3] else None
+                        "period": str(i["report_date"]), "total_revenue": float(i["total_revenue"]) if i["total_revenue"] else None,
+                        "net_profit": float(i["net_profit"]) if i["net_profit"] else None
                     } for i in income
                 ],
                 "indicators": [
                     {
-                        "period": str(ind[0]), "roe": float(ind[1]) if ind[1] else None,
-                        "gross_margin": float(ind[2]) if ind[2] else None,
-                        "eps": float(ind[5]) if ind[5] else None
+                        "period": str(ind["report_date"]), "roe": float(ind["roe"]) if ind["roe"] else None,
+                        "gross_margin": float(ind["grossprofit_margin"]) if ind["grossprofit_margin"] else None,
+                        "eps": float(ind["eps"]) if ind["eps"] else None
                     } for ind in indicators
                 ]
             }
@@ -114,14 +114,14 @@ class StockInfoService:
             return {
                 "holder_counts": [
                     {
-                        "date": str(c[0]), "count": c[1], 
-                        "change_pct": float(c[2]) if c[2] else None
+                        "date": str(c["end_date"]), "count": c["holder_count"], 
+                        "change_pct": float(c["holder_change_pct"]) if c["holder_change_pct"] else None
                     } for c in counts
                 ],
                 "top10": [
                     {
-                        "rank": t[1], "name": t[2], "type": t[3], 
-                        "count": t[4], "pct": float(t[5]) if t[5] else None
+                        "rank": t["rank"], "name": t["holder_name"], "type": t["share_type"], 
+                        "count": t["hold_count"], "pct": float(t["hold_pct"]) if t["hold_pct"] else None
                     } for t in top10
                 ]
             }
@@ -153,15 +153,15 @@ class StockInfoService:
             return {
                 "north_funds": [
                     {
-                        "date": str(n[0]), "count": n[1], "ratio": float(n[2]) if n[2] else None
+                        "date": str(n["trade_date"]), "count": n["hold_count"], "ratio": float(n["hold_ratio"]) if n["hold_ratio"] else None
                     } for n in north
                 ],
                 "lhb": [
                     {
-                        "date": str(l[0]), "close": float(l[1]) if l[1] else None,
-                        "change": float(l[2]) if l[2] else None,
-                        "net_buy": float(l[3]) if l[3] else None,
-                        "reason": l[4]
+                        "date": str(l["trade_date"]), "close": float(l["close_price"]) if l["close_price"] else None,
+                        "change": float(l["change_pct"]) if l["change_pct"] else None,
+                        "net_buy": float(l["net_buy_amt"]) if l["net_buy_amt"] else None,
+                        "reason": l["reason"]
                     } for l in lhb
                 ]
             }

@@ -23,8 +23,8 @@ class CalendarService:
             sql = "SELECT cal_date FROM trade_cal WHERE cal_date BETWEEN %s AND %s AND is_open = 1 ORDER BY cal_date ASC"
             rows = await db.execute(sql, (start_date, end_date))
             
-            # rows 返回的是 tuple 的列表，每个 tuple 第一个元素是 date 对象
-            return [row[0].strftime("%Y-%m-%d") if isinstance(row[0], (datetime.date, datetime.datetime)) else str(row[0]) for row in rows]
+            # rows 返回的是字典列表，使用键名访问
+            return [row["cal_date"].strftime("%Y-%m-%d") if isinstance(row["cal_date"], (datetime.date, datetime.datetime)) else str(row["cal_date"]) for row in rows]
         except Exception as e:
             logger.error(f"获取交易日列表失败: {e}")
             return None
@@ -41,7 +41,7 @@ class CalendarService:
             if not rows:
                 return {"date": check_date, "is_open": False, "status": "unknown"}
             
-            is_open = int(rows[0][0]) == 1
+            is_open = int(rows[0]["is_open"]) == 1
             return {
                 "date": check_date,
                 "is_open": is_open,
@@ -58,7 +58,7 @@ class CalendarService:
             today = datetime.date.today().strftime("%Y-%m-%d")
             rows = await db.execute(sql, (today, limit))
             
-            days = [row[0].strftime("%Y-%m-%d") if isinstance(row[0], (datetime.date, datetime.datetime)) else str(row[0]) for row in rows]
+            days = [row["cal_date"].strftime("%Y-%m-%d") if isinstance(row["cal_date"], (datetime.date, datetime.datetime)) else str(row["cal_date"]) for row in rows]
             return sorted(days)
         except Exception as e:
             logger.error(f"获取最近交易日失败: {e}")

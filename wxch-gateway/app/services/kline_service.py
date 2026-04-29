@@ -14,7 +14,7 @@ class KlineService:
         try:
             sql = "SELECT adjust_date, fore_adjust_factor FROM stock_adjust_factor WHERE code = %s ORDER BY adjust_date ASC"
             rows = await db.execute(sql, (code,))
-            return [{"date": str(row[0]), "factor": float(row[1])} for row in rows]
+            return [{"date": str(row["adjust_date"]), "factor": float(row["fore_adjust_factor"])} for row in rows]
         except Exception as e:
             logger.warning(f"获取复权因子失败: {e}")
             return []
@@ -79,17 +79,17 @@ class KlineService:
             raw_data = []
             for row in reversed(rows):
                 raw_data.append({
-                    "date": str(row[0]),
-                    "open": float(row[1]),
-                    "high": float(row[2]),
-                    "low": float(row[3]),
-                    "close": float(row[4]),
-                    "pre_close": float(row[5]) if row[5] is not None else None,
-                    "volume": float(row[6]),
-                    "amount": float(row[7]),
-                    "turnover": float(row[8]) if row[8] is not None else None,
-                    "pct_chg": float(row[9]) if row[9] is not None else None,
-                    "trade_status": int(row[10]) if row[10] is not None else None
+                    "date": str(row["trade_date"]),
+                    "open": float(row["open"]),
+                    "high": float(row["high"]),
+                    "low": float(row["low"]),
+                    "close": float(row["close"]),
+                    "pre_close": float(row["pre_close"]) if row["pre_close"] is not None else None,
+                    "volume": float(row["volume"]),
+                    "amount": float(row["amount"]),
+                    "turnover": float(row["turnover"]) if row["turnover"] is not None else None,
+                    "pct_chg": float(row["pct_chg"]) if row["pct_chg"] is not None else None,
+                    "trade_status": int(row["trade_status"]) if row["trade_status"] is not None else None
                 })
 
             # 3. 处理复权

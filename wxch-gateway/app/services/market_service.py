@@ -55,7 +55,7 @@ class MarketService:
         """获取最新的市场概览"""
         try:
             sql = "SELECT * FROM ads_l1_market_overview ORDER BY trade_date DESC LIMIT 1"
-            rows = await db.execute(sql)
+            rows = await db.execute(sql, use_dict=False)
             if rows:
                 return self._map_row(rows[0])
             return None
@@ -67,7 +67,7 @@ class MarketService:
         """获取市场概览历史"""
         try:
             sql = "SELECT * FROM ads_l1_market_overview ORDER BY trade_date DESC LIMIT %s"
-            rows = await db.execute(sql, (limit,))
+            rows = await db.execute(sql, (limit,), use_dict=False)
             return [self._map_row(row) for row in rows]
         except Exception as e:
             logger.error(f"获取市场概览历史失败: {e}")
@@ -77,7 +77,7 @@ class MarketService:
         """获取最新的结构分化数据 (Chapter 2)"""
         try:
             sql = "SELECT snapshot_payload, summary_text FROM ads_l2_structural_snapshot ORDER BY trade_date DESC LIMIT 1"
-            rows = await db.execute(sql)
+            rows = await db.execute(sql, use_dict=False)
             if not rows:
                 return {}
             

@@ -36,12 +36,13 @@ class Database:
             await self.pool.wait_closed()
             logger.info("MySQL 异步连接池已关闭")
 
-    async def execute(self, query: str, args: tuple = None):
-        """执行单条 SQL 并返回字典结果"""
+    async def execute(self, query: str, args: tuple = None, use_dict: bool = True):
+        """执行单条 SQL 并返回结果 (默认返回字典列表)"""
         if not self.pool:
             await self.connect()
         async with self.pool.acquire() as conn:
-            async with conn.cursor(aiomysql.DictCursor) as cur:
+            cursor_type = aiomysql.DictCursor if use_dict else aiomysql.Cursor
+            async with conn.cursor(cursor_type) as cur:
                 await cur.execute(query, args)
                 return await cur.fetchall()
 
