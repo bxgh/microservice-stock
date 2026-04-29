@@ -20,7 +20,7 @@ class AuthService:
             "grant_type": "authorization_code"
         }
         
-        async with httpx.AsyncClient(timeout=10.0) as client:
+        async with httpx.AsyncClient(timeout=10.0, verify=False) as client:
             response = await client.get(url, params=params)
             if response.status_code != 200:
                 logger.error(f"WeChat API error: HTTP {response.status_code}")
