@@ -84,6 +84,10 @@ class L2StructuralService:
                     # 严格频率控制: 2秒
                     await asyncio.sleep(2.0)
                     
+                    # 强制垃圾回收，释放 DataFrame 占用的内存
+                    import gc
+                    gc.collect()
+                    
                 except Exception as e:
                     logger.warning(f"同步概念 {name} 失败: {e}")
                     
