@@ -37,13 +37,22 @@ class Database:
             logger.info("MySQL 异步连接池已关闭")
 
     async def execute(self, query: str, args: tuple = None):
-        """执行单条 SQL"""
+        """执行单条 SQL 并返回字典结果"""
+        if not self.pool:
+            await self.connect()
+        async with self.pool.acquire() as conn:
+            async with conn.cursor(aiomysql.DictCursor) as cur:
+                await cur.execute(query, args)
+                return await cur.fetchall()
+
+    async def execute_insert(self, query: str, args: tuple = None):
+        """执行插入并返回最后插入的 ID"""
         if not self.pool:
             await self.connect()
         async with self.pool.acquire() as conn:
             async with conn.cursor() as cur:
                 await cur.execute(query, args)
-                return await cur.fetchall()
+                return cur.lastrowid
 
 # 全局数据库对象
 db = Database()

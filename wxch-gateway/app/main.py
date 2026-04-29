@@ -1,10 +1,10 @@
 import uuid
 import time
 from contextlib import asynccontextmanager
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Request, HTTPException
 from fastapi.responses import JSONResponse
 
-from app.api import kline, quote, stock_info, market, calendar
+from app.api import kline, quote, stock_info, market, calendar, auth, diary, user
 from app.utils.logger import setup_logger, request_id_var
 from app.utils.database import db
 
@@ -64,12 +64,44 @@ async def add_request_id_and_logging(request: Request, call_next):
     finally:
         request_id_var.reset(token)
 
+@app.exception_handler(HTTPException)
+async def http_exception_handler(request: Request, exc: HTTPException):
+    request_id = getattr(request.state, "request_id", "unknown")
+    return JSONResponse(
+        status_code=exc.status_code,
+        content={
+            "error": {
+                "code": f"HTTP_{exc.status_code}",
+                "message": exc.detail,
+                "request_id": request_id
+            }
+        },
+    )
+
+@app.exception_handler(Exception)
+async def generic_exception_handler(request: Request, exc: Exception):
+    request_id = getattr(request.state, "request_id", "unknown")
+    logger.error(f"Unhandled exception: {exc}", exc_info=True)
+    return JSONResponse(
+        status_code=500,
+        content={
+            "error": {
+                "code": "INTERNAL_SERVER_ERROR",
+                "message": "Internal server error",
+                "request_id": request_id
+            }
+        },
+    )
+
 @app.get("/health")
 async def health_check():
     """健康检查端点"""
     return {"status": "healthy", "service": "wxch-gateway"}
 
 # 注册路由
+app.include_router(auth.router, prefix="/api/v1/auth", tags=["认证授权"])
+app.include_router(user.router, prefix="/api/v1/user", tags=["用户系统"])
+app.include_router(diary.router, prefix="/api/v1/diaries", tags=["股市日记"])
 app.include_router(kline.router, prefix="/api/v1/stocks", tags=["股票数据"])
 app.include_router(quote.router, prefix="/api/v1/stocks", tags=["股票数据"])
 app.include_router(stock_info.router, prefix="/api/v1/stocks", tags=["个股详情"])

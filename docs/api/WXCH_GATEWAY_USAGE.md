@@ -237,7 +237,64 @@
 *   **参数**: `limit` (默认 5): 获取最近几个交易日。
 *   **描述**: 获取当前日期之前的最近 N 个交易日。
 
-## 7. 微信小程序调用示例
+## 7. 认证与用户接口
+
+以下接口涉及身份验证。除登录接口外，其余接口均需在 Header 中携带 `Authorization: Bearer <Token>`。
+
+### 7.1 微信静默登录 (Auth Login)
+*   **路径**: `/api/v1/auth/login`
+*   **方法**: `POST`
+*   **描述**: 实现微信小程序无感静默登录，建立用户身份关联并发放 JWT 凭证。
+*   **请求参数**:
+    ```json
+    { "code": "微信 wx.login 获取的临时凭证" }
+    ```
+*   **响应示例**:
+    ```json
+    {
+      "code": 200,
+      "data": {
+        "token": "eyJhbGciOiJIUzI1Ni...",
+        "user_info": {
+          "id": 1,
+          "nickname": "小散张三",
+          "level": 0,
+          "prefs": { "ui": { "theme": "standard" } }
+        }
+      },
+      "message": "登录成功"
+    }
+    ```
+
+### 7.2 用户资料 (User Profile)
+*   **路径**: `/api/v1/user/profile`
+*   **方法**: `GET` / `PUT`
+*   **描述**: 获取或更新用户个人资料及个性化配置。
+*   **更新参数 (PUT)**: 支持 `nickname`, `avatar_url`, `gender`, `region`, `prefs` (JSON 对象)。
+
+## 8. 股市日记接口 (Stock Diary)
+
+全功能日记管理接口，支持 Markdown 格式与个股/标签关联。
+
+### 8.1 日记列表 (List)
+*   **路径**: `/api/v1/diaries`
+*   **方法**: `GET`
+*   **查询参数**:
+    *   `page`: 页码 (默认 1)
+    *   `size`: 每页条数 (默认 20)
+    *   `tag`: 按标签名称筛选
+    *   `entry_type`: 按类型筛选 (1=盘前, 2=盘中, 3=盘后, 4=周复盘, 5=随笔, 6=个股研究)
+    *   `search`: 全文检索关键词 (命中标题或正文)
+*   **响应**: `{"items": [...], "total": 100, "page": 1, "size": 20}`
+
+### 8.2 日记操作 (CRUD)
+*   **获取详情**: `GET /api/v1/diaries/{id}`
+*   **创建日记**: `POST /api/v1/diaries`
+    *   Payload: `entry_date`, `entry_type`, `title`, `content`, `stocks` (ts_code 列表), `tags` (标签名列表)。
+*   **更新日记**: `PUT /api/v1/diaries/{id}`
+*   **删除日记**: `DELETE /api/v1/diaries/{id}` (软删除)
+
+## 9. 微信小程序调用示例
 
 建议在小程序中使用 `wx.cloud.callContainer` 进行调用，这样可以免去鉴权逻辑并享受腾讯云内网加速。
 
@@ -265,10 +322,11 @@ wx.cloud.callContainer({
 });
 ```
 
-## 8. 错误处理规范
+## 10. 错误处理规范
 
 接口采用标准 HTTP 状态码：
 *   **400**: 参数错误（如代码格式不支持）。
+*   **401**: 认证失败（Token 过期或无效）。
 *   **404**: 未找到对应股票数据。
 *   **500**: 服务器内部错误。
 
@@ -287,7 +345,7 @@ wx.cloud.callContainer({
 
 所有返回的 Header 中包含 `X-Request-ID`，如遇问题请提供该 ID 供后端排查日志。
 
-## 9. 注意事项
+## 11. 注意事项
 1.  **代码标准化**: 接口已内置标准化逻辑，前端可放心传入 `600519.SH`、`sh.600519` 或纯数字 `600519`。
 2.  **频率限制**: 实时行情数据通过腾讯行情源拉取，建议小程序轮询间隔不小于 **3 秒**，避免触发上游限流导致数据异常。
 3.  **时区**: 所有日期数据均以 `Asia/Shanghai` 时区为准。

@@ -15,6 +15,15 @@ class Settings(BaseSettings):
     LOG_LEVEL: str = "INFO"
     TZ: str = "Asia/Shanghai"
     
+    # 微信小程序配置
+    WECHAT_APPID: str = "your_appid_here"
+    WECHAT_SECRET: str = "your_secret_here"
+    
+    # JWT配置
+    JWT_SECRET: str = "your_jwt_secret_here_change_in_production"
+    JWT_ALGORITHM: str = "HS256"
+    JWT_EXPIRATION_DAYS: int = 30
+    
     model_config = SettingsConfigDict(
         env_file=".env",
         extra="ignore",
