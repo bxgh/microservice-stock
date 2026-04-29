@@ -1,0 +1,125 @@
+{
+  "id": "post_market_audit_4.0",
+  "name": "post_market_audit",
+  "steps": [
+    {
+      "id": "kline_barrier",
+      "name": "K线阻塞探测",
+      "type": "docker",
+      "params": {
+        "timeout": 7200,
+        "threshold": 99
+      },
+      "command": null,
+      "outputs": [],
+      "task_id": "wait_for_kline",
+      "map_from": null,
+      "template": null,
+      "depends_on": [],
+      "max_attempts": 3,
+      "retry_policy": "fixed"
+    },
+    {
+      "id": "first_audit",
+      "name": "初步审计",
+      "type": "docker",
+      "params": {
+        "session": "close",
+        "threshold": 1000
+      },
+      "command": null,
+      "outputs": [],
+      "task_id": "calculate_data_quality",
+      "map_from": null,
+      "template": null,
+      "depends_on": [
+        "kline_barrier"
+      ],
+      "max_attempts": 3,
+      "retry_policy": "fixed"
+    },
+    {
+      "id": "direct_repair",
+      "name": "直接修复",
+      "type": "docker",
+      "params": {
+        "date": "{{ target_date }}",
+        "mode": "repair",
+        "concurrency": 64,
+        "stock_codes": "{{ first_audit.missing_list }}"
+      },
+      "command": null,
+      "outputs": [],
+      "task_id": "repair_tick",
+      "map_from": null,
+      "template": null,
+      "depends_on": [
+        "first_audit"
+      ],
+      "max_attempts": 3,
+      "retry_policy": "fixed"
+    },
+    {
+      "id": "re_audit",
+      "name": "复查",
+      "type": "docker",
+      "params": {
+        "session": "close",
+        "threshold": 1000
+      },
+      "command": null,
+      "outputs": [],
+      "task_id": "calculate_data_quality",
+      "map_from": null,
+      "template": null,
+      "depends_on": [
+        "direct_repair"
+      ],
+      "max_attempts": 3,
+      "retry_policy": "fixed"
+    },
+    {
+      "id": "ai_review",
+      "name": "AI 复核",
+      "type": "docker",
+      "params": {
+        "input_data": "{{ re_audit.abnormal_list }}",
+        "trigger_condition": "{{ re_audit.diagnosis.action }}"
+      },
+      "command": null,
+      "outputs": [],
+      "task_id": "ai_quality_gatekeeper",
+      "map_from": null,
+      "template": null,
+      "depends_on": [
+        "re_audit"
+      ],
+      "max_attempts": 3,
+      "retry_policy": "fixed"
+    },
+    {
+      "id": "final_repair",
+      "name": "最终修复",
+      "type": "docker",
+      "params": {
+        "date": "{{ target_date }}",
+        "mode": "repair",
+        "concurrency": 64,
+        "stock_codes": "{{ ai_review.confirmed_bad_codes }}"
+      },
+      "command": null,
+      "outputs": [],
+      "task_id": "repair_tick",
+      "map_from": null,
+      "template": null,
+      "depends_on": [
+        "re_audit",
+        "ai_review"
+      ],
+      "max_attempts": 3,
+      "retry_policy": "fixed"
+    }
+  ],
+  "version": "4.0",
+  "global_context": {}
+}

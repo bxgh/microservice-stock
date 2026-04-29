@@ -1,0 +1,66 @@
+{
+  "id": "pre_market_prep_4.0",
+  "name": "Pre-Market Preparation Pipeline",
+  "steps": [
+    {
+      "id": "fetch_stock_list",
+      "name": "盘前股票清单采集",
+      "type": "docker",
+      "params": {
+        "date": "{{target_date}}"
+      },
+      "command": [
+        "jobs.daily_stock_collection"
+      ],
+      "outputs": [],
+      "task_id": "daily_stock_collection",
+      "map_from": null,
+      "template": null,
+      "depends_on": [],
+      "max_attempts": 3,
+      "retry_policy": "agentic"
+    },
+    {
+      "id": "data_migration",
+      "name": "昨日分笔数据归档清理",
+      "type": "docker",
+      "params": {},
+      "command": [
+        "jobs.tick_data_migration"
+      ],
+      "outputs": [],
+      "task_id": "tick_data_migrate",
+      "map_from": null,
+      "template": null,
+      "depends_on": [
+        "fetch_stock_list"
+      ],
+      "max_attempts": 2,
+      "retry_policy": "agentic"
+    },
+    {
+      "id": "gate_1_check",
+      "name": "Gate-1: 盘前准入校验",
+      "type": "docker",
+      "params": {
+        "date": "{{target_date}}"
+      },
+      "command": [
+        "jobs.pre_market_gate"
+      ],
+      "outputs": [],
+      "task_id": "pre_market_gate",
+      "map_from": null,
+      "template": null,
+      "depends_on": [
+        "data_migration"
+      ],
+      "max_attempts": 2,
+      "retry_policy": "agentic"
+    }
+  ],
+  "version": "1.0",
+  "global_context": {
+    "target_date": "FAIL_TEST_LLM"
+  }
+}
