@@ -221,6 +221,8 @@ async def daily_market_overview_sync_job() -> Dict[str, Any]:
         # 如果是降级模式，这里计算的是“当前已有的”部分数据
         await market_service.sync_market_breadth_daily(target_date)
         await indicator_service.calculate_l1_market_overview(target_date)
+        # 5. 计算 L2 完整指标
+        await indicator_service.calculate_l2_indicators_full(target_date)
 
         logger.info(f"【定时任务】双源同步与计算流程结束: {target_date}")
         return {'status': 'success', 'message': f'同步任务已处理: {target_date}'}

@@ -3,17 +3,20 @@ import aiomysql
 import logging
 import datetime
 import os
+from dotenv import load_dotenv
+
+load_dotenv()
 
 # 配置日志
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 logger = logging.getLogger("calc_l2_full")
 
 DB_CONFIG = {
-    'host': 'sh-cdb-h7flpxu4.sql.tencentcdb.com',
-    'port': 26300,
-    'user': 'root',
-    'password': 'alwaysup@888',
-    'db': 'alwaysup',
+    'host': os.getenv("DB_HOST", "localhost"),
+    'port': int(os.getenv("DB_PORT", 3306)),
+    'user': os.getenv("DB_USER", "root"),
+    'password': os.getenv("DB_PASSWORD", ""),
+    'db': os.getenv("DB_NAME", "stock_data"),
     'autocommit': True
 }
 
