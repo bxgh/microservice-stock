@@ -217,6 +217,26 @@
     *   `concept`: 最活跃的前 10 个概念板块。
     *   `summary`: 自动生成的结构化分析摘要文案。
 
+### 6.7 交易日历 (Trade Calendar)
+
+#### 1. 交易日列表 (Trading Days)
+*   **路径**: `/api/v1/calendar/trading_days`
+*   **参数**: 
+    *   `start_date` (optional): 开始日期 (YYYY-MM-DD)
+    *   `end_date` (optional): 结束日期 (YYYY-MM-DD)
+*   **描述**: 获取指定范围内的所有交易日列表。
+
+#### 2. 是否开市 (Is Open)
+*   **路径**: `/api/v1/calendar/is_open`
+*   **参数**: `date` (optional): 检查日期，默认为今日。
+*   **描述**: 检查特定日期是否为交易日。
+*   **响应**: `{"date": "2026-04-29", "is_open": true, "status": "success"}`
+
+#### 3. 最近交易日 (Recent)
+*   **路径**: `/api/v1/calendar/recent`
+*   **参数**: `limit` (默认 5): 获取最近几个交易日。
+*   **描述**: 获取当前日期之前的最近 N 个交易日。
+
 ## 7. 微信小程序调用示例
 
 建议在小程序中使用 `wx.cloud.callContainer` 进行调用，这样可以免去鉴权逻辑并享受腾讯云内网加速。
