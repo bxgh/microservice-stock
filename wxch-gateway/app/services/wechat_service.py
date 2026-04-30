@@ -45,7 +45,7 @@ class WechatService:
             "secret": secret
         }
         
-        async with httpx.AsyncClient() as client:
+        async with httpx.AsyncClient(verify=False) as client:
             resp = await client.get(url, params=params)
             data = resp.json()
             
@@ -88,7 +88,7 @@ class WechatService:
             ]
         }
         
-        async with httpx.AsyncClient() as client:
+        async with httpx.AsyncClient(verify=False) as client:
             resp = await client.post(url, json=payload)
             data = resp.json()
             
