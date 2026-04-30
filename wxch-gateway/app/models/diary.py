@@ -111,6 +111,7 @@ class DiaryStatsResponse(BaseModel):
 
 class DiaryPublishMPRequest(BaseModel):
     entry_id: int
+    content: Optional[str] = Field(None, description="净化后的 Markdown 正文，若提供则优先使用此内容")
     is_snapshot: bool = True
 
 

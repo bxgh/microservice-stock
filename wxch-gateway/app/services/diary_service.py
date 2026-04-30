@@ -332,7 +332,9 @@ class DiaryService:
         account = accounts[0]
         
         # 3. Markdown 转 HTML
-        html_content = markdown.markdown(diary["content"], extensions=['extra', 'codehilite', 'toc'])
+        # 优先使用前端传来的“净化版”内容，如果没有则使用原内容
+        source_content = data.content if data.content else diary["content"]
+        html_content = markdown.markdown(source_content, extensions=['extra', 'codehilite', 'toc'])
         
         # 4. 创建发布记录 (mp_publish_record)
         # 根据 DDL, mp_publish_record 需要 title, author, digest, content_html, diary_id, mp_account_id
@@ -340,7 +342,7 @@ class DiaryService:
         user_res = await db.execute(author_query, (user_id,))
         author = user_res[0]["nickname"] if user_res else "Trader"
         
-        digest = diary.get("excerpt") or (diary["content"][:60] if diary["content"] else "")
+        digest = diary.get("excerpt") or (source_content[:60] if source_content else "")
         
         insert_record_q = """
             INSERT INTO mp_publish_record 
