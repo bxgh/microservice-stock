@@ -62,23 +62,23 @@ class WechatService:
                 return None
 
     async def upload_image(self, account_id: int, image_path: str) -> Optional[str]:
-        """上传临时素材(图片)"""
+        """上传永久素材(图片) - 草稿箱必须使用永久素材"""
         token = await self.get_access_token(account_id)
         if not token:
             return None
             
-        url = f"https://api.weixin.qq.com/cgi-bin/media/upload?access_token={token}&type=image"
+        url = f"https://api.weixin.qq.com/cgi-bin/material/add_material?access_token={token}&type=image"
         
         async with httpx.AsyncClient(verify=False) as client:
             with open(image_path, "rb") as f:
-                files = {"media": f}
+                files = {"media": ("cover.jpg", f, "image/jpeg")}
                 resp = await client.post(url, files=files)
                 data = resp.json()
                 
                 if "media_id" in data:
                     return data["media_id"]
                 else:
-                    logger.error(f"Failed to upload image: {data}")
+                    logger.error(f"Failed to upload permanent image: {data}")
                     return None
 
     async def _create_default_cover(self) -> str:
@@ -94,7 +94,6 @@ class WechatService:
     async def add_draft(self, account_id: int, title: str, content_html: str, 
                         author: str = "", digest: str = "", thumb_media_id: str = "") -> Optional[str]:
         """新建草稿"""
-        # 如果没有封面图，生成并上传一个默认的
         if not thumb_media_id:
             cover_path = await self._create_default_cover()
             thumb_media_id = await self.upload_image(account_id, cover_path)
