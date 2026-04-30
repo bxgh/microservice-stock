@@ -2,7 +2,8 @@ import logging
 from typing import List, Optional, Tuple, Dict, Any
 from fastapi import HTTPException
 from app.utils.database import db
-from app.models.diary import DiaryEntryCreate, DiaryEntryUpdate
+from app.models.diary import DiaryEntryCreate, DiaryEntryUpdate, DiaryPublishMPRequest
+import markdown
 
 logger = logging.getLogger("gateway.service.diary")
 
@@ -247,7 +248,10 @@ class DiaryService:
 
     async def update(self, user_id: int, diary_id: int, data: DiaryEntryUpdate) -> Dict[str, Any]:
         # Check if exists
-        check_query = "SELECT id FROM diary_entry WHERE id = %s AND user_id = %s AND deleted_at IS NULL"
+        check_query = """
+            SELECT id FROM diary_entry 
+            WHERE id = %s AND user_id = %s AND deleted_at IS NULL
+        """
         if not await db.execute(check_query, (diary_id, user_id)):
             raise HTTPException(status_code=404, detail="Diary entry not found")
             
@@ -296,7 +300,10 @@ class DiaryService:
         return await self.get_by_id(user_id, diary_id)
 
     async def delete(self, user_id: int, diary_id: int):
-        update_query = "UPDATE diary_entry SET deleted_at = NOW() WHERE id = %s AND user_id = %s AND deleted_at IS NULL"
+        update_query = """
+            UPDATE diary_entry SET deleted_at = NOW() 
+            WHERE id = %s AND user_id = %s AND deleted_at IS NULL
+        """
         await db.execute(update_query, (diary_id, user_id))
         
         # Update user diary count (recalculate)
@@ -304,5 +311,69 @@ class DiaryService:
         res = await db.execute(count_query, (user_id,))
         count = res[0]["c"] if res else 0
         await db.execute("UPDATE sys_user SET diary_count = %s WHERE id = %s", (count, user_id))
+
+    async def publish_to_mp(self, user_id: int, data: DiaryPublishMPRequest) -> Dict[str, Any]:
+        # 1. 获取日记详情
+        diary = await self.get_by_id(user_id, data.entry_id)
+        if not diary:
+            raise HTTPException(status_code=404, detail="Diary entry not found")
+            
+        # 2. 获取用户公众号配置 (取默认或第一个)
+        acc_query = """
+            SELECT id, mp_appid, access_token_encrypted 
+            FROM mp_account 
+            WHERE user_id = %s AND status = 1 
+            ORDER BY is_default DESC LIMIT 1
+        """
+        accounts = await db.execute(acc_query, (user_id,))
+        if not accounts:
+            raise HTTPException(status_code=400, detail="No linked WeChat Official Account found")
+        account = accounts[0]
+        
+        # 3. Markdown 转 HTML
+        html_content = markdown.markdown(diary["content"], extensions=['extra', 'codehilite', 'toc'])
+        
+        # 4. 创建发布记录 (mp_publish_record)
+        # 根据 DDL, mp_publish_record 需要 title, author, digest, content_html, diary_id, mp_account_id
+        author_query = "SELECT nickname FROM sys_user WHERE id = %s"
+        user_res = await db.execute(author_query, (user_id,))
+        author = user_res[0]["nickname"] if user_res else "Trader"
+        
+        digest = diary.get("excerpt") or (diary["content"][:60] if diary["content"] else "")
+        
+        insert_record_q = """
+            INSERT INTO mp_publish_record 
+            (user_id, diary_id, mp_account_id, title, author, digest, 
+             content_html, status, created_at, updated_at)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, 0, NOW(), NOW())
+        """
+        params = (
+            user_id, data.entry_id, account["id"], 
+            diary["title"] or f"股市日记 {diary['entry_date']}", 
+            author, digest, html_content
+        )
+        record_id = await db.execute_insert(insert_record_q, params)
+        
+        # 5. 调用微信接口 (此处为占位，待完善 SDK 集成)
+        # 理想流程: 获取 token -> 上传素材 -> 添加草稿
+        wx_media_id = f"mock_media_id_{record_id}" # 占位
+        
+        # 6. 更新状态
+        update_record_q = """
+            UPDATE mp_publish_record 
+            SET status = 1, wx_media_id = %s, uploaded_at = NOW() 
+            WHERE id = %s
+        """
+        await db.execute(update_record_q, (wx_media_id, record_id))
+        
+        # 7. 更新日记表的发布次数
+        update_diary_q = "UPDATE diary_entry SET mp_published_count = mp_published_count + 1 WHERE id = %s"
+        await db.execute(update_diary_q, (data.entry_id,))
+        
+        return {
+            "publish_record_id": record_id,
+            "wx_media_id": wx_media_id,
+            "message": "Draft created successfully in WeChat"
+        }
 
 diary_service = DiaryService()

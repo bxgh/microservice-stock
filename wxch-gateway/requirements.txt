@@ -6,3 +6,4 @@ aiomysql>=0.2.0
 python-json-logger>=2.0.0
 easyquotation>=0.7.5
 PyJWT>=2.8.0
+markdown>=3.4.0

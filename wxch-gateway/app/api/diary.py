@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, Query, Path
 from typing import Optional
-from app.models.diary import DiaryEntryCreate, DiaryEntryUpdate, DiaryEntryResponse, PaginatedDiaryResponse, DiaryStatsResponse
+from app.models.diary import DiaryEntryCreate, DiaryEntryUpdate, DiaryEntryResponse, PaginatedDiaryResponse, DiaryStatsResponse, DiaryPublishMPRequest, DiaryPublishMPResponse
 from app.services.diary_service import diary_service
 from app.utils.auth import get_current_user_id
 
@@ -58,3 +58,10 @@ async def delete_diary(
 ):
     await diary_service.delete(user_id, diary_id)
     return {"message": "Deleted successfully"}
+
+@router.post("/publish/mp", response_model=DiaryPublishMPResponse, summary="发布日记到微信公众号草稿箱")
+async def publish_to_mp(
+    data: DiaryPublishMPRequest,
+    user_id: int = Depends(get_current_user_id)
+):
+    return await diary_service.publish_to_mp(user_id, data)

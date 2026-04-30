@@ -273,26 +273,7 @@
 *   **更新参数 (PUT)**: 支持 `nickname`, `avatar_url`, `gender`, `region`, `prefs` (JSON 对象)。
 
 ## 8. 股市日记接口 (Stock Diary)
-
-全功能日记管理接口，支持 Markdown 格式与个股/标签关联。
-
-### 8.1 日记列表 (List)
-*   **路径**: `/api/v1/diaries`
-*   **方法**: `GET`
-*   **查询参数**:
-    *   `page`: 页码 (默认 1)
-    *   `size`: 每页条数 (默认 20)
-    *   `tag`: 按标签名称筛选
-    *   `entry_type`: 按类型筛选 (1=盘前, 2=盘中, 3=盘后, 4=周复盘, 5=随笔, 6=个股研究)
-    *   `search`: 全文检索关键词 (命中标题或正文)
-*   **响应**: `{"items": [...], "total": 100, "page": 1, "size": 20}`
-
-### 8.2 日记操作 (CRUD)
-*   **获取详情**: `GET /api/v1/diaries/{id}`
-*   **创建日记**: `POST /api/v1/diaries`
-    *   Payload: `entry_date`, `entry_type`, `title`, `content`, `stocks` (ts_code 列表), `tags` (标签名列表)。
-*   **更新日记**: `PUT /api/v1/diaries/{id}`
-*   **删除日记**: `DELETE /api/v1/diaries/{id}` (软删除)
+请参阅详细的 [股市日记系统：API 规格说明书](./api-spec-diary.md)。
 
 ## 9. 微信小程序调用示例
 

@@ -6,7 +6,7 @@
 
 ## 1. 通用规范
 
-- **Base URL**: `https://<gateway-domain>/api/v1/diary`
+- **Base URL**: `https://<gateway-domain>/api/v1/diaries`
 - **认证方式**: 
   - Header: `Authorization: Bearer <JWT_TOKEN>`
   - Token 获取见 [token.md](./token.md)
@@ -198,7 +198,14 @@
     "is_snapshot": true // 是否创建独立快照(允许二次编辑)
   }
   ```
-- **响应 Data**: `{ "publish_record_id": 500, "wx_media_id": "xxx" }`
+- **响应 Data**: 
+  ```json
+  {
+    "publish_record_id": 500,
+    "wx_media_id": "xxx",
+    "message": "Draft created successfully in WeChat"
+  }
+  ```
 
 ---
 
@@ -225,3 +232,37 @@
    - 不存在则创建，`owner_user_id` 设为当前用户 ID。
    - 更新 `diary_tag` 关系。
 4. **行情透传**: `GET /entries` 列表接口中，后端需根据 `stocks` 的 `ts_code` 批量获取实时行情并返回。
+
+---
+
+## 6. 微信小程序调用示例 (WeChat Cloud Container)
+
+建议在小程序中使用 `wx.cloud.callContainer` 进行调用，这样可以享受腾讯云内网加速。
+
+```javascript
+// 示例：创建一篇新日记
+wx.cloud.callContainer({
+  "config": {
+    "env": "prod-xxxxx" // 你的云托管环境ID
+  },
+  "path": "/api/v1/diaries",
+  "header": {
+    "X-WX-SERVICE": "wxch-gateway", // 目标服务名称
+    "Authorization": "Bearer " + wx.getStorageSync('token') // 传递 JWT
+  },
+  "method": "POST",
+  "data": {
+    "entry_date": "2026-05-01",
+    "entry_type": 5,
+    "title": "今日复盘",
+    "content": "今天市场表现...",
+    "stocks": ["600519.SH"]
+  },
+  "success": (res) => {
+    console.log("日记已保存:", res.data);
+  },
+  "fail": (err) => {
+    console.error("请求失败:", err);
+  }
+});
+```
