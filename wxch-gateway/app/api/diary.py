@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, Query, Path
 from typing import Optional
-from app.models.diary import DiaryEntryCreate, DiaryEntryUpdate, DiaryEntryResponse, PaginatedDiaryResponse
+from app.models.diary import DiaryEntryCreate, DiaryEntryUpdate, DiaryEntryResponse, PaginatedDiaryResponse, DiaryStatsResponse
 from app.services.diary_service import diary_service
 from app.utils.auth import get_current_user_id
 
@@ -22,6 +22,12 @@ async def get_diaries(
         page=page,
         size=size
     )
+
+@router.get("/stats", response_model=DiaryStatsResponse, summary="获取日记看板统计")
+async def get_diary_stats(
+    user_id: int = Depends(get_current_user_id)
+):
+    return await diary_service.get_stats(user_id)
 
 @router.get("/{diary_id}", response_model=DiaryEntryResponse, summary="获取日记详情")
 async def get_diary(

@@ -7,6 +7,53 @@ from app.models.diary import DiaryEntryCreate, DiaryEntryUpdate
 logger = logging.getLogger("gateway.service.diary")
 
 class DiaryService:
+    async def get_stats(self, user_id: int) -> Dict[str, Any]:
+        # 1. 本月记录天数 (DISTINCT entry_date in current month)
+        days_query = """
+            SELECT COUNT(DISTINCT entry_date) as c 
+            FROM diary_entry 
+            WHERE user_id = %s AND deleted_at IS NULL 
+            AND entry_date >= DATE_FORMAT(NOW(), '%%Y-%%m-01')
+        """
+        days_res = await db.execute(days_query, (user_id,))
+        monthly_days = days_res[0]["c"] if days_res else 0
+
+        # 2. 错题本总数 (Linked to tag category=2)
+        error_query = """
+            SELECT COUNT(DISTINCT d.id) as c
+            FROM diary_entry d
+            JOIN diary_tag dt ON d.id = dt.diary_id
+            JOIN diary_tag_dict t ON dt.tag_id = t.id
+            WHERE d.user_id = %s AND d.deleted_at IS NULL AND t.category = 2
+        """
+        error_res = await db.execute(error_query, (user_id,))
+        error_book_count = error_res[0]["c"] if error_res else 0
+
+        # 3. 最近心情
+        mood_query = """
+            SELECT mood FROM diary_entry 
+            WHERE user_id = %s AND deleted_at IS NULL AND mood IS NOT NULL
+            ORDER BY entry_date DESC, created_at DESC LIMIT 1
+        """
+        mood_res = await db.execute(mood_query, (user_id,))
+        latest_mood = mood_res[0]["mood"] if mood_res else None
+
+        # 4. 心情分布
+        dist_query = """
+            SELECT mood, COUNT(*) as count
+            FROM diary_entry
+            WHERE user_id = %s AND deleted_at IS NULL AND mood IS NOT NULL
+            GROUP BY mood
+        """
+        mood_distribution = await db.execute(dist_query, (user_id,))
+
+        return {
+            "monthly_days": monthly_days,
+            "error_book_count": error_book_count,
+            "latest_mood": latest_mood,
+            "mood_distribution": mood_distribution
+        }
+
     async def get_list(self, user_id: int, page: int = 1, size: int = 20, 
                        tag: Optional[str] = None, entry_type: Optional[int] = None, 
                        search: Optional[str] = None) -> Tuple[List[Dict[str, Any]], int]:

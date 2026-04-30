@@ -74,3 +74,13 @@ class PaginatedDiaryResponse(BaseModel):
     total: int
     page: int
     size: int
+
+class MoodStat(BaseModel):
+    mood: int
+    count: int
+
+class DiaryStatsResponse(BaseModel):
+    monthly_days: int = Field(0, description="本月记录天数")
+    error_book_count: int = Field(0, description="错题本总数")
+    latest_mood: Optional[int] = Field(None, description="最近一次心情 ID")
+    mood_distribution: List[MoodStat] = Field(default_factory=list, description="心情分布统计")
