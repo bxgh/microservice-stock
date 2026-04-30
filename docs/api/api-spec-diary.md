@@ -51,7 +51,7 @@
 
 ### 3.1 看板统计
 - **Endpoint**: `GET /stats`
-- **描述**: 获取用户当月日记统计及情绪概览。
+- **描述**: 获取用户当月日记统计及情绪概览。 (实际路径: `/api/v1/diaries/stats`)
 - **响应 Data**:
   ```json
   {
@@ -67,6 +67,7 @@
 
 ### 3.2 日记列表 (分页/过滤)
 - **Endpoint**: `GET /entries`
+- **描述**: 获取日记列表。 (实际路径: `/api/v1/diaries/entries`)
 - **查询参数**:
   - `page`: (int) 页码, 默认 1
   - `page_size`: (int) 每页大小, 默认 10
@@ -104,7 +105,7 @@
 
 ### 3.3 日记详情
 - **Endpoint**: `GET /entries/:id`
-- **描述**: 获取指定日记的完整 Markdown 内容。
+- **描述**: 获取指定日记的完整 Markdown 内容。 (实际路径: `/api/v1/diaries/entries/:id`)
 - **响应 Data**:
   ```json
   {
@@ -127,6 +128,7 @@
 
 ### 3.4 保存/更新日记
 - **Endpoint**: `POST /entries` (新建) / `PUT /entries/:id` (修改)
+- **描述**: 保存或更新日记内容。 (实际路径: `/api/v1/diaries/entries` 或 `/api/v1/diaries/entries/:id`)
 - **请求 Payload**:
   ```json
   {
@@ -146,7 +148,7 @@
 
 ### 3.5 删除日记
 - **Endpoint**: `DELETE /entries/:id`
-- **描述**: 软删除日记 (设置 `deleted_at`)。
+- **描述**: 软删除日记 (设置 `deleted_at`)。 (实际路径: `/api/v1/diaries/entries/:id`)
 
 ### 3.6 标签字典获取
 - **Endpoint**: `GET /tags/dict`
@@ -190,7 +192,7 @@
 
 ### 3.9 公众号发布 (草稿)
 - **Endpoint**: `POST /publish/mp`
-- **描述**: 将日记内容转换为 HTML 并上传至微信公众号草稿箱（仅支持已绑定的单个公众号）。
+- **描述**: 将日记内容转换为 HTML 并上传至微信公众号草稿箱（仅支持已绑定的单个公众号）。 (实际路径: `/api/v1/diaries/publish/mp`)
 - **请求 Payload**:
   ```json
   {
@@ -245,7 +247,7 @@ wx.cloud.callContainer({
   "config": {
     "env": "prod-xxxxx" // 你的云托管环境ID
   },
-  "path": "/api/v1/diaries",
+  "path": "/api/v1/diaries/entries",
   "header": {
     "X-WX-SERVICE": "wxch-gateway", // 目标服务名称
     "Authorization": "Bearer " + wx.getStorageSync('token') // 传递 JWT

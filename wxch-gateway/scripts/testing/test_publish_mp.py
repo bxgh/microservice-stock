@@ -55,7 +55,7 @@ async def test_publish_mp_flow():
             "content": "# Test Header\nThis is a test content for WeChat publishing.",
             "stocks": ["000001.SZ"]
         }
-        create_res = await ac.post("/api/v1/entries", json=new_diary, headers=headers)
+        create_res = await ac.post("/api/v1/diaries/entries", json=new_diary, headers=headers)
         assert create_res.status_code == 200
         diary_id = create_res.json()["id"]
         
@@ -64,7 +64,7 @@ async def test_publish_mp_flow():
             "entry_id": diary_id,
             "is_snapshot": True
         }
-        pub_res = await ac.post("/api/v1/publish/mp", json=publish_data, headers=headers)
+        pub_res = await ac.post("/api/v1/diaries/publish/mp", json=publish_data, headers=headers)
         
         assert pub_res.status_code == 200, pub_res.text
         data = pub_res.json()
