@@ -6,7 +6,7 @@ from app.utils.auth import get_current_user_id
 
 router = APIRouter()
 
-@router.get("", response_model=PaginatedDiaryResponse, summary="获取日记列表")
+@router.get("/entries", response_model=PaginatedDiaryResponse, summary="获取日记列表")
 async def get_diaries(
     page: int = Query(1, ge=1),
     size: int = Query(20, ge=1, le=100),
@@ -29,21 +29,21 @@ async def get_diary_stats(
 ):
     return await diary_service.get_stats(user_id)
 
-@router.get("/{diary_id}", response_model=DiaryEntryResponse, summary="获取日记详情")
+@router.get("/entries/{diary_id}", response_model=DiaryEntryResponse, summary="获取日记详情")
 async def get_diary(
     diary_id: int = Path(..., description="日记 ID"),
     user_id: int = Depends(get_current_user_id)
 ):
     return await diary_service.get_by_id(user_id, diary_id)
 
-@router.post("", response_model=DiaryEntryResponse, summary="创建日记")
+@router.post("/entries", response_model=DiaryEntryResponse, summary="创建日记")
 async def create_diary(
     data: DiaryEntryCreate,
     user_id: int = Depends(get_current_user_id)
 ):
     return await diary_service.create(user_id, data)
 
-@router.put("/{diary_id}", response_model=DiaryEntryResponse, summary="更新日记")
+@router.put("/entries/{diary_id}", response_model=DiaryEntryResponse, summary="更新日记")
 async def update_diary(
     data: DiaryEntryUpdate,
     diary_id: int = Path(..., description="日记 ID"),
@@ -51,7 +51,7 @@ async def update_diary(
 ):
     return await diary_service.update(user_id, diary_id, data)
 
-@router.delete("/{diary_id}", summary="删除日记")
+@router.delete("/entries/{diary_id}", summary="删除日记")
 async def delete_diary(
     diary_id: int = Path(..., description="日记 ID"),
     user_id: int = Depends(get_current_user_id)
