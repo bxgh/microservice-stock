@@ -4,6 +4,7 @@ from fastapi import HTTPException
 from app.utils.database import db
 from app.models.diary import DiaryEntryCreate, DiaryEntryUpdate, DiaryPublishMPRequest
 import markdown
+from app.services.wechat_service import wechat_service
 
 logger = logging.getLogger("gateway.service.diary")
 
@@ -354,9 +355,22 @@ class DiaryService:
         )
         record_id = await db.execute_insert(insert_record_q, params)
         
-        # 5. 调用微信接口 (此处为占位，待完善 SDK 集成)
-        # 理想流程: 获取 token -> 上传素材 -> 添加草稿
-        wx_media_id = f"mock_media_id_{record_id}" # 占位
+        # 5. 调用微信接口 (正式调用)
+        # 理想流程: 获取 token -> 上传素材(图片) -> 添加草稿
+        # 目前先实现文章添加，图片上传建议后续通过附件模块独立处理
+        wx_media_id = await wechat_service.add_draft(
+            account_id=account['id'],
+            title=diary["title"] or f"股市日记 {diary['entry_date']}",
+            content_html=html_content,
+            author=author or "",
+            digest=digest or ""
+        )
+        
+        if not wx_media_id:
+            # 如果失败，标记记录并抛错
+            error_q = "UPDATE mp_publish_record SET status = 4, error_message = %s WHERE id = %s"
+            await db.execute(error_q, ("Failed to add draft to WeChat", record_id))
+            raise HTTPException(status_code=500, detail="Failed to sync to WeChat Draft box")
         
         # 6. 更新状态
         update_record_q = """
