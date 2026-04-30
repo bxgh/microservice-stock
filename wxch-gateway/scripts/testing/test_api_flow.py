@@ -51,7 +51,7 @@ async def test_user_profile_and_diary():
         assert profile_data["id"] == user_id
         
         # 3. Test Diary List
-        list_res = await ac.get("/api/v1/diaries/entries", headers=headers)
+        list_res = await ac.get("/api/v1/entries", headers=headers)
         assert list_res.status_code == 200
         list_data = list_res.json()
         assert "items" in list_data
@@ -65,18 +65,18 @@ async def test_user_profile_and_diary():
             "stocks": ["600519.SH"],
             "tags": ["测试标签"]
         }
-        create_res = await ac.post("/api/v1/diaries/entries", json=new_diary, headers=headers)
+        create_res = await ac.post("/api/v1/entries", json=new_diary, headers=headers)
         assert create_res.status_code == 200, create_res.text
         created_data = create_res.json()
         assert created_data["title"] == new_diary["title"]
         new_id = created_data["id"]
         
         # 5. Get Diary
-        get_res = await ac.get(f"/api/v1/diaries/entries/{new_id}", headers=headers)
+        get_res = await ac.get(f"/api/v1/entries/{new_id}", headers=headers)
         assert get_res.status_code == 200
         
         # 6. Delete Diary
-        del_res = await ac.delete(f"/api/v1/diaries/entries/{new_id}", headers=headers)
+        del_res = await ac.delete(f"/api/v1/entries/{new_id}", headers=headers)
         assert del_res.status_code == 200
         
 if __name__ == "__main__":

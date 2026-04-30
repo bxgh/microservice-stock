@@ -101,7 +101,7 @@ async def health_check():
 # 注册路由
 app.include_router(auth.router, prefix="/api/v1/auth", tags=["认证授权"])
 app.include_router(user.router, prefix="/api/v1/user", tags=["用户系统"])
-app.include_router(diary.router, prefix="/api/v1/diaries", tags=["股市日记"])
+app.include_router(diary.router, prefix="/api/v1", tags=["股市日记"])
 app.include_router(kline.router, prefix="/api/v1/stocks", tags=["股票数据"])
 app.include_router(quote.router, prefix="/api/v1/stocks", tags=["股票数据"])
 app.include_router(stock_info.router, prefix="/api/v1/stocks", tags=["个股详情"])
