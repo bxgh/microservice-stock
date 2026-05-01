@@ -220,7 +220,6 @@ class DiaryService:
         html_content = markdown.markdown(source_content, extensions=['extra', 'codehilite', 'toc'])
         
         # 3. HTML 深度净化：清理所有无效标签
-        # 清理不含实质文字的 P 和 LI (包括只含空格或换行的)
         html_content = re.sub(r'<(p|li)[^>]*>\s*(?:&nbsp;|\s)*</\1>', '', html_content)
         
         # 4. 样式变量定义
@@ -228,31 +227,20 @@ class DiaryService:
         color_gold = "#d4a76a"
         
         # 5. 标签样式硬注入
-        # 注入段落
         html_content = html_content.replace("<p>", f'<p style="font-family: {font_serif}; font-size: 14px; line-height: 1.6; color: #353535; margin: 0 0 10px 0; text-align: justify;">')
-        
-        # 注入标题：补齐 § 符号，锁定上边距
         def h3_replacer(match):
             title_text = match.group(1)
             return f'<h3 style="font-family: {font_serif}; font-size: 16px; font-weight: bold; color: #222; margin: 20px 0 6px 0; padding-left: 10px; border-left: 3px solid {color_gold}; line-height: 1.4;"><span style="color: {color_gold}; margin-right: 4px;">§</span>{title_text}</h3>'
         html_content = re.sub(r"<h3>(.*?)</h3>", h3_replacer, html_content)
-        
-        # 注入列表
         html_content = html_content.replace("<ul>", f'<ul style="margin: 0 0 12px 0; padding-left: 20px; font-family: {font_serif}; font-size: 14px; color: #353535;">')
         html_content = html_content.replace("<li>", f'<li style="margin: 0 0 4px 0; padding: 0;">')
-        
-        # 注入引用
         html_content = html_content.replace("<blockquote>", f'<blockquote style="border-left: 3px solid #eee; padding: 6px 12px; color: #777; background-color: #f9f9f9; margin: 15px 0; font-family: {font_serif}; font-size: 13px;">')
         
         # 6. 特殊处理：确保第一个元素的 margin-top 绝对为 0
-        # 如果第一个标签是 <p style="...">，将其 margin 改为 0 0 10px 0
-        html_content = re.sub(r'^(<p style=".*?)margin: 0 0 10px 0;', r'\1margin: 0 0 10px 0;', html_content) # 已经设为0了，但为了万无一失增加强制性
-        
-        # 7. 包装最终容器
         final_html = f'<div class="entry-container" style="padding: 0 10px 10px 10px; background-color: #ffffff; margin-top: 0 !important;">' \
                      f'<div style="margin-top: 0 !important;">{html_content}</div></div>'
         
-        # 8. 作者、发布记录
+        # 7. 作者、发布记录
         author = "八仙过海"
         digest = diary.get("excerpt") or (source_content[:60] if source_content else "")
         
@@ -282,7 +270,8 @@ class DiaryService:
                 raise Exception("Failed to sync to WeChat draft box")
         except Exception as e:
             logger.error(f"Failed to publish to mp: {str(e)}")
-            update_q = "UPDATE mp_publish_record SET status = 4, error_msg = %s WHERE id = %s"
+            # 修正：修正字段名为 error_message
+            update_q = "UPDATE mp_publish_record SET status = 4, error_message = %s WHERE id = %s"
             await db.execute(update_q, (str(e), record_id))
             return {"publish_record_id": record_id, "message": f"failed: {str(e)}"}
 
