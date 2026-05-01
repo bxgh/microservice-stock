@@ -111,7 +111,8 @@ class DiaryService:
             data.content, data.content_format, excerpt, word_count, 
             data.visibility, 1 if data.is_pinned else 0
         )
-        entry_id = await db.execute(query, params)
+        # 使用 execute_insert 获取自增 ID
+        entry_id = await db.execute_insert(query, params)
         
         if data.stocks:
             stock_info_q = "SELECT id, ts_code FROM stock_info WHERE ts_code IN ({})".format(",".join(["%s"] * len(data.stocks)))
@@ -181,7 +182,6 @@ class DiaryService:
 
     async def get_stats(self, user_id: int) -> Dict[str, Any]:
         """获取统计"""
-        # 注意: DATE_FORMAT 中的 % 必须转义为 %%
         monthly_q = """
             SELECT COUNT(DISTINCT entry_date) as count 
             FROM diary_entry 
@@ -263,16 +263,17 @@ class DiaryService:
         author = user_res[0]["nickname"] if user_res else "Trader"
         digest = diary.get("excerpt") or (source_content[:60] if source_content else "")
         
-        # 修复：补上缺失的 user_id
         insert_record_q = """
             INSERT INTO mp_publish_record 
             (user_id, diary_id, mp_account_id, title, author, digest, content_html, status) 
             VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
         """
-        record_id = await db.execute(insert_record_q, (
+        # 修正：使用 execute_insert 获取真实的 record_id
+        record_id = await db.execute_insert(insert_record_q, (
             user_id, data.entry_id, account['id'], diary['title'] or f"日记 {diary['entry_date']}",
             author, digest, html_content, 1 
         ))
+        
         try:
             wx_media_id = await wechat_service.add_draft(
                 account_id=account['id'],
@@ -282,6 +283,7 @@ class DiaryService:
                 digest=digest or ""
             )
             if wx_media_id:
+                # 修正：确保 record_id 是数字而非列表
                 update_q = "UPDATE mp_publish_record SET status = 3, wx_media_id = %s WHERE id = %s"
                 await db.execute(update_q, (wx_media_id, record_id))
                 return {"publish_record_id": record_id, "wx_media_id": wx_media_id, "message": "success"}
@@ -289,6 +291,7 @@ class DiaryService:
                 raise Exception("Failed to sync to WeChat draft box")
         except Exception as e:
             logger.error(f"Failed to publish to mp: {str(e)}")
+            # 修正：确保这里也能正确使用 record_id
             update_q = "UPDATE mp_publish_record SET status = 4, error_msg = %s WHERE id = %s"
             await db.execute(update_q, (str(e), record_id))
             return {"publish_record_id": record_id, "message": f"failed: {str(e)}"}
