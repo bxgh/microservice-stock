@@ -11,7 +11,7 @@ from app.services.wechat_service import wechat_service
 logger = logging.getLogger("gateway.service.diary")
 
 class DiaryService:
-    """日记服务类 (精英排版+保底复制最终版)"""
+    """日记服务类，处理日记的增删改查及同步逻辑"""
 
     async def get_list(self, user_id: int, page: int = 1, size: int = 20, 
                           tag: Optional[str] = None, entry_type: Optional[int] = None,
@@ -20,6 +20,7 @@ class DiaryService:
         offset = (page - 1) * size
         params = [user_id]
         where_clauses = ["user_id = %s", "deleted_at IS NULL"]
+        
         if tag:
             where_clauses.append("id IN (SELECT diary_id FROM diary_tag dt JOIN diary_tag_dict td ON dt.tag_id = td.id WHERE td.name = %s)")
             params.append(tag)
@@ -31,44 +32,103 @@ class DiaryService:
             params.extend([f"%{search}%", f"%{search}%"])
             
         where_str = " AND ".join(where_clauses)
-        count_res = await db.execute(f"SELECT COUNT(*) as total FROM diary_entry WHERE {where_str}", tuple(params))
+        
+        count_query = f"SELECT COUNT(*) as total FROM diary_entry WHERE {where_str}"
+        count_res = await db.execute(count_query, tuple(params))
         total = count_res[0]['total']
         
-        items = await db.execute(f"SELECT * FROM diary_entry WHERE {where_str} ORDER BY entry_date DESC, created_at DESC LIMIT %s OFFSET %s", tuple(params + [size, offset]))
+        list_query = f"""
+            SELECT * FROM diary_entry 
+            WHERE {where_str} 
+            ORDER BY entry_date DESC, created_at DESC 
+            LIMIT %s OFFSET %s
+        """
+        list_params = params + [size, offset]
+        items = await db.execute(list_query, tuple(list_params))
         
         if items:
             ids = [item['id'] for item in items]
-            stocks_res = await db.execute("SELECT ds.diary_id as entry_id, s.ts_code, s.name FROM diary_stock ds JOIN stock_info s ON ds.ts_code = s.ts_code WHERE ds.diary_id IN ({})".format(",".join(["%s"] * len(ids))), tuple(ids))
-            tags_res = await db.execute("SELECT dt.diary_id as entry_id, td.id, td.name, td.category, td.color FROM diary_tag dt JOIN diary_tag_dict td ON dt.tag_id = td.id WHERE dt.diary_id IN ({})".format(",".join(["%s"] * len(ids))), tuple(ids))
+            stocks_query = """
+                SELECT ds.diary_id as entry_id, s.ts_code, s.name 
+                FROM diary_stock ds
+                JOIN stock_info s ON ds.ts_code = s.ts_code
+                WHERE ds.diary_id IN ({})
+            """.format(",".join(["%s"] * len(ids)))
+            stocks_res = await db.execute(stocks_query, tuple(ids))
+            
+            tags_query = """
+                SELECT dt.diary_id as entry_id, td.id, td.name, td.category, td.color
+                FROM diary_tag dt
+                JOIN diary_tag_dict td ON dt.tag_id = td.id
+                WHERE dt.diary_id IN ({})
+            """.format(",".join(["%s"] * len(ids)))
+            tags_res = await db.execute(tags_query, tuple(ids))
+            
             for item in items:
                 item['stocks'] = [s for s in stocks_res if s['entry_id'] == item['id']]
                 item['tags'] = [t for t in tags_res if t['entry_id'] == item['id']]
+                
         return items, total
 
     async def get_by_id(self, user_id: int, entry_id: int) -> Optional[Dict[str, Any]]:
         """获取日记详情"""
-        res = await db.execute("SELECT * FROM diary_entry WHERE id = %s AND user_id = %s AND deleted_at IS NULL", (entry_id, user_id))
-        if not res: return None
+        query = "SELECT * FROM diary_entry WHERE id = %s AND user_id = %s AND deleted_at IS NULL"
+        res = await db.execute(query, (entry_id, user_id))
+        if not res:
+            return None
+        
         item = res[0]
-        item['stocks'] = await db.execute("SELECT s.ts_code, s.name, s.market, s.industry_sw FROM diary_stock ds JOIN stock_info s ON ds.ts_code = s.ts_code WHERE ds.diary_id = %s", (entry_id,))
-        item['tags'] = await db.execute("SELECT td.id, td.name, td.category, td.color FROM diary_tag dt JOIN diary_tag_dict td ON dt.tag_id = td.id WHERE dt.diary_id = %s", (entry_id,))
+        stocks_query = """
+            SELECT s.ts_code, s.name, s.market, s.industry_sw
+            FROM diary_stock ds
+            JOIN stock_info s ON ds.ts_code = s.ts_code
+            WHERE ds.diary_id = %s
+        """
+        item['stocks'] = await db.execute(stocks_query, (entry_id,))
+        
+        tags_query = """
+            SELECT td.id, td.name, td.category, td.color
+            FROM diary_tag dt
+            JOIN diary_tag_dict td ON dt.tag_id = td.id
+            WHERE dt.diary_id = %s
+        """
+        item['tags'] = await db.execute(tags_query, (entry_id,))
         return item
 
     async def create(self, user_id: int, data: DiaryEntryCreate) -> Dict[str, Any]:
         """创建日记"""
         word_count = len(data.content)
         excerpt = data.content[:200].replace("\n", " ").strip()
-        query = """INSERT INTO diary_entry (user_id, entry_date, entry_type, mood, title, content, content_format, excerpt, word_count, visibility, is_pinned) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)"""
-        params = (user_id, data.entry_date, data.entry_type, data.mood, data.title, data.content, data.content_format, excerpt, word_count, data.visibility, 1 if data.is_pinned else 0)
+        
+        query = """
+            INSERT INTO diary_entry (
+                user_id, entry_date, entry_type, mood, title, content, 
+                content_format, excerpt, word_count, visibility, is_pinned
+            ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+        """
+        params = (
+            user_id, data.entry_date, data.entry_type, data.mood, data.title, 
+            data.content, data.content_format, excerpt, word_count, 
+            data.visibility, 1 if data.is_pinned else 0
+        )
         entry_id = await db.execute_insert(query, params)
+        
         if data.stocks:
-            stocks_found = await db.execute("SELECT id, ts_code FROM stock_info WHERE ts_code IN ({})".format(",".join(["%s"] * len(data.stocks))), tuple(data.stocks))
+            stock_info_q = "SELECT id, ts_code FROM stock_info WHERE ts_code IN ({})".format(",".join(["%s"] * len(data.stocks)))
+            stocks_found = await db.execute(stock_info_q, tuple(data.stocks))
             if stocks_found:
-                await db.execute_many("INSERT INTO diary_stock (diary_id, stock_id, ts_code) VALUES (%s, %s, %s)", [(entry_id, s['id'], s['ts_code']) for s in stocks_found])
+                stock_rel_q = "INSERT INTO diary_stock (diary_id, stock_id, ts_code) VALUES (%s, %s, %s)"
+                stock_rel_params = [(entry_id, s['id'], s['ts_code']) for s in stocks_found]
+                await db.execute_many(stock_rel_q, stock_rel_params)
+            
         if data.tags:
-            tags_found = await db.execute("SELECT id FROM diary_tag_dict WHERE name IN ({})".format(",".join(["%s"] * len(data.tags))), tuple(data.tags))
+            tag_query = "SELECT id FROM diary_tag_dict WHERE name IN ({})".format(",".join(["%s"] * len(data.tags)))
+            tags_found = await db.execute(tag_query, tuple(data.tags))
             if tags_found:
-                await db.execute_many("INSERT INTO diary_tag (diary_id, tag_id) VALUES (%s, %s)", [(entry_id, t['id']) for t in tags_found])
+                rel_query = "INSERT INTO diary_tag (diary_id, tag_id) VALUES (%s, %s)"
+                rel_params = [(entry_id, t['id']) for t in tags_found]
+                await db.execute_many(rel_query, rel_params)
+                
         return await self.get_by_id(user_id, entry_id)
 
     async def update(self, user_id: int, entry_id: int, data: DiaryEntryUpdate) -> Dict[str, Any]:
@@ -80,77 +140,159 @@ class DiaryService:
             if field in ['stocks', 'tags']: continue
             updates.append(f"{field} = %s")
             params.append(value)
+            
         if updates:
             if 'content' in update_fields:
-                updates.extend(["word_count = %s", "excerpt = %s"])
-                params.extend([len(update_fields['content']), update_fields['content'][:200].replace("\n", " ").strip()])
+                updates.append("word_count = %s")
+                params.append(len(update_fields['content']))
+                updates.append("excerpt = %s")
+                params.append(update_fields['content'][:200].replace("\n", " ").strip())
             params.extend([entry_id, user_id])
-            await db.execute(f"UPDATE diary_entry SET {', '.join(updates)} WHERE id = %s AND user_id = %s", tuple(params))
+            query = f"UPDATE diary_entry SET {', '.join(updates)} WHERE id = %s AND user_id = %s"
+            await db.execute(query, tuple(params))
+            
         if 'stocks' in update_fields:
             await db.execute("DELETE FROM diary_stock WHERE diary_id = %s", (entry_id,))
             if update_fields['stocks']:
-                stocks_found = await db.execute("SELECT id, ts_code FROM stock_info WHERE ts_code IN ({})".format(",".join(["%s"] * len(update_fields['stocks']))), tuple(update_fields['stocks']))
+                stock_info_q = "SELECT id, ts_code FROM stock_info WHERE ts_code IN ({})".format(",".join(["%s"] * len(update_fields['stocks'])))
+                stocks_found = await db.execute(stock_info_q, tuple(update_fields['stocks']))
                 if stocks_found:
-                    await db.execute_many("INSERT INTO diary_stock (diary_id, stock_id, ts_code) VALUES (%s, %s, %s)", [(entry_id, s['id'], s['ts_code']) for s in stocks_found])
+                    stock_rel_q = "INSERT INTO diary_stock (diary_id, stock_id, ts_code) VALUES (%s, %s, %s)"
+                    stock_rel_params = [(entry_id, s['id'], s['ts_code']) for s in stocks_found]
+                    await db.execute_many(stock_rel_q, stock_rel_params)
+                
         if 'tags' in update_fields:
             await db.execute("DELETE FROM diary_tag WHERE diary_id = %s", (entry_id,))
             if update_fields['tags']:
-                tags_found = await db.execute("SELECT id FROM diary_tag_dict WHERE name IN ({})".format(",".join(["%s"] * len(update_fields['tags']))), tuple(update_fields['tags']))
+                tag_query = "SELECT id FROM diary_tag_dict WHERE name IN ({})".format(",".join(["%s"] * len(update_fields['tags'])))
+                tags_found = await db.execute(tag_query, tuple(update_fields['tags']))
                 if tags_found:
-                    await db.execute_many("INSERT INTO diary_tag (diary_id, tag_id) VALUES (%s, %s)", [(entry_id, t['id']) for t in tags_found])
+                    rel_query = "INSERT INTO diary_tag (diary_id, tag_id) VALUES (%s, %s)"
+                    rel_params = [(entry_id, t['id']) for t in tags_found]
+                    await db.execute_many(rel_query, rel_params)
+                    
         return await self.get_by_id(user_id, entry_id)
 
     async def delete(self, user_id: int, entry_id: int) -> bool:
         """逻辑删除"""
-        affected = await db.execute("UPDATE diary_entry SET deleted_at = NOW() WHERE id = %s AND user_id = %s", (entry_id, user_id))
+        query = "UPDATE diary_entry SET deleted_at = NOW() WHERE id = %s AND user_id = %s"
+        affected = await db.execute(query, (entry_id, user_id))
         return affected > 0
 
     async def get_stats(self, user_id: int) -> Dict[str, Any]:
         """获取统计"""
-        monthly_res = await db.execute("SELECT COUNT(DISTINCT entry_date) as count FROM diary_entry WHERE user_id = %s AND deleted_at IS NULL AND entry_date >= DATE_FORMAT(NOW() ,'%%Y-%%m-01')", (user_id,))
-        mood_res = await db.execute("SELECT mood FROM diary_entry WHERE user_id = %s AND deleted_at IS NULL ORDER BY entry_date DESC LIMIT 1", (user_id,))
-        dist_res = await db.execute("SELECT mood, COUNT(*) as count FROM diary_entry WHERE user_id = %s AND deleted_at IS NULL GROUP BY mood", (user_id,))
-        return {"monthly_days": monthly_res[0]['count'] if monthly_res else 0, "latest_mood": mood_res[0]['mood'] if mood_res else None, "mood_distribution": dist_res or []}
+        monthly_q = """
+            SELECT COUNT(DISTINCT entry_date) as count 
+            FROM diary_entry 
+            WHERE user_id = %s AND deleted_at IS NULL AND entry_date >= DATE_FORMAT(NOW() ,'%%Y-%%m-01')
+        """
+        monthly_res = await db.execute(monthly_q, (user_id,))
+        mood_q = "SELECT mood FROM diary_entry WHERE user_id = %s AND deleted_at IS NULL ORDER BY entry_date DESC LIMIT 1"
+        mood_res = await db.execute(mood_q, (user_id,))
+        dist_q = "SELECT mood, COUNT(*) as count FROM diary_entry WHERE user_id = %s AND deleted_at IS NULL GROUP BY mood"
+        dist_res = await db.execute(dist_q, (user_id,))
+        
+        return {
+            "monthly_days": monthly_res[0]['count'] if monthly_res else 0,
+            "latest_mood": mood_res[0]['mood'] if mood_res else None,
+            "mood_distribution": dist_res or []
+        }
 
     async def publish_to_mp(self, user_id: int, data: DiaryPublishMPRequest) -> Dict[str, Any]:
-        """最终版发布逻辑：极致内联样式 + 强制返回 HTML 供复制"""
+        """同步日记到微信公众号草稿箱 (认真排版终极版)"""
         diary = await self.get_by_id(user_id, data.entry_id)
-        if not diary: raise Exception("Diary not found")
-        accounts = await db.execute("SELECT id, mp_appid FROM mp_account LIMIT 1")
-        if not accounts: raise Exception("No mp account found")
+        if not diary:
+            raise Exception("Diary not found")
+        
+        account_query = "SELECT id, mp_appid FROM mp_account LIMIT 1"
+        accounts = await db.execute(account_query)
+        if not accounts:
+            raise Exception("No linked WeChat Official Account found")
         account = accounts[0]
         
-        # 1. 极致排版引擎
-        content = data.content if data.content else diary["content"]
-        content = re.sub(r'^\s*[*+-]\s*$', '', content, flags=re.MULTILINE)
-        content = re.sub(r'\n\s*\n', '\n\n', content.strip())
-        html = markdown.markdown(content, extensions=['extra', 'codehilite', 'toc'])
-        html = re.sub(r'<(p|li)[^>]*>\s*(?:&nbsp;|\s)*</\1>', '', html)
+        source_content = data.content if data.content else diary["content"]
         
-        f_serif = "'Optima', 'Source Serif Pro', 'PingFang SC', 'STSongti-SC-Regular', serif"
-        c_gold = "#d4a76a"
-        html = html.replace("<p>", f'<p style="font-family: {f_serif}; font-size: 14px; line-height: 1.6; color: #353535; margin: 0 0 10px 0; text-align: justify;">')
-        html = re.sub(r"<h3>(.*?)</h3>", lambda m: f'<h3 style="font-family: {f_serif}; font-size: 16px; font-weight: bold; color: #222; margin: 20px 0 6px 0; padding-left: 10px; border-left: 3px solid {c_gold}; line-height: 1.4;"><span style="color: {c_gold}; margin-right: 4px;">§</span>{m.group(1)}</h3>', html)
-        html = html.replace("<ul>", f'<ul style="margin: 0 0 12px 0; padding-left: 20px; font-family: {f_serif}; font-size: 14px; color: #353535;">').replace("<li>", f'<li style="margin: 0 0 4px 0; padding: 0;">')
-        html = html.replace("<blockquote>", f'<blockquote style="border-left: 3px solid #eee; padding: 6px 12px; color: #777; background-color: #f9f9f9; margin: 15px 0; font-family: {f_serif}; font-size: 13px;">')
-        final_html = f'<div style="padding: 0 10px 10px 10px; background-color: #ffffff; margin-top: 0 !important;"><div style="margin-top: 0 !important;">{html}</div></div>'
+        # 1. 源码清理：物理切除只含列表符号的空行
+        source_content = re.sub(r'^\s*[*+-]\s*$', '', source_content, flags=re.MULTILINE)
+        source_content = re.sub(r'\n\s*\n', '\n\n', source_content.strip())
         
-        # 2. 保底返回结构
-        result = {"publish_record_id": None, "wx_media_id": None, "content_html": final_html, "message": "init"}
-        author, digest = "八仙过海", (diary.get("excerpt") or (content[:60] if content else ""))
-        record_id = await db.execute_insert("INSERT INTO mp_publish_record (user_id, diary_id, mp_account_id, title, author, digest, content_html, status) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)", (user_id, data.entry_id, account['id'], diary['title'] or f"日记 {diary['entry_date']}", author, digest, final_html, 1))
-        result["publish_record_id"] = record_id
+        # 2. 基础 Markdown 转 HTML
+        html_content = markdown.markdown(source_content, extensions=['extra', 'codehilite', 'toc'])
         
-        # 3. 尝试自动同步
+        # 3. HTML 深度净化：清理所有无效标签
+        # 清理不含实质文字的 P 和 LI (包括只含空格或换行的)
+        html_content = re.sub(r'<(p|li)[^>]*>\s*(?:&nbsp;|\s)*</\1>', '', html_content)
+        
+        # 4. 样式变量定义
+        font_serif = "'Optima', 'Source Serif Pro', 'PingFang SC', 'STSongti-SC-Regular', serif"
+        color_gold = "#d4a76a"
+        
+        # 5. 标签样式硬注入
+        # 注入段落
+        html_content = html_content.replace("<p>", f'<p style="font-family: {font_serif}; font-size: 14px; line-height: 1.6; color: #353535; margin: 0 0 10px 0; text-align: justify;">')
+        
+        # 注入标题：补齐 § 符号，锁定上边距
+        def h3_replacer(match):
+            title_text = match.group(1)
+            return f'<h3 style="font-family: {font_serif}; font-size: 16px; font-weight: bold; color: #222; margin: 20px 0 6px 0; padding-left: 10px; border-left: 3px solid {color_gold}; line-height: 1.4;"><span style="color: {color_gold}; margin-right: 4px;">§</span>{title_text}</h3>'
+        html_content = re.sub(r"<h3>(.*?)</h3>", h3_replacer, html_content)
+        
+        # 注入列表
+        html_content = html_content.replace("<ul>", f'<ul style="margin: 0 0 12px 0; padding-left: 20px; font-family: {font_serif}; font-size: 14px; color: #353535;">')
+        html_content = html_content.replace("<li>", f'<li style="margin: 0 0 4px 0; padding: 0;">')
+        
+        # 注入引用
+        html_content = html_content.replace("<blockquote>", f'<blockquote style="border-left: 3px solid #eee; padding: 6px 12px; color: #777; background-color: #f9f9f9; margin: 15px 0; font-family: {font_serif}; font-size: 13px;">')
+        
+        # 6. 特殊处理：确保第一个元素的 margin-top 绝对为 0
+        # 如果第一个标签是 <p style="...">，将其 margin 改为 0 0 10px 0
+        html_content = re.sub(r'^(<p style=".*?)margin: 0 0 10px 0;', r'\1margin: 0 0 10px 0;', html_content) # 已经设为0了，但为了万无一失增加强制性
+        
+        # 7. 包装最终容器
+        final_html = f'<div class="entry-container" style="padding: 0 10px 10px 10px; background-color: #ffffff; margin-top: 0 !important;">' \
+                     f'<div style="margin-top: 0 !important;">{html_content}</div></div>'
+        
+        # 8. 作者、发布记录
+        author = "八仙过海"
+        digest = diary.get("excerpt") or (source_content[:60] if source_content else "")
+        
+        insert_record_q = """
+            INSERT INTO mp_publish_record 
+            (user_id, diary_id, mp_account_id, title, author, digest, content_html, status) 
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+        """
+        record_id = await db.execute_insert(insert_record_q, (
+            user_id, data.entry_id, account['id'], diary['title'] or f"日记 {diary['entry_date']}",
+            author, digest, final_html, 1 
+        ))
+        
         try:
-            wx_media_id = await wechat_service.add_draft(account_id=account['id'], title=diary["title"] or f"股市日记 {diary['entry_date']}", content_html=final_html, author=author, digest=digest or "")
+            wx_media_id = await wechat_service.add_draft(
+                account_id=account['id'],
+                title=diary["title"] or f"股市日记 {diary['entry_date']}",
+                content_html=final_html,
+                author=author,
+                digest=digest or ""
+            )
             if wx_media_id:
-                await db.execute("UPDATE mp_publish_record SET status = 3, wx_media_id = %s WHERE id = %s", (wx_media_id, record_id))
-                result.update({"wx_media_id": wx_media_id, "message": "success"})
-            else: raise Exception("Sync failed (Account restriction)")
+                update_q = "UPDATE mp_publish_record SET status = 3, wx_media_id = %s WHERE id = %s"
+                await db.execute(update_q, (wx_media_id, record_id))
+                return {
+                    "publish_record_id": record_id, 
+                    "wx_media_id": wx_media_id, 
+                    "content_html": final_html,
+                    "message": "success"
+                }
+            else:
+                raise Exception("Failed to sync to WeChat draft box")
         except Exception as e:
-            await db.execute("UPDATE mp_publish_record SET status = 4, error_message = %s WHERE id = %s", (str(e), record_id))
-            result["message"] = f"API failed: {str(e)}. Use 'Copy HTML' instead."
-        return result
+            logger.error(f"Failed to publish to mp: {str(e)}")
+            update_q = "UPDATE mp_publish_record SET status = 4, error_message = %s WHERE id = %s"
+            await db.execute(update_q, (str(e), record_id))
+            return {
+                "publish_record_id": record_id, 
+                "content_html": final_html,
+                "message": f"failed: {str(e)}"
+            }
 
 diary_service = DiaryService()
