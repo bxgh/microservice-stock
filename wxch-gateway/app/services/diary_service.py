@@ -227,22 +227,24 @@ class DiaryService:
         font_serif = "'Optima', 'Source Serif Pro', 'PingFang SC', 'STSongti-SC-Regular', serif"
         color_gold = "#d4a76a"
         
-        # 5. 标签样式硬注入
+        # 5. 标签样式硬注入 (增加背景色和边框，对齐小程序视觉)
+        style_card = f'font-family: {font_serif}; font-size: 14px; line-height: 1.6; color: #353535; background-color: #f9f9f9; border-left: 3px solid #eee; padding: 10px 15px; margin: 0 0 12px 0; text-align: justify; border-radius: 4px;'
+        
         # 注入段落
-        html_content = html_content.replace("<p>", f'<p style="font-family: {font_serif}; font-size: 14px; line-height: 1.6; color: #353535; margin: 0 0 10px 0; text-align: justify;">')
+        html_content = html_content.replace("<p>", f'<p style="{style_card}">')
         
         # 注入标题：补齐 § 符号，锁定上边距
         def h3_replacer(match):
             title_text = match.group(1)
-            return f'<h3 style="font-family: {font_serif}; font-size: 16px; font-weight: bold; color: #222; margin: 20px 0 6px 0; padding-left: 10px; border-left: 3px solid {color_gold}; line-height: 1.4;"><span style="color: {color_gold}; margin-right: 4px;">§</span>{title_text}</h3>'
+            return f'<h3 style="font-family: {font_serif}; font-size: 16px; font-weight: bold; color: #222; margin: 25px 0 10px 0; padding-left: 10px; border-left: 3px solid {color_gold}; line-height: 1.4;"><span style="color: {color_gold}; margin-right: 4px;">§</span>{title_text}</h3>'
         html_content = re.sub(r"<h3>(.*?)</h3>", h3_replacer, html_content)
         
-        # 注入列表
-        html_content = html_content.replace("<ul>", f'<ul style="margin: 0 0 12px 0; padding-left: 20px; font-family: {font_serif}; font-size: 14px; color: #353535;">')
-        html_content = html_content.replace("<li>", f'<li style="margin: 0 0 4px 0; padding: 0;">')
+        # 注入列表 (同样应用卡片样式)
+        html_content = html_content.replace("<ul>", f'<ul style="margin: 0 0 15px 0; padding: 0; list-style-type: none;">')
+        html_content = html_content.replace("<li>", f'<li style="{style_card} list-style: none;">')
         
-        # 注入引用
-        html_content = html_content.replace("<blockquote>", f'<blockquote style="border-left: 3px solid #eee; padding: 6px 12px; color: #777; background-color: #f9f9f9; margin: 15px 0; font-family: {font_serif}; font-size: 13px;">')
+        # 注入引用 (稍微深一点的灰色)
+        html_content = html_content.replace("<blockquote>", f'<blockquote style="font-family: {font_serif}; font-size: 13px; border-left: 3px solid {color_gold}; padding: 10px 15px; color: #666; background-color: #fcfaf5; margin: 15px 0; border-radius: 4px;">')
         
         # 6. 特殊处理：确保第一个元素的 margin-top 绝对为 0
         # 如果第一个标签是 <p style="...">，将其 margin 改为 0 0 10px 0
