@@ -55,5 +55,14 @@ class Database:
                 await cur.execute(query, args)
                 return cur.lastrowid
 
+    async def execute_many(self, query: str, args: list = None):
+        """批量执行 SQL (主要用于批量插入)"""
+        if not self.pool:
+            await self.connect()
+        async with self.pool.acquire() as conn:
+            async with conn.cursor() as cur:
+                affected = await cur.executemany(query, args)
+                return affected
+
 # 全局数据库对象
 db = Database()
