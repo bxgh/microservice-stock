@@ -9,10 +9,9 @@ from app.utils.database import db
 logger = logging.getLogger("gateway.wechat")
 
 class WechatService:
-    """微信公众号服务类 (云调用版 - 终极兼容)"""
+    """微信公众号服务类 (云调用版 - 终极尝试)"""
 
     def __init__(self):
-        # 确保 base_url 不带末尾斜杠
         self.base_url = "http://api.weixin.qq.com"
         self.service_name = os.getenv("K_SERVICE", "alwaysup")
 
@@ -25,13 +24,13 @@ class WechatService:
         return None
 
     async def upload_image(self, account_id: int, image_path: str) -> Optional[str]:
-        """上传素材 (严格路径匹配)"""
+        """上传素材 (切回永久素材模式)"""
         appid = await self.get_mp_appid(account_id)
         if not appid:
             return None
             
-        # 路径去掉开头的斜杠，尝试与网关匹配
-        path = "cgi-bin/media/upload"
+        # 在白名单已通的前提下，重新尝试永久素材接口，因为草稿箱可能强制要求永久封面
+        path = "cgi-bin/material/add_material"
         url = f"{self.base_url}/{path}?type=image"
         
         headers = {
@@ -42,15 +41,24 @@ class WechatService:
         async with httpx.AsyncClient(timeout=30.0) as client:
             with open(image_path, "rb") as f:
                 files = {"media": ("cover.jpg", f, "image/jpeg")}
-                # 显式打印我们要访问的完整 URL，方便日志比对
-                logger.info(f"Accessing Cloud Call URL: {url}")
+                logger.info(f"Trying Permanent Material Upload: {url}")
                 resp = await client.post(url, files=files, headers=headers)
                 data = resp.json()
                 
                 if "media_id" in data:
+                    logger.info(f"Permanent Material Upload SUCCESS: {data['media_id']}")
                     return data["media_id"]
                 else:
-                    logger.error(f"Media upload failed: {data}")
+                    logger.error(f"Permanent Material Upload FAILED: {data}")
+                    # 如果永久素材还是报 48001，尝试兜底到临时素材
+                    logger.info("Falling back to Temp Material Upload...")
+                    temp_url = f"{self.base_url}/cgi-bin/media/upload?type=image"
+                    f.seek(0)
+                    resp_temp = await client.post(temp_url, files={"media": ("cover.jpg", f, "image/jpeg")}, headers=headers)
+                    data_temp = resp_temp.json()
+                    if "media_id" in data_temp:
+                        logger.info(f"Temp Material Upload SUCCESS: {data_temp['media_id']}")
+                        return data_temp["media_id"]
                     return None
 
     async def _create_default_cover(self) -> str:
@@ -65,7 +73,7 @@ class WechatService:
 
     async def add_draft(self, account_id: int, title: str, content_html: str, 
                         author: str = "八仙过海", digest: str = "", thumb_media_id: str = "") -> Optional[str]:
-        """新建草稿 (严格路径匹配)"""
+        """新建草稿"""
         appid = await self.get_mp_appid(account_id)
         if not appid:
             return None
@@ -103,9 +111,10 @@ class WechatService:
             data = resp.json()
             
             if "media_id" in data:
+                logger.info(f"DRAFT CREATION SUCCESS: {data['media_id']}")
                 return data["media_id"]
             else:
-                logger.error(f"Draft creation failed: {data}")
+                logger.error(f"DRAFT CREATION FAILED: {data}")
                 return None
 
 wechat_service = WechatService()
