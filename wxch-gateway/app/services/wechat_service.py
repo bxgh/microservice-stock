@@ -9,12 +9,10 @@ from app.utils.database import db
 logger = logging.getLogger("gateway.wechat")
 
 class WechatService:
-    """微信公众号服务类 (云调用版 - 增强调试)"""
+    """微信公众号服务类 (云调用版 - 个人/认证全兼容)"""
 
     def __init__(self):
-        # 云托管内部调用地址
         self.base_url = "http://api.weixin.qq.com"
-        # 自动识别云托管服务名
         self.service_name = os.getenv("K_SERVICE", "alwaysup")
 
     async def get_mp_appid(self, account_id: int) -> Optional[str]:
@@ -26,13 +24,13 @@ class WechatService:
         return None
 
     async def upload_image(self, account_id: int, image_path: str) -> Optional[str]:
-        """上传永久素材(图片)"""
+        """上传素材 (优先尝试临时素材，以兼容个人订阅号)"""
         appid = await self.get_mp_appid(account_id)
         if not appid:
-            logger.error(f"Account {account_id} not found in DB")
             return None
             
-        url = f"{self.base_url}/cgi-bin/material/add_material?type=image"
+        # 使用 cgi-bin/media/upload 接口，这个接口对所有类型的公众号(包括个人号)都是开放的
+        url = f"{self.base_url}/cgi-bin/media/upload?type=image"
         
         headers = {
             "X-WX-APPID": appid,
@@ -45,11 +43,12 @@ class WechatService:
                 resp = await client.post(url, files=files, headers=headers)
                 data = resp.json()
                 
+                # 临时素材返回的是 media_id
                 if "media_id" in data:
-                    logger.info(f"Successfully uploaded material for AppID {appid}: {data['media_id']}")
+                    logger.info(f"Successfully uploaded temp material: {data['media_id']}")
                     return data["media_id"]
                 else:
-                    logger.error(f"Material upload failed for {appid}: {data}")
+                    logger.error(f"Media upload failed: {data}")
                     return None
 
     async def _create_default_cover(self) -> str:
@@ -64,21 +63,19 @@ class WechatService:
 
     async def add_draft(self, account_id: int, title: str, content_html: str, 
                         author: str = "八仙过海", digest: str = "", thumb_media_id: str = "") -> Optional[str]:
-        """新建草稿 (带详细日志)"""
+        """新建草稿"""
         appid = await self.get_mp_appid(account_id)
         if not appid:
-            logger.error(f"Cannot find AppID for account_id {account_id}")
             return None
 
-        # 1. 准备封面
+        # 1. 准备封面 (使用临时素材接口上传)
         if not thumb_media_id:
             cover_path = await self._create_default_cover()
             thumb_media_id = await self.upload_image(account_id, cover_path)
             if not thumb_media_id:
-                logger.error(f"Failed to prepare cover for AppID {appid}")
                 return None
             
-        # 2. 调用草稿箱接口
+        # 2. 添加草稿
         url = f"{self.base_url}/cgi-bin/draft/add"
         
         headers = {
@@ -100,18 +97,15 @@ class WechatService:
             ]
         }
         
-        # 打印请求摘要（不打全文防止日志爆炸，只打长度和关键标识）
-        logger.info(f"Sending draft to AppID {appid}, Content length: {len(content_html)}, Thumb: {thumb_media_id}")
-        
         async with httpx.AsyncClient(timeout=60.0) as client:
             resp = await client.post(url, content=json.dumps(payload, ensure_ascii=False).encode('utf-8'), headers=headers)
             data = resp.json()
             
             if "media_id" in data:
-                logger.info(f"SUCCESS! Draft created in AppID {appid}. media_id: {data['media_id']}")
+                logger.info(f"SUCCESS! Draft created: {data['media_id']}")
                 return data["media_id"]
             else:
-                logger.error(f"Draft creation failed for AppID {appid}. Response: {data}")
+                logger.error(f"Draft creation failed: {data}")
                 return None
 
 wechat_service = WechatService()
