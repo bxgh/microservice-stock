@@ -48,7 +48,6 @@ class DiaryService:
         
         if items:
             ids = [item['id'] for item in items]
-            # 修正表名: diary_stock
             stocks_query = """
                 SELECT ds.diary_id as entry_id, s.ts_code, s.name 
                 FROM diary_stock ds
@@ -57,7 +56,6 @@ class DiaryService:
             """.format(",".join(["%s"] * len(ids)))
             stocks_res = await db.execute(stocks_query, tuple(ids))
             
-            # 修正表名: diary_tag, diary_tag_dict
             tags_query = """
                 SELECT dt.diary_id as entry_id, td.id, td.name, td.category, td.color
                 FROM diary_tag dt
@@ -80,7 +78,6 @@ class DiaryService:
             return None
         
         item = res[0]
-        # 修正表名: diary_stock
         stocks_query = """
             SELECT s.ts_code, s.name, s.market, s.industry_sw
             FROM diary_stock ds
@@ -89,7 +86,6 @@ class DiaryService:
         """
         item['stocks'] = await db.execute(stocks_query, (entry_id,))
         
-        # 修正表名: diary_tag, diary_tag_dict
         tags_query = """
             SELECT td.id, td.name, td.category, td.color
             FROM diary_tag dt
@@ -118,8 +114,6 @@ class DiaryService:
         entry_id = await db.execute(query, params)
         
         if data.stocks:
-            # 修正表名: diary_stock
-            # 先查出 stock_id
             stock_info_q = "SELECT id, ts_code FROM stock_info WHERE ts_code IN ({})".format(",".join(["%s"] * len(data.stocks)))
             stocks_found = await db.execute(stock_info_q, tuple(data.stocks))
             if stocks_found:
@@ -128,7 +122,6 @@ class DiaryService:
                 await db.execute_many(stock_rel_q, stock_rel_params)
             
         if data.tags:
-            # 修正表名: diary_tag, diary_tag_dict
             tag_query = "SELECT id FROM diary_tag_dict WHERE name IN ({})".format(",".join(["%s"] * len(data.tags)))
             tags_found = await db.execute(tag_query, tuple(data.tags))
             if tags_found:
@@ -188,10 +181,11 @@ class DiaryService:
 
     async def get_stats(self, user_id: int) -> Dict[str, Any]:
         """获取统计"""
+        # 注意: DATE_FORMAT 中的 % 必须转义为 %%
         monthly_q = """
             SELECT COUNT(DISTINCT entry_date) as count 
             FROM diary_entry 
-            WHERE user_id = %s AND deleted_at IS NULL AND entry_date >= DATE_FORMAT(NOW() ,'%Y-%m-01')
+            WHERE user_id = %s AND deleted_at IS NULL AND entry_date >= DATE_FORMAT(NOW() ,'%%Y-%%m-01')
         """
         monthly_res = await db.execute(monthly_q, (user_id,))
         mood_q = "SELECT mood FROM diary_entry WHERE user_id = %s AND deleted_at IS NULL ORDER BY entry_date DESC LIMIT 1"
