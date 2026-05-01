@@ -199,7 +199,7 @@ class DiaryService:
         }
 
     async def publish_to_mp(self, user_id: int, data: DiaryPublishMPRequest) -> Dict[str, Any]:
-        """同步日记到微信公众号草稿箱 (硬核排版版)"""
+        """同步日记到微信公众号草稿箱 (极致清爽版)"""
         diary = await self.get_by_id(user_id, data.entry_id)
         if not diary:
             raise Exception("Diary not found")
@@ -212,40 +212,42 @@ class DiaryService:
         
         source_content = data.content if data.content else diary["content"]
         
+        # 0. 预处理内容，移除 Markdown 中可能产生的空行干扰
+        source_content = re.sub(r'\n\s*\n', '\n\n', source_content.strip())
+        
         # 1. 基础 Markdown 转 HTML
         html_content = markdown.markdown(source_content, extensions=['extra', 'codehilite', 'toc'])
         
-        # 2. 硬核样式注入 (直接对 HTML 标签进行正则替换，确保内联样式 100% 生效)
-        # 定义核心样式变量
+        # 2. 清理 HTML 中的空标签 (重点清除空段落和空列表项)
+        html_content = re.sub(r'<p[^>]*>\s*(?:&nbsp;)?\s*</p>', '', html_content)
+        html_content = re.sub(r'<li[^>]*>\s*(?:&nbsp;)?\s*</li>', '', html_content)
+        
+        # 3. 硬核样式注入
         font_serif = "'Optima', 'Source Serif Pro', 'PingFang SC', 'STSongti-SC-Regular', serif"
         color_gold = "#d4a76a"
         
-        # 替换段落: 压缩边距，行高紧致
-        html_content = html_content.replace("<p>", f'<p style="font-family: {font_serif}; font-size: 14px; line-height: 1.6; color: #353535; margin: 0 0 8px 0; text-align: justify; letter-spacing: 0.2px;">')
+        # 替换段落: 
+        html_content = html_content.replace("<p>", f'<p style="font-family: {font_serif}; font-size: 14px; line-height: 1.6; color: #353535; margin: 0 0 10px 0; text-align: justify;">')
         
-        # 替换标题: 还原 § 符号和金色左边框
-        # 正则匹配 <h3>...</h3>
+        # 替换标题: 补齐 § 符号
         def h3_replacer(match):
             title_text = match.group(1)
-            # 自动补全 § 符号 (金色)
-            return f'<h3 style="font-family: {font_serif}; font-size: 16px; font-weight: bold; color: #222; margin: 18px 0 4px 0; padding-left: 10px; border-left: 3px solid {color_gold}; line-height: 1.4;"><span style="color: {color_gold}; margin-right: 4px;">§</span>{title_text}</h3>'
-        
+            return f'<h3 style="font-family: {font_serif}; font-size: 16px; font-weight: bold; color: #222; margin: 20px 0 6px 0; padding-left: 10px; border-left: 3px solid {color_gold}; line-height: 1.4;"><span style="color: {color_gold}; margin-right: 4px;">§</span>{title_text}</h3>'
         html_content = re.sub(r"<h3>(.*?)</h3>", h3_replacer, html_content)
         
-        # 替换列表: 强制清除顶部边距
-        html_content = html_content.replace("<ul>", f'<ul style="margin: 0 0 10px 0; padding-left: 20px; font-family: {font_serif}; font-size: 14px; color: #353535;">')
-        html_content = html_content.replace("<li>", f'<li style="margin-bottom: 4px;">')
+        # 替换列表: 极致紧致
+        html_content = html_content.replace("<ul>", f'<ul style="margin: 0 0 12px 0; padding-left: 20px; font-family: {font_serif}; font-size: 14px; color: #353535;">')
+        html_content = html_content.replace("<li>", f'<li style="margin: 0 0 4px 0; padding: 0;">')
         
         # 替换引用块
-        html_content = html_content.replace("<blockquote>", f'<blockquote style="border-left: 3px solid #eee; padding: 4px 12px; color: #777; background-color: #f9f9f9; margin: 12px 0; font-family: {font_serif}; font-size: 13px;">')
+        html_content = html_content.replace("<blockquote>", f'<blockquote style="border-left: 3px solid #eee; padding: 6px 12px; color: #777; background-color: #f9f9f9; margin: 15px 0; font-family: {font_serif}; font-size: 13px;">')
         
-        # 3. 包装在最终容器中
-        final_html = f'<div class="entry-container" style="padding: 10px; background-color: #ffffff;">{html_content}</div>'
+        # 4. 包装在最终容器中 (强制第一个元素 margin-top 为 0)
+        final_html = f'<div class="entry-container" style="padding: 0 10px 10px 10px; background-color: #ffffff;">' \
+                     f'<div style="margin-top: 0;">{html_content}</div></div>'
         
-        # 4. 创建发布记录
-        author_query = "SELECT nickname FROM sys_user WHERE id = %s"
-        user_res = await db.execute(author_query, (user_id,))
-        author = user_res[0]["nickname"] if user_res else "Trader"
+        # 5. 作者默认设为“八仙过海”
+        author = "八仙过海"
         digest = diary.get("excerpt") or (source_content[:60] if source_content else "")
         
         insert_record_q = """
@@ -263,7 +265,7 @@ class DiaryService:
                 account_id=account['id'],
                 title=diary["title"] or f"股市日记 {diary['entry_date']}",
                 content_html=final_html,
-                author=author or "",
+                author=author,
                 digest=digest or ""
             )
             if wx_media_id:
