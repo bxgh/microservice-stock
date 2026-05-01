@@ -165,8 +165,35 @@ class StockInfoService:
                     } for l in lhb
                 ]
             }
+        async def search_stocks(self, keyword: str, limit: int = 15) -> List[Dict[str, Any]]:
+        """股票模糊搜索 (代码、名称、拼音)"""
+        try:
+            # 兼容处理: 如果输入纯数字但不足 6 位，补齐进行匹配
+            search_pattern = f"%{keyword}%"
+            
+            sql = """
+                SELECT ts_code, symbol, name, market, industry_sw as industry, status
+                FROM stock_info 
+                WHERE (ts_code LIKE %s OR symbol LIKE %s OR name LIKE %s OR pinyin_initial LIKE %s)
+                AND deleted_at IS NULL
+                ORDER BY status DESC, ts_code ASC
+                LIMIT %s
+            """
+            results = await db.execute(sql, (search_pattern, search_pattern, search_pattern, search_pattern, limit))
+            
+            # 格式转换
+            return [
+                {
+                    "tsCode": r["ts_code"],
+                    "symbol": r["symbol"],
+                    "name": r["name"],
+                    "market": r["market"],
+                    "industry": r["industry"],
+                    "status": "normal" if r["status"] == 1 else ("halt" if r["status"] == 2 else ("st" if r["status"] == 3 else "delisted"))
+                } for r in results
+            ]
         except Exception as e:
-            logger.error(f"获取资金数据失败: {e}")
-            return {"north_funds": [], "lhb": []}
+            logger.error(f"搜索股票失败: {e}")
+            return []
 
 stock_info_service = StockInfoService()
