@@ -2,10 +2,10 @@ import logging
 import time
 import os
 import markdown
+import re
 from typing import Optional, List, Dict, Any
 from app.utils.database import db
 from app.models.diary import DiaryEntryCreate, DiaryEntryUpdate, DiaryPublishMPRequest
-from premailer import transform
 from app.services.wechat_service import wechat_service
 
 logger = logging.getLogger("gateway.service.diary")
@@ -111,7 +111,6 @@ class DiaryService:
             data.content, data.content_format, excerpt, word_count, 
             data.visibility, 1 if data.is_pinned else 0
         )
-        # 使用 execute_insert 获取自增 ID
         entry_id = await db.execute_insert(query, params)
         
         if data.stocks:
@@ -200,64 +199,50 @@ class DiaryService:
         }
 
     async def publish_to_mp(self, user_id: int, data: DiaryPublishMPRequest) -> Dict[str, Any]:
-        """同步日记到微信公众号草稿箱"""
+        """同步日记到微信公众号草稿箱 (硬核排版版)"""
         diary = await self.get_by_id(user_id, data.entry_id)
         if not diary:
             raise Exception("Diary not found")
+        
         account_query = "SELECT id, mp_appid FROM mp_account LIMIT 1"
         accounts = await db.execute(account_query)
         if not accounts:
             raise Exception("No linked WeChat Official Account found")
         account = accounts[0]
+        
         source_content = data.content if data.content else diary["content"]
-        WECHAT_STYLE = """
-        <style>
-            .entry-container {
-                font-family: 'Optima', 'Source Serif Pro', 'PingFang SC', 'STSongti-SC-Regular', serif;
-                font-size: 15px;
-                line-height: 1.75;
-                color: #353535;
-                padding: 0 5px;
-                text-align: justify;
-            }
-            h3 {
-                font-size: 17px;
-                font-weight: bold;
-                color: #222;
-                margin-top: 24px;
-                margin-bottom: 8px;
-                border-left: 3px solid #d4a76a;
-                padding-left: 10px;
-                line-height: 1.4;
-            }
-            p {
-                margin: 0 0 12px 0;
-                letter-spacing: 0.3px;
-            }
-            blockquote {
-                border-left: 3px solid #e0e0e0;
-                padding: 5px 12px;
-                color: #777;
-                background-color: #f9f9f9;
-                margin: 15px 0;
-            }
-            ul, ol {
-                margin-bottom: 12px;
-                padding-left: 18px;
-            }
-            li {
-                margin-bottom: 6px;
-            }
-            hr {
-                border: 0;
-                border-top: 1px solid #eee;
-                margin: 24px 0;
-            }
-        </style>
-        """
-        raw_html = markdown.markdown(source_content, extensions=['extra', 'codehilite', 'toc'])
-        styled_html_raw = f"<html><body>{WECHAT_STYLE}<div class='entry-container'>{raw_html}</div></body></html>"
-        html_content = transform(styled_html_raw)
+        
+        # 1. 基础 Markdown 转 HTML
+        html_content = markdown.markdown(source_content, extensions=['extra', 'codehilite', 'toc'])
+        
+        # 2. 硬核样式注入 (直接对 HTML 标签进行正则替换，确保内联样式 100% 生效)
+        # 定义核心样式变量
+        font_serif = "'Optima', 'Source Serif Pro', 'PingFang SC', 'STSongti-SC-Regular', serif"
+        color_gold = "#d4a76a"
+        
+        # 替换段落: 压缩边距，行高紧致
+        html_content = html_content.replace("<p>", f'<p style="font-family: {font_serif}; font-size: 14px; line-height: 1.6; color: #353535; margin: 0 0 8px 0; text-align: justify; letter-spacing: 0.2px;">')
+        
+        # 替换标题: 还原 § 符号和金色左边框
+        # 正则匹配 <h3>...</h3>
+        def h3_replacer(match):
+            title_text = match.group(1)
+            # 自动补全 § 符号 (金色)
+            return f'<h3 style="font-family: {font_serif}; font-size: 16px; font-weight: bold; color: #222; margin: 18px 0 4px 0; padding-left: 10px; border-left: 3px solid {color_gold}; line-height: 1.4;"><span style="color: {color_gold}; margin-right: 4px;">§</span>{title_text}</h3>'
+        
+        html_content = re.sub(r"<h3>(.*?)</h3>", h3_replacer, html_content)
+        
+        # 替换列表: 强制清除顶部边距
+        html_content = html_content.replace("<ul>", f'<ul style="margin: 0 0 10px 0; padding-left: 20px; font-family: {font_serif}; font-size: 14px; color: #353535;">')
+        html_content = html_content.replace("<li>", f'<li style="margin-bottom: 4px;">')
+        
+        # 替换引用块
+        html_content = html_content.replace("<blockquote>", f'<blockquote style="border-left: 3px solid #eee; padding: 4px 12px; color: #777; background-color: #f9f9f9; margin: 12px 0; font-family: {font_serif}; font-size: 13px;">')
+        
+        # 3. 包装在最终容器中
+        final_html = f'<div class="entry-container" style="padding: 10px; background-color: #ffffff;">{html_content}</div>'
+        
+        # 4. 创建发布记录
         author_query = "SELECT nickname FROM sys_user WHERE id = %s"
         user_res = await db.execute(author_query, (user_id,))
         author = user_res[0]["nickname"] if user_res else "Trader"
@@ -268,22 +253,20 @@ class DiaryService:
             (user_id, diary_id, mp_account_id, title, author, digest, content_html, status) 
             VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
         """
-        # 修正：使用 execute_insert 获取真实的 record_id
         record_id = await db.execute_insert(insert_record_q, (
             user_id, data.entry_id, account['id'], diary['title'] or f"日记 {diary['entry_date']}",
-            author, digest, html_content, 1 
+            author, digest, final_html, 1 
         ))
         
         try:
             wx_media_id = await wechat_service.add_draft(
                 account_id=account['id'],
                 title=diary["title"] or f"股市日记 {diary['entry_date']}",
-                content_html=html_content,
+                content_html=final_html,
                 author=author or "",
                 digest=digest or ""
             )
             if wx_media_id:
-                # 修正：确保 record_id 是数字而非列表
                 update_q = "UPDATE mp_publish_record SET status = 3, wx_media_id = %s WHERE id = %s"
                 await db.execute(update_q, (wx_media_id, record_id))
                 return {"publish_record_id": record_id, "wx_media_id": wx_media_id, "message": "success"}
@@ -291,7 +274,6 @@ class DiaryService:
                 raise Exception("Failed to sync to WeChat draft box")
         except Exception as e:
             logger.error(f"Failed to publish to mp: {str(e)}")
-            # 修正：确保这里也能正确使用 record_id
             update_q = "UPDATE mp_publish_record SET status = 4, error_msg = %s WHERE id = %s"
             await db.execute(update_q, (str(e), record_id))
             return {"publish_record_id": record_id, "message": f"failed: {str(e)}"}
