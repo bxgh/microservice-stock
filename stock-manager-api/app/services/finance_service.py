@@ -1,6 +1,7 @@
 from typing import List, Dict, Any, Optional
 from app.utils.database import db
 from app.utils.http_client import http_client
+from app.utils.code_utils import normalize_ts_code
 from app.utils.logger import get_logger
 import aiomysql
 
@@ -11,6 +12,7 @@ class FinanceService:
 
     async def get_financial_reports(self, ts_code: str, limit: int = 40) -> Dict[str, Any]:
         """从数据库查询三大报表数据"""
+        ts_code = normalize_ts_code(ts_code)
         
         # 1. 资产负债表
         sql_bs = """
@@ -67,6 +69,7 @@ class FinanceService:
 
     async def sync_financial_reports(self, ts_code: str) -> Dict[str, Any]:
         """从数据源同步财务报表"""
+        ts_code = normalize_ts_code(ts_code)
         try:
             # 1. 从 AkShare API 获取历史报表
             # 注意：ts_code 格式处理在 AkShare 端完成
@@ -97,6 +100,7 @@ class FinanceService:
 
     async def get_financial_indicators(self, ts_code: str, limit: int = 40) -> Dict[str, Any]:
         """从数据库查询财务衍生指标 (ROE, EPS等)"""
+        ts_code = normalize_ts_code(ts_code)
         sql = """
             SELECT ts_code, report_date, roe, roa, netprofit_margin, grossprofit_margin, 
                    asset_liab_ratio, current_ratio, eps
@@ -118,6 +122,7 @@ class FinanceService:
 
     async def sync_financial_indicators(self, ts_code: str) -> Dict[str, Any]:
         """从数据源同步财务衍生指标"""
+        ts_code = normalize_ts_code(ts_code)
         try:
             # 1. 从 AkShare API 获取分析指标
             data = await http_client.get("akshare", f"/api/v1/finance/analysis-indicators/{ts_code}")
@@ -140,6 +145,7 @@ class FinanceService:
 
     async def _save_financial_indicators(self, ts_code: str, data: List[Dict[str, Any]]) -> int:
         if not data: return 0
+        ts_code = normalize_ts_code(ts_code)
         sql = """
             INSERT INTO stock_finance_indicators 
             (ts_code, report_date, roe, roa, netprofit_margin, grossprofit_margin, 
@@ -169,6 +175,7 @@ class FinanceService:
 
     async def _save_balance_sheets(self, ts_code: str, data: List[Dict[str, Any]]) -> int:
         if not data: return 0
+        ts_code = normalize_ts_code(ts_code)
         sql = """
             INSERT INTO stock_balance_sheet 
             (ts_code, report_date, notice_date, total_assets, total_liabilities, 
@@ -203,6 +210,7 @@ class FinanceService:
 
     async def _save_income_statements(self, ts_code: str, data: List[Dict[str, Any]]) -> int:
         if not data: return 0
+        ts_code = normalize_ts_code(ts_code)
         sql = """
             INSERT INTO stock_income_statement 
             (ts_code, report_date, notice_date, total_revenue, operating_revenue, 
@@ -234,6 +242,7 @@ class FinanceService:
 
     async def _save_cash_flow_statements(self, ts_code: str, data: List[Dict[str, Any]]) -> int:
         if not data: return 0
+        ts_code = normalize_ts_code(ts_code)
         sql = """
             INSERT INTO stock_cash_flow_statement 
             (ts_code, report_date, notice_date, net_operating_cash_flow, 

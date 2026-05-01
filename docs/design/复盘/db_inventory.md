@@ -1,6 +1,6 @@
 # 数据库表结构与空间占用报告
 
-- **生成时间**: 2026-04-25 21:09:11
+- **生成时间**: 2026-05-01 21:43:00
 - **数据库名**: `alwaysup`
 
 ## 行情与原始数据 (Market Raw Data)
@@ -522,6 +522,10 @@
 
 ---
 
+---
+
+## 股市日记与盘后复盘 (Diary & Market Review)
+
 ### 表: `fupan_data`
 - **描述**: 复盘数据表
 - **行数**: 0
@@ -544,6 +548,140 @@
 | stock_activity | text | Yes | None | 个股活跃度分析（如涨停/跌停数量、换手率、成交量等） |
 | sealing_efficiency | text | Yes | None | 封板效率分析（涨停封板率、炸板情况等） |
 | created_at | timestamp | No | None | 记录创建时间 |
+
+---
+
+### 表: `diary_entry`
+- **描述**: 日记主表
+- **行数**: 19
+- **占用空间**: 0.11 MB (数据: 0.02MB, 索引: 0.09MB)
+
+| 字段名 | 类型 | 必填 | 键 | 备注 |
+|---|---|---|---|---|
+| id | bigint(20) unsigned | No | PRI |  |
+| user_id | bigint(20) unsigned | No | MUL | 所属用户 |
+| slug | varchar(32) | Yes | UNI | 分享 URL 短串,私密日记 NULL |
+| entry_date | date | No |  | 归属交易日,与 created_at 区分 |
+| entry_type | tinyint(4) | No |  | 1=盘前 2=盘中 3=盘后 4=周复盘 5=随笔 6=个股研究 |
+| mood | tinyint(4) | Yes |  | 情绪 1=冷静 2=兴奋 3=焦虑 4=恐惧 5=贪婪 6=困惑,NULL=未标 |
+| title | varchar(128) | Yes | MUL | 标题,可空 |
+| content | mediumtext | No |  | Markdown 正文 |
+| content_format | varchar(16) | No |  | 正文格式版本 |
+| excerpt | varchar(255) | Yes |  | 摘要,前 60 字纯文本 |
+| word_count | int(10) unsigned | No |  | 字数 |
+| cover_attachment_id | bigint(20) unsigned | Yes |  | 封面图,引用 diary_attachment.id |
+| visibility | tinyint(4) | No |  | 0=私密 1=链接可见 2=公开 |
+| is_pinned | tinyint(1) | No |  | 是否置顶 |
+| mp_published_count | int(10) unsigned | No |  | 发布到公众号次数 |
+| last_exported_at | datetime | Yes |  | 最近一次成功导出时间 |
+| meta | json | Yes |  |  |
+| created_at | datetime | No |  |  |
+| updated_at | datetime | No |  |  |
+| deleted_at | datetime | Yes |  |  |
+
+---
+
+### 表: `diary_stock`
+- **描述**: 日记股票关联
+- **行数**: 10
+- **占用空间**: 0.06 MB (数据: 0.02MB, 索引: 0.05MB)
+
+| 字段名 | 类型 | 必填 | 键 | 备注 |
+|---|---|---|---|---|
+| id | bigint(20) unsigned | No | PRI |  |
+| diary_id | bigint(20) unsigned | No | MUL |  |
+| stock_id | bigint(20) unsigned | No | MUL |  |
+| ts_code | varchar(16) | No | MUL | 冗余,便于免 JOIN 查询 |
+| position_in_content | int(10) unsigned | Yes |  | 在正文中首次出现的位置,可用于排序 |
+| created_at | datetime | No |  |  |
+
+---
+
+### 表: `diary_tag`
+- **描述**: 日记标签关联
+- **行数**: 9
+- **占用空间**: 0.05 MB (数据: 0.02MB, 索引: 0.03MB)
+
+| 字段名 | 类型 | 必填 | 键 | 备注 |
+|---|---|---|---|---|
+| id | bigint(20) unsigned | No | PRI |  |
+| diary_id | bigint(20) unsigned | No | MUL |  |
+| tag_id | bigint(20) unsigned | No | MUL |  |
+| created_at | datetime | No |  |  |
+
+---
+
+### 表: `diary_tag_dict`
+- **描述**: 标签字典
+- **行数**: 24
+- **占用空间**: 0.05 MB (数据: 0.02MB, 索引: 0.03MB)
+
+| 字段名 | 类型 | 必填 | 键 | 备注 |
+|---|---|---|---|---|
+| id | bigint(20) unsigned | No | PRI |  |
+| owner_user_id | bigint(20) unsigned | Yes | MUL | NULL=系统标签,有值=用户自定义 |
+| name | varchar(32) | No |  | 标签名,不含 # 前缀 |
+| category | tinyint(4) | No |  | 0=普通 1=系统预置 2=错题本 3=策略类 |
+| color | varchar(8) | Yes |  | 颜色 hex,可选 |
+| usage_count | int(10) unsigned | No |  | 使用次数,定时刷新 |
+| created_at | datetime | No |  |  |
+| updated_at | datetime | No |  |  |
+| deleted_at | datetime | Yes |  |  |
+
+---
+
+### 表: `diary_attachment`
+- **描述**: 日记附件
+- **行数**: 0
+- **占用空间**: 0.06 MB (数据: 0.02MB, 索引: 0.05MB)
+
+| 字段名 | 类型 | 必填 | 键 | 备注 |
+|---|---|---|---|---|
+| id | bigint(20) unsigned | No | PRI |  |
+| user_id | bigint(20) unsigned | No | MUL | 冗余,便于按用户统计配额 |
+| diary_id | bigint(20) unsigned | Yes | MUL | 关联日记,NULL=已上传未关联 |
+| cos_key | varchar(255) | No | UNI | COS 对象 key,如 diary/uid/202604/abc.jpg |
+| mime_type | varchar(64) | No |  |  |
+| size_bytes | int(10) unsigned | No |  |  |
+| width | int(10) unsigned | Yes |  | 图片宽度 px |
+| height | int(10) unsigned | Yes |  | 图片高度 px |
+| original_name | varchar(128) | Yes |  | 原始文件名 |
+| wx_media_id | varchar(128) | Yes |  | 微信永久素材 ID |
+| wx_media_url | varchar(512) | Yes |  | 微信素材 URL |
+| wx_uploaded_at | datetime | Yes |  |  |
+| created_at | datetime | No |  |  |
+| updated_at | datetime | No |  |  |
+| deleted_at | datetime | Yes |  |  |
+
+---
+
+### 表: `diary_export_task`
+- **描述**: 日记导出任务
+- **行数**: 0
+- **占用空间**: 0.05 MB (数据: 0.02MB, 索引: 0.03MB)
+
+| 字段名 | 类型 | 必填 | 键 | 备注 |
+|---|---|---|---|---|
+| id | bigint(20) unsigned | No | PRI |  |
+| user_id | bigint(20) unsigned | No | MUL |  |
+| task_type | tinyint(4) | No |  | 1=单篇 2=按月 3=按年 4=全量 5=自定义 |
+| format | varchar(16) | No |  | md(V1 仅支持)/pdf/zip |
+| scope | json | No |  | 导出范围参数 |
+| status | tinyint(4) | No | MUL | 0=排队 1=处理中 2=成功 3=失败 4=已过期 |
+| progress | tinyint(4) | No |  | 0-100 |
+| entry_count | int(10) unsigned | No |  | 导出日记数 |
+| output_cos_key | varchar(255) | Yes |  |  |
+| output_size_bytes | int(10) unsigned | Yes |  |  |
+| download_url | varchar(512) | Yes |  | 签名下载 URL,有时效 |
+| expired_at | datetime | Yes |  | 下载链接过期时间,默认 7 天 |
+| downloaded_count | int(10) unsigned | No |  |  |
+| error_code | varchar(32) | Yes |  |  |
+| error_message | varchar(512) | Yes |  |  |
+| retry_count | tinyint(3) unsigned | No |  |  |
+| created_at | datetime | No |  |  |
+| started_at | datetime | Yes |  |  |
+| finished_at | datetime | Yes |  |  |
+| updated_at | datetime | No |  |  |
 
 ---
 

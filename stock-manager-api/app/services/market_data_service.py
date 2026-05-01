@@ -6,6 +6,7 @@ import datetime
 from datetime import date
 from typing import List, Dict, Any, Optional
 from app.utils.database import db
+from app.utils.code_utils import normalize_ts_code
 from app.utils.logger import get_logger
 from app.config import settings
 
@@ -64,6 +65,8 @@ class MarketDataService:
 
     async def sync_stock_daily(self, ts_code: str = '', trade_date: str = '', start_date: str = '', end_date: str = ''):
         """同步股票日线行情 (优先 Tushare, 失败则降级至 BaoStock)"""
+        if ts_code:
+            ts_code = normalize_ts_code(ts_code)
         try:
             # 1. 优先尝试从 Tushare 获取
             logger.info(f"正在通过 Tushare 同步股票日线: {ts_code or trade_date}")
@@ -136,6 +139,7 @@ class MarketDataService:
 
     async def sync_index_daily(self, ts_code: str, start_date: str = '', end_date: str = '', trade_date: str = ''):
         """同步指数日线行情 (优先 Tushare)"""
+        ts_code = normalize_ts_code(ts_code)
         try:
             logger.info(f"正在通过 Tushare 同步指数日线: {ts_code}")
             url = f"{self.tushare_url}/api/v1/index/daily"
@@ -203,7 +207,7 @@ class MarketDataService:
                     SUM(CASE WHEN pct_chg <= -0.09 THEN 1 ELSE 0 END) as down_9pct_count
                 FROM stock_kline_daily
                 WHERE trade_date = %s
-                AND code NOT LIKE '900%%' AND code NOT LIKE '200%%'
+                AND ts_code NOT LIKE '900%%' AND ts_code NOT LIKE '200%%'
             """
             res_agg = await db.execute(sql_agg, (target_date,))
             if not res_agg or not res_agg[0][0]:
@@ -235,7 +239,7 @@ class MarketDataService:
             high_60d, low_60d, high_250d, low_250d = 0, 0, 0, 0
             
             # 分批获取股票列表进行计算
-            sql_all_codes = "SELECT DISTINCT code FROM stock_kline_daily WHERE trade_date = %s"
+            sql_all_codes = "SELECT DISTINCT ts_code FROM stock_kline_daily WHERE trade_date = %s"
             codes_res = await db.execute(sql_all_codes, (target_date,))
             all_codes = [r[0] for r in codes_res]
             
@@ -253,7 +257,7 @@ class MarketDataService:
                     f_map[f_code].append((f_date, float(f_factor)))
 
                 # 获取该批次股票的 K 线窗口
-                sql_k = f"SELECT code, trade_date, close FROM stock_kline_daily WHERE code IN ({placeholders}) AND trade_date >= %s AND trade_date <= %s ORDER BY code, trade_date"
+                sql_k = f"SELECT ts_code, trade_date, close FROM stock_kline_daily WHERE ts_code IN ({placeholders}) AND trade_date >= %s AND trade_date <= %s ORDER BY ts_code, trade_date"
                 k_res = await db.execute(sql_k, tuple(batch_codes + [start_date_250, target_date]))
                 
                 target_date_obj = datetime.datetime.strptime(target_date, '%Y-%m-%d').date() if isinstance(target_date, str) else target_date
@@ -352,15 +356,11 @@ class MarketDataService:
                 """
                 args = []
                 for i in data:
-                    # 补齐代码后缀
-                    code = i.get("code")
-                    if code:
-                        if code.startswith('6'): code = f"{code}.SH"
-                        elif code.startswith(('0', '3')): code = f"{code}.SZ"
-                        elif code.startswith(('8', '4')): code = f"{code}.BJ"
+                    # P0: 使用归一化工具
+                    ts_code = normalize_ts_code(i.get("code") or i.get("ts_code"))
                     
                     args.append((
-                        target_date, code, i.get("name"), pool_type, i.get("close"), i.get("pct_chg"),
+                        target_date, ts_code, i.get("name"), pool_type, i.get("close"), i.get("pct_chg"),
                         i.get("amount"), i.get("circ_mv"), i.get("turnover_rate"), i.get("first_limit_time"),
                         i.get("last_limit_time"), i.get("board_height"), i.get("seal_money"), i.get("seal_count"),
                         i.get("open_times"), i.get("industry")

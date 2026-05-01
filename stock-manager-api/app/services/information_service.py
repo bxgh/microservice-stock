@@ -2,6 +2,7 @@ from typing import List, Dict, Any, Optional
 from datetime import datetime
 from app.utils.database import db
 from app.utils.http_client import http_client
+from app.utils.code_utils import normalize_ts_code
 from app.utils.logger import get_logger
 
 logger = get_logger("stock-manager.information")
@@ -18,7 +19,7 @@ class InformationService:
         
         sql = """
             INSERT INTO stock_analyst_rank
-            (stock_code, report_date, analyst, rating, change_direction, target_price)
+            (ts_code, report_date, analyst, rating, change_direction, target_price)
             VALUES (%s, %s, %s, %s, %s, %s)
             ON DUPLICATE KEY UPDATE
                 rating = VALUES(rating),
@@ -29,8 +30,10 @@ class InformationService:
         
         rows = []
         for item in data:
+            # P0: 统一使用 ts_code 并进行归一化
+            ts_code = normalize_ts_code(item.get("ts_code") or item.get("stock_code"))
             rows.append((
-                item.get("stock_code"),
+                ts_code,
                 item.get("report_date"),
                 item.get("analyst"),
                 item.get("rating"),
@@ -46,18 +49,19 @@ class InformationService:
             logger.error(f"同步机构评级失败: {e}")
             raise
 
-    async def get_analyst_ranks(self, code: str, limit: int = 50) -> List[Dict[str, Any]]:
+    async def get_analyst_ranks(self, ts_code: str, limit: int = 50) -> List[Dict[str, Any]]:
+        ts_code = normalize_ts_code(ts_code)
         sql = """
-            SELECT id, stock_code, report_date, analyst, rating, change_direction, target_price, created_at
+            SELECT id, ts_code, report_date, analyst, rating, change_direction, target_price, created_at
             FROM stock_analyst_rank
-            WHERE stock_code = %s
+            WHERE ts_code = %s
             ORDER BY report_date DESC
             LIMIT %s
         """
-        rows = await db.execute(sql, (code, limit))
+        rows = await db.execute(sql, (ts_code, limit))
         return [
             {
-                "id": r[0], "stock_code": r[1], "report_date": r[2], "analyst": r[3],
+                "id": r[0], "ts_code": r[1], "report_date": r[2], "analyst": r[3],
                 "rating": r[4], "change_direction": r[5], "target_price": float(r[6]) if r[6] else None,
                 "created_at": r[7]
             } for r in rows
@@ -70,9 +74,10 @@ class InformationService:
         if not data:
             return 0
             
+        # P0: 修正表结构不匹配问题 (stock_code -> ts_code)
         sql = """
             INSERT INTO stock_performance_forecast
-            (stock_code, notice_date, report_period, type, growth_min, growth_max)
+            (ts_code, notice_date, report_period, type, growth_min, growth_max)
             VALUES (%s, %s, %s, %s, %s, %s)
             ON DUPLICATE KEY UPDATE
                 notice_date = VALUES(notice_date),
@@ -83,8 +88,9 @@ class InformationService:
         
         rows = []
         for item in data:
+            ts_code = normalize_ts_code(item.get("ts_code") or item.get("stock_code"))
             rows.append((
-                item.get("stock_code"),
+                ts_code,
                 item.get("notice_date"),
                 item.get("report_period"),
                 item.get("type"),
@@ -100,18 +106,19 @@ class InformationService:
             logger.error(f"同步业绩预告失败: {e}")
             raise
 
-    async def get_forecasts(self, code: str, limit: int = 20) -> List[Dict[str, Any]]:
+    async def get_forecasts(self, ts_code: str, limit: int = 20) -> List[Dict[str, Any]]:
+        ts_code = normalize_ts_code(ts_code)
         sql = """
-            SELECT id, stock_code, notice_date, report_period, type, growth_min, growth_max
+            SELECT id, ts_code, notice_date, report_period, type, growth_min, growth_max
             FROM stock_performance_forecast
-            WHERE stock_code = %s
-            ORDER BY report_period DESC
+            WHERE ts_code = %s
+            ORDER BY notice_date DESC
             LIMIT %s
         """
-        rows = await db.execute(sql, (code, limit))
+        rows = await db.execute(sql, (ts_code, limit))
         return [
             {
-                "id": r[0], "stock_code": r[1], "notice_date": r[2], "report_period": r[3],
+                "id": r[0], "ts_code": r[1], "notice_date": r[2], "report_period": r[3],
                 "type": r[4], "growth_min": float(r[5]) if r[5] else None, "growth_max": float(r[6]) if r[6] else None
             } for r in rows
         ]
@@ -125,7 +132,7 @@ class InformationService:
             
         sql = """
             INSERT INTO stock_sentiment_daily
-            (stock_code, trade_date, post_count, read_count, comment_count, rank_score)
+            (ts_code, trade_date, post_count, read_count, comment_count, rank_score)
             VALUES (%s, %s, %s, %s, %s, %s)
             ON DUPLICATE KEY UPDATE
                 post_count = VALUES(post_count),
@@ -136,8 +143,9 @@ class InformationService:
         
         rows = []
         for item in data:
+            ts_code = normalize_ts_code(item.get("ts_code") or item.get("stock_code"))
             rows.append((
-                item.get("stock_code"),
+                ts_code,
                 item.get("trade_date"),
                 item.get("post_count", 0),
                 item.get("read_count", 0),
@@ -153,18 +161,19 @@ class InformationService:
             logger.error(f"同步市场热度失败: {e}")
             raise
 
-    async def get_sentiment(self, code: str, limit: int = 30) -> List[Dict[str, Any]]:
+    async def get_sentiment(self, ts_code: str, limit: int = 30) -> List[Dict[str, Any]]:
+        ts_code = normalize_ts_code(ts_code)
         sql = """
-            SELECT id, stock_code, trade_date, post_count, read_count, comment_count, rank_score
+            SELECT id, ts_code, trade_date, post_count, read_count, comment_count, rank_score
             FROM stock_sentiment_daily
-            WHERE stock_code = %s
+            WHERE ts_code = %s
             ORDER BY trade_date DESC
             LIMIT %s
         """
-        rows = await db.execute(sql, (code, limit))
+        rows = await db.execute(sql, (ts_code, limit))
         return [
             {
-                "id": r[0], "stock_code": r[1], "trade_date": r[2],
+                "id": r[0], "ts_code": r[1], "trade_date": r[2],
                 "post_count": r[3], "read_count": r[4], "comment_count": r[5], "rank_score": r[6]
             } for r in rows
         ]
@@ -192,7 +201,7 @@ class InformationService:
                     continue
                     
                 clean_items.append({
-                    "stock_code": item.get("stock_code"),
+                    "ts_code": normalize_ts_code(item.get("ts_code") or item.get("stock_code")),
                     "report_date": rpt_date,
                     "analyst": item.get("analyst"),
                     "rating": item.get("rating"),
@@ -216,12 +225,12 @@ class InformationService:
             clean_items = []
             for item in data:
                 clean_items.append({
-                    "stock_code": item.get("stock_code"),
+                    "ts_code": normalize_ts_code(item.get("ts_code") or item.get("stock_code")),
                     "notice_date": item.get("notice_date"),
                     "report_period": item.get("report_period"),
                     "type": item.get("type"),
-                    "growth_min": None, 
-                    "growth_max": None
+                    "growth_min": item.get("growth_min"), # 不再硬编码为 None，优先从 API 取
+                    "growth_max": item.get("growth_max")
                 })
                 
             return await self.sync_forecasts(clean_items)
@@ -229,10 +238,11 @@ class InformationService:
             logger.error(f"Orchestration sync_forecasts failed: {e}")
             raise
 
-    async def sync_sentiment_from_akshare(self, code: str) -> int:
+    async def sync_sentiment_from_akshare(self, ts_code: str) -> int:
         """从 AkShare API 获取并同步个股今日热度"""
         try:
-            data = await http_client.get("akshare", f"/api/v1/information/sentiment/{code}")
+            ts_code = normalize_ts_code(ts_code)
+            data = await http_client.get("akshare", f"/api/v1/information/sentiment/{ts_code}")
             if not data:
                 return 0
                 
@@ -241,7 +251,7 @@ class InformationService:
             trade_date = now.strftime("%Y-%m-%d")
             
             clean_item = {
-                "stock_code": code,
+                "ts_code": ts_code,
                 "trade_date": trade_date,
                 "post_count": data.get("post_count", 0),
                 "read_count": data.get("read_count", 0),
@@ -251,6 +261,6 @@ class InformationService:
             
             return await self.sync_sentiment([clean_item])
         except Exception as e:
-            logger.error(f"Orchestration sync_sentiment failed: code={code}, {e}")
+            logger.error(f"Orchestration sync_sentiment failed: ts_code={ts_code}, {e}")
             raise
 

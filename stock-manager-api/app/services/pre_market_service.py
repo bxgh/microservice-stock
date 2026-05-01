@@ -3,6 +3,7 @@ import asyncio
 from typing import Dict, Any, List
 from app.utils.database import db
 from app.utils.http_client import http_client
+from app.utils.code_utils import normalize_ts_code
 from app.utils.logger import get_logger
 
 logger = get_logger("stock-manager.pre_market")
@@ -117,20 +118,13 @@ class PreMarketService:
                     
                 rows = []
                 for item in data:
-                    code = item.get("stock_code") or item.get("code")
-                    if not code:
+                    # P0: 使用统一的归一化工具
+                    ts_code = normalize_ts_code(item.get("stock_code") or item.get("code"))
+                    if not ts_code:
                         continue
                     
-                    # Format Code
-                    # item["stock_code"] might be raw "600519"
-                    if not code.startswith(("SH", "SZ", "BJ")):
-                        if code.startswith("6"): code = f"{code}.SH"
-                        elif code.startswith("8") or code.startswith("4") or code.startswith("9"): code = f"{code}.BJ"
-                        elif code.startswith("0") or code.startswith("3"): code = f"{code}.SZ"
-                        else: code = f"{code}.SZ"
-                    
                     rows.append((
-                        code,
+                        ts_code,
                         period,
                         item.get("notice_date"),
                         item.get("type"),
