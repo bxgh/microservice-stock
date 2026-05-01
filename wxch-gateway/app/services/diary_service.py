@@ -241,7 +241,7 @@ class DiaryService:
                      f'<div style="margin-top: 0 !important;">{html_content}</div></div>'
         
         # 7. 作者、发布记录
-        author = "八仙过海"
+        author = ""
         digest = diary.get("excerpt") or (source_content[:60] if source_content else "")
         
         insert_record_q = """
