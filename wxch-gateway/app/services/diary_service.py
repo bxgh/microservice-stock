@@ -199,7 +199,7 @@ class DiaryService:
         }
 
     async def publish_to_mp(self, user_id: int, data: DiaryPublishMPRequest) -> Dict[str, Any]:
-        """同步日记到微信公众号草稿箱 (认真排版终极版)"""
+        """同步日记到微信公众号 (白名单模式 + 支持一键复制)"""
         diary = await self.get_by_id(user_id, data.entry_id)
         if not diary:
             raise Exception("Diary not found")
@@ -212,21 +212,15 @@ class DiaryService:
         
         source_content = data.content if data.content else diary["content"]
         
-        # 1. 源码清理：物理切除只含列表符号的空行
+        # 1. 极致排版引擎
         source_content = re.sub(r'^\s*[*+-]\s*$', '', source_content, flags=re.MULTILINE)
         source_content = re.sub(r'\n\s*\n', '\n\n', source_content.strip())
-        
-        # 2. 基础 Markdown 转 HTML
         html_content = markdown.markdown(source_content, extensions=['extra', 'codehilite', 'toc'])
-        
-        # 3. HTML 深度净化：清理所有无效标签
         html_content = re.sub(r'<(p|li)[^>]*>\s*(?:&nbsp;|\s)*</\1>', '', html_content)
         
-        # 4. 样式变量定义
         font_serif = "'Optima', 'Source Serif Pro', 'PingFang SC', 'STSongti-SC-Regular', serif"
         color_gold = "#d4a76a"
         
-        # 5. 标签样式硬注入
         html_content = html_content.replace("<p>", f'<p style="font-family: {font_serif}; font-size: 14px; line-height: 1.6; color: #353535; margin: 0 0 10px 0; text-align: justify;">')
         def h3_replacer(match):
             title_text = match.group(1)
@@ -236,14 +230,21 @@ class DiaryService:
         html_content = html_content.replace("<li>", f'<li style="margin: 0 0 4px 0; padding: 0;">')
         html_content = html_content.replace("<blockquote>", f'<blockquote style="border-left: 3px solid #eee; padding: 6px 12px; color: #777; background-color: #f9f9f9; margin: 15px 0; font-family: {font_serif}; font-size: 13px;">')
         
-        # 6. 特殊处理：确保第一个元素的 margin-top 绝对为 0
         final_html = f'<div class="entry-container" style="padding: 0 10px 10px 10px; background-color: #ffffff; margin-top: 0 !important;">' \
                      f'<div style="margin-top: 0 !important;">{html_content}</div></div>'
         
-        # 7. 作者、发布记录
-        author = ""
+        author = "八仙过海"
         digest = diary.get("excerpt") or (source_content[:60] if source_content else "")
         
+        # 2. 准备返回数据 (无论同步成功与否，都返回 HTML 以支持前端一键复制)
+        result = {
+            "publish_record_id": None,
+            "wx_media_id": None,
+            "content_html": final_html, # 核心：返回排版好的 HTML
+            "message": "init"
+        }
+        
+        # 3. 记录发布流水
         insert_record_q = """
             INSERT INTO mp_publish_record 
             (user_id, diary_id, mp_account_id, title, author, digest, content_html, status) 
@@ -253,7 +254,9 @@ class DiaryService:
             user_id, data.entry_id, account['id'], diary['title'] or f"日记 {diary['entry_date']}",
             author, digest, final_html, 1 
         ))
+        result["publish_record_id"] = record_id
         
+        # 4. 尝试 API 同步 (白名单模式)
         try:
             wx_media_id = await wechat_service.add_draft(
                 account_id=account['id'],
@@ -265,14 +268,16 @@ class DiaryService:
             if wx_media_id:
                 update_q = "UPDATE mp_publish_record SET status = 3, wx_media_id = %s WHERE id = %s"
                 await db.execute(update_q, (wx_media_id, record_id))
-                return {"publish_record_id": record_id, "wx_media_id": wx_media_id, "message": "success"}
+                result["wx_media_id"] = wx_media_id
+                result["message"] = "success"
             else:
-                raise Exception("Failed to sync to WeChat draft box")
+                raise Exception("Failed to sync (Whitelist check failed or Account restricted)")
         except Exception as e:
-            logger.error(f"Failed to publish to mp: {str(e)}")
-            # 修正：修正字段名为 error_message
+            logger.warning(f"API sync failed, but HTML is ready for manual copy: {str(e)}")
             update_q = "UPDATE mp_publish_record SET status = 4, error_message = %s WHERE id = %s"
             await db.execute(update_q, (str(e), record_id))
-            return {"publish_record_id": record_id, "message": f"failed: {str(e)}"}
+            result["message"] = f"API sync failed: {str(e)}. You can still use 'Copy HTML' to sync manually."
+            
+        return result
 
 diary_service = DiaryService()
