@@ -4,6 +4,7 @@ from fastapi import HTTPException
 from app.utils.database import db
 from app.models.diary import DiaryEntryCreate, DiaryEntryUpdate, DiaryPublishMPRequest
 import markdown
+from premailer import transform
 from app.services.wechat_service import wechat_service
 
 logger = logging.getLogger("gateway.service.diary")
@@ -331,10 +332,62 @@ class DiaryService:
             raise HTTPException(status_code=400, detail="No linked WeChat Official Account found")
         account = accounts[0]
         
-        # 3. Markdown 转 HTML
+        # 3. Markdown 转 HTML 并注入精美样式
         # 优先使用前端传来的“净化版”内容，如果没有则使用原内容
         source_content = data.content if data.content else diary["content"]
-        html_content = markdown.markdown(source_content, extensions=['extra', 'codehilite', 'toc'])
+        
+        # 定义公众号专用样式 (还原小程序纸质感)
+        WECHAT_STYLE = """
+        <style>
+            .entry-container {
+                font-family: 'Optima', 'Source Serif Pro', 'PingFang SC', 'STSongti-SC-Regular', serif;
+                font-size: 16px;
+                line-height: 1.85;
+                color: #353535;
+                padding: 0 5px;
+                text-align: justify;
+            }
+            h3 {
+                font-size: 18px;
+                font-weight: bold;
+                color: #222;
+                margin-top: 40px;
+                margin-bottom: 20px;
+                border-left: 4px solid #d4a76a;
+                padding-left: 12px;
+                line-height: 1.4;
+            }
+            p {
+                margin-bottom: 25px;
+                letter-spacing: 0.5px;
+            }
+            blockquote {
+                border-left: 3px solid #e0e0e0;
+                padding: 10px 15px;
+                color: #777;
+                background-color: #f9f9f9;
+                margin: 20px 0;
+                font-style: italic;
+            }
+            ul, ol {
+                margin-bottom: 25px;
+                padding-left: 20px;
+            }
+            li {
+                margin-bottom: 12px;
+            }
+            hr {
+                border: 0;
+                border-top: 1px solid #eee;
+                margin: 40px 0;
+            }
+        </style>
+        """
+        
+        raw_html = markdown.markdown(source_content, extensions=['extra', 'codehilite', 'toc'])
+        # 包装容器并注入样式
+        styled_html_raw = f"<html><body>{WECHAT_STYLE}<div class='entry-container'>{raw_html}</div></body></html>"
+        html_content = transform(styled_html_raw)
         
         # 4. 创建发布记录 (mp_publish_record)
         # 根据 DDL, mp_publish_record 需要 title, author, digest, content_html, diary_id, mp_account_id
