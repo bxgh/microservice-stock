@@ -58,6 +58,8 @@ async def get_stock_dividends(code: str):
         "data": [], 
         "status": "data_insufficient",
         "message": "分红配股数据暂未入库"
+    }
+
 @router.get("/search")
 async def search_stocks(keyword: str = Query(..., min_length=1)):
     """搜索股票: 支持代码、名称、拼音"""
