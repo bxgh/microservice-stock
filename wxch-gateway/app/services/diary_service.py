@@ -199,7 +199,7 @@ class DiaryService:
         }
 
     async def publish_to_mp(self, user_id: int, data: DiaryPublishMPRequest) -> Dict[str, Any]:
-        """同步日记到微信公众号草稿箱 (极致清爽版)"""
+        """同步日记到微信公众号草稿箱 (认真排版终极版)"""
         diary = await self.get_by_id(user_id, data.entry_id)
         if not diary:
             raise Exception("Diary not found")
@@ -212,41 +212,47 @@ class DiaryService:
         
         source_content = data.content if data.content else diary["content"]
         
-        # 0. 预处理内容，移除 Markdown 中可能产生的空行干扰
+        # 1. 源码清理：物理切除只含列表符号的空行
+        source_content = re.sub(r'^\s*[*+-]\s*$', '', source_content, flags=re.MULTILINE)
         source_content = re.sub(r'\n\s*\n', '\n\n', source_content.strip())
         
-        # 1. 基础 Markdown 转 HTML
+        # 2. 基础 Markdown 转 HTML
         html_content = markdown.markdown(source_content, extensions=['extra', 'codehilite', 'toc'])
         
-        # 2. 清理 HTML 中的空标签 (重点清除空段落和空列表项)
-        html_content = re.sub(r'<p[^>]*>\s*(?:&nbsp;)?\s*</p>', '', html_content)
-        html_content = re.sub(r'<li[^>]*>\s*(?:&nbsp;)?\s*</li>', '', html_content)
+        # 3. HTML 深度净化：清理所有无效标签
+        # 清理不含实质文字的 P 和 LI (包括只含空格或换行的)
+        html_content = re.sub(r'<(p|li)[^>]*>\s*(?:&nbsp;|\s)*</\1>', '', html_content)
         
-        # 3. 硬核样式注入
+        # 4. 样式变量定义
         font_serif = "'Optima', 'Source Serif Pro', 'PingFang SC', 'STSongti-SC-Regular', serif"
         color_gold = "#d4a76a"
         
-        # 替换段落: 
+        # 5. 标签样式硬注入
+        # 注入段落
         html_content = html_content.replace("<p>", f'<p style="font-family: {font_serif}; font-size: 14px; line-height: 1.6; color: #353535; margin: 0 0 10px 0; text-align: justify;">')
         
-        # 替换标题: 补齐 § 符号
+        # 注入标题：补齐 § 符号，锁定上边距
         def h3_replacer(match):
             title_text = match.group(1)
             return f'<h3 style="font-family: {font_serif}; font-size: 16px; font-weight: bold; color: #222; margin: 20px 0 6px 0; padding-left: 10px; border-left: 3px solid {color_gold}; line-height: 1.4;"><span style="color: {color_gold}; margin-right: 4px;">§</span>{title_text}</h3>'
         html_content = re.sub(r"<h3>(.*?)</h3>", h3_replacer, html_content)
         
-        # 替换列表: 极致紧致
+        # 注入列表
         html_content = html_content.replace("<ul>", f'<ul style="margin: 0 0 12px 0; padding-left: 20px; font-family: {font_serif}; font-size: 14px; color: #353535;">')
         html_content = html_content.replace("<li>", f'<li style="margin: 0 0 4px 0; padding: 0;">')
         
-        # 替换引用块
+        # 注入引用
         html_content = html_content.replace("<blockquote>", f'<blockquote style="border-left: 3px solid #eee; padding: 6px 12px; color: #777; background-color: #f9f9f9; margin: 15px 0; font-family: {font_serif}; font-size: 13px;">')
         
-        # 4. 包装在最终容器中 (强制第一个元素 margin-top 为 0)
-        final_html = f'<div class="entry-container" style="padding: 0 10px 10px 10px; background-color: #ffffff;">' \
-                     f'<div style="margin-top: 0;">{html_content}</div></div>'
+        # 6. 特殊处理：确保第一个元素的 margin-top 绝对为 0
+        # 如果第一个标签是 <p style="...">，将其 margin 改为 0 0 10px 0
+        html_content = re.sub(r'^(<p style=".*?)margin: 0 0 10px 0;', r'\1margin: 0 0 10px 0;', html_content) # 已经设为0了，但为了万无一失增加强制性
         
-        # 5. 作者默认设为“八仙过海”
+        # 7. 包装最终容器
+        final_html = f'<div class="entry-container" style="padding: 0 10px 10px 10px; background-color: #ffffff; margin-top: 0 !important;">' \
+                     f'<div style="margin-top: 0 !important;">{html_content}</div></div>'
+        
+        # 8. 作者、发布记录
         author = "八仙过海"
         digest = diary.get("excerpt") or (source_content[:60] if source_content else "")
         
