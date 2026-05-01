@@ -16,14 +16,13 @@ class DiaryService:
     async def get_list(self, user_id: int, page: int = 1, size: int = 20, 
                           tag: Optional[str] = None, entry_type: Optional[int] = None,
                           search: Optional[str] = None) -> tuple:
-        """获取日记列表 (与 API 对应)"""
+        """获取日记列表"""
         offset = (page - 1) * size
         params = [user_id]
-        where_clauses = ["user_id = %s"]
+        where_clauses = ["user_id = %s", "deleted_at IS NULL"]
         
         if tag:
-            # 假设这里通过标签名过滤
-            where_clauses.append("id IN (SELECT entry_id FROM diary_entry_tag det JOIN sys_tag t ON det.tag_id = t.id WHERE t.name = %s)")
+            where_clauses.append("id IN (SELECT diary_id FROM diary_tag dt JOIN diary_tag_dict td ON dt.tag_id = td.id WHERE td.name = %s)")
             params.append(tag)
         if entry_type:
             where_clauses.append("entry_type = %s")
@@ -49,19 +48,21 @@ class DiaryService:
         
         if items:
             ids = [item['id'] for item in items]
+            # 修正表名: diary_stock
             stocks_query = """
-                SELECT des.entry_id, s.ts_code, s.name 
-                FROM diary_entry_stock des
-                JOIN stock_basic s ON des.ts_code = s.ts_code
-                WHERE des.entry_id IN ({})
+                SELECT ds.diary_id as entry_id, s.ts_code, s.name 
+                FROM diary_stock ds
+                JOIN stock_info s ON ds.ts_code = s.ts_code
+                WHERE ds.diary_id IN ({})
             """.format(",".join(["%s"] * len(ids)))
             stocks_res = await db.execute(stocks_query, tuple(ids))
             
+            # 修正表名: diary_tag, diary_tag_dict
             tags_query = """
-                SELECT det.entry_id, t.id, t.name, t.category, t.color
-                FROM diary_entry_tag det
-                JOIN sys_tag t ON det.tag_id = t.id
-                WHERE det.entry_id IN ({})
+                SELECT dt.diary_id as entry_id, td.id, td.name, td.category, td.color
+                FROM diary_tag dt
+                JOIN diary_tag_dict td ON dt.tag_id = td.id
+                WHERE dt.diary_id IN ({})
             """.format(",".join(["%s"] * len(ids)))
             tags_res = await db.execute(tags_query, tuple(ids))
             
@@ -72,33 +73,36 @@ class DiaryService:
         return items, total
 
     async def get_by_id(self, user_id: int, entry_id: int) -> Optional[Dict[str, Any]]:
-        """获取日记详情 (与 API 对应)"""
-        query = "SELECT * FROM diary_entry WHERE id = %s AND user_id = %s"
+        """获取日记详情"""
+        query = "SELECT * FROM diary_entry WHERE id = %s AND user_id = %s AND deleted_at IS NULL"
         res = await db.execute(query, (entry_id, user_id))
         if not res:
             return None
         
         item = res[0]
+        # 修正表名: diary_stock
         stocks_query = """
             SELECT s.ts_code, s.name, s.market, s.industry_sw
-            FROM diary_entry_stock des
-            JOIN stock_basic s ON des.ts_code = s.ts_code
-            WHERE des.entry_id = %s
+            FROM diary_stock ds
+            JOIN stock_info s ON ds.ts_code = s.ts_code
+            WHERE ds.diary_id = %s
         """
         item['stocks'] = await db.execute(stocks_query, (entry_id,))
+        
+        # 修正表名: diary_tag, diary_tag_dict
         tags_query = """
-            SELECT t.id, t.name, t.category, t.color
-            FROM diary_entry_tag det
-            JOIN sys_tag t ON det.tag_id = t.id
-            WHERE det.entry_id = %s
+            SELECT td.id, td.name, td.category, td.color
+            FROM diary_tag dt
+            JOIN diary_tag_dict td ON dt.tag_id = td.id
+            WHERE dt.diary_id = %s
         """
         item['tags'] = await db.execute(tags_query, (entry_id,))
         return item
 
     async def create(self, user_id: int, data: DiaryEntryCreate) -> Dict[str, Any]:
-        """创建日记 (与 API 对应)"""
+        """创建日记"""
         word_count = len(data.content)
-        excerpt = data.content[:200].replace("\n", " ")
+        excerpt = data.content[:200].replace("\n", " ").strip()
         
         query = """
             INSERT INTO diary_entry (
@@ -114,22 +118,28 @@ class DiaryService:
         entry_id = await db.execute(query, params)
         
         if data.stocks:
-            stock_query = "INSERT INTO diary_entry_stock (entry_id, ts_code) VALUES (%s, %s)"
-            stock_params = [(entry_id, code) for code in data.stocks]
-            await db.execute_many(stock_query, stock_params)
+            # 修正表名: diary_stock
+            # 先查出 stock_id
+            stock_info_q = "SELECT id, ts_code FROM stock_info WHERE ts_code IN ({})".format(",".join(["%s"] * len(data.stocks)))
+            stocks_found = await db.execute(stock_info_q, tuple(data.stocks))
+            if stocks_found:
+                stock_rel_q = "INSERT INTO diary_stock (diary_id, stock_id, ts_code) VALUES (%s, %s, %s)"
+                stock_rel_params = [(entry_id, s['id'], s['ts_code']) for s in stocks_found]
+                await db.execute_many(stock_rel_q, stock_rel_params)
             
         if data.tags:
-            tag_query = "SELECT id FROM sys_tag WHERE name IN ({})".format(",".join(["%s"] * len(data.tags)))
+            # 修正表名: diary_tag, diary_tag_dict
+            tag_query = "SELECT id FROM diary_tag_dict WHERE name IN ({})".format(",".join(["%s"] * len(data.tags)))
             tags_found = await db.execute(tag_query, tuple(data.tags))
             if tags_found:
-                rel_query = "INSERT INTO diary_entry_tag (entry_id, tag_id) VALUES (%s, %s)"
+                rel_query = "INSERT INTO diary_tag (diary_id, tag_id) VALUES (%s, %s)"
                 rel_params = [(entry_id, t['id']) for t in tags_found]
                 await db.execute_many(rel_query, rel_params)
                 
         return await self.get_by_id(user_id, entry_id)
 
     async def update(self, user_id: int, entry_id: int, data: DiaryEntryUpdate) -> Dict[str, Any]:
-        """更新日记 (与 API 对应)"""
+        """更新日记"""
         updates = []
         params = []
         update_fields = data.model_dump(exclude_unset=True)
@@ -143,47 +153,50 @@ class DiaryService:
                 updates.append("word_count = %s")
                 params.append(len(update_fields['content']))
                 updates.append("excerpt = %s")
-                params.append(update_fields['content'][:200].replace("\n", " "))
+                params.append(update_fields['content'][:200].replace("\n", " ").strip())
             params.extend([entry_id, user_id])
             query = f"UPDATE diary_entry SET {', '.join(updates)} WHERE id = %s AND user_id = %s"
             await db.execute(query, tuple(params))
             
         if 'stocks' in update_fields:
-            await db.execute("DELETE FROM diary_entry_stock WHERE entry_id = %s", (entry_id,))
+            await db.execute("DELETE FROM diary_stock WHERE diary_id = %s", (entry_id,))
             if update_fields['stocks']:
-                stock_query = "INSERT INTO diary_entry_stock (entry_id, ts_code) VALUES (%s, %s)"
-                stock_params = [(entry_id, code) for code in update_fields['stocks']]
-                await db.execute_many(stock_query, stock_params)
+                stock_info_q = "SELECT id, ts_code FROM stock_info WHERE ts_code IN ({})".format(",".join(["%s"] * len(update_fields['stocks'])))
+                stocks_found = await db.execute(stock_info_q, tuple(update_fields['stocks']))
+                if stocks_found:
+                    stock_rel_q = "INSERT INTO diary_stock (diary_id, stock_id, ts_code) VALUES (%s, %s, %s)"
+                    stock_rel_params = [(entry_id, s['id'], s['ts_code']) for s in stocks_found]
+                    await db.execute_many(stock_rel_q, stock_rel_params)
                 
         if 'tags' in update_fields:
-            await db.execute("DELETE FROM diary_entry_tag WHERE entry_id = %s", (entry_id,))
+            await db.execute("DELETE FROM diary_tag WHERE diary_id = %s", (entry_id,))
             if update_fields['tags']:
-                tag_query = "SELECT id FROM sys_tag WHERE name IN ({})".format(",".join(["%s"] * len(update_fields['tags'])))
+                tag_query = "SELECT id FROM diary_tag_dict WHERE name IN ({})".format(",".join(["%s"] * len(update_fields['tags'])))
                 tags_found = await db.execute(tag_query, tuple(update_fields['tags']))
                 if tags_found:
-                    rel_query = "INSERT INTO diary_entry_tag (entry_id, tag_id) VALUES (%s, %s)"
+                    rel_query = "INSERT INTO diary_tag (diary_id, tag_id) VALUES (%s, %s)"
                     rel_params = [(entry_id, t['id']) for t in tags_found]
                     await db.execute_many(rel_query, rel_params)
                     
         return await self.get_by_id(user_id, entry_id)
 
     async def delete(self, user_id: int, entry_id: int) -> bool:
-        """删除日记 (与 API 对应)"""
-        query = "DELETE FROM diary_entry WHERE id = %s AND user_id = %s"
+        """逻辑删除"""
+        query = "UPDATE diary_entry SET deleted_at = NOW() WHERE id = %s AND user_id = %s"
         affected = await db.execute(query, (entry_id, user_id))
         return affected > 0
 
     async def get_stats(self, user_id: int) -> Dict[str, Any]:
-        """获取统计 (与 API 对应)"""
+        """获取统计"""
         monthly_q = """
             SELECT COUNT(DISTINCT entry_date) as count 
             FROM diary_entry 
-            WHERE user_id = %s AND entry_date >= DATE_FORMAT(NOW() ,'%Y-%m-01')
+            WHERE user_id = %s AND deleted_at IS NULL AND entry_date >= DATE_FORMAT(NOW() ,'%Y-%m-01')
         """
         monthly_res = await db.execute(monthly_q, (user_id,))
-        mood_q = "SELECT mood FROM diary_entry WHERE user_id = %s ORDER BY entry_date DESC LIMIT 1"
+        mood_q = "SELECT mood FROM diary_entry WHERE user_id = %s AND deleted_at IS NULL ORDER BY entry_date DESC LIMIT 1"
         mood_res = await db.execute(mood_q, (user_id,))
-        dist_q = "SELECT mood, COUNT(*) as count FROM diary_entry WHERE user_id = %s GROUP BY mood"
+        dist_q = "SELECT mood, COUNT(*) as count FROM diary_entry WHERE user_id = %s AND deleted_at IS NULL GROUP BY mood"
         dist_res = await db.execute(dist_q, (user_id,))
         
         return {
