@@ -262,13 +262,15 @@ class DiaryService:
         user_res = await db.execute(author_query, (user_id,))
         author = user_res[0]["nickname"] if user_res else "Trader"
         digest = diary.get("excerpt") or (source_content[:60] if source_content else "")
+        
+        # 修复：补上缺失的 user_id
         insert_record_q = """
             INSERT INTO mp_publish_record 
-            (diary_id, mp_account_id, title, author, digest, content_html, status) 
-            VALUES (%s, %s, %s, %s, %s, %s, %s)
+            (user_id, diary_id, mp_account_id, title, author, digest, content_html, status) 
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
         """
         record_id = await db.execute(insert_record_q, (
-            data.entry_id, account['id'], diary['title'] or f"日记 {diary['entry_date']}",
+            user_id, data.entry_id, account['id'], diary['title'] or f"日记 {diary['entry_date']}",
             author, digest, html_content, 1 
         ))
         try:
