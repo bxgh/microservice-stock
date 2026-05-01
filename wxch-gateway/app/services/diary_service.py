@@ -252,9 +252,10 @@ class DiaryService:
         final_html = f'<div class="entry-container" style="padding: 0 10px 10px 10px; background-color: #ffffff; margin-top: 0 !important;">' \
                      f'<div style="margin-top: 0 !important;">{html_content}</div></div>'
         
-        # 8. 作者、发布记录
+        # 8. 作者、发布记录 (截断摘要防止 45004)
         author = "八仙过海"
-        digest = diary.get("excerpt") or (source_content[:60] if source_content else "")
+        raw_digest = diary.get("excerpt") or source_content[:60] or ""
+        digest = raw_digest[:64].replace("\n", " ").strip()
         
         insert_record_q = """
             INSERT INTO mp_publish_record 
