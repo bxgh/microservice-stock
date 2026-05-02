@@ -172,13 +172,15 @@ class StockInfoService:
     async def search_stocks(self, keyword: str, limit: int = 15) -> List[Dict[str, Any]]:
         """股票模糊搜索 (代码、名称、拼音)"""
         try:
-            # 优化搜索逻辑: 
-            # 1. 如果是纯数字，优先匹配代码开头
-            # 2. 如果是中文/拼音，匹配名称或拼音
+            # 核心逻辑:
+            # 1. 优先查询专门为搜索优化的 stock_info (含拼音索引)
+            # 2. 如果结果为空且输入是数字代码，则回退查询全量基础信息表 stock_basic_info
+            
             search_pattern = f"{keyword}%" if keyword.isdigit() else f"%{keyword}%"
             fuzzy_pattern = f"%{keyword}%"
             
-            sql = """
+            # 第一阶段: 查询 stock_info (高性能搜索表)
+            sql_info = """
                 SELECT ts_code, symbol, name, market, industry_sw as industry, status
                 FROM stock_info 
                 WHERE (ts_code LIKE %s OR symbol LIKE %s OR name LIKE %s OR pinyin_initial LIKE %s)
@@ -190,9 +192,18 @@ class StockInfoService:
                     status DESC, ts_code ASC
                 LIMIT %s
             """
-            # 参数: ts_code(pattern), symbol(pattern), name(fuzzy), pinyin(fuzzy), symbol(exact), symbol(pattern), name(exact), limit
             params = (search_pattern, search_pattern, fuzzy_pattern, fuzzy_pattern, keyword, search_pattern, keyword, limit)
-            results = await db.execute(sql, params)
+            results = await db.execute(sql_info, params)
+            
+            # 第二阶段回退: 如果 stock_info 没搜到且是数字，查全量基础库 stock_basic_info
+            if not results and keyword.isdigit():
+                sql_basic = """
+                    SELECT ts_code, symbol, name, market, '' as industry, 1 as status
+                    FROM stock_basic_info
+                    WHERE symbol LIKE %s OR ts_code LIKE %s
+                    LIMIT %s
+                """
+                results = await db.execute(sql_basic, (search_pattern, search_pattern, limit))
             
             # 格式转换
             return [
