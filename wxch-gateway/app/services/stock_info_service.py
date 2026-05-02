@@ -179,7 +179,6 @@ class StockInfoService:
                 SELECT ts_code, symbol, name, market, industry_sw as industry, status
                 FROM stock_info 
                 WHERE (ts_code LIKE %s OR symbol LIKE %s OR name LIKE %s OR pinyin_initial LIKE %s)
-                AND deleted_at IS NULL
                 ORDER BY status DESC, ts_code ASC
                 LIMIT %s
             """
