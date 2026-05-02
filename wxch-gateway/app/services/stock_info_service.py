@@ -15,7 +15,7 @@ class StockInfoService:
             sql_rank = """
                 SELECT report_date, analyst, rating, change_direction, target_price 
                 FROM stock_analyst_rank 
-                WHERE stock_code = %s 
+                WHERE ts_code = %s 
                 ORDER BY report_date DESC LIMIT 10
             """
             ranks = await db.execute(sql_rank, (code,))
@@ -24,7 +24,7 @@ class StockInfoService:
             sql_forecast = """
                 SELECT notice_date, report_period, type, growth_min, growth_max 
                 FROM stock_performance_forecast 
-                WHERE stock_code = %s 
+                WHERE ts_code = %s 
                 ORDER BY report_period DESC LIMIT 5
             """
             forecasts = await db.execute(sql_forecast, (code,))
