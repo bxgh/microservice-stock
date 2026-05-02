@@ -99,7 +99,7 @@ class MarketDataService:
         """统一将 Tushare 格式的日线保存到数据库"""
         query = """
             INSERT INTO stock_kline_daily (
-                code, trade_date, open, high, low, close, 
+                ts_code, trade_date, open, high, low, close, 
                 pre_close, pct_chg, volume, amount
             ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
             ON DUPLICATE KEY UPDATE

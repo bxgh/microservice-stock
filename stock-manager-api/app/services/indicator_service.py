@@ -73,7 +73,7 @@ class IndicatorService:
                 UPDATE ads_l1_market_overview o
                 SET turnover_total = (
                     SELECT SUM(k.amount) FROM stock_kline_daily k
-                    JOIN stock_basic_info s ON k.code = s.ts_code
+                    JOIN stock_basic_info s ON k.ts_code = s.ts_code
                     WHERE k.trade_date = %s
                 )
                 WHERE trade_date = %s
@@ -232,7 +232,7 @@ class IndicatorService:
                     SUM(CASE WHEN k.pct_chg >= 0.099 THEN 1 ELSE 0 END) AS limit_up_count,
                     COUNT(*) AS total_count
                 FROM stock_kline_daily k
-                INNER JOIN stock_industry_sw sw ON k.code = sw.code
+                INNER JOIN stock_industry_sw sw ON k.ts_code = sw.code
                 WHERE k.trade_date = %s
                 GROUP BY sw.l1_code
             ) b ON o.industry_code = SUBSTRING_INDEX(b.industry_code, '.', 1)
@@ -252,10 +252,10 @@ class IndicatorService:
             INNER JOIN (
                 SELECT 
                     sw.l1_code AS industry_code,
-                    SUBSTRING_INDEX(GROUP_CONCAT(k.code ORDER BY k.pct_chg DESC), ',', 1) AS top_code,
+                    SUBSTRING_INDEX(GROUP_CONCAT(k.ts_code ORDER BY k.pct_chg DESC), ',', 1) AS top_code,
                     MAX(k.pct_chg) AS top_pct
                 FROM stock_kline_daily k
-                INNER JOIN stock_industry_sw sw ON k.code = sw.code
+                INNER JOIN stock_industry_sw sw ON k.ts_code = sw.code
                 WHERE k.trade_date = %s
                 GROUP BY sw.l1_code
             ) t ON o.industry_code = SUBSTRING_INDEX(t.industry_code, '.', 1)

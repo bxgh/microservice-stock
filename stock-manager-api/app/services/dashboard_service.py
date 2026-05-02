@@ -26,7 +26,8 @@ class DashboardService:
 
             kline_count = 0
             if latest_date:
-                sql_kline_count = "SELECT COUNT(DISTINCT code) FROM stock_kline_daily WHERE trade_date = %s"
+                # K线更新统计
+                sql_kline_count = "SELECT COUNT(DISTINCT ts_code) FROM stock_kline_daily WHERE trade_date = %s"
                 count_res = await db.execute(sql_kline_count, (latest_date,))
                 kline_count = count_res[0][0] if count_res and count_res[0] else 0
 

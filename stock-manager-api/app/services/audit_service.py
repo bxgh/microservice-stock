@@ -34,7 +34,7 @@ class AuditService:
             # 获取基线：使用最近一个交易日的实际股票数作为基准
             # 这样可以避免代码格式不一致的问题
             sql_baseline = """
-                SELECT COUNT(DISTINCT code) 
+                SELECT COUNT(DISTINCT ts_code) 
                 FROM stock_kline_daily 
                 WHERE trade_date = (
                     SELECT MAX(trade_date) 
@@ -50,8 +50,8 @@ class AuditService:
                 total_baseline = 5422
                 logger.warning(f"无法从K线表获取基线，使用静态值: {total_baseline}")
             
-            # 获取 MySQL K线计数
-            sql_mysql = "SELECT trade_date, COUNT(DISTINCT code) as count FROM stock_kline_daily WHERE trade_date BETWEEN %s AND %s GROUP BY trade_date"
+            # MySQL 中的实际数据量
+            sql_mysql = "SELECT trade_date, COUNT(DISTINCT ts_code) as count FROM stock_kline_daily WHERE trade_date BETWEEN %s AND %s GROUP BY trade_date"
             mysql_res = await db.execute(sql_mysql, (start_str, end_str))
             mysql_counts = {
                 row[0].strftime("%Y-%m-%d") if isinstance(row[0], (datetime.date, datetime.datetime)) else str(row[0]): row[1]
