@@ -39,12 +39,12 @@ class OpsService:
                 date = datetime.date.today().strftime("%Y-%m-%d")
             
             # 查询指定日期的复权因子数量
-            sql = "SELECT COUNT(DISTINCT code) FROM stock_adjust_factor WHERE adjust_date = %s"
+            sql = "SELECT COUNT(DISTINCT ts_code) FROM stock_adjust_factor WHERE adjust_date = %s"
             res = await db.execute(sql, (date,))
             count = res[0][0] if res and res[0] else 0
             
             # 获取部分股票代码示例
-            sql_codes = "SELECT DISTINCT code FROM stock_adjust_factor WHERE adjust_date = %s LIMIT 10"
+            sql_codes = "SELECT DISTINCT ts_code FROM stock_adjust_factor WHERE adjust_date = %s LIMIT 10"
             codes_res = await db.execute(sql_codes, (date,))
             codes = [row[0] for row in codes_res] if codes_res else []
             

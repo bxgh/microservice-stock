@@ -137,6 +137,49 @@ class MarketDataService:
             logger.error(f"BaoStock 降级同步也失败了: {e}")
             return 0
 
+    async def sync_adj_factor(self, ts_code: str = '', start_date: str = '', end_date: str = ''):
+        """同步复权因子 (优先 Tushare)"""
+        try:
+            logger.info(f"正在从 Tushare 同步复权因子: {ts_code if ts_code else '全市场'}")
+            url = f"{self.tushare_url}/api/v1/stock/adj_factor"
+            params = {
+                "ts_code": ts_code,
+                "start_date": start_date.replace("-", ""),
+                "end_date": end_date.replace("-", "")
+            }
+            async with httpx.AsyncClient(timeout=30.0) as client:
+                resp = await client.get(url, params=params)
+                resp.raise_for_status()
+                data = resp.json().get("data", [])
+            
+            if not data:
+                return 0
+            
+            query = """
+                INSERT INTO stock_adjust_factor (
+                    ts_code, adjust_date, fore_adjust_factor, 
+                    back_adjust_factor, adjust_factor
+                ) VALUES (%s, %s, %s, %s, %s)
+                ON DUPLICATE KEY UPDATE
+                fore_adjust_factor=VALUES(fore_adjust_factor),
+                back_adjust_factor=VALUES(back_adjust_factor),
+                adjust_factor=VALUES(adjust_factor)
+            """
+            args = []
+            for i in data:
+                d = i.get("trade_date")
+                dt_str = f"{d[:4]}-{d[4:6]}-{d[6:8]}"
+                args.append((
+                    i.get("ts_code"), dt_str, i.get("adj_factor"), 
+                    i.get("adj_factor"), i.get("adj_factor") # Tushare 只返回一个 adj_factor
+                ))
+            await db.execute_many(query, args)
+            logger.info(f"成功保存 {len(args)} 条复权因子")
+            return len(args)
+        except Exception as e:
+            logger.error(f"同步复权因子失败: {e}")
+            return 0
+
     async def sync_index_daily(self, ts_code: str, start_date: str = '', end_date: str = '', trade_date: str = ''):
         """同步指数日线行情 (优先 Tushare)"""
         ts_code = normalize_ts_code(ts_code)
@@ -249,7 +292,7 @@ class MarketDataService:
                 
                 # 获取该批次股票的复权因子
                 placeholders = ','.join(['%s'] * len(batch_codes))
-                sql_f = f"SELECT code, adjust_date, back_adjust_factor FROM stock_adjust_factor WHERE code IN ({placeholders}) ORDER BY code, adjust_date"
+                sql_f = f"SELECT ts_code, adjust_date, back_adjust_factor FROM stock_adjust_factor WHERE ts_code IN ({placeholders}) ORDER BY ts_code, adjust_date"
                 f_res = await db.execute(sql_f, tuple(batch_codes))
                 f_map = {}
                 for f_code, f_date, f_factor in f_res:
@@ -268,12 +311,15 @@ class MarketDataService:
                     rows = list(group)
                     f_list = f_map.get(code, [(datetime.date(1990, 1, 1), 1.0)])
                     f_dates = [x[0] for x in f_list]
+                    latest_factor = f_list[-1][1] if f_list else 1.0
                     
                     adj_rows = []
                     for _, t_date, raw_close in rows:
                         idx = bisect.bisect_right(f_dates, t_date) - 1
                         factor = f_list[idx if idx >= 0 else 0][1]
-                        adj_rows.append({'date': t_date, 'adj_close': float(raw_close) * factor})
+                        # 使用前复权公式: P_adj = P_raw * (F_date / F_latest)
+                        adj_p = float(raw_close) * (factor / latest_factor)
+                        adj_rows.append({'date': t_date, 'adj_close': adj_p})
                     
                     target_row = next((r for r in adj_rows if r['date'] == target_date_obj), None)
                     if not target_row: continue

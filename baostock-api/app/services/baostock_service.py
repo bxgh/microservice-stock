@@ -1030,7 +1030,7 @@ class BaoStockService:
                 
                 if db_min_date is None:
                     res = await db.execute(
-                        "SELECT MIN(adjust_date), MAX(adjust_date) FROM stock_adjust_factor WHERE code=%s", 
+                        "SELECT MIN(adjust_date), MAX(adjust_date) FROM stock_adjust_factor WHERE ts_code=%s", 
                         (std_code,)
                     )
                     if res and res[0][0]:
@@ -1115,7 +1115,7 @@ class BaoStockService:
             write_start = time.time()
             sql = """
             INSERT INTO stock_adjust_factor 
-                (code, adjust_date, fore_adjust_factor, back_adjust_factor, adjust_factor)
+                (ts_code, adjust_date, fore_adjust_factor, back_adjust_factor, adjust_factor)
             VALUES 
                 (%s, %s, %s, %s, %s)
             ON DUPLICATE KEY UPDATE
@@ -1203,7 +1203,7 @@ class BaoStockService:
             logger.info("正在批量预取复权因子已有日期范围...")
             db_ranges = {}
             try:
-                range_res = await db.execute("SELECT code, MIN(adjust_date), MAX(adjust_date) FROM stock_adjust_factor GROUP BY code")
+                range_res = await db.execute("SELECT ts_code, MIN(adjust_date), MAX(adjust_date) FROM stock_adjust_factor GROUP BY ts_code")
                 for r in range_res:
                     bs_key = self._normalize_to_baostock(r[0])
                     db_ranges[bs_key] = (r[1], r[2])
@@ -1336,7 +1336,7 @@ class BaoStockService:
         if not buffer: return
         sql = """
         INSERT INTO stock_adjust_factor 
-            (code, adjust_date, fore_adjust_factor, back_adjust_factor, adjust_factor)
+            (ts_code, adjust_date, fore_adjust_factor, back_adjust_factor, adjust_factor)
         VALUES 
             (%s, %s, %s, %s, %s)
         ON DUPLICATE KEY UPDATE
@@ -1498,7 +1498,7 @@ class BaoStockService:
             
             # 3. 复权因子数据统计
             adjust_sql = """
-                SELECT adjust_date, COUNT(DISTINCT code) as count 
+                SELECT adjust_date, COUNT(DISTINCT ts_code) as count 
                 FROM stock_adjust_factor USE INDEX (idx_adjust_date)
                 WHERE adjust_date >= %s AND adjust_date <= %s
                 GROUP BY adjust_date 
