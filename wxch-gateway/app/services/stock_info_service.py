@@ -172,17 +172,27 @@ class StockInfoService:
     async def search_stocks(self, keyword: str, limit: int = 15) -> List[Dict[str, Any]]:
         """股票模糊搜索 (代码、名称、拼音)"""
         try:
-            # 兼容处理: 如果输入纯数字但不足 6 位，补齐进行匹配
-            search_pattern = f"%{keyword}%"
+            # 优化搜索逻辑: 
+            # 1. 如果是纯数字，优先匹配代码开头
+            # 2. 如果是中文/拼音，匹配名称或拼音
+            search_pattern = f"{keyword}%" if keyword.isdigit() else f"%{keyword}%"
+            fuzzy_pattern = f"%{keyword}%"
             
             sql = """
                 SELECT ts_code, symbol, name, market, industry_sw as industry, status
                 FROM stock_info 
                 WHERE (ts_code LIKE %s OR symbol LIKE %s OR name LIKE %s OR pinyin_initial LIKE %s)
-                ORDER BY status DESC, ts_code ASC
+                ORDER BY 
+                    (CASE WHEN symbol = %s THEN 0 
+                          WHEN symbol LIKE %s THEN 1
+                          WHEN name = %s THEN 2
+                          ELSE 3 END),
+                    status DESC, ts_code ASC
                 LIMIT %s
             """
-            results = await db.execute(sql, (search_pattern, search_pattern, search_pattern, search_pattern, limit))
+            # 参数: ts_code(pattern), symbol(pattern), name(fuzzy), pinyin(fuzzy), symbol(exact), symbol(pattern), name(exact), limit
+            params = (search_pattern, search_pattern, fuzzy_pattern, fuzzy_pattern, keyword, search_pattern, keyword, limit)
+            results = await db.execute(sql, params)
             
             # 格式转换
             return [
