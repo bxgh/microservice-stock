@@ -123,12 +123,12 @@ class MetadataService:
             
             # 3. Upsert
             sql = """
-            INSERT INTO stock_basic_info (ts_code, symbol, name, market, list_status)
+            INSERT INTO stock_info (ts_code, symbol, name, market, status)
             VALUES (%s, %s, %s, %s, %s)
             ON DUPLICATE KEY UPDATE 
                 name=VALUES(name), 
                 market=VALUES(market),
-                list_status=VALUES(list_status)
+                status=VALUES(status)
             """
             
             batch_size = 500
