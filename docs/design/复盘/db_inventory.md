@@ -458,7 +458,7 @@
 | 字段名 | 类型 | 必填 | 键 | 备注 |
 |---|---|---|---|---|
 | id | int(11) | No | PRI |  |
-| stock_code | varchar(20) | No | MUL |  |
+| ts_code | varchar(20) | No | MUL |  |
 | alert_date | datetime | No | MUL |  |
 | layer | varchar(10) | No | None |  |
 | alert_type | varchar(20) | No | None | 预警类型: CRITICAL_SLOWING, DISLOCATION |
@@ -495,7 +495,7 @@
 | 字段名 | 类型 | 必填 | 键 | 备注 |
 |---|---|---|---|---|
 | id | int(11) | No | PRI |  |
-| stock_code | varchar(20) | No | MUL | 股票/指数代码 |
+| ts_code | varchar(20) | No | MUL | 股票/指数代码 |
 | trade_date | datetime | No | MUL | 交易日期 |
 | cci_value | float | No | None | CCI 计算值 |
 | rho_value | float | No | None | 横截面相关性 Rho |
@@ -784,7 +784,7 @@
 | 字段名 | 类型 | 必填 | 键 | 备注 |
 |---|---|---|---|---|
 | id | int(11) | No | PRI |  |
-| code | varchar(16) | No | MUL | 股票代码 |
+| ts_code | varchar(16) | No | MUL | 股票代码 |
 | adjust_date | date | No | MUL | 除权除息日期 |
 | fore_adjust_factor | decimal(16,6) | Yes | None | 前复权因子 |
 | back_adjust_factor | decimal(16,6) | Yes | None | 后复权因子 |
@@ -801,7 +801,7 @@
 | 字段名 | 类型 | 必填 | 键 | 备注 |
 |---|---|---|---|---|
 | id | int(11) | No | PRI |  |
-| stock_code | varchar(20) | No | MUL | 标准代码 600519.SH |
+| ts_code | varchar(20) | No | MUL | 标准代码 600519.SH |
 | report_date | date | No | None |  |
 | analyst | varchar(50) | No | None | 机构/分析师名称 |
 | rating | varchar(20) | No | None | 评级 (买入/增持/中性) |
@@ -847,7 +847,7 @@
 
 | 字段名 | 类型 | 必填 | 键 | 备注 |
 |---|---|---|---|---|
-| stock_code | varchar(20) | No | PRI |  |
+| ts_code | varchar(20) | No | PRI |  |
 | status | varchar(10) | No | MUL |  |
 | listing_date | date | Yes | None |  |
 | missing_count | int(11) | Yes | None |  |
@@ -881,7 +881,7 @@
 
 | 字段名 | 类型 | 必填 | 键 | 备注 |
 |---|---|---|---|---|
-| code | varchar(20) | No | PRI | 标准股票代码 |
+| ts_code | varchar(20) | No | PRI | 标准股票代码 |
 | l1_code | varchar(20) | Yes | MUL | 一级行业代码 |
 | l1_name | varchar(50) | Yes | None | 一级行业名称 |
 | l2_code | varchar(20) | Yes | MUL | 二级行业代码 |
@@ -916,7 +916,7 @@
 | 字段名 | 类型 | 必填 | 键 | 备注 |
 |---|---|---|---|---|
 | id | bigint(20) | No | PRI |  |
-| code | varchar(16) | No | MUL |  |
+| ts_code | varchar(16) | No | MUL |  |
 | trade_date | date | No | MUL |  |
 | open | decimal(16,4) | Yes | None |  |
 | high | decimal(16,4) | Yes | None |  |
@@ -1022,7 +1022,7 @@
 | 字段名 | 类型 | 必填 | 键 | 备注 |
 |---|---|---|---|---|
 | id | int(11) | No | PRI |  |
-| stock_code | varchar(20) | No | MUL |  |
+| ts_code | varchar(20) | No | MUL |  |
 | trade_date | date | No | None |  |
 | post_count | int(11) | Yes | None | 当日发帖数 |
 | read_count | int(11) | Yes | None | 当日阅读数 |
