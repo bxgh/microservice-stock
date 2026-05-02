@@ -96,7 +96,7 @@ class FinanceService:
             }
         except Exception as e:
             logger.error(f"Sync finance failed for {ts_code}: {e}")
-            return {"ts_code": ts_code, "success": False, "message": str(e)}
+            raise
 
     async def get_financial_indicators(self, ts_code: str, limit: int = 40) -> Dict[str, Any]:
         """从数据库查询财务衍生指标 (ROE, EPS等)"""
@@ -141,7 +141,7 @@ class FinanceService:
             }
         except Exception as e:
             logger.error(f"Sync indicators failed for {ts_code}: {e}")
-            return {"ts_code": ts_code, "success": False, "message": str(e)}
+            raise
 
     async def _save_financial_indicators(self, ts_code: str, data: List[Dict[str, Any]]) -> int:
         if not data: return 0

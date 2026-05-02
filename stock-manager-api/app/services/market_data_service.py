@@ -135,7 +135,7 @@ class MarketDataService:
             return -1
         except Exception as e:
             logger.error(f"BaoStock 降级同步也失败了: {e}")
-            return 0
+            raise
 
     async def sync_adj_factor(self, ts_code: str = '', start_date: str = '', end_date: str = ''):
         """同步复权因子 (优先 Tushare)"""
@@ -178,7 +178,7 @@ class MarketDataService:
             return len(args)
         except Exception as e:
             logger.error(f"同步复权因子失败: {e}")
-            return 0
+            raise
 
     async def sync_index_daily(self, ts_code: str, start_date: str = '', end_date: str = '', trade_date: str = ''):
         """同步指数日线行情 (优先 Tushare)"""
@@ -207,7 +207,7 @@ class MarketDataService:
                 return 0
         except Exception as e:
             logger.error(f"Tushare 指数同步失败: {ts_code}, {e}")
-            return 0
+            raise
 
     async def _save_index_daily_to_db(self, data: List[Dict[str, Any]]):
         """统一保存指数日线"""

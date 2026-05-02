@@ -38,7 +38,7 @@ class PreMarketService:
             
         except Exception as e:
             logger.error(f"早盘事件同步失败: {e}")
-            
+            raise
         return stats
 
     async def sync_daily_performance_forecast(self) -> int:
@@ -67,4 +67,4 @@ class PreMarketService:
             
         except Exception as e:
             logger.error(f"业绩预告同步失败: {e}")
-            return 0
+            raise
