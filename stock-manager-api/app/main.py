@@ -84,6 +84,22 @@ async def lifespan(app: FastAPI):
             hour=19,
             minute=30
         )
+
+        # 8. 注册机构评级同步任务 (每日 03:00)
+        scheduler.add_daily_job(
+            job_funcs.daily_analyst_rating_sync_job,
+            job_id="daily_analyst_rating_sync",
+            hour=3,
+            minute=0
+        )
+
+        # 9. 注册股东数据同步任务 (每日 04:00)
+        scheduler.add_daily_job(
+            job_funcs.daily_shareholder_sync_job,
+            job_id="daily_shareholder_sync",
+            hour=4,
+            minute=0
+        )
         
         # 3. 启动
         await scheduler.start()

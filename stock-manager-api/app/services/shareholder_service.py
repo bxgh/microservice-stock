@@ -11,6 +11,50 @@ logger = get_logger("stock-manager.shareholder")
 class ShareholderService:
     """股东数据同步服务"""
     
+    async def fetch_from_tushare(self, ts_code: str, all_history: bool = False) -> Dict[str, Any]:
+        """从 tushare-api 获取股东数据 (120积分)"""
+        ts_code = normalize_ts_code(ts_code)
+        try:
+            # 1. 股东户数
+            path_count = "/api/v1/stk_holdernumber"
+            params = {"ts_code": ts_code}
+            if not all_history:
+                # 仅获取最近的
+                params["limit"] = 10
+            
+            resp_count = await http_client.get("tushare", path_count, params=params)
+            holder_count_data = []
+            for item in resp_count.get("data", []):
+                holder_count_data.append({
+                    "date": item.get("ann_date"),
+                    "count": item.get("holder_num"),
+                    "change": None, # Tushare 不直接提供变动比例，需计算或从其他接口取
+                    "avg_market_cap": None
+                })
+
+            # 2. 前十大股东
+            path_top10 = "/api/v1/top10_holders"
+            resp_top10 = await http_client.get("tushare", path_top10, params=params)
+            top10_data = []
+            for item in resp_top10.get("data", []):
+                top10_data.append({
+                    "time": item.get("ann_date"),
+                    "rank": item.get("rank"), # Tushare 可能没有 rank，需核实。如果没给则用索引
+                    "holder_name": item.get("holder_name"),
+                    "share_type": item.get("holder_type"),
+                    "hold_count": item.get("hold_amount"),
+                    "hold_pct": item.get("hold_ratio"),
+                    "change": item.get("hold_float") # Tushare 字段
+                })
+            
+            return {
+                "holder_count_history": holder_count_data,
+                "top10_holders": top10_data
+            }
+        except Exception as e:
+            logger.error(f"从 tushare-api 获取股东数据失败: ts_code={ts_code}, error={e}")
+            raise
+
     async def fetch_from_akshare(self, ts_code: str, all_history: bool = False) -> Dict[str, Any]:
         """从 akshare-api 获取股东数据
         
@@ -126,8 +170,12 @@ class ShareholderService:
         """
         ts_code = normalize_ts_code(ts_code)
         try:
-            # 获取数据
-            data = await self.fetch_from_akshare(ts_code, all_history)
+            # 优先尝试 Tushare
+            try:
+                data = await self.fetch_from_tushare(ts_code, all_history)
+            except Exception as te:
+                logger.warning(f"Tushare 获取股东数据失败，降级至 AkShare: {te}")
+                data = await self.fetch_from_akshare(ts_code, all_history)
             
             # 同步股东户数
             holder_count_data = data.get("holder_count_history", [])
@@ -178,6 +226,60 @@ class ShareholderService:
             "synced_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         }
     
+    async def sync_by_ann_date(self, ann_date: str) -> int:
+        """按公告日期批量同步股东数据 (Tushare 120积分)
+        
+        :param ann_date: 公告日期 (YYYYMMDD)
+        :return: 同步成功的记录数
+        """
+        try:
+            # 1. 获取股东户数更新
+            path_count = "/api/v1/stk_holdernumber"
+            params = {"ann_date": ann_date.replace("-", "")}
+            resp_count = await http_client.get("tushare", path_count, params=params)
+            
+            total_synced = 0
+            count_data = resp_count.get("data", [])
+            if count_data:
+                # 按股票分组写入
+                from itertools import groupby
+                count_data.sort(key=lambda x: x['ts_code'])
+                for ts_code, group in groupby(count_data, key=lambda x: x['ts_code']):
+                    items = []
+                    for item in group:
+                        items.append({
+                            "date": item.get("ann_date"),
+                            "count": item.get("holder_num"),
+                            "change": None,
+                            "avg_market_cap": None
+                        })
+                    total_synced += await self.sync_holder_count(ts_code, items)
+            
+            # 2. 获取前十大股东更新
+            path_top10 = "/api/v1/top10_holders"
+            resp_top10 = await http_client.get("tushare", path_top10, params=params)
+            top10_data = resp_top10.get("data", [])
+            if top10_data:
+                top10_data.sort(key=lambda x: x['ts_code'])
+                for ts_code, group in groupby(top10_data, key=lambda x: x['ts_code']):
+                    items = []
+                    for item in group:
+                        items.append({
+                            "time": item.get("ann_date"),
+                            "rank": item.get("rank"),
+                            "holder_name": item.get("holder_name"),
+                            "share_type": item.get("holder_type"),
+                            "hold_count": item.get("hold_amount"),
+                            "hold_pct": item.get("hold_ratio"),
+                            "change": item.get("hold_float")
+                        })
+                    await self.sync_top10_holders(ts_code, items)
+                    
+            return total_synced
+        except Exception as e:
+            logger.error(f"按公告日期同步股东数据失败: ann_date={ann_date}, error={e}")
+            raise
+
     async def get_holder_count_history(self, ts_code: str, limit: int = 100) -> List[Dict[str, Any]]:
         """查询股东户数历史
         

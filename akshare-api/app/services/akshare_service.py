@@ -914,8 +914,9 @@ class AkShareService:
                     "stock_code": row.get("股票代码", ""),
                     "notice_date": str(row.get("公告日期", ""))[:10],
                     "report_period": period_date,
-                    "type": row.get("业绩变动", ""),
-                    "growth_range": str(row.get("业绩变动幅度", ""))
+                    "type": row.get("预告类型", ""),
+                    "growth_range": str(row.get("业绩变动幅度", "")),
+                    "description": row.get("业绩变动", "")
                 })
             return result
         except Exception as e:

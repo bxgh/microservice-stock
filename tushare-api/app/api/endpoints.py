@@ -99,3 +99,95 @@ async def suspend_d(
         return {"data": data}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+@router.get("/forecast")
+async def forecast(
+    request: Request,
+    ts_code: Optional[str] = None,
+    ann_date: Optional[str] = None,
+    start_date: Optional[str] = None,
+    end_date: Optional[str] = None,
+    period: Optional[str] = None
+):
+    service = get_service(request)
+    try:
+        data = await service.get_forecast(ts_code=ts_code, ann_date=ann_date, start_date=start_date, end_date=end_date, period=period)
+        return {"data": data}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.get("/express")
+async def express(
+    request: Request,
+    ts_code: Optional[str] = None,
+    ann_date: Optional[str] = None,
+    start_date: Optional[str] = None,
+    end_date: Optional[str] = None,
+    period: Optional[str] = None
+):
+    service = get_service(request)
+    try:
+        data = await service.get_express(ts_code=ts_code, ann_date=ann_date, start_date=start_date, end_date=end_date, period=period)
+        return {"data": data}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.get("/dividend")
+async def dividend(
+    request: Request,
+    ts_code: Optional[str] = None,
+    ann_date: Optional[str] = None,
+    imp_ann_date: Optional[str] = None
+):
+    service = get_service(request)
+    try:
+        data = await service.get_dividend(ts_code=ts_code, ann_date=ann_date, imp_ann_date=imp_ann_date)
+        return {"data": data}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.get("/stk_holdernumber")
+async def stk_holdernumber(
+    request: Request,
+    ts_code: Optional[str] = None,
+    ann_date: Optional[str] = None,
+    start_date: Optional[str] = None,
+    end_date: Optional[str] = None
+):
+    service = get_service(request)
+    try:
+        data = await service.get_stk_holdernumber(ts_code=ts_code, ann_date=ann_date, start_date=start_date, end_date=end_date)
+        return {"data": data}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.get("/top10_holders")
+async def top10_holders(
+    request: Request,
+    ts_code: Optional[str] = None,
+    ann_date: Optional[str] = None,
+    start_date: Optional[str] = None,
+    end_date: Optional[str] = None,
+    period: Optional[str] = None
+):
+    service = get_service(request)
+    try:
+        data = await service.get_top10_holders(ts_code=ts_code, ann_date=ann_date, start_date=start_date, end_date=end_date, period=period)
+        return {"data": data}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.get("/stk_rating")
+async def stk_rating(
+    request: Request,
+    ts_code: Optional[str] = None,
+    ann_date: Optional[str] = None,
+    start_date: Optional[str] = None,
+    end_date: Optional[str] = None
+):
+    service = get_service(request)
+    try:
+        data = await service.get_stk_rating(ts_code=ts_code, ann_date=ann_date, start_date=start_date, end_date=end_date)
+        return {"data": data}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))

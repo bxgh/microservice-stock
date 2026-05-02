@@ -10,28 +10,7 @@ logger = get_logger("stock-manager.suspension")
 class SuspensionService:
     """股票停牌数据服务"""
     
-    async def create_table_if_not_exists(self):
-        """创建停牌表"""
-        sql = """
-        CREATE TABLE IF NOT EXISTS stock_suspensions (
-            id INT AUTO_INCREMENT PRIMARY KEY,
-            ts_code VARCHAR(20) NOT NULL COMMENT '股票代码',
-            trade_date DATE NOT NULL COMMENT '停牌日期',
-            is_suspended TINYINT(1) DEFAULT 1 COMMENT '是否停牌 1=是',
-            reason VARCHAR(255) COMMENT '停牌原因(如有)',
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-            UNIQUE KEY uk_code_date (ts_code, trade_date),
-            KEY idx_date (trade_date),
-            KEY idx_code (ts_code)
-        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='股票每日停牌记录';
-        """
-        try:
-            await db.execute(sql)
-            logger.info("stock_suspensions 表检查/创建完成")
-        except Exception as e:
-            logger.error(f"创建 stock_suspensions 表失败: {e}")
-            raise
+    # P0-3: 移除内联 DDL，已迁移至 /database/migrations/ 管理
 
     async def fetch_market_status(self, date: str) -> List[Dict[str, Any]]:
         """从 BaoStock-API 获取全市场状态"""
@@ -80,7 +59,7 @@ class SuspensionService:
 
     async def sync_date_range(self, start_date: str, end_date: str) -> Dict[str, Any]:
         """同步指定日期范围的停牌数据"""
-        await self.create_table_if_not_exists()
+        # await self.create_table_if_not_exists() # P0-3 移除
         
         start = datetime.strptime(start_date, "%Y-%m-%d")
         end = datetime.strptime(end_date, "%Y-%m-%d")
@@ -110,7 +89,7 @@ class SuspensionService:
         return stats
     async def sync_today_suspensions(self) -> int:
         """从 AkShare 同步今日停牌数据 (早盘任务)"""
-        await self.create_table_if_not_exists()
+        # await self.create_table_if_not_exists() # P0-3 移除
         
         today_str = datetime.now().strftime("%Y-%m-%d")
         logger.info(f"开始执行早盘停牌数据同步: {today_str}")

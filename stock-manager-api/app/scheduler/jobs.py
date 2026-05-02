@@ -230,3 +230,37 @@ async def daily_market_overview_sync_job() -> Dict[str, Any]:
     except Exception as e:
         logger.error(f"【定时任务】同步流水线崩溃: {e}", exc_info=True)
         return {'status': 'error', 'message': str(e)}
+
+async def daily_shareholder_sync_job() -> Dict[str, Any]:
+    """每日股东数据同步任务 (Tushare 120积分)"""
+    try:
+        from app.services.shareholder_service import ShareholderService
+        from datetime import datetime
+        
+        today = datetime.now().strftime("%Y%m%d")
+        logger.info(f"【定时任务】开始同步公告日期为 {today} 的股东数据")
+        
+        service = ShareholderService()
+        count = await service.sync_by_ann_date(today)
+        
+        return {'status': 'success', 'message': f'股东数据同步完成: {count} 个股票有更新'}
+    except Exception as e:
+        logger.error(f"【定时任务】股东数据同步失败: {e}")
+        return {'status': 'error', 'message': str(e)}
+
+async def daily_analyst_rating_sync_job() -> Dict[str, Any]:
+    """每日机构评级同步任务 (Tushare 600积分)"""
+    try:
+        from app.services.information_service import InformationService
+        from datetime import datetime
+        
+        today = datetime.now().strftime("%Y%m%d")
+        logger.info(f"【定时任务】开始同步公告日期为 {today} 的机构评级")
+        
+        service = InformationService()
+        count = await service.sync_analyst_ranks_from_tushare(ann_date=today)
+        
+        return {'status': 'success', 'message': f'机构评级同步完成: {count} 条记录'}
+    except Exception as e:
+        logger.error(f"【定时任务】机构评级同步失败: {e}")
+        return {'status': 'error', 'message': str(e)}

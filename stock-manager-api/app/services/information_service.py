@@ -182,6 +182,38 @@ class InformationService:
     # Orchestration Methods (Fetch from AkShare API -> Save to DB)
     # -------------------------------------------------------------------------
     
+    async def sync_analyst_ranks_from_tushare(self, ann_date: Optional[str] = None) -> int:
+        """从 Tushare API 获取并同步机构评级 (600积分)"""
+        try:
+            params = {}
+            if ann_date:
+                params["ann_date"] = ann_date.replace("-", "")
+            else:
+                # 默认获取最近一个月的
+                from datetime import datetime, timedelta
+                params["start_date"] = (datetime.now() - timedelta(days=30)).strftime("%Y%m%d")
+                
+            resp = await http_client.get("tushare", "/api/v1/stk_rating", params=params)
+            data = resp.get("data", [])
+            if not data:
+                return 0
+            
+            clean_items = []
+            for item in data:
+                clean_items.append({
+                    "ts_code": normalize_ts_code(item.get("ts_code")),
+                    "report_date": item.get("ann_date"),
+                    "analyst": item.get("org_name"),
+                    "rating": item.get("rating"),
+                    "change_direction": None,
+                    "target_price": None # stk_rating 不带目标价，需 stk_target 接口
+                })
+            
+            return await self.sync_analyst_ranks(clean_items)
+        except Exception as e:
+            logger.error(f"Orchestration sync_analyst_ranks_from_tushare failed: {e}")
+            return await self.sync_analyst_ranks_from_akshare(ann_date)
+
     async def sync_analyst_ranks_from_akshare(self, report_date: Optional[str] = None) -> int:
         """从 AkShare API 获取并同步机构评级"""
         try:
@@ -214,28 +246,88 @@ class InformationService:
             logger.error(f"Orchestration sync_analyst_ranks failed: {e}")
             raise
 
-    async def sync_forecasts_from_akshare(self, period: str) -> int:
-        """从 AkShare API 获取并同步业绩预告"""
+    async def sync_forecasts_from_tushare(self, period: str = None, ann_date: str = None) -> int:
+        """从 Tushare API 获取并同步业绩预告 (2000积分)"""
         try:
-            params = {"period": period}
-            data = await http_client.get("akshare", "/api/v1/information/forecasts", params=params)
+            params = {}
+            if period: params["period"] = period
+            if ann_date: params["ann_date"] = ann_date
+            
+            # Tushare forecast 要求 ann_date 或 ts_code 必填其一
+            if not ann_date and not params.get("ts_code"):
+                # 如果没有 ann_date，尝试用今日日期作为默认值，或者由调用方提供
+                # 这里为了兼容全量同步，如果只给了 period，可能需要多次调用或改用其他接口
+                if not period:
+                    from datetime import datetime
+                    params["ann_date"] = datetime.now().strftime("%Y%m%d")
+            
+            resp = await http_client.get("tushare", "/api/v1/forecast", params=params)
+            data = resp.get("data", [])
             if not data:
                 return 0
                 
             clean_items = []
             for item in data:
                 clean_items.append({
-                    "ts_code": normalize_ts_code(item.get("ts_code") or item.get("stock_code")),
-                    "notice_date": item.get("notice_date"),
-                    "report_period": item.get("report_period"),
+                    "ts_code": normalize_ts_code(item.get("ts_code")),
+                    "notice_date": item.get("ann_date"),
+                    "report_period": item.get("end_date"),
                     "type": item.get("type"),
-                    "growth_min": item.get("growth_min"), # 不再硬编码为 None，优先从 API 取
-                    "growth_max": item.get("growth_max")
+                    "growth_min": item.get("p_change_min"),
+                    "growth_max": item.get("p_change_max")
                 })
                 
             return await self.sync_forecasts(clean_items)
         except Exception as e:
-            logger.error(f"Orchestration sync_forecasts failed: {e}")
+            logger.error(f"Orchestration sync_forecasts_from_tushare failed: {e}")
+            # Fallback to AkShare if possible
+            return await self.sync_forecasts_from_akshare(period)
+
+    async def sync_forecasts_from_akshare(self, period: str) -> int:
+        """从 AkShare API 获取并同步业绩预告 (备份数据源)"""
+        try:
+            params = {"period": period}
+            data = await http_client.get("akshare", "/api/v1/forecast", params=params)
+            if not data:
+                return 0
+                
+            clean_items = []
+            for item in data:
+                # 尝试解析 AkShare 的业绩变动幅度字符串
+                growth_min, growth_max = None, None
+                range_str = item.get("growth_range", "")
+                
+                # 增强正则解析：匹配 百分比 或 数值(万元/亿元)
+                try:
+                    import re
+                    # 匹配所有数字（含负号和小数点）
+                    nums = re.findall(r"(-?\d+\.?\d*)", range_str.replace(",", ""))
+                    if "%" in range_str:
+                        # 百分比模式：通常最后两个数字是范围
+                        if len(nums) >= 2:
+                            growth_min, growth_max = float(nums[-2]), float(nums[-1])
+                        elif len(nums) == 1:
+                            growth_min = float(nums[0])
+                    elif "元" in range_str:
+                        # 金额模式：由于金额可能很大且包含日期数字，匹配较为复杂
+                        # 仅当 nums 长度较多时尝试提取最后的部分
+                        if len(nums) >= 2:
+                            growth_min, growth_max = float(nums[-2]), float(nums[-1])
+                except:
+                    pass
+
+                clean_items.append({
+                    "ts_code": normalize_ts_code(item.get("ts_code") or item.get("stock_code")),
+                    "notice_date": item.get("notice_date"),
+                    "report_period": item.get("report_period"),
+                    "type": item.get("type") or "未知",
+                    "growth_min": growth_min,
+                    "growth_max": growth_max
+                })
+                
+            return await self.sync_forecasts(clean_items)
+        except Exception as e:
+            logger.error(f"Orchestration sync_forecasts_from_akshare failed: {e}")
             raise
 
     async def sync_sentiment_from_akshare(self, ts_code: str) -> int:

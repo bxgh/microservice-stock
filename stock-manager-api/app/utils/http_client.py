@@ -13,6 +13,7 @@ class ContainerClient:
         self.base_urls = {
             "baostock": settings.BAOSTOCK_API_URL,
             "akshare": settings.AKSHARE_API_URL,
+            "tushare": settings.TUSHARE_API_URL,
             "pywencai": settings.PYWENCAI_API_URL
         }
     
