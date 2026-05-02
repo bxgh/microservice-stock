@@ -165,7 +165,11 @@ class StockInfoService:
                     } for l in lhb
                 ]
             }
-        async def search_stocks(self, keyword: str, limit: int = 15) -> List[Dict[str, Any]]:
+        except Exception as e:
+            logger.error(f"获取资金数据失败: {e}")
+            return {"north_funds": [], "lhb": []}
+
+    async def search_stocks(self, keyword: str, limit: int = 15) -> List[Dict[str, Any]]:
         """股票模糊搜索 (代码、名称、拼音)"""
         try:
             # 兼容处理: 如果输入纯数字但不足 6 位，补齐进行匹配

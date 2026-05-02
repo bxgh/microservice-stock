@@ -4,6 +4,11 @@ from typing import Dict, Any
 
 router = APIRouter()
 
+@router.get("/search")
+async def search_stocks(keyword: str = Query(..., min_length=1)):
+    """搜索股票: 支持代码、名称、拼音"""
+    return await stock_info_service.search_stocks(keyword)
+
 def normalize_code(code: str) -> str:
     """标准化代码为 600519.SH 格式"""
     code = code.upper()
@@ -59,8 +64,3 @@ async def get_stock_dividends(code: str):
         "status": "data_insufficient",
         "message": "分红配股数据暂未入库"
     }
-
-@router.get("/search")
-async def search_stocks(keyword: str = Query(..., min_length=1)):
-    """搜索股票: 支持代码、名称、拼音"""
-    return await stock_info_service.search_stocks(keyword)
