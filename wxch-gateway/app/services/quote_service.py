@@ -189,8 +189,8 @@ class QuoteService:
                         minute_amount = cum_amount - prev_amount
                         
                         # 计算均价 (累积成交额 / 累积成交量)
-                        # 注意: 累积成交量单位是“手”，需要 * 100
-                        avg_price = round(cum_amount / (cum_vol * 100), 3) if cum_vol > 0 else curr_price
+                        # 腾讯分时接口返回的 cum_vol 已经是股数，无需再乘以 100
+                        avg_price = round(cum_amount / cum_vol, 3) if cum_vol > 0 else curr_price
 
                         result.append({
                             "time": parts[0],
