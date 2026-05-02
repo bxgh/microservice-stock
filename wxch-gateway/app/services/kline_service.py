@@ -12,7 +12,7 @@ class KlineService:
     async def _get_adjust_factors(self, code: str) -> List[Dict[str, Any]]:
         """获取复权因子"""
         try:
-            sql = "SELECT adjust_date, fore_adjust_factor FROM stock_adjust_factor WHERE code = %s ORDER BY adjust_date ASC"
+            sql = "SELECT adjust_date, fore_adjust_factor FROM stock_adjust_factor WHERE ts_code = %s ORDER BY adjust_date ASC"
             rows = await db.execute(sql, (code,))
             return [{"date": str(row["adjust_date"]), "factor": float(row["fore_adjust_factor"])} for row in rows]
         except Exception as e:
@@ -58,7 +58,7 @@ class KlineService:
             sql = """
                 SELECT trade_date, open, high, low, close, pre_close, volume, amount, turnover, pct_chg, trade_status 
                 FROM stock_kline_daily 
-                WHERE code = %s
+                WHERE ts_code = %s
             """
             params = [code]
             if start_date:
