@@ -219,7 +219,7 @@ class IndicatorService:
             FROM ods_sw_index_daily
             WHERE trade_date = %s AND level = 'l1'
             """
-            await db.execute(insert_industry_sql, (target_date, target_date))
+            await db.execute(insert_industry_sql, (target_date,))
             
             # 1.2 行业内部广度
             sql_breadth = """
@@ -350,9 +350,9 @@ class IndicatorService:
                         elif spread_today < -0.005: direction = 'short_dominant'
                         
                         await db.execute(
-                            """INSERT INTO ads_l2_style_factor 
+                            \"\"\"INSERT INTO ads_l2_style_factor 
                             (trade_date, factor_code, factor_name, long_pct, short_pct, spread_today, spread_5d, spread_20d, direction)
-                            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)""",
+                            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)\"\"\",
                             (target_date, f_code, f_name, long_pct, short_pct, spread_today, s_5d, s_20d, direction)
                         )
 
