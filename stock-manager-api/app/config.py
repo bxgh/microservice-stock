@@ -20,6 +20,14 @@ class Settings(BaseSettings):
     # 日志级别
     LOG_LEVEL: str = "INFO"
     
+    # 邮件告警配置
+    SMTP_HOST: str = "smtp.qq.com"
+    SMTP_PORT: int = 465
+    SMTP_USER: str = ""
+    SMTP_PASS: str = ""
+    ALERT_RECEIVER: str = ""
+    ALERT_LEVEL_THRESHOLD: str = "WARN"
+    
     model_config = SettingsConfigDict(
         env_file="../.env",
         extra="ignore",

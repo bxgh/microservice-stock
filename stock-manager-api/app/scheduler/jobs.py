@@ -1,19 +1,32 @@
-"""
-定时任务定义 (stock-manager)
-"""
 import logging
+import datetime
 from typing import Dict, Any
+from app.common.scheduler_decorators import trading_day_only
 
 logger = logging.getLogger(__name__)
 
+async def _update_readiness(table_name: str, biz_date: str, count: int, status: str = "READY"):
+    """更新数据就绪状态"""
+    try:
+        from app.utils.database import db
+        sql = """
+            INSERT INTO meta_data_readiness 
+            (table_name, biz_date, storage, record_count, expected_min, producer_node, ready_at, status)
+            VALUES (%s, %s, 'cloud_mysql', %s, 0, 'cloud', NOW(), %s)
+            ON DUPLICATE KEY UPDATE 
+                record_count=VALUES(record_count),
+                ready_at=VALUES(ready_at),
+                status=VALUES(status)
+        """
+        await db.execute(sql, (table_name, biz_date, count, status))
+        logger.info(f"【契约申报】已更新 {table_name} 就绪状态为 {status}")
+    except Exception as e:
+        logger.error(f"更新就绪状态失败: {e}")
+
+
+@trading_day_only()
 async def daily_suspension_morning_sync_job() -> Dict[str, Any]:
-    """每日早盘停牌数据同步任务
-    
-    每日 09:15 执行，从 AkShare 获取当日停牌、复牌信息
-    
-    Returns:
-        执行结果信息
-    """
+    """每日早盘停牌数据同步任务 (09:15)"""
     try:
         logger.info("【定时任务】开始执行每日早盘停牌数据同步")
         
@@ -34,9 +47,11 @@ async def daily_suspension_morning_sync_job() -> Dict[str, Any]:
             'status': 'error',
             'message': f'早盘停牌同步失败: {str(e)}'
         }
+@trading_day_only(check_next=True)
 async def daily_performance_forecast_sync_job() -> Dict[str, Any]:
     """每日早盘业绩预告同步任务 (08:45)"""
     try:
+
         from app.services.pre_market_service import PreMarketService
         service = PreMarketService()
         count = await service.sync_daily_performance_forecast()
@@ -45,15 +60,14 @@ async def daily_performance_forecast_sync_job() -> Dict[str, Any]:
         logger.error(f"业绩预告同步失败: {e}", exc_info=True)
         return {'status': 'error', 'message': str(e)}
 
+@trading_day_only()
 async def daily_monitor_data_sync_job() -> Dict[str, Any]:
-    """每日收盘后资金面跨服务同步任务 (15:30)
-    
-    触发 monitor-service 进行龙虎榜、大宗交易、两融数据同步
-    """
+    """每日收盘后资金面跨服务同步任务 (15:30)"""
     import httpx
     from app.config import settings
     
     try:
+
         logger.info("【定时任务】开始触发资金面监控数据同步")
         url = f"{settings.MONITOR_SERVICE_URL}/api/v1/sync/daily"
         
@@ -73,33 +87,7 @@ async def daily_monitor_data_sync_job() -> Dict[str, Any]:
             'message': f'触发失败: {str(e)}'
         }
 
-async def daily_monitor_calculate_job() -> Dict[str, Any]:
-    """每日盘后监控指标计算任务 (15:45)
-    
-    触发 monitor-service 进行评分引擎计算
-    """
-    import httpx
-    from app.config import settings
-    
-    try:
-        logger.info("【定时任务】开始触发监控指标计算")
-        url = f"{settings.MONITOR_SERVICE_URL}/api/v1/calculate"
-        
-        async with httpx.AsyncClient(timeout=120.0) as client:
-            resp = await client.post(url)
-            resp.raise_for_status()
-            
-            logger.info("【定时任务】监控指标计算请求已送达")
-            return {
-                'status': 'success',
-                'message': '指标计算任务成功触发'
-            }
-    except Exception as e:
-        logger.error(f"【定时任务】触发指标计算失败: {e}")
-        return {
-            'status': 'error',
-            'message': f'触发失败: {str(e)}'
-        }
+# 监控指标计算任务 (原 daily_monitor_calculate_job) 已下沉至内网处理
 
 async def weekly_financial_indicators_sync_job() -> Dict[str, Any]:
     """每周全市场财务衍生指标同步任务
@@ -172,16 +160,17 @@ async def weekly_financial_indicators_sync_job() -> Dict[str, Any]:
             'message': error_msg
         }
 
+@trading_day_only()
 async def daily_market_overview_sync_job() -> Dict[str, Any]:
-    """每日市场全景数据同步与计算任务 (19:30)
+    """每日市场全景数据同步任务 (19:30)
     
-    采用 Tushare 优先，BaoStock 兜底的策略
+    职责: 同步指数、K线、涨跌停池。计算逻辑已迁移至内网。
     """
     try:
+
         from app.services.market_data_service import MarketDataService
         from app.services.indicator_service import IndicatorService
         from app.utils.database import db
-        import datetime
 
         target_date = datetime.datetime.now().strftime("%Y-%m-%d")
         logger.info(f"【定时任务】启动双源同步流水线: {target_date}")
@@ -214,30 +203,31 @@ async def daily_market_overview_sync_job() -> Dict[str, Any]:
         else:
             logger.info(f"全市场 K 线同步成功: {kline_count} 条")
 
-        # 3. 同步涨跌停池 (AkShare)
+        # 4. 同步涨跌停池 (AkShare)
         await market_service.sync_limit_pool(target_date)
 
-        # 4. 计算市场广度与 L1 全景 (仅当数据基本就绪时)
-        # 如果是降级模式，这里计算的是“当前已有的”部分数据
-        await market_service.sync_market_breadth_daily(target_date)
-        await indicator_service.calculate_l1_market_overview(target_date)
-        # 5. 计算 L2 完整指标
-        await indicator_service.calculate_l2_indicators_full(target_date)
+        # 5. 同步停复牌记录 (Tushare)
+        suspend_count = await market_service.sync_stock_suspend(suspend_date=target_date)
+        logger.info(f"全市场停复牌同步完成: {suspend_count} 条")
 
-        logger.info(f"【定时任务】双源同步与计算流程结束: {target_date}")
-        return {'status': 'success', 'message': f'同步任务已处理: {target_date}'}
+        # 6. 主动更新就绪状态 (不再进行 L1/L2 计算)
+        await _update_readiness("stock_kline_daily", target_date, kline_count)
+        
+        logger.info(f"【定时任务】采集流程结束: {target_date}")
+        return {'status': 'success', 'message': f'采集已完成: {target_date}'}
         
     except Exception as e:
         logger.error(f"【定时任务】同步流水线崩溃: {e}", exc_info=True)
         return {'status': 'error', 'message': str(e)}
 
+@trading_day_only()
 async def daily_shareholder_sync_job() -> Dict[str, Any]:
     """每日股东数据同步任务 (Tushare 120积分)"""
     try:
+
         from app.services.shareholder_service import ShareholderService
-        from datetime import datetime
         
-        today = datetime.now().strftime("%Y%m%d")
+        today = datetime.datetime.now().strftime("%Y%m%d")
         logger.info(f"【定时任务】开始同步公告日期为 {today} 的股东数据")
         
         service = ShareholderService()
@@ -248,13 +238,14 @@ async def daily_shareholder_sync_job() -> Dict[str, Any]:
         logger.error(f"【定时任务】股东数据同步失败: {e}")
         return {'status': 'error', 'message': str(e)}
 
+@trading_day_only()
 async def daily_analyst_rating_sync_job() -> Dict[str, Any]:
     """每日机构评级同步任务 (Tushare 600积分)"""
     try:
+
         from app.services.information_service import InformationService
-        from datetime import datetime
         
-        today = datetime.now().strftime("%Y%m%d")
+        today = datetime.datetime.now().strftime("%Y%m%d")
         logger.info(f"【定时任务】开始同步公告日期为 {today} 的机构评级")
         
         service = InformationService()

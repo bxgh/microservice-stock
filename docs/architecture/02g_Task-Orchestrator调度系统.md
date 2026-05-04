@@ -1,12 +1,12 @@
 # 02g. Task-Orchestrator 调度系统
 
-> **版本**: 1.0  
-> **状态**: 草案  
-> **日期**: 2026-01-03
+> **版本**: 1.1 (已完成 Phase 1 止血)
+> **状态**: 实施中
+> **日期**: 2026-05-03
 
 ## 1. 设计目标
 
-在云端服务器（2核4G）资源约束下，构建一个**轻量、可靠、可扩展**的中心化调度系统，统一管理所有数据采集与同步任务。
+在云端服务器 (2核 4G / 6Mbps) 的严苛资源约束下，构建一个**轻量、可靠、具备交易日感知**的中心化调度系统。
 
 ### 1.1 核心原则
 
@@ -70,27 +70,19 @@ graph TB
 
 ## 3. 核心功能模块
 
-### 3.1 智能触发器
+### 3.1 智能拦截与探测机制
 
-```python
-# 交易日触发器示例
-class TradingDayTrigger:
-    """仅在交易日触发的智能触发器"""
-    
-    async def should_fire(self) -> bool:
-        # 依赖 CalendarService 判断交易日
-        is_trading = await calendar_service.is_trading_day()
-        if not is_trading:
-            logger.info("非交易日，跳过任务触发")
-            return False
-        return True
-```
+#### 3.1.1 交易日门禁 (Calendar Barrier)
+通过 `@trading_day_only()` 装饰器，强制所有采集任务在非交易日自动跳过，杜绝无效外部 API 请求。
 
-| 触发器类型 | 用途 | 实现方式 |
+#### 3.1.2 数据就绪契约 (Readiness Contract)
+引入 `meta_data_readiness` 表，实现任务间的解耦。
+
+| 触发器类型 | 实现方式 | 作用 |
 |:-----------|:-----|:---------|
-| `TradingDayTrigger` | K线/复权因子同步 | 查询 `trade_cal` 表 |
-| `CronTrigger` | 常规定时任务 | APScheduler 内置 |
-| `DataReadyTrigger` | 上游数据就绪后触发 | Redis Pub/Sub |
+| `CalendarService` | 查询 `trade_cal` 表 | 物理隔离非交易日负载 |
+| `ReadinessProber` | 扫描 ODS 表记录数 | 确保上游数据就绪后才开启下游计算 |
+| `EventTrigger` | Redis Pub/Sub | (Phase 2) 任务间精准实时触发 |
 
 ### 3.2 DAG 工作流 (Phase 2)
 
@@ -114,7 +106,10 @@ workflow:
 ### 3.3 任务状态管理
 
 ```
-状态流转: PENDING → RUNNING → SUCCESS / FAILED → RETRYING (可选)
+状态流转: PENDING → RUNNING → SUCCESS / FAILED
+
+**自愈机制 (Self-Healing)**:
+系统定期扫描 `workflow_runs` 和 `task_commands` 表。对于 `RUNNING` 状态超过预设 TTL (如 2小时) 的“僵尸任务”，系统会自动将其标记为 `FAILED`，以释放调度队列并触发告警。
 ```
 
 **Redis 存储结构**:
@@ -250,33 +245,35 @@ tasks:
 }
 ```
 
-### 6.2 告警规则 (Phase 2)
+### 6.2 异步邮件告警体系 (Alerter)
 
-| 条件 | 级别 | 动作 |
-|:-----|:-----|:-----|
-| 任务连续失败 3 次 | WARNING | 日志记录 + Redis 标记 |
-| 任务执行超时 | ERROR | 强制终止 + 告警 |
-| Worker 内存超限 | CRITICAL | OOM Kill + 记录 |
+基于 `aiosmtplib` 实现了全自动告警分发机制。
 
-> **当前实现**: 告警通过日志记录，后续可接入企微/邮件通知。
+| 级别 | 触发场景 | 告警动作 | 期望响应 |
+|:-----|:-----|:-----|:-----|
+| **WARN** | 单次任务重试成功、探测到部分数据缺失 | 邮件推送 + 防抖 | 次日检查 |
+| **ERROR** | 任务最终失败、核心数据 (K线) 缺失 | 邮件推送 + 日志 | 当晚人工介入 |
+| **CRITICAL** | 调度进程崩溃、磁盘空间 > 90% | 强力邮件 + 系统报警 | 立即处理 |
+
+**防抖逻辑**: 5 分钟内相同标题的告警仅发送一次，防止邮件轰炸。
 
 ---
 
 ## 7. 实施路线图
 
-### Phase 1: 基础调度 (当前)
+### Phase 1: 基础鲁棒性 (已完成 - 2026-05-03)
 
-- [x] 使用 APScheduler 内嵌于 `baostock-api`
-- [x] 支持 TradingDayTrigger
-- [x] 任务状态存储于 Redis
-- [x] 基础日志监控
+- [x] 基于 **APScheduler** 构建云端调度中枢 `stock-manager-api`
+- [x] 深度集成 **CalendarService** 实现交易日精准过滤
+- [x] 建立 **Readiness Contract** (数据就绪契约)，实现 ODS -> ADS 触发解耦
+- [x] 实现 **Alerter** 异步邮件告警体系，支持防抖与分级
+- [x] 完成 160+ 僵尸任务状态自愈清理
 
-### Phase 2: 独立编排器
+### Phase 2: 计算任务下沉
 
-- [ ] 抽离为独立 `task-orchestrator` 服务
-- [ ] 实现 DAG 依赖编排
-- [ ] 添加任务配置热更新
-- [ ] 接入告警通知渠道
+- [ ] 部署 **内网计算节点** (stock-compute)，分担云端内存压力
+- [ ] 实现跨网数据增量同步与双写回写机制
+- [ ] 异动捕捉管线 (8 个 task) 正式落地
 
 ### Phase 3: 分布式扩展 (可选)
 

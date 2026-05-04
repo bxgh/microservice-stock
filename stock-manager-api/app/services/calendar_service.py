@@ -60,3 +60,14 @@ class CalendarService:
             "tradingDays": trading_days,
             "holidays": holidays
         }
+
+    async def is_trading_day(self, date_str: str = None) -> bool:
+        """检查指定日期是否为交易日"""
+        if not date_str:
+            date_str = datetime.date.today().strftime("%Y-%m-%d")
+            
+        sql = "SELECT is_open FROM trade_cal WHERE cal_date = %s"
+        res = await db.execute(sql, (date_str,))
+        if res and int(res[0][0]) == 1:
+            return True
+        return False
