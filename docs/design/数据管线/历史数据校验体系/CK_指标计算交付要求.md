@@ -10,12 +10,12 @@
 
 ClickHouse 需要从 MySQL 同步以下两张核心原表。**严禁在 MySQL 端进行预关联计算**，必须以 Raw Data 形式同步。
 
-### 1.1 `ods_stock_kline_daily` (原始未复权 K 线)
+### 1.1 `stock_kline_daily` (MySQL 数据源：原始未复权 K 线)
 *   **同步策略**：增量同步 / MaterializedMySQL 引擎。
 *   **CK 表引擎建议**：`ReplacingMergeTree` (使用 `trade_date`, `ts_code` 排序并去重)。
 *   **特点**：保证了所有价格数据严格等于交易所原始快照，无任何复权污染。
 
-### 1.2 `dim_stock_adjust_factor` (复权因子变动快照)
+### 1.2 `stock_adjust_factor` (MySQL 数据源：复权因子变动快照)
 *   **同步策略**：全量/增量同步。
 *   **CK 表引擎建议**：`ReplacingMergeTree`。
 *   **特点**：稀疏时间序列（仅在发生分红派息的日期才有记录）。
@@ -37,7 +37,7 @@ CREATE VIEW v_stock_kline_forward_adj AS
 WITH latest_factors AS (
     -- 1. 获取每只股票当前的最新（最大）复权因子作为基准分母
     SELECT ts_code, MAX(adjust_factor) AS max_factor
-    FROM dim_stock_adjust_factor
+    FROM stock_adjust_factor
     GROUP BY ts_code
 )
 SELECT 
@@ -50,9 +50,9 @@ SELECT
     round(k.low * f.adjust_factor / lf.max_factor, 4) AS adj_low,
     k.pct_chg,
     k.amount
-FROM ods_stock_kline_daily k
+FROM stock_kline_daily k
 -- 2. 关键点：使用 ASOF LEFT JOIN 实现极速时序对齐，无需辅助表
-ASOF LEFT JOIN dim_stock_adjust_factor f
+ASOF LEFT JOIN stock_adjust_factor f
     ON k.ts_code = f.ts_code AND k.trade_date >= f.adjust_date
 -- 3. 关联最新因子计算复权
 LEFT JOIN latest_factors lf 
@@ -79,7 +79,7 @@ SELECT
     countIf(k.pct_chg >= 9.9) AS limit_up_count,
     count() AS total_count,
     round(up_count / total_count, 4) AS internal_breadth
-FROM ods_stock_kline_daily k
+FROM stock_kline_daily k
 JOIN dim_stock_industry_sw sw ON k.ts_code = sw.code
 WHERE k.trade_date = '2026-05-04'
 GROUP BY sw.l1_code, k.trade_date;
@@ -96,7 +96,7 @@ SELECT
     -- 直接获取 pct_chg 最大时对应的 ts_code
     argMax(k.ts_code, k.pct_chg) AS top_stock_code,
     MAX(k.pct_chg) AS top_pct
-FROM ods_stock_kline_daily k
+FROM stock_kline_daily k
 JOIN dim_stock_industry_sw sw ON k.ts_code = sw.code
 WHERE k.trade_date = '2026-05-04'
 GROUP BY sw.l1_code, k.trade_date;
@@ -108,4 +108,4 @@ GROUP BY sw.l1_code, k.trade_date;
 
 1. **功能完整性**：CK 端必须创建 `v_stock_kline_forward_adj` 视图，保证查询该视图返回的数据与 Tushare 官方前复权接口的误差在 `±0.01`（四舍五入精度差异）以内。
 2. **性能达标**：在跨度 10 年（约 2000 万行 K 线）的全市场尺度下，针对 `v_stock_kline_forward_adj` 的聚合查询（如计算全市场 MA250 穿越家数），需在 `500ms` 内返回。
-3. **架构纪律性**：禁止在 CK 中修改原始 `ods_stock_kline_daily` 任何数据。所有调整、复权、降噪动作，均以 View（视图）或 Dictionary（字典）的形式隔离在计算层。
+3. **架构纪律性**：禁止在 CK 中修改原始 `stock_kline_daily` 任何数据。所有调整、复权、降噪动作，均以 View（视图）或 Dictionary（字典）的形式隔离在计算层。

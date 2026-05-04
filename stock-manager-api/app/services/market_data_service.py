@@ -7,6 +7,7 @@ from datetime import date
 from typing import List, Dict, Any, Optional
 from app.utils.database import db
 from app.utils.code_utils import normalize_ts_code
+from app.utils.data_validator import DataValidator
 from app.utils.logger import get_logger
 from app.config import settings
 
@@ -115,16 +116,58 @@ class MarketDataService:
             ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
         """
         args = []
+        # 转换日期格式以便校验
+        transformed_data = []
         for i in data:
             d = i.get("trade_date")
             dt_str = f"{d[:4]}-{d[4:6]}-{d[6:8]}"
+            # 预处理金额和涨跌幅，方便校验
             pct_chg = float(i.get("pct_chg", 0)) / 100.0 if i.get("pct_chg") is not None else None
+            amount = float(i.get("amount", 0)) * 1000.0 if i.get("amount") is not None else None
+            
+            transformed_item = {
+                **i,
+                "trade_date": dt_str,
+                "pct_chg": pct_chg,
+                "amount": amount,
+                "volume": i.get("vol") # 统一字段名
+            }
+            transformed_data.append(transformed_item)
+
+        # 执行校验
+        passed, rejected = DataValidator.validate_kline_batch(transformed_data, "stock_kline_daily")
+        
+        if rejected:
+            logger.warning(f"发现 {len(rejected)} 条脏数据，已拦截并记录至 staging_rejected")
+            await self._log_rejected_data(rejected)
+
+        if not passed:
+            return
+
+        for i in passed:
             args.append((
-                i.get("ts_code"), dt_str, i.get("open"), i.get("high"), i.get("low"), i.get("close"),
-                i.get("pre_close"), pct_chg, i.get("vol"), 
-                float(i.get("amount", 0)) * 1000.0 if i.get("amount") is not None else None
+                i.get("ts_code"), i.get("trade_date"), i.get("open"), i.get("high"), i.get("low"), i.get("close"),
+                i.get("pre_close"), i.get("pct_chg"), i.get("volume"), i.get("amount")
             ))
         await db.execute_many(query, args)
+
+    async def _log_rejected_data(self, rejected: List[Dict[str, Any]]):
+        """记录被拒绝的数据到审计表"""
+        try:
+            query = """
+                INSERT INTO staging_rejected (
+                    ts_code, trade_date, source_table, raw_data, reject_reason
+                ) VALUES (%s, %s, %s, %s, %s)
+            """
+            args = []
+            for r in rejected:
+                args.append((
+                    r["ts_code"], r["trade_date"], r["source_table"], 
+                    r["raw_data"], r["reject_reason"]
+                ))
+            await db.execute_many(query, args)
+        except Exception as e:
+            logger.error(f"记录拒绝数据失败: {e}")
 
     async def _sync_stock_daily_baostock_fallback(self, trade_date: str):
         """BaoStock 降级补偿逻辑"""

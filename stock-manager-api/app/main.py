@@ -8,7 +8,7 @@ from fastapi.responses import JSONResponse
 from app.api import (
     metadata, audit, scheduler, ops, system, dashboard, market_dashboard,
     shareholders, chips, game, information, commands, task_commands, data_audit, suspension,
-    monitor, finance
+    monitor, finance, dq
 )
 from app.api.market import router as market_router
 
@@ -227,5 +227,6 @@ app.include_router(information.router, prefix="/api/v1/information", tags=["信�
 app.include_router(monitor.router, prefix="/api/v1/monitor", tags=["监控指标"])
 app.include_router(finance.router, prefix="/api/v1/finance", tags=["财务数据"])
 app.include_router(market_router, prefix="/api/v1/market", tags=["行情数据"])
+app.include_router(dq.router, prefix="/api/v1/dq", tags=["数据质量"])
 
 

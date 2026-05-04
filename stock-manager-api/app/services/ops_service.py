@@ -80,3 +80,50 @@ class OpsService:
         except Exception as e:
             logger.error(f"触发补偿任务失败: {e}")
             return {"status": "error", "message": str(e)}
+
+    async def get_reject_report(self, date: str = None) -> Dict[str, Any]:
+        """获取当日数据校验拒绝报告"""
+        try:
+            if not date:
+                date = datetime.date.today().strftime("%Y-%m-%d")
+            
+            # 1. 统计总拒绝数
+            sql_count = "SELECT COUNT(*) FROM staging_rejected WHERE trade_date = %s"
+            res_count = await db.execute(sql_count, (date,))
+            total_rejected = res_count[0][0] if res_count else 0
+            
+            # 2. 按原因分布统计
+            sql_dist = """
+                SELECT reject_reason, COUNT(*) as count 
+                FROM staging_rejected 
+                WHERE trade_date = %s 
+                GROUP BY reject_reason
+            """
+            res_dist = await db.execute(sql_dist, (date,))
+            distribution = {row[0]: row[1] for row in res_dist} if res_dist else {}
+            
+            # 3. 获取前 20 条详细信息
+            sql_details = """
+                SELECT ts_code, reject_reason, raw_data 
+                FROM staging_rejected 
+                WHERE trade_date = %s 
+                LIMIT 20
+            """
+            res_details = await db.execute(sql_details, (date,))
+            details = []
+            for row in res_details:
+                details.append({
+                    "ts_code": row[0],
+                    "reason": row[1],
+                    "raw": row[2]
+                })
+                
+            return {
+                "date": date,
+                "total_rejected": total_rejected,
+                "distribution": distribution,
+                "details_sample": details
+            }
+        except Exception as e:
+            logger.error(f"获取拒绝报告异常: {e}")
+            return {"date": date, "error": str(e)}

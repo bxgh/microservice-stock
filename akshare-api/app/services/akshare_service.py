@@ -1329,3 +1329,38 @@ class AkShareService:
         except Exception as e:
             logger.error(f"AkShare获取概念名单失败: error={e}")
             return []
+
+    async def get_stock_daily(self, symbol: str, start_date: str = "19700101", end_date: str = "20500101", adjust: str = "") -> List[Dict[str, Any]]:
+        """获取 A 股日线行情 (后复权/前复权/不复权)
+        
+        :param symbol: 股票代码 600519
+        :param adjust: 复权类型: hfq (后复权), qfq (前复权), "" (不复权)
+        """
+        try:
+            df = await asyncio.to_thread(
+                ak.stock_zh_a_hist,
+                symbol=symbol,
+                period="daily",
+                start_date=start_date.replace("-", ""),
+                end_date=end_date.replace("-", ""),
+                adjust=adjust
+            )
+            if df is None or df.empty:
+                return []
+            
+            result = []
+            for _, row in df.iterrows():
+                result.append({
+                    "date": str(row.get("日期", "")),
+                    "open": self._clean_value(row.get("开盘")),
+                    "high": self._clean_value(row.get("最高")),
+                    "low": self._clean_value(row.get("最低")),
+                    "close": self._clean_value(row.get("收盘")),
+                    "volume": self._clean_value(row.get("成交量")),
+                    "amount": self._clean_value(row.get("成交额")),
+                    "pct_chg": self._clean_value(row.get("涨跌幅")) / 100.0 if row.get("涨跌幅") is not None else None,
+                })
+            return result
+        except Exception as e:
+            logger.error(f"AkShare获取日线行情失败: symbol={symbol}, error={e}")
+            return []

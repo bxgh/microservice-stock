@@ -459,3 +459,23 @@ async def sync_concept_index(
     service = L2StructuralService()
     result = await service.sync_concept_kline_daily(start_date, end_date)
     return result
+
+
+@router.get("/stock/daily")
+async def get_stock_daily(
+    request: Request,
+    symbol: str = Query(..., description="股票代码"),
+    start_date: str = Query("19700101"),
+    end_date: str = Query("20500101"),
+    adjust: str = Query("", description="复权类型: hfq, qfq, ''")
+):
+    """获取个股日线行情 (A股)"""
+    request_id = getattr(request.state, "request_id", "unknown")
+    service = request.app.state.akshare_service
+    try:
+        result = await service.get_stock_daily(symbol, start_date, end_date, adjust)
+        logger.info(f"获取个股行情成功: symbol={symbol}, count={len(result)}", extra={"request_id": request_id})
+        return result
+    except Exception as e:
+        logger.error(f"获取个股行情失败: symbol={symbol}, error={e}", extra={"request_id": request_id})
+        raise HTTPException(status_code=500, detail=str(e))
