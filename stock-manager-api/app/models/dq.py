@@ -5,7 +5,7 @@ from pydantic import BaseModel, Field
 class DQFindingBase(BaseModel):
     ts_code: str
     trade_date: date
-    check_type: str = Field(..., description="CROSS_SOURCE, INTEGRITY, CONTINUITY")
+    check_type: str = Field(..., description="CROSS_SOURCE, INTEGRITY, CONTINUITY, BUSINESS_RULE, FACTOR_RECONCILE")
     severity: str = "WARN"
     finding_msg: str
     diff_data: Optional[Dict[str, Any]] = None

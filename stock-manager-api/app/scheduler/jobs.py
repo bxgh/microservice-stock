@@ -255,3 +255,46 @@ async def daily_analyst_rating_sync_job() -> Dict[str, Any]:
     except Exception as e:
         logger.error(f"【定时任务】机构评级同步失败: {e}")
         return {'status': 'error', 'message': str(e)}
+
+@trading_day_only()
+async def daily_business_rule_check_job() -> Dict[str, Any]:
+    """每日业务规则校验任务 (20:30)"""
+    try:
+        from app.services.dimension_service import dimension_service
+        from app.services.business_rule_validator import business_rule_validator
+        
+        target_date = datetime.datetime.now().strftime("%Y-%m-%d")
+        logger.info(f"【定时任务】开始业务规则校验流水线: {target_date}")
+        
+        # 1. 同步状态 (ST/停牌/新股)
+        await dimension_service.sync_stock_status(target_date)
+        
+        # 2. 生成涨跌幅限制
+        await dimension_service.generate_daily_price_limits(target_date)
+        
+        # 3. 执行涨跌幅校验
+        await business_rule_validator.validate_price_limit(target_date)
+        
+        return {'status': 'success', 'message': f'业务规则校验完成: {target_date}'}
+    except Exception as e:
+        logger.error(f"【定时任务】业务规则校验失败: {e}")
+        return {'status': 'error', 'message': str(e)}
+
+async def weekly_factor_reconcile_job() -> Dict[str, Any]:
+    """每周复权因子对账任务"""
+    try:
+        from app.services.dimension_service import dimension_service
+        from app.services.business_rule_validator import business_rule_validator
+        
+        logger.info("【定时任务】开始执行周度复权因子对账")
+        
+        # 1. 同步最近的除权除息流水
+        await dimension_service.sync_corporate_actions()
+        
+        # 2. 执行对账
+        await business_rule_validator.reconcile_adjustment_factors()
+        
+        return {'status': 'success', 'message': '复权因子对账完成'}
+    except Exception as e:
+        logger.error(f"【定时任务】复权因子对账失败: {e}")
+        return {'status': 'error', 'message': str(e)}

@@ -116,6 +116,23 @@ async def lifespan(app: FastAPI):
             hour=23,
             minute=30
         )
+
+        # 10. 注册业务规则校验任务 (每日 20:30)
+        scheduler.add_daily_job(
+            job_funcs.daily_business_rule_check_job,
+            job_id="daily_business_rule_check",
+            hour=20,
+            minute=30
+        )
+
+        # 11. 注册复权因子对账任务 (每周日 05:00)
+        scheduler.add_cron_job(
+            job_funcs.weekly_factor_reconcile_job,
+            job_id="weekly_factor_reconcile",
+            day_of_week='sun',
+            hour=5,
+            minute=0
+        )
         
         # 3. 启动
         await scheduler.start()
