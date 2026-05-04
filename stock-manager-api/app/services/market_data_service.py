@@ -86,6 +86,17 @@ class MarketDataService:
                 # 写入数据库逻辑...
                 await self._save_stock_daily_to_db(data)
                 logger.info(f"Tushare 同步股票日线完成: {len(data)} 条")
+                
+                # P0: 只要有 K 线写入，就必须同步填充当天的复权因子缓存
+                # 否则视图 JOIN 会因为缺日期导致当天复权行情为空
+                if data:
+                    unique_codes = list(set([i.get("ts_code") for i in data if i.get("ts_code")]))
+                    dates = [i.get("trade_date") for i in data if i.get("trade_date")]
+                    if unique_codes and dates:
+                        s_date = f"{min(dates)[:4]}-{min(dates)[4:6]}-{min(dates)[6:8]}"
+                        e_date = f"{max(dates)[:4]}-{max(dates)[4:6]}-{max(dates)[6:8]}"
+                        await self._refresh_factor_cache(unique_codes, s_date, e_date)
+                        
                 return len(data)
             else:
                 logger.warning(f"Tushare 未返回数据: {ts_code or trade_date}, 准备降级至 BaoStock")
@@ -98,14 +109,10 @@ class MarketDataService:
     async def _save_stock_daily_to_db(self, data: List[Dict[str, Any]]):
         """统一将 Tushare 格式的日线保存到数据库"""
         query = """
-            INSERT INTO stock_kline_daily (
+            INSERT IGNORE INTO stock_kline_daily (
                 ts_code, trade_date, open, high, low, close, 
                 pre_close, pct_chg, volume, amount
             ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-            ON DUPLICATE KEY UPDATE
-            open=VALUES(open), high=VALUES(high), low=VALUES(low),
-            close=VALUES(close), pre_close=VALUES(pre_close),
-            pct_chg=VALUES(pct_chg), volume=VALUES(volume), amount=VALUES(amount)
         """
         args = []
         for i in data:
@@ -156,14 +163,10 @@ class MarketDataService:
                 return 0
             
             query = """
-                INSERT INTO stock_adjust_factor (
+                INSERT IGNORE INTO stock_adjust_factor (
                     ts_code, adjust_date, fore_adjust_factor, 
                     back_adjust_factor, adjust_factor
                 ) VALUES (%s, %s, %s, %s, %s)
-                ON DUPLICATE KEY UPDATE
-                fore_adjust_factor=VALUES(fore_adjust_factor),
-                back_adjust_factor=VALUES(back_adjust_factor),
-                adjust_factor=VALUES(adjust_factor)
             """
             args = []
             for i in data:
@@ -175,10 +178,48 @@ class MarketDataService:
                 ))
             await db.execute_many(query, args)
             logger.info(f"成功保存 {len(args)} 条复权因子")
+            
+            # 这里不再强制触发，因为 K 线同步时会兜底刷新
             return len(args)
         except Exception as e:
             logger.error(f"同步复权因子失败: {e}")
             raise
+
+    async def _refresh_factor_cache(self, ts_codes: Any, start_date: str, end_date: str):
+        """增量刷新 ods_stock_factor_daily 缓存表 (MySQL 5.7 兼容版)"""
+        try:
+            if isinstance(ts_codes, str):
+                ts_codes = [ts_codes]
+            
+            logger.info(f"正在增量刷新复权因子缓存: {len(ts_codes)} 只股票 ({start_date} ~ {end_date})")
+            
+            # MySQL 5.7 兼容语法：使用关联子查询寻找最接近的因子记录
+            sql = f"""
+                INSERT INTO ods_stock_factor_daily (ts_code, trade_date, adjust_factor)
+                SELECT 
+                    f_codes.ts_code,
+                    c.cal_date,
+                    (SELECT f2.adjust_factor 
+                     FROM stock_adjust_factor f2 
+                     WHERE f2.ts_code = f_codes.ts_code 
+                       AND f2.adjust_date <= c.cal_date 
+                     ORDER BY f2.adjust_date DESC LIMIT 1) as adjust_factor
+                FROM trade_cal c
+                CROSS JOIN (
+                    SELECT DISTINCT ts_code FROM stock_adjust_factor 
+                    WHERE ts_code IN ({','.join(['%s']*len(ts_codes))})
+                ) f_codes
+                WHERE c.is_open = 1 
+                  AND c.cal_date BETWEEN %s AND %s
+                ON DUPLICATE KEY UPDATE
+                    adjust_factor = VALUES(adjust_factor)
+
+            """
+            params = ts_codes + [start_date, end_date]
+            await db.execute(sql, tuple(params))
+            logger.info(f"复权因子缓存刷新完成: {len(ts_codes)} 只股票")
+        except Exception as e:
+            logger.error(f"刷新复权因子缓存失败: {e}")
 
     async def sync_index_daily(self, ts_code: str, start_date: str = '', end_date: str = '', trade_date: str = ''):
         """同步指数日线行情 (优先 Tushare)"""
@@ -419,4 +460,47 @@ class MarketDataService:
             return total_synced
         except Exception as e:
             logger.error(f"同步涨跌停池失败: {target_date}, {e}")
+            raise
+
+    async def sync_stock_suspend(self, suspend_date: str = '', resume_date: str = '', start_date: str = '', end_date: str = ''):
+        """从 Tushare 同步股票停复牌记录到 dim_stock_suspend"""
+        try:
+            logger.info(f"正在从 Tushare 同步停复牌记录: start={start_date}, end={end_date}, date={suspend_date}")
+            url = f"{self.tushare_url}/api/v1/suspend_d"
+            params = {}
+            if suspend_date: params["suspend_date"] = suspend_date.replace("-", "")
+            if resume_date: params["resume_date"] = resume_date.replace("-", "")
+            if start_date: params["start_date"] = start_date.replace("-", "")
+            if end_date: params["end_date"] = end_date.replace("-", "")
+                
+            async with httpx.AsyncClient(timeout=30.0) as client:
+                resp = await client.get(url, params=params)
+                resp.raise_for_status()
+                data = resp.json().get("data", [])
+            
+            if not data:
+                logger.info("未获取到任何停复牌记录")
+                return 0
+
+            query = """
+                INSERT IGNORE INTO dim_stock_suspend (
+                    ts_code, suspend_date, suspend_timing, suspend_type
+                ) VALUES (%s, %s, %s, %s)
+            """
+            args = []
+            for i in data:
+                d = i.get("trade_date") or i.get("suspend_date")
+                if not d: continue
+                dt_str = f"{d[:4]}-{d[4:6]}-{d[6:8]}"
+                ts_code = normalize_ts_code(i.get("ts_code"))
+                args.append((
+                    ts_code, dt_str, i.get("suspend_timing"), i.get("suspend_type")
+                ))
+            
+            if args:
+                await db.execute_many(query, args)
+                logger.info(f"成功同步停复牌记录: {len(args)} 条")
+            return len(args)
+        except Exception as e:
+            logger.error(f"同步停复牌记录失败: {e}")
             raise

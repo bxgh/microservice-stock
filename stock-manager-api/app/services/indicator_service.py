@@ -231,7 +231,7 @@ class IndicatorService:
                     SUM(CASE WHEN k.pct_chg < 0  THEN 1 ELSE 0 END) AS down_count,
                     SUM(CASE WHEN k.pct_chg >= 0.099 THEN 1 ELSE 0 END) AS limit_up_count,
                     COUNT(*) AS total_count
-                FROM stock_kline_daily k
+                FROM v_stock_kline_forward_adj k
                 INNER JOIN stock_industry_sw sw ON k.ts_code = sw.code
                 WHERE k.trade_date = %s
                 GROUP BY sw.l1_code
@@ -254,7 +254,7 @@ class IndicatorService:
                     sw.l1_code AS industry_code,
                     SUBSTRING_INDEX(GROUP_CONCAT(k.ts_code ORDER BY k.pct_chg DESC), ',', 1) AS top_code,
                     MAX(k.pct_chg) AS top_pct
-                FROM stock_kline_daily k
+                FROM v_stock_kline_forward_adj k
                 INNER JOIN stock_industry_sw sw ON k.ts_code = sw.code
                 WHERE k.trade_date = %s
                 GROUP BY sw.l1_code
@@ -350,9 +350,9 @@ class IndicatorService:
                         elif spread_today < -0.005: direction = 'short_dominant'
                         
                         await db.execute(
-                            \"\"\"INSERT INTO ads_l2_style_factor 
+                            """INSERT INTO ads_l2_style_factor 
                             (trade_date, factor_code, factor_name, long_pct, short_pct, spread_today, spread_5d, spread_20d, direction)
-                            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)\"\"\",
+                            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)""",
                             (target_date, f_code, f_name, long_pct, short_pct, spread_today, s_5d, s_20d, direction)
                         )
 

@@ -10,6 +10,8 @@ from app.api import (
     shareholders, chips, game, information, commands, task_commands, data_audit, suspension,
     monitor, finance
 )
+from app.api.market import router as market_router
+
 from app.utils.logger import setup_logger, request_id_var
 from app.utils.database import db
 from app.utils.http_client import http_client
@@ -31,11 +33,25 @@ async def lifespan(app: FastAPI):
     try:
         from app.scheduler import TaskScheduler, set_scheduler_instance
         from app.scheduler import jobs as job_funcs
+        from app.scheduler import system_jobs as sys_job_funcs
         
         # 1. 初始化
         scheduler = TaskScheduler(timezone="Asia/Shanghai")
         set_scheduler_instance(scheduler)
         
+        # 1.1 注册系统健康监控 (每 5 分钟)
+        scheduler.add_interval_job(
+            sys_job_funcs.system_health_monitor_job,
+            minutes=5,
+            job_id="system_health_monitor"
+        )
+
+        # 1.2 注册数据就绪探测 (每 2 分钟)
+        scheduler.add_interval_job(
+            sys_job_funcs.readiness_prober_job,
+            minutes=2,
+            job_id="readiness_prober"
+        )
         
         # 2. 注册早盘停牌数据同步任务 (每天 09:15)
         scheduler.add_daily_job(
@@ -61,15 +77,7 @@ async def lifespan(app: FastAPI):
             job_id="daily_monitor_data_sync"
         )
         
-        # 5. 注册监控指标/健康分计算任务 (每天 15:45)
-        scheduler.add_daily_job(
-            job_funcs.daily_monitor_calculate_job,
-            hour=15,
-            minute=45,
-            job_id="daily_monitor_calculate"
-        )
-        
-        # 6. 注册全市场财务衍生指标同步任务 (每日 02:30)
+        # 5. 注册全市场财务衍生指标同步任务 (每日 02:30)
         scheduler.add_daily_job(
             job_funcs.weekly_financial_indicators_sync_job,
             job_id="daily_finance_indicators_sync",
@@ -77,7 +85,7 @@ async def lifespan(app: FastAPI):
             minute=30
         )
 
-        # 7. 注册市场全景数据同步与计算任务 (每日 19:30)
+        # 6. 注册市场全景数据同步任务 (每日 19:30)
         scheduler.add_daily_job(
             job_funcs.daily_market_overview_sync_job,
             job_id="daily_market_overview_sync",
@@ -85,7 +93,7 @@ async def lifespan(app: FastAPI):
             minute=30
         )
 
-        # 8. 注册机构评级同步任务 (每日 03:00)
+        # 7. 注册机构评级同步任务 (每日 03:00)
         scheduler.add_daily_job(
             job_funcs.daily_analyst_rating_sync_job,
             job_id="daily_analyst_rating_sync",
@@ -93,12 +101,20 @@ async def lifespan(app: FastAPI):
             minute=0
         )
 
-        # 9. 注册股东数据同步任务 (每日 04:00)
+        # 8. 注册股东数据同步任务 (每日 04:00)
         scheduler.add_daily_job(
             job_funcs.daily_shareholder_sync_job,
             job_id="daily_shareholder_sync",
             hour=4,
             minute=0
+        )
+
+        # 9. 注册日终自检审计任务 (每日 23:30)
+        scheduler.add_daily_job(
+            sys_job_funcs.daily_audit_job,
+            job_id="daily_audit",
+            hour=23,
+            minute=30
         )
         
         # 3. 启动
@@ -210,5 +226,6 @@ app.include_router(game.router, prefix="/api/v1/game", tags=["博弈维度同步
 app.include_router(information.router, prefix="/api/v1/information", tags=["信息维度同步"])
 app.include_router(monitor.router, prefix="/api/v1/monitor", tags=["监控指标"])
 app.include_router(finance.router, prefix="/api/v1/finance", tags=["财务数据"])
+app.include_router(market_router, prefix="/api/v1/market", tags=["行情数据"])
 
 
