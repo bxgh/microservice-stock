@@ -163,7 +163,7 @@ class CrossCompareService:
         """落库 dq_findings"""
         try:
             sql = """
-                INSERT INTO dq_findings (ts_code, trade_date, check_type, severity, finding_msg, diff_data)
+                INSERT INTO dq_findings (ts_code, trade_date, rule_id, severity, description, diff_data)
                 VALUES (%s, %s, %s, %s, %s, %s)
             """
             await db.execute(sql, (
