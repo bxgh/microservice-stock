@@ -1,16 +1,7 @@
 # 数据库表结构与空间占用报告
 
-- **生成时间**: 2026-05-03 11:14:42
+- **生成时间**: 2026-05-05 12:00:40
 - **数据库名**: `alwaysup`
-
-```sh
-docker run --rm \
-  -v $(pwd):/app \
-  -w /app \
-  --env-file .env \
-  akshare-api:latest \
-  python3 scripts/generate_db_inventory.py
-```
 
 ## 行情与原始数据 (Market Raw Data)
 
@@ -183,8 +174,8 @@ docker run --rm \
 
 ### 表: `ods_concept_kline_daily`
 - **描述**: ODS: 概念板块日线行情
-- **行数**: 474
-- **占用空间**: 0.06 MB (数据: 0.06MB, 索引: 0.00MB)
+- **行数**: 776
+- **占用空间**: 0.08 MB (数据: 0.08MB, 索引: 0.00MB)
 
 | 字段名 | 类型 | 必填 | 键 | 备注 |
 |---|---|---|---|---|
@@ -207,7 +198,7 @@ docker run --rm \
 
 ### 表: `ods_event_limit_pool`
 - **描述**: ODS:涨跌停 / 炸板 / 连板池(每日多池共表)
-- **行数**: 3,307
+- **行数**: 3,103
 - **占用空间**: 1.95 MB (数据: 1.52MB, 索引: 0.44MB)
 
 | 字段名 | 类型 | 必填 | 键 | 备注 |
@@ -286,10 +277,23 @@ docker run --rm \
 
 ---
 
+### 表: `ods_stock_factor_daily`
+- **描述**: 无备注
+- **行数**: 16,314,955
+- **占用空间**: 1165.98 MB (数据: 667.00MB, 索引: 498.98MB)
+
+| 字段名 | 类型 | 必填 | 键 | 备注 |
+|---|---|---|---|---|
+| ts_code | varchar(16) | No | PRI |  |
+| trade_date | date | No | PRI |  |
+| adjust_factor | decimal(16,6) | No |  |  |
+
+---
+
 ### 表: `ods_sw_index_daily`
 - **描述**: ODS: 申万一级/二级行业指数日线
-- **行数**: 537
-- **占用空间**: 0.14 MB (数据: 0.12MB, 索引: 0.02MB)
+- **行数**: 716
+- **占用空间**: 0.19 MB (数据: 0.17MB, 索引: 0.02MB)
 
 | 字段名 | 类型 | 必填 | 键 | 备注 |
 |---|---|---|---|---|
@@ -485,7 +489,7 @@ docker run --rm \
 
 ### 表: `ads_l1_market_overview`
 - **描述**: ADS-L1:市场全景指标(每日一行)
-- **行数**: 36
+- **行数**: 35
 - **占用空间**: 0.02 MB (数据: 0.02MB, 索引: 0.00MB)
 
 | 字段名 | 类型 | 必填 | 键 | 备注 |
@@ -539,7 +543,7 @@ docker run --rm \
 
 ### 表: `ads_l2_concept_daily`
 - **描述**: ADS: 概念 L2 结构指标
-- **行数**: 78
+- **行数**: 158
 - **占用空间**: 0.03 MB (数据: 0.02MB, 索引: 0.02MB)
 
 | 字段名 | 类型 | 必填 | 键 | 备注 |
@@ -581,8 +585,8 @@ docker run --rm \
 
 ### 表: `ads_l2_industry_daily`
 - **描述**: ADS: 行业 L2 结构指标
-- **行数**: 93
-- **占用空间**: 0.03 MB (数据: 0.02MB, 索引: 0.02MB)
+- **行数**: 124
+- **占用空间**: 0.06 MB (数据: 0.05MB, 索引: 0.02MB)
 
 | 字段名 | 类型 | 必填 | 键 | 备注 |
 |---|---|---|---|---|
@@ -651,7 +655,7 @@ docker run --rm \
 
 ### 表: `ads_l2_style_factor`
 - **描述**: ADS: 风格 L2 结构指标
-- **行数**: 6
+- **行数**: 8
 - **占用空间**: 0.02 MB (数据: 0.02MB, 索引: 0.00MB)
 
 | 字段名 | 类型 | 必填 | 键 | 备注 |
@@ -840,7 +844,7 @@ docker run --rm \
 
 ### 表: `data_audit_details`
 - **描述**: 数据校验详情明细表
-- **行数**: 55
+- **行数**: 58
 - **占用空间**: 0.23 MB (数据: 0.22MB, 索引: 0.02MB)
 
 | 字段名 | 类型 | 必填 | 键 | 备注 |
@@ -892,7 +896,7 @@ docker run --rm \
 
 ### 表: `migrations_history`
 - **描述**: 无备注
-- **行数**: 6
+- **行数**: 8
 - **占用空间**: 0.03 MB (数据: 0.02MB, 索引: 0.02MB)
 
 | 字段名 | 类型 | 必填 | 键 | 备注 |
@@ -1111,6 +1115,47 @@ docker run --rm \
 
 ---
 
+### 表: `backfill_audit`
+- **描述**: 无备注
+- **行数**: 2
+- **占用空间**: 0.02 MB (数据: 0.02MB, 索引: 0.00MB)
+
+| 字段名 | 类型 | 必填 | 键 | 备注 |
+|---|---|---|---|---|
+| id | int(11) | No | PRI |  |
+| ts_code | varchar(20) | No |  |  |
+| trade_date | date | No |  |  |
+| target_table | varchar(50) | No |  |  |
+| before_data | json | Yes |  |  |
+| after_data | json | Yes |  |  |
+| reason | varchar(100) | Yes |  |  |
+| operator | varchar(50) | Yes |  |  |
+| request_id | varchar(50) | Yes |  |  |
+| created_at | timestamp | No |  |  |
+
+---
+
+### 表: `backfill_queue`
+- **描述**: 无备注
+- **行数**: 1
+- **占用空间**: 0.03 MB (数据: 0.02MB, 索引: 0.02MB)
+
+| 字段名 | 类型 | 必填 | 键 | 备注 |
+|---|---|---|---|---|
+| id | int(11) | No | PRI |  |
+| ts_code | varchar(20) | No | MUL |  |
+| trade_date | date | No |  |  |
+| target_table | varchar(50) | Yes |  |  |
+| priority | int(11) | Yes |  | 1:HS300, 2:Others |
+| status | varchar(20) | Yes |  | PENDING, PROCESSING, COMPLETED, FAILED, PAUSED |
+| error_count | int(11) | Yes |  |  |
+| last_error | text | Yes |  |  |
+| request_id | varchar(50) | Yes |  |  |
+| created_at | timestamp | No |  |  |
+| updated_at | timestamp | No |  |  |
+
+---
+
 ### 表: `CCI_alerts`
 - **描述**: 无备注
 - **行数**: 0
@@ -1200,6 +1245,42 @@ docker run --rm \
 
 ---
 
+### 表: `dim_code_remap`
+- **描述**: 证券代码变更映射表
+- **行数**: 0
+- **占用空间**: 0.03 MB (数据: 0.02MB, 索引: 0.02MB)
+
+| 字段名 | 类型 | 必填 | 键 | 备注 |
+|---|---|---|---|---|
+| old_ts_code | varchar(20) | No | PRI |  |
+| new_ts_code | varchar(20) | No | PRI |  |
+| change_date | date | No |  |  |
+| change_reason | varchar(255) | Yes |  |  |
+| created_at | timestamp | No |  |  |
+
+---
+
+### 表: `dim_corporate_action`
+- **描述**: 除权除息事件流水表
+- **行数**: 0
+- **占用空间**: 0.03 MB (数据: 0.02MB, 索引: 0.02MB)
+
+| 字段名 | 类型 | 必填 | 键 | 备注 |
+|---|---|---|---|---|
+| id | int(11) | No | PRI |  |
+| ts_code | varchar(20) | No | MUL |  |
+| ann_date | date | Yes |  | 公告日期 |
+| record_date | date | Yes |  | 股权登记日 |
+| ex_date | date | No |  | 除权除息日 |
+| pay_date | date | Yes |  | 派息日 |
+| div_cash | decimal(18,4) | Yes |  | 每股分红 (税前) |
+| stk_div | decimal(18,4) | Yes |  | 每股送红股 |
+| stk_add | decimal(18,4) | Yes |  | 每股转增股本 |
+| event_type | varchar(20) | Yes |  | 事件类型: DIVIDEND, SPLIT, ALLOTMENT |
+| created_at | timestamp | No |  |  |
+
+---
+
 ### 表: `dim_filter_profile`
 - **描述**: DIM-筛选模板
 - **行数**: 5
@@ -1215,6 +1296,55 @@ docker run --rm \
 | display_order | int(11) | Yes |  |  |
 | created_at | timestamp | No |  |  |
 | updated_at | timestamp | No |  |  |
+
+---
+
+### 表: `dim_price_limit`
+- **描述**: 股票每日涨跌幅限制维度表
+- **行数**: 6,111
+- **占用空间**: 0.39 MB (数据: 0.39MB, 索引: 0.00MB)
+
+| 字段名 | 类型 | 必填 | 键 | 备注 |
+|---|---|---|---|---|
+| ts_code | varchar(20) | No | PRI |  |
+| trade_date | date | No | PRI |  |
+| up_limit_pct | decimal(8,4) | No |  | 理论涨停板比例 (如 0.10, 0.20) |
+| down_limit_pct | decimal(8,4) | No |  | 理论跌停板比例 (如 -0.10, -0.20) |
+| rule_desc | varchar(100) | Yes |  | 规则描述 (如: 主板ST 5%) |
+| created_at | timestamp | No |  |  |
+
+---
+
+### 表: `dim_stock_status`
+- **描述**: 股票每日状态维度表
+- **行数**: 6,111
+- **占用空间**: 0.53 MB (数据: 0.34MB, 索引: 0.19MB)
+
+| 字段名 | 类型 | 必填 | 键 | 备注 |
+|---|---|---|---|---|
+| ts_code | varchar(20) | No | PRI | 股票代码 (600519.SH) |
+| trade_date | date | No | PRI | 交易日期 |
+| status | varchar(20) | Yes |  | 状态: NORMAL, ST, *ST, SUSPEND, NEW, DELIST |
+| is_st | tinyint(1) | Yes |  | 是否为 ST/*ST |
+| is_suspended | tinyint(1) | Yes |  | 是否停牌 |
+| is_new | tinyint(1) | Yes |  | 是否为上市 N 日内新股 |
+| created_at | timestamp | No |  |  |
+| updated_at | timestamp | No |  |  |
+
+---
+
+### 表: `dim_stock_suspend`
+- **描述**: 个股停复牌日历维度表
+- **行数**: 624,457
+- **占用空间**: 72.16 MB (数据: 53.61MB, 索引: 18.55MB)
+
+| 字段名 | 类型 | 必填 | 键 | 备注 |
+|---|---|---|---|---|
+| ts_code | varchar(20) | No | PRI | 股票代码 (如 600519.SH) |
+| suspend_date | date | No | PRI | 停牌日期 |
+| suspend_timing | varchar(50) | Yes |  | 停牌时间 (如 停牌一天, 取消停牌) |
+| suspend_type | varchar(20) | Yes |  | 停牌类型 (S-停牌, R-复牌) |
+| created_at | timestamp | Yes |  |  |
 
 ---
 
@@ -1273,7 +1403,7 @@ docker run --rm \
 
 ### 表: `dim_user_active_profile`
 - **描述**: DIM-用户当前激活模板
-- **行数**: 1
+- **行数**: 0
 - **占用空间**: 0.02 MB (数据: 0.02MB, 索引: 0.00MB)
 
 | 字段名 | 类型 | 必填 | 键 | 备注 |
@@ -1303,6 +1433,59 @@ docker run --rm \
 | schema_version | varchar(10) | Yes |  |  |
 | created_at | timestamp | No |  |  |
 | updated_at | timestamp | No |  |  |
+
+---
+
+### 表: `dq_findings`
+- **描述**: 无备注
+- **行数**: 3
+- **占用空间**: 0.06 MB (数据: 0.02MB, 索引: 0.05MB)
+
+| 字段名 | 类型 | 必填 | 键 | 备注 |
+|---|---|---|---|---|
+| id | int(11) | No | PRI |  |
+| ts_code | varchar(20) | No | MUL |  |
+| trade_date | date | No |  |  |
+| rule_id | varchar(50) | Yes | MUL |  |
+| severity | varchar(10) | Yes |  | WARN, ERROR |
+| description | text | Yes |  |  |
+| diff_data | json | Yes |  | Original vs Target values |
+| status | varchar(20) | Yes | MUL |  |
+| created_at | timestamp | No |  |  |
+| updated_at | timestamp | No |  |  |
+
+---
+
+### 表: `dq_metrics_history`
+- **描述**: 无备注
+- **行数**: 4
+- **占用空间**: 0.05 MB (数据: 0.02MB, 索引: 0.03MB)
+
+| 字段名 | 类型 | 必填 | 键 | 备注 |
+|---|---|---|---|---|
+| trade_date | date | No | PRI |  |
+| indicator_name | varchar(50) | No | PRI |  |
+| indicator_value | float | No |  |  |
+| target_value | float | Yes |  |  |
+| status | varchar(20) | Yes |  |  |
+| created_at | timestamp | No |  |  |
+
+---
+
+### 表: `dq_reports`
+- **描述**: 无备注
+- **行数**: 2
+- **占用空间**: 0.03 MB (数据: 0.02MB, 索引: 0.02MB)
+
+| 字段名 | 类型 | 必填 | 键 | 备注 |
+|---|---|---|---|---|
+| id | int(11) | No | PRI |  |
+| inspection_date | date | No | UNI | 巡检目标日期 |
+| start_time | timestamp | No |  | 开始时间 |
+| end_time | timestamp | Yes |  | 结束时间 |
+| score | decimal(5,2) | Yes |  | 数据质量得分 |
+| summary | json | Yes |  | 汇总数据 (各类异常统计) |
+| status | varchar(20) | Yes |  | 执行状态 |
 
 ---
 
@@ -1350,6 +1533,49 @@ docker run --rm \
 | extra | json | Yes |  |  |
 | schema_version | varchar(10) | Yes |  |  |
 | created_at | timestamp | No |  |  |
+
+---
+
+### 表: `meta_data_readiness`
+- **描述**: 无备注
+- **行数**: 4
+- **占用空间**: 0.03 MB (数据: 0.02MB, 索引: 0.02MB)
+
+| 字段名 | 类型 | 必填 | 键 | 备注 |
+|---|---|---|---|---|
+| table_name | varchar(128) | No | PRI |  |
+| biz_date | date | No | PRI |  |
+| storage | varchar(16) | Yes |  |  |
+| record_count | bigint(20) | Yes |  |  |
+| expected_min | bigint(20) | Yes |  |  |
+| producer_node | varchar(64) | Yes |  |  |
+| producer_task | varchar(128) | Yes |  |  |
+| ready_at | datetime | Yes |  |  |
+| status | varchar(16) | Yes |  |  |
+| notes | varchar(255) | Yes |  |  |
+
+---
+
+### 表: `meta_pipeline_run`
+- **描述**: 无备注
+- **行数**: 0
+- **占用空间**: 0.05 MB (数据: 0.02MB, 索引: 0.03MB)
+
+| 字段名 | 类型 | 必填 | 键 | 备注 |
+|---|---|---|---|---|
+| run_id | varchar(64) | No | PRI |  |
+| pipeline_id | varchar(128) | No | MUL |  |
+| biz_date | date | No |  |  |
+| task_id | varchar(128) | No | PRI |  |
+| status | varchar(16) | No | MUL |  |
+| started_at | datetime | Yes |  |  |
+| finished_at | datetime | Yes |  |  |
+| duration_sec | int(11) | Yes |  |  |
+| retry_count | int(11) | Yes |  |  |
+| max_retry | int(11) | Yes |  |  |
+| error_message | text | Yes |  |  |
+| error_stack | text | Yes |  |  |
+| output_summary | json | Yes |  |  |
 
 ---
 
@@ -1416,7 +1642,7 @@ docker run --rm \
 
 ### 表: `mp_publish_record`
 - **描述**: 公众号发布记录
-- **行数**: 81
+- **行数**: 78
 - **占用空间**: 0.20 MB (数据: 0.14MB, 索引: 0.06MB)
 
 | 字段名 | 类型 | 必填 | 键 | 备注 |
@@ -1509,6 +1735,24 @@ docker run --rm \
 
 ---
 
+### 表: `recalc_signal`
+- **描述**: 无备注
+- **行数**: 1
+- **占用空间**: 0.02 MB (数据: 0.02MB, 索引: 0.00MB)
+
+| 字段名 | 类型 | 必填 | 键 | 备注 |
+|---|---|---|---|---|
+| id | int(11) | No | PRI |  |
+| ts_code | varchar(20) | No |  |  |
+| start_date | date | No |  |  |
+| end_date | date | No |  |  |
+| indicator_type | varchar(50) | Yes |  |  |
+| status | varchar(20) | Yes |  |  |
+| request_id | varchar(50) | Yes |  |  |
+| created_at | timestamp | No |  |  |
+
+---
+
 ### 表: `sector_kline_daily`
 - **描述**: ODS:行业 / ETF 日线行情
 - **行数**: 141,851
@@ -1529,9 +1773,26 @@ docker run --rm \
 
 ---
 
+### 表: `staging_rejected`
+- **描述**: 无备注
+- **行数**: 2
+- **占用空间**: 0.05 MB (数据: 0.02MB, 索引: 0.03MB)
+
+| 字段名 | 类型 | 必填 | 键 | 备注 |
+|---|---|---|---|---|
+| id | bigint(20) | No | PRI |  |
+| ts_code | varchar(20) | No | MUL |  |
+| trade_date | date | No | MUL |  |
+| source_table | varchar(64) | No |  | 目标表名 |
+| raw_data | json | No |  | 原始输入数据 |
+| reject_reason | varchar(255) | No |  | 失败原因 |
+| created_at | datetime | Yes |  |  |
+
+---
+
 ### 表: `stock_adjust_factor`
 - **描述**: 股票复权因子表
-- **行数**: 74,189
+- **行数**: 74,171
 - **占用空间**: 13.58 MB (数据: 5.52MB, 索引: 8.06MB)
 
 | 字段名 | 类型 | 必填 | 键 | 备注 |
@@ -1837,7 +2098,7 @@ docker run --rm \
 
 ### 表: `stock_suspensions`
 - **描述**: 股票每日停牌记录
-- **行数**: 3,732
+- **行数**: 3,712
 - **占用空间**: 0.58 MB (数据: 0.22MB, 索引: 0.36MB)
 
 | 字段名 | 类型 | 必填 | 键 | 备注 |
@@ -1964,8 +2225,8 @@ docker run --rm \
 
 ### 表: `task_execution_logs`
 - **描述**: 任务执行日志
-- **行数**: 104
-- **占用空间**: 0.38 MB (数据: 0.33MB, 索引: 0.05MB)
+- **行数**: 118
+- **占用空间**: 0.42 MB (数据: 0.38MB, 索引: 0.05MB)
 
 | 字段名 | 类型 | 必填 | 键 | 备注 |
 |---|---|---|---|---|
@@ -2000,6 +2261,18 @@ docker run --rm \
 | success_rate | decimal(29,2) | Yes |  |  |
 | avg_duration_seconds | decimal(14,4) | Yes |  |  |
 | last_run_time | datetime | Yes |  | 开始时间 |
+
+---
+
+### 表: `test_cascade_table`
+- **描述**: 无备注
+- **行数**: 0
+- **占用空间**: 0.02 MB (数据: 0.02MB, 索引: 0.00MB)
+
+| 字段名 | 类型 | 必填 | 键 | 备注 |
+|---|---|---|---|---|
+| ts_code | varchar(20) | Yes |  |  |
+| trade_date | date | Yes |  |  |
 
 ---
 
@@ -2063,6 +2336,33 @@ docker run --rm \
 | cost_pulse_fdr007 | decimal(10,4) | Yes |  | VOL-05 资金成本的异常脉冲(FR007) |
 | non_bank_premium | decimal(10,4) | Yes |  | VOL-05 辅助非银流动性溢价(R007-FR007) |
 | etf_depletion_rate | decimal(10,4) | Yes |  | VOL-06 ETF被动护盘的效用消耗斜率 |
+
+---
+
+### 表: `v_stock_kline_forward_adj`
+- **描述**: VIEW
+- **行数**: 0
+- **占用空间**: 0.00 MB (数据: 0.00MB, 索引: 0.00MB)
+
+| 字段名 | 类型 | 必填 | 键 | 备注 |
+|---|---|---|---|---|
+| ts_code | varchar(16) | No |  |  |
+| trade_date | date | No |  |  |
+| open | decimal(16,4) | Yes |  |  |
+| high | decimal(16,4) | Yes |  |  |
+| low | decimal(16,4) | Yes |  |  |
+| close | decimal(16,4) | Yes |  |  |
+| pre_close | decimal(16,4) | Yes |  |  |
+| pct_chg | decimal(16,6) | Yes |  |  |
+| volume | bigint(20) | Yes |  |  |
+| amount | decimal(20,4) | Yes |  |  |
+| adjust_factor | decimal(16,6) | Yes |  |  |
+| max_factor | decimal(16,6) | Yes |  | 复权因子 |
+| adj_open | decimal(33,4) | Yes |  |  |
+| adj_high | decimal(33,4) | Yes |  |  |
+| adj_low | decimal(33,4) | Yes |  |  |
+| adj_close | decimal(33,4) | Yes |  |  |
+| adj_pre_close | decimal(33,4) | Yes |  |  |
 
 ---
 
@@ -2130,7 +2430,7 @@ docker run --rm \
 
 ### 表: `workflow_runs`
 - **描述**: Workflow instance execution tracking
-- **行数**: 237
+- **行数**: 260
 - **占用空间**: 4.34 MB (数据: 4.30MB, 索引: 0.05MB)
 
 | 字段名 | 类型 | 必填 | 键 | 备注 |

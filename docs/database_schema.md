@@ -229,3 +229,40 @@
 | `industry_name` | VARCHAR(50) | 行业名称 |
 
 - **唯一约束**: `uk_code_ind (ts_code, industry_code)`
+
+---
+
+## 14. 数据质量与观测 (DQ & Observability)
+
+### 14.1 数据质量异常项表 (`dq_findings`)
+记录各类校验规则（如跨源比对、业务规则等）发现的异常。
+
+| 字段名 | 类型 | 说明 | 备注 |
+| :--- | :--- | :--- | :--- |
+| `id` | INT | 自增ID | 主键 |
+| `ts_code` | VARCHAR(20) | 股票代码 | 可为空 (全局校验) |
+| `trade_date` | DATE | 交易日期 | |
+| `rule_id` | VARCHAR(50) | 规则ID | 对应 `rules.yaml` 中的 ID |
+| `severity` | VARCHAR(20) | 严重程度 | INFO/WARN/ERROR/CRITICAL |
+| `description` | TEXT | 异常详细描述 | |
+| `diff_data` | JSON | 差异数据详情 | 存储比对差异快照 |
+| `status` | VARCHAR(20) | 状态 | OPEN (待处理) / RESOLVED (已解决) |
+| `created_at` | TIMESTAMP | 发现时间 | |
+| `updated_at` | TIMESTAMP | 最后更新时间 | |
+
+- **索引**: `idx_trade_date`, `idx_rule_id`, `idx_status`
+
+### 14.2 DQ 指标历史表 (`dq_metrics_history`)
+记录每日数据质量核心指标的统计结果。
+
+| 字段名 | 类型 | 说明 | 备注 |
+| :--- | :--- | :--- | :--- |
+| `id` | INT | 自增ID | 主键 |
+| `trade_date` | DATE | 统计日期 | |
+| `indicator_name` | VARCHAR(50) | 指标名称 | COMPLETENESS/CONSISTENCY 等 |
+| `indicator_value`| DECIMAL(10,4)| 实际值 | |
+| `target_value` | DECIMAL(10,4)| 目标阈值 | |
+| `status` | VARCHAR(20) | 状态判定 | OK/WARNING/ERROR |
+| `created_at` | TIMESTAMP | 计算时间 | |
+
+- **唯一约束**: `uk_date_name (trade_date, indicator_name)`
