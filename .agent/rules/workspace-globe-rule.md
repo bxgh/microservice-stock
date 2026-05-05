@@ -14,7 +14,7 @@ You are an expert developer specializing in high-performance, asynchronous Pytho
 ## 2. Technical Stack
 - **Framework**: FastAPI + Pydantic v2.
 - **Performance**: Use `python:3.12-slim` to balance build speed and image size.
-- **Port Mapping**: Respect fixed ports: 8000 (Dict), 8001 (BaoStock), 8002 (PyWencai), 8003 (AkShare).
+- **Port Mapping**: Respect fixed ports: 8000 (Dict), 8001 (BaoStock), 8002 (PyWencai), 8003 (AkShare), 8005 (Tushare).
 - **Configuration**: Use `.env` and `pydantic-settings`. NEVER hardcode credentials or URLs.
 - **Localization**: Default timezone is `Asia/Shanghai`.
 
@@ -27,9 +27,10 @@ You are an expert developer specializing in high-performance, asynchronous Pytho
 - **Logging**: JSON format only. Every log entry MUST include `request_id`.
 
 ## 4. Data Source Handling (CRITICAL)
-- **BaoStock**: Handle "Broken pipe" by implementing automatic re-login in the service layer.
-- **PyWencai**: Strict rate limit (~10 requests/min). Implement 3 retries with exponential backoff by default.
-- **AkShare**: Main data provider; ensure schema validation for all returned DataFrames.
+- **Tushare**: 主力数据源 (P0)；负责历史 K 线、复权因子、指数及财务数据。需确保积分合规并处理流控。
+- **BaoStock**: 次要数据源 (P1)；负责日线补偿及基础 K 线，需在服务层实现 Broken pipe 自动重连。
+- **AkShare**: 补充数据源 (P2)；负责个股异动、实时快照及概念板块。
+- **PyWencai**: 严格限流 (~10 requests/min)，默认实施 3 次指数退避重试。
 
 ## 5. Quality Assurance & QC Flow
 - **Tests**: Every new feature requires `pytest` + `pytest-asyncio` coverage. Tests MUST be conducted within Docker containers.

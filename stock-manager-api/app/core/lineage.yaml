@@ -1,0 +1,23 @@
+# 数据血缘配置文件
+# 用于 E6 补数修复后自动标记下游指标失效
+
+lineage:
+  stock_kline_daily:
+    indicators:
+      - name: MA
+        window_size: 60  # MA60 需要重算 T 到 T+59
+      - name: MACD
+        window_size: 250 # EMA 衰减周期，设为 250 天以保证平滑
+      - name: KDJ
+        window_size: 20
+      - name: RSI
+        window_size: 20
+    target_tables:
+      - test_cascade_table
+
+  stock_adjust_factor:
+    indicators:
+      - name: ADJUSTED_PRICE
+        window_size: 1   # 复权因子变动影响当天及以后所有复权价格
+    target_tables:
+      - ods_stock_factor_daily

@@ -6,10 +6,24 @@ from fastapi import FastAPI, Request, HTTPException
 from fastapi.responses import JSONResponse
 
 from app.api import (
-    metadata, audit, scheduler, ops, system, dashboard, market_dashboard,
-    shareholders, chips, game, information, commands, task_commands, data_audit, suspension,
-    monitor, finance, dq
-)
+    metadata,
+    audit,
+    scheduler,
+    ops,
+    system,
+    dashboard,
+    market_dashboard,
+    shareholders,
+    chips,
+    game,
+    information,
+    commands,
+    task_commands,
+    data_audit,
+    suspension,
+    monitor,
+    finance,
+    dq)
 from app.api.market import router as market_router
 
 from app.utils.logger import setup_logger, request_id_var
@@ -19,6 +33,7 @@ from app.utils.http_client import http_client
 # 初始化日志
 logger = setup_logger("stock-manager")
 
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """应用生命周期管理"""
@@ -27,18 +42,18 @@ async def lifespan(app: FastAPI):
         await db.connect()
     except Exception as e:
         logger.error(f"数据库连接池启动失败: {e}")
-    
+
     # 初始化并启动调度器
     scheduler = None
     try:
         from app.scheduler import TaskScheduler, set_scheduler_instance
         from app.scheduler import jobs as job_funcs
         from app.scheduler import system_jobs as sys_job_funcs
-        
+
         # 1. 初始化
         scheduler = TaskScheduler(timezone="Asia/Shanghai")
         set_scheduler_instance(scheduler)
-        
+
         # 1.1 注册系统健康监控 (每 5 分钟)
         scheduler.add_interval_job(
             sys_job_funcs.system_health_monitor_job,
@@ -52,7 +67,7 @@ async def lifespan(app: FastAPI):
             minutes=2,
             job_id="readiness_prober"
         )
-        
+
         # 2. 注册早盘停牌数据同步任务 (每天 09:15)
         scheduler.add_daily_job(
             job_funcs.daily_suspension_morning_sync_job,
@@ -68,7 +83,7 @@ async def lifespan(app: FastAPI):
             minute=45,
             job_id="daily_performance_forecast_sync"
         )
-        
+
         # 4. 注册资金监测数据定时同步任务 (每天 15:30)
         scheduler.add_daily_job(
             job_funcs.daily_monitor_data_sync_job,
@@ -76,7 +91,7 @@ async def lifespan(app: FastAPI):
             minute=30,
             job_id="daily_monitor_data_sync"
         )
-        
+
         # 5. 注册全市场财务衍生指标同步任务 (每日 02:30)
         scheduler.add_daily_job(
             job_funcs.weekly_financial_indicators_sync_job,
@@ -133,20 +148,32 @@ async def lifespan(app: FastAPI):
             hour=5,
             minute=0
         )
-        
+
+        # 12. 注册补数扫描与处理任务 (E6)
+        scheduler.add_interval_job(
+            sys_job_funcs.backfill_enqueue_job,
+            hours=1,
+            job_id="backfill_enqueue"
+        )
+        scheduler.add_interval_job(
+            sys_job_funcs.backfill_processor_job,
+            minutes=5,
+            job_id="backfill_processor"
+        )
+
         # 3. 启动
         await scheduler.start()
         logger.info("Stock-Manager 内部调度器已启动")
-        
+
     except Exception as e:
         logger.error(f"调度器启动失败: {e}", exc_info=True)
 
     yield
-    
+
     # 关闭调度器
     if scheduler:
         await scheduler.stop()
-    
+
     # 关闭时清理资源
     await db.disconnect()
     await http_client.close()
@@ -159,21 +186,22 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
+
 @app.middleware("http")
 async def add_request_id_and_logging(request: Request, call_next):
     """添加 request_id 和请求日志"""
     request_id = str(uuid.uuid4())[:8]
     request.state.request_id = request_id
-    
+
     # 设置 ContextVar
     token = request_id_var.set(request_id)
-    
+
     start_time = time.time()
     try:
         response = await call_next(request)
-        
+
         duration_ms = int((time.time() - start_time) * 1000)
-        
+
         log_data = {
             "request_id": request_id,
             "method": request.method,
@@ -182,12 +210,17 @@ async def add_request_id_and_logging(request: Request, call_next):
             "duration_ms": duration_ms,
             "client_ip": request.client.host if request.client else "unknown",
         }
-        logger.info(f"Request completed", extra={"extra_data": log_data, "request_id": request_id})
-        
+        logger.info(
+            f"Request completed",
+            extra={
+                "extra_data": log_data,
+                "request_id": request_id})
+
         response.headers["X-Request-ID"] = request_id
         return response
     finally:
         request_id_var.reset(token)
+
 
 @app.exception_handler(HTTPException)
 async def http_exception_handler(request: Request, exc: HTTPException):
@@ -203,6 +236,7 @@ async def http_exception_handler(request: Request, exc: HTTPException):
             }
         },
     )
+
 
 @app.exception_handler(Exception)
 async def general_exception_handler(request: Request, exc: Exception):
@@ -220,6 +254,7 @@ async def general_exception_handler(request: Request, exc: Exception):
         },
     )
 
+
 @app.get("/health")
 async def health_check():
     """健康检查端点"""
@@ -233,17 +268,30 @@ app.include_router(suspension.router, prefix="/api/v1", tags=["停牌数据"])
 app.include_router(ops.router, prefix="/api/v1/ops", tags=["运维"])
 app.include_router(system.router, prefix="/api/v1/system", tags=["系统"])
 app.include_router(dashboard.router, prefix="/api/v1/dashboard", tags=["仪表盘"])
-app.include_router(market_dashboard.router, prefix="/api/v1/market/dashboard", tags=["市场全景"])
+app.include_router(
+    market_dashboard.router,
+    prefix="/api/v1/market/dashboard",
+    tags=["市场全景"])
 app.include_router(commands.router, prefix="/api/v1/commands", tags=["命令"])
-app.include_router(task_commands.router, prefix="/api/v1/task-commands", tags=["任务指令"])
-app.include_router(data_audit.router, prefix="/api/v1/data-audits", tags=["数据审计"])
-app.include_router(shareholders.router, prefix="/api/v1/shareholders", tags=["股东数据"])
+app.include_router(
+    task_commands.router,
+    prefix="/api/v1/task-commands",
+    tags=["任务指令"])
+app.include_router(
+    data_audit.router,
+    prefix="/api/v1/data-audits",
+    tags=["数据审计"])
+app.include_router(
+    shareholders.router,
+    prefix="/api/v1/shareholders",
+    tags=["股东数据"])
 app.include_router(chips.router, prefix="/api/v1/chips", tags=["筹码维度同步"])
 app.include_router(game.router, prefix="/api/v1/game", tags=["博弈维度同步"])
-app.include_router(information.router, prefix="/api/v1/information", tags=["信息维度同步"])
+app.include_router(
+    information.router,
+    prefix="/api/v1/information",
+    tags=["信息维度同步"])
 app.include_router(monitor.router, prefix="/api/v1/monitor", tags=["监控指标"])
 app.include_router(finance.router, prefix="/api/v1/finance", tags=["财务数据"])
 app.include_router(market_router, prefix="/api/v1/market", tags=["行情数据"])
 app.include_router(dq.router, prefix="/api/v1/dq", tags=["数据质量"])
-
-
