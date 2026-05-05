@@ -23,7 +23,8 @@ from app.api import (
     suspension,
     monitor,
     finance,
-    dq)
+    dq,
+    backfill)
 from app.api.market import router as market_router
 
 from app.utils.logger import setup_logger, request_id_var
@@ -295,3 +296,4 @@ app.include_router(monitor.router, prefix="/api/v1/monitor", tags=["监控指标
 app.include_router(finance.router, prefix="/api/v1/finance", tags=["财务数据"])
 app.include_router(market_router, prefix="/api/v1/market", tags=["行情数据"])
 app.include_router(dq.router, prefix="/api/v1/dq", tags=["数据质量"])
+app.include_router(backfill.router, prefix="/api/v1/backfill", tags=["补数与重算"])
