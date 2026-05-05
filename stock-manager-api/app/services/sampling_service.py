@@ -6,6 +6,7 @@ from app.utils.logger import get_logger
 
 logger = get_logger("stock-manager.sampling")
 
+
 class SamplingService:
     """分层抽样服务 (E4)"""
 
@@ -14,8 +15,8 @@ class SamplingService:
         try:
             # 优先从同花顺成分表获取
             sql = """
-                SELECT DISTINCT c.ts_code FROM stock_sector_cons_ths c 
-                JOIN stock_sector_ths s ON c.sector_id = s.id 
+                SELECT DISTINCT c.ts_code FROM stock_sector_cons_ths c
+                JOIN stock_sector_ths s ON c.sector_id = s.id
                 WHERE s.sector_name LIKE '%沪深300%'
             """
             rows = await db.execute(sql)
@@ -38,7 +39,8 @@ class SamplingService:
             logger.error(f"获取全市场股票失败: {e}")
             return []
 
-    async def get_daily_inspection_list(self, target_date: datetime.date = None) -> List[str]:
+    async def get_daily_inspection_list(
+            self, target_date: datetime.date = None) -> List[str]:
         """
         生成当日巡检清单:
         1. 核心桶: 沪深300 (100% 覆盖)
@@ -46,15 +48,15 @@ class SamplingService:
         """
         if not target_date:
             target_date = datetime.date.today()
-        
+
         # 1. 核心桶
         core_set = await self.get_hs300_members()
-        
+
         # 2. 轮转桶 (1/7)
         all_stocks = await self.get_all_active_stocks()
         # 使用星期几作为种子 (0-6)
-        day_index = target_date.weekday() 
-        
+        day_index = target_date.weekday()
+
         rolling_list = []
         for code in all_stocks:
             if code in core_set:
@@ -62,10 +64,15 @@ class SamplingService:
             # 稳定哈希分片
             if zlib.crc32(code.encode()) % 7 == day_index:
                 rolling_list.append(code)
-        
+
         final_list = list(core_set) + rolling_list
-        logger.info(f"生成巡检清单: 日期={target_date}, 总数={len(final_list)} (核心={len(core_set)}, 轮转={len(rolling_list)})")
-        
+        logger.info(
+            f"生成巡检清单: 日期={target_date}, 总数={
+                len(final_list)} (核心={
+                len(core_set)}, 轮转={
+                len(rolling_list)})")
+
         return final_list
+
 
 sampling_service = SamplingService()

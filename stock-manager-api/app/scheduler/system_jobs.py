@@ -188,3 +188,41 @@ async def backfill_processor_job():
     except Exception as e:
         logger.error(f"补数执行任务异常: {e}")
         return {"status": "error", "message": str(e)}
+
+
+@trading_day_only()
+async def daily_dq_report_job() -> Dict[str, Any]:
+    """每日数据质量报告任务 (09:05)"""
+    from app.services.dq_metrics_service import dq_metrics_service
+
+    # 获取最近一个交易日
+    try:
+        sql = "SELECT cal_date FROM trade_cal WHERE cal_date < CURDATE() AND is_open = 1 ORDER BY cal_date DESC LIMIT 1"
+        res = await db.execute(sql)
+        if not res:
+            return {"status": "skipped", "reason": "no_trading_day_found"}
+
+        target_date = res[0][0]
+        if isinstance(target_date, (datetime.date, datetime.datetime)):
+            target_date = target_date.strftime("%Y-%m-%d")
+
+        # 1. 计算指标
+        metrics = await dq_metrics_service.calculate_daily_metrics(target_date)
+
+        # 2. 发送告警 (如果指标显著低于预期)
+        critical_issues = {k: v for k, v in metrics.items() if v < 0.90}
+        if critical_issues:
+            await alerter.alert("ERROR", f"DQ 指标严重偏离目标 ({target_date})", {
+                "date": target_date,
+                **critical_issues
+            })
+        elif any(v < 0.99 for v in metrics.values()):
+            await alerter.alert("INFO", f"每日 DQ 质量报告 ({target_date})", {
+                "date": target_date,
+                **metrics
+            })
+
+        return {"status": "success", "date": target_date, "metrics": metrics}
+    except Exception as e:
+        logger.error(f"DQ 报告任务异常: {e}")
+        return {"status": "error", "message": str(e)}

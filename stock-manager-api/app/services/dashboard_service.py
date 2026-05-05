@@ -7,6 +7,7 @@ from app.services.ops_service import OpsService
 
 logger = get_logger("stock-manager.dashboard")
 
+
 class DashboardService:
     def __init__(self):
         self.baseline_service = BaselineService()
@@ -31,11 +32,13 @@ class DashboardService:
                 count_res = await db.execute(sql_kline_count, (latest_date,))
                 kline_count = count_res[0][0] if count_res and count_res[0] else 0
 
-            kline_coverage = round((kline_count / total_stocks) * 100, 1) if total_stocks > 0 else 0
-            
+            kline_coverage = round(
+                (kline_count / total_stocks) * 100,
+                1) if total_stocks > 0 else 0
+
             # 3. 实时查询 tick 覆盖率 (目前暂无 tick 表，返回 0)
             tick_coverage = 0.0
-            
+
             # 4. 获取最近任务
             recent_tasks = await self._get_recent_tasks()
 
@@ -55,9 +58,9 @@ class DashboardService:
         """从 commands 表获取最近触发的任务"""
         try:
             sql = """
-            SELECT task_id, status, created_at 
-            FROM commands 
-            ORDER BY created_at DESC 
+            SELECT task_id, status, created_at
+            FROM commands
+            ORDER BY created_at DESC
             LIMIT 5
             """
             rows = await db.execute(sql)

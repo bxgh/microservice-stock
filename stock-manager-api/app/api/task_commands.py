@@ -7,9 +7,11 @@ from app.services.task_command_service import TaskCommandService
 router = APIRouter()
 service = TaskCommandService()
 
+
 class CommandCreateRequest(BaseModel):
     task_id: str
     params: Dict[str, Any]
+
 
 @router.post("", summary="下达任务指令")
 async def create_task_command(request: CommandCreateRequest = Body(...)):
@@ -26,6 +28,7 @@ async def create_task_command(request: CommandCreateRequest = Body(...)):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+
 @router.get("", summary="获取指令列表")
 async def list_task_commands(
     task_id: Optional[str] = Query(None, description="过滤任务ID"),
@@ -40,6 +43,7 @@ async def list_task_commands(
         return {"commands": commands}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
 
 @router.get("/{command_id}", summary="查看指令状态")
 async def get_task_command(command_id: int):

@@ -8,6 +8,7 @@ from datetime import datetime, timedelta
 router = APIRouter()
 logger = get_logger("stock-manager.api.chips")
 
+
 @router.post("/sync/restricted")
 async def sync_restricted_release(
     request: Request,
@@ -17,19 +18,24 @@ async def sync_restricted_release(
     """同步限售解禁数据"""
     request_id = getattr(request.state, "request_id", "unknown")
     service = ChipService()
-    
+
     if not start_date:
         start_date = datetime.now().strftime("%Y-%m-%d")
     if not end_date:
         # Default look ahead 60 days to get upcoming pressure
         end_date = (datetime.now() + timedelta(days=60)).strftime("%Y-%m-%d")
-        
+
     try:
         count = await service.sync_restricted_release(start_date, end_date)
-        return {"status": "success", "synced_count": count, "start_date": start_date, "end_date": end_date}
+        return {
+            "status": "success",
+            "synced_count": count,
+            "start_date": start_date,
+            "end_date": end_date}
     except Exception as e:
         logger.error(f"同步限售解禁失败: {e}", extra={"request_id": request_id})
         raise HTTPException(status_code=500, detail=str(e))
+
 
 @router.post("/sync/block_trade")
 async def sync_block_trade(
@@ -41,11 +47,15 @@ async def sync_block_trade(
     """同步大宗交易数据 (支持单日或范围)"""
     request_id = getattr(request.state, "request_id", "unknown")
     service = ChipService()
-    
+
     try:
         if start_date and end_date:
             count = await service.sync_block_trade_range(start_date, end_date)
-            return {"status": "success", "synced_count": count, "start_date": start_date, "end_date": end_date}
+            return {
+                "status": "success",
+                "synced_count": count,
+                "start_date": start_date,
+                "end_date": end_date}
         else:
             if not date:
                 date = datetime.now().strftime("%Y-%m-%d")
@@ -54,6 +64,7 @@ async def sync_block_trade(
     except Exception as e:
         logger.error(f"同步大宗交易失败: {e}", extra={"request_id": request_id})
         raise HTTPException(status_code=500, detail=str(e))
+
 
 @router.get("/restricted/{code}")
 async def get_restricted_release(code: str):
@@ -70,6 +81,7 @@ async def get_restricted_release(code: str):
             "holder_type": row[4]
         })
     return {"code": code, "data": result}
+
 
 @router.get("/block_trade/{code}")
 async def get_block_trade(code: str, limit: int = 20):

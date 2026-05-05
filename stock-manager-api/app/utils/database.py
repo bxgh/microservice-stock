@@ -4,8 +4,10 @@ from app.utils.logger import get_logger
 
 logger = get_logger("stock-manager.database")
 
+
 class Database:
     """MySQL 异步连接池管理"""
+
     def __init__(self):
         self.pool = None
 
@@ -52,6 +54,7 @@ class Database:
         async with self.pool.acquire() as conn:
             async with conn.cursor() as cur:
                 return await cur.executemany(query, args)
+
 
 # 全局数据库对象
 db = Database()

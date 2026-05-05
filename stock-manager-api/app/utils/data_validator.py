@@ -1,14 +1,16 @@
 import json
 from typing import List, Dict, Any, Tuple
 
+
 class DataValidator:
     """数据校验核心类"""
 
     @staticmethod
-    def validate_kline_batch(data: List[Dict[str, Any]], source_table: str = "stock_kline_daily") -> Tuple[List[Dict], List[Dict]]:
+    def validate_kline_batch(
+            data: List[Dict[str, Any]], source_table: str = "stock_kline_daily") -> Tuple[List[Dict], List[Dict]]:
         """
         批量校验 K 线数据
-        
+
         Returns:
             (passed_records, rejected_records)
             rejected_records 包含: {'raw': original_dict, 'reason': str}
@@ -28,7 +30,7 @@ class DataValidator:
                 })
             else:
                 passed.append(item)
-        
+
         return passed, rejected
 
     @staticmethod
@@ -36,16 +38,26 @@ class DataValidator:
         """单条 K 线校验逻辑"""
         try:
             # 1. 必填字段校验
-            required = ["ts_code", "trade_date", "open", "high", "low", "close"]
+            required = [
+                "ts_code",
+                "trade_date",
+                "open",
+                "high",
+                "low",
+                "close"]
             for field in required:
                 if item.get(field) is None:
                     return f"Missing required field: {field}"
 
             # 2. 值域校验 (Range)
-            o, h, l, c = float(item["open"]), float(item["high"]), float(item["low"]), float(item["close"])
+            o, h, l, c = float(
+                item["open"]), float(
+                item["high"]), float(
+                item["low"]), float(
+                item["close"])
             if any(v <= 0 for v in [o, h, l, c]):
                 return f"Price must be positive: O={o}, H={h}, L={l}, C={c}"
-            
+
             vol = float(item.get("vol") or item.get("volume") or 0)
             amount = float(item.get("amount") or 0)
             if vol < 0 or amount < 0:
@@ -67,9 +79,10 @@ class DataValidator:
                 avg_price = amount / vol
                 # 考虑到权重的细微差异，放宽到 10% 冗余
                 if avg_price < l * 0.8 or avg_price > h * 1.2:
-                    return f"Business irrationality: amount/vol={avg_price:.2f} is far from range [{l}, {h}]"
+                    return f"Business irrationality: amount/vol={
+                        avg_price:.2f} is far from range [{l}, {h}]"
 
-            return "" # Passed
+            return ""  # Passed
         except (ValueError, TypeError) as e:
             return f"Data type error: {str(e)}"
         except Exception as e:

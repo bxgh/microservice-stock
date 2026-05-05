@@ -43,12 +43,12 @@ async def run_e5_regression_test():
                 await cur.execute('SELECT count(*) FROM dim_price_limit WHERE trade_date=%s', (target_date,))
                 limit_count = (await cur.fetchone())[0]
                 
-                await cur.execute('SELECT count(*) FROM dq_findings WHERE trade_date=%s AND rule_id="BUSINESS_RULE"', (target_date,))
+                await cur.execute('SELECT count(*) FROM dq_findings WHERE trade_date=%s AND rule_id="PRICE_LIMIT_CHECK"', (target_date,))
                 finding_count = (await cur.fetchone())[0]
                 
                 print(f"  -> dim_stock_status 记录数: {status_count}")
                 print(f"  -> dim_price_limit 记录数: {limit_count}")
-                print(f"  -> dq_findings (BUSINESS_RULE) 预警数: {finding_count}")
+                print(f"  -> dq_findings (PRICE_LIMIT_CHECK) 预警数: {finding_count}")
                 
                 if status_count > 0 and limit_count > 0:
                     print("\n[SUCCESS] E5 业务规则校验模块回归测试通过！")

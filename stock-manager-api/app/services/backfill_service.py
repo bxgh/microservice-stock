@@ -34,11 +34,49 @@ class BackfillService:
             logger.error(f"加载数据血缘配置失败: {e}")
             return {}
 
+    def is_breaker_open(self, rule_id: str) -> bool:
+        """检查特定规则是否熔断 (E6)"""
+        stats = self._breaker_stats.get(rule_id)
+        if not stats:
+            return False
+
+        # 如果最近 10 分钟内失败超过 5 次，则熔断
+        if stats['fail_count'] >= 5 and (
+                datetime.now() - stats['last_fail']).total_seconds() < 600:
+            return True
+
+        # 自动恢复：如果超过 10 分钟没有新失败，重置计数
+        if (datetime.now() - stats['last_fail']).total_seconds() >= 600:
+            self._breaker_stats[rule_id] = {
+                'fail_count': 0, 'last_fail': datetime.now()}
+            return False
+
+        return False
+
+    def _update_breaker(self, rule_id: str):
+        """更新熔断统计"""
+        stats = self._breaker_stats.get(
+            rule_id, {'fail_count': 0, 'last_fail': datetime.now()})
+        # 如果距离上次失败超过 1 小时，重置计数
+        if (datetime.now() - stats['last_fail']).total_seconds() > 3600:
+            stats['fail_count'] = 1
+        else:
+            stats['fail_count'] += 1
+        stats['last_fail'] = datetime.now()
+        self._breaker_stats[rule_id] = stats
+
+        if stats['fail_count'] == 5:
+            logger.critical(f"补数服务已触发熔断告警: {rule_id}")
+            asyncio.create_task(
+                alerter.alert(
+                    "CRITICAL", "补数服务熔断", {
+                        "rule_id": rule_id, "fail_count": 5}))
+
     async def enqueue_findings(self):
         """将发现的问题记录入补数队列"""
         try:
             # 1. 筛选 OPEN 状态且严重级别高的记录
-            # 2. 识别沪深 300 标的 (这里简单硬编码示例，实际应从 index_weight 获取)
+            # 2. 识别沪深 300 标的
             hs300_placeholder = "('600519.SH', '000001.SZ', '000002.SZ')"  # 示例
 
             sql = f"""
@@ -61,6 +99,11 @@ class BackfillService:
 
     async def process_queue(self, batch_size: int = 5):
         """执行补数任务"""
+        # 1. 检查熔断
+        if self.is_breaker_open("general_backfill"):
+            logger.warning("补数服务处于熔断状态，跳过本次处理")
+            return
+
         sql_fetch = """
             SELECT id, ts_code, trade_date, target_table, priority, error_count, request_id
             FROM backfill_queue
@@ -87,8 +130,10 @@ class BackfillService:
                     await self.invalidate_downstream(ts_code, t_date, table, exec_req_id)
                 else:
                     await self._handle_failure(task_id, err_cnt, "数据抓取或校验失败", exec_req_id)
+                    self._update_breaker("general_backfill")
             except Exception as e:
                 await self._handle_failure(task_id, err_cnt, str(e), exec_req_id)
+                self._update_breaker("general_backfill")
 
     async def _handle_single_backfill(
             self,
@@ -114,7 +159,6 @@ class BackfillService:
             return False
 
         # 4. 校验数据
-        # 注意：DataValidator 预期的是处理后的单位 (元, 股)
         passed, rejected = DataValidator.validate_kline_batch(data, table)
         if not passed:
             logger.error(f"[{request_id}] 数据校验未通过: {rejected}")
@@ -134,8 +178,6 @@ class BackfillService:
         sql = f"SELECT * FROM {table} WHERE ts_code = %s AND trade_date = %s"
         res = await db.execute(sql, (ts_code, t_date))
         if res:
-            # 简单转为 dict (假设字段顺序已知或通过 cursor 获取)
-            # 这里简化处理，实际开发中建议使用 DictCursor
             return str(res[0])
         return None
 
@@ -172,7 +214,6 @@ class BackfillService:
     async def _fetch_from_akshare(self, ts_code, t_date):
         """降级至 AkShare 抓取"""
         try:
-            # 逻辑类似 _fetch_from_tushare，但调用 akshare-api
             url = f"{self.akshare_url}/api/v1/market/stock/daily"
             params = {
                 "symbol": ts_code.split(".")[0],
@@ -182,7 +223,7 @@ class BackfillService:
                 resp = await client.get(url, params=params)
                 if resp.status_code == 200:
                     data = resp.json()
-                    return data  # AkShare 服务端通常已经处理好单位
+                    return data
         except Exception as e:
             logger.error(f"AkShare 降级抓取失败: {e}")
         return []
@@ -241,22 +282,17 @@ class BackfillService:
         if not config:
             return
 
-        # 1. 清理云端受影响的指标数据
         target_tables = config.get("target_tables", [])
         for table in target_tables:
-            # 对于 MA60 等，影响 T 到 T+59
-            # 这里简化处理：删除该股票 T 日及以后所有数据，强制重算
             sql_del = f"DELETE FROM {table} WHERE ts_code = %s AND trade_date >= %s"
             await db.execute(sql_del, (ts_code, t_date))
             logger.info(
                 f"[{request_id}] 已清理下游表数据: {table} | {ts_code} >= {t_date}")
 
-        # 2. 发送重算信号
         sql_sig = """
             INSERT INTO recalc_signal (ts_code, start_date, end_date, request_id)
             VALUES (%s, %s, %s, %s)
         """
-        # 默认重算周期：T 日到 T+250 (覆盖大部分 EMA 衰减)
         end_date = t_date + timedelta(days=250)
         await db.execute(sql_sig, (ts_code, t_date, end_date, request_id))
 
@@ -274,13 +310,11 @@ class BackfillService:
 
         logger.error(f"[{request_id}] 补数任务失败({new_err_cnt}/3): {error_msg}")
 
-        # 检查是否需要触发熔断告警
         if new_err_cnt >= 3:
-            await alerter.alert("CRITICAL", f"补数任务彻底失败: {task_id}", {
-                "ts_code": "unknown",
-                "error": error_msg,
-                "request_id": request_id
-            })
+            asyncio.create_task(
+                alerter.alert(
+                    "CRITICAL", f"补数任务彻底失败: {task_id}", {
+                        "ts_code": "unknown", "error": error_msg, "request_id": request_id}))
 
 
 # 全局服务单例

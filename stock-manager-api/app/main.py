@@ -162,7 +162,15 @@ async def lifespan(app: FastAPI):
             job_id="backfill_processor"
         )
 
-        # 3. 启动
+        # 13. 注册每日数据质量报告任务 (每天 09:05)
+        scheduler.add_daily_job(
+            sys_job_funcs.daily_dq_report_job,
+            job_id="daily_dq_report",
+            hour=9,
+            minute=5
+        )
+
+        # 启动
         await scheduler.start()
         logger.info("Stock-Manager 内部调度器已启动")
 
@@ -199,7 +207,7 @@ async def add_request_id_and_logging(request: Request, call_next):
 
     start_time = time.time()
     try:
-        response = await call_next(request)
+        call_res = await call_next(request)
 
         duration_ms = int((time.time() - start_time) * 1000)
 
@@ -207,7 +215,7 @@ async def add_request_id_and_logging(request: Request, call_next):
             "request_id": request_id,
             "method": request.method,
             "path": request.url.path,
-            "status": response.status_code,
+            "status": call_res.status_code,
             "duration_ms": duration_ms,
             "client_ip": request.client.host if request.client else "unknown",
         }
@@ -217,8 +225,8 @@ async def add_request_id_and_logging(request: Request, call_next):
                 "extra_data": log_data,
                 "request_id": request_id})
 
-        response.headers["X-Request-ID"] = request_id
-        return response
+        call_res.headers["X-Request-ID"] = request_id
+        return call_res
     finally:
         request_id_var.reset(token)
 

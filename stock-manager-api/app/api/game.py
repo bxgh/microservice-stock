@@ -8,6 +8,7 @@ from datetime import datetime
 router = APIRouter()
 logger = get_logger("stock-manager.api.game")
 
+
 @router.post("/sync/lhb")
 async def sync_lhb(
     request: Request,
@@ -16,16 +17,17 @@ async def sync_lhb(
     """同步龙虎榜数据 (含机构明细)"""
     request_id = getattr(request.state, "request_id", "unknown")
     service = GameService()
-    
+
     if not date:
         date = datetime.now().strftime("%Y-%m-%d")
-        
+
     try:
         count = await service.sync_lhb_daily(date)
         return {"status": "success", "synced_count": count, "date": date}
     except Exception as e:
         logger.error(f"同步龙虎榜失败: {e}", extra={"request_id": request_id})
         raise HTTPException(status_code=500, detail=str(e))
+
 
 @router.post("/sync/north")
 async def sync_north(
@@ -35,16 +37,17 @@ async def sync_north(
     """同步北向资金持股数据"""
     request_id = getattr(request.state, "request_id", "unknown")
     service = GameService()
-    
+
     if not date:
         date = datetime.now().strftime("%Y-%m-%d")
-        
+
     try:
         count = await service.sync_north_funds_daily(date)
         return {"status": "success", "synced_count": count, "date": date}
     except Exception as e:
         logger.error(f"同步北向资金失败: {e}", extra={"request_id": request_id})
         raise HTTPException(status_code=500, detail=str(e))
+
 
 @router.post("/sync/north/history/{code}")
 async def sync_north_history(
@@ -54,7 +57,7 @@ async def sync_north_history(
     """同步个股北向资金持股历史"""
     request_id = getattr(request.state, "request_id", "unknown")
     service = GameService()
-    
+
     try:
         count = await service.sync_north_funds_history(code)
         return {"status": "success", "synced_count": count, "code": code}
@@ -62,15 +65,16 @@ async def sync_north_history(
         logger.error(f"同步北向资金历史失败: {e}", extra={"request_id": request_id})
         raise HTTPException(status_code=500, detail=str(e))
 
+
 @router.get("/lhb/{code}")
 async def get_lhb_history(code: str, limit: int = 20):
     """查询个股龙虎榜历史"""
     sql = """
-        SELECT trade_date, close_price, change_pct, net_buy_amt, 
+        SELECT trade_date, close_price, change_pct, net_buy_amt,
                inst_net_buy_amt, inst_buy_count, inst_sell_count, reason
-        FROM stock_lhb_daily 
-        WHERE ts_code = %s 
-        ORDER BY trade_date DESC 
+        FROM stock_lhb_daily
+        WHERE ts_code = %s
+        ORDER BY trade_date DESC
         LIMIT %s
     """
     rows = await db.execute(sql, (code, limit))
@@ -88,14 +92,15 @@ async def get_lhb_history(code: str, limit: int = 20):
         })
     return {"code": code, "data": result}
 
+
 @router.get("/north/{code}")
 async def get_north_history(code: str, limit: int = 20):
     """查询个股北向持股历史"""
     sql = """
         SELECT trade_date, hold_count, hold_market_cap, hold_ratio
-        FROM stock_north_funds_daily 
-        WHERE ts_code = %s 
-        ORDER BY trade_date DESC 
+        FROM stock_north_funds_daily
+        WHERE ts_code = %s
+        ORDER BY trade_date DESC
         LIMIT %s
     """
     rows = await db.execute(sql, (code, limit))

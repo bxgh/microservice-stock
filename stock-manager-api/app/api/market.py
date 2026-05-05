@@ -7,6 +7,7 @@ from app.utils.code_utils import normalize_ts_code
 router = APIRouter()
 logger = get_logger("stock-manager.market")
 
+
 @router.get("/kline")
 async def get_kline(
     ts_code: str = Query(..., description="股票代码, 如 600519.SH"),
@@ -15,16 +16,16 @@ async def get_kline(
     limit: int = Query(200, description="返回条数", ge=1, le=5000)
 ):
     """获取日线行情 (前复权)
-    
+
     使用 v_stock_kline_forward_adj 视图，返回字段已将 adj_close 等映射为标准 close。
     """
     try:
         ts_code = normalize_ts_code(ts_code)
-        
+
         # 基础 SQL
         # 我们将 adj_xxx 映射为 xxx，让前端无感知切换
         sql = """
-            SELECT 
+            SELECT
                 trade_date,
                 adj_open as open,
                 adj_high as high,
@@ -39,19 +40,19 @@ async def get_kline(
             WHERE ts_code = %s
         """
         params = [ts_code]
-        
+
         if start_date:
             sql += " AND trade_date >= %s"
             params.append(start_date)
         if end_date:
             sql += " AND trade_date <= %s"
             params.append(end_date)
-            
+
         sql += " ORDER BY trade_date DESC LIMIT %s"
         params.append(limit)
-        
+
         rows = await db.execute(sql, tuple(params))
-        
+
         results = []
         for r in rows:
             results.append({
@@ -66,9 +67,9 @@ async def get_kline(
                 "amount": float(r[8]) if r[8] is not None else 0,
                 "adj_factor": float(r[9]) if r[9] is not None else 1.0
             })
-            
+
         return {"ts_code": ts_code, "data": results}
-        
+
     except Exception as e:
         logger.error(f"获取 K 线失败: {ts_code}, {e}")
         raise HTTPException(status_code=500, detail=str(e))

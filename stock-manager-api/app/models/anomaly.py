@@ -2,6 +2,7 @@ from datetime import date, datetime
 from typing import Optional, List, Dict, Any
 from pydantic import BaseModel, Field
 
+
 class AnomalyDerivedMetrics(BaseModel):
     trade_date: date
     ts_code: str
@@ -31,6 +32,7 @@ class AnomalyDerivedMetrics(BaseModel):
     schema_version: str = "v1.0"
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
+
 
 class AnomalySignal(BaseModel):
     id: Optional[int] = None
@@ -69,6 +71,7 @@ class AnomalySignal(BaseModel):
     schema_version: str = "v1.0"
     created_at: Optional[datetime] = None
 
+
 class AnomalyTop10(BaseModel):
     id: Optional[int] = None
     user_id: int = 1
@@ -89,6 +92,7 @@ class AnomalyTop10(BaseModel):
     key_features: Optional[Dict[str, Any]] = None
     created_at: Optional[datetime] = None
 
+
 class TagDictionary(BaseModel):
     tag_code: str
     tag_name_cn: str
@@ -100,6 +104,7 @@ class TagDictionary(BaseModel):
     tag_meta: Optional[Dict[str, Any]] = None
     created_at: Optional[datetime] = None
 
+
 class FilterProfile(BaseModel):
     profile_code: str
     profile_name: str
@@ -109,6 +114,7 @@ class FilterProfile(BaseModel):
     display_order: int = 100
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
+
 
 class MarketState(BaseModel):
     trade_date: date
@@ -121,6 +127,7 @@ class MarketState(BaseModel):
     extra: Optional[Dict[str, Any]] = None
     created_at: Optional[datetime] = None
 
+
 class AnomalyScoreWeight(BaseModel):
     version: str
     weight_key: str
@@ -129,6 +136,7 @@ class AnomalyScoreWeight(BaseModel):
     is_active: bool = False
     effective_from: Optional[date] = None
     created_at: Optional[datetime] = None
+
 
 class UserSectorPref(BaseModel):
     id: Optional[int] = None

@@ -6,15 +6,16 @@ import json
 
 logger = get_logger("stock-manager.data_audit")
 
+
 class DataAuditService:
     """数据审计日志服务"""
 
-    async def get_summaries(self, 
-                          page: int = 1, 
-                          size: int = 20, 
-                          trade_date: Optional[str] = None,
-                          data_type: Optional[str] = None,
-                          level: Optional[str] = None) -> Dict[str, Any]:
+    async def get_summaries(self,
+                            page: int = 1,
+                            size: int = 20,
+                            trade_date: Optional[str] = None,
+                            data_type: Optional[str] = None,
+                            level: Optional[str] = None) -> Dict[str, Any]:
         """查询审计汇总记录"""
         try:
             offset = (page - 1) * size
@@ -30,25 +31,25 @@ class DataAuditService:
             if level:
                 where_clauses.append("level = %s")
                 params.append(level)
-            
+
             where_sql = " AND ".join(where_clauses)
-            
+
             # Count
             count_sql = f"SELECT COUNT(*) FROM data_audit_summaries WHERE {where_sql}"
             count_res = await db.execute(count_sql, tuple(params))
             total = count_res[0][0]
-            
+
             # Query
             query_sql = f"""
                 SELECT id, data_type, target, trade_date, level, issue_count, description, created_at, updated_at
-                FROM data_audit_summaries 
+                FROM data_audit_summaries
                 WHERE {where_sql}
                 ORDER BY trade_date DESC, id DESC
                 LIMIT %s OFFSET %s
             """
             params.extend([size, offset])
             rows = await db.execute(query_sql, tuple(params))
-            
+
             items = []
             for row in rows:
                 items.append(DataAuditSummary(
@@ -62,7 +63,7 @@ class DataAuditService:
                     created_at=row[7],
                     updated_at=row[8]
                 ))
-                
+
             return {
                 "items": items,
                 "total": total,
@@ -106,18 +107,18 @@ class DataAuditService:
                 ORDER BY id ASC
             """
             rows = await db.execute(sql, (summary_id,))
-            
+
             items = []
             for row in rows:
                 context_val = row[5]
                 if isinstance(context_val, str):
                     try:
                         context_val = json.loads(context_val)
-                    except:
+                    except BaseException:
                         context_val = {}
                 elif context_val is None:
                     context_val = {}
-                    
+
                 items.append(DataAuditDetail(
                     id=row[0],
                     summary_id=row[1],
@@ -129,7 +130,9 @@ class DataAuditService:
                 ))
             return items
         except Exception as e:
-            logger.error(f"Failed to get audit details for summary {summary_id}: {e}")
+            logger.error(
+                f"Failed to get audit details for summary {summary_id}: {e}")
             raise e
+
 
 data_audit_service = DataAuditService()

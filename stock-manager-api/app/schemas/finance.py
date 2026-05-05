@@ -2,12 +2,15 @@ from pydantic import BaseModel, ConfigDict
 from typing import List, Optional
 from datetime import date
 
+
 class FinancialReportBase(BaseModel):
     ts_code: str
     report_date: date
     notice_date: Optional[date] = None
 
 # --- 资产负债表 ---
+
+
 class BalanceSheetResponse(FinancialReportBase):
     total_assets: Optional[float] = None
     total_liabilities: Optional[float] = None
@@ -28,6 +31,8 @@ class BalanceSheetResponse(FinancialReportBase):
     model_config = ConfigDict(from_attributes=True)
 
 # --- 利润表 ---
+
+
 class IncomeStatementResponse(FinancialReportBase):
     total_revenue: Optional[float] = None
     operating_revenue: Optional[float] = None
@@ -48,6 +53,8 @@ class IncomeStatementResponse(FinancialReportBase):
     model_config = ConfigDict(from_attributes=True)
 
 # --- 现金流量表 ---
+
+
 class CashFlowStatementResponse(FinancialReportBase):
     net_operating_cash_flow: Optional[float] = None
     net_investing_cash_flow: Optional[float] = None
@@ -59,6 +66,8 @@ class CashFlowStatementResponse(FinancialReportBase):
     model_config = ConfigDict(from_attributes=True)
 
 # --- 综合响应 ---
+
+
 class FullFinancialReportResponse(BaseModel):
     ts_code: str
     balance_sheets: List[BalanceSheetResponse]
@@ -66,6 +75,8 @@ class FullFinancialReportResponse(BaseModel):
     cash_flow_statements: List[CashFlowStatementResponse]
 
 # --- 财务衍生指标 ---
+
+
 class FinanceIndicatorResponse(BaseModel):
     ts_code: str
     report_date: date
@@ -79,9 +90,11 @@ class FinanceIndicatorResponse(BaseModel):
 
     model_config = ConfigDict(from_attributes=True)
 
+
 class FinancialIndicatorsListResponse(BaseModel):
     ts_code: str
     indicators: List[FinanceIndicatorResponse]
+
 
 class SyncFinanceResult(BaseModel):
     ts_code: str
@@ -90,6 +103,7 @@ class SyncFinanceResult(BaseModel):
     count_is: int
     count_cf: int
     message: str = ""
+
 
 class SyncFinanceIndicatorsResult(BaseModel):
     ts_code: str

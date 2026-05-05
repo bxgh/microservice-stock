@@ -1,0 +1,14 @@
+rules:
+  - id: PRICE_LIMIT_CHECK
+    name: "涨跌幅超限校验"
+    severity: "WARN"
+    handler: "price_limit_handler"
+    description: "校验当日 K 线的最高价/最低价是否超出理论涨跌停限制"
+    enabled: true
+
+  - id: FACTOR_RECONCILE
+    name: "复权因子对账"
+    severity: "ERROR"
+    handler: "factor_reconcile_handler"
+    description: "校验复权因子变动是否与除权除息公告一致"
+    enabled: true

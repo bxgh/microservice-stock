@@ -30,11 +30,11 @@ def set_scheduler_instance(scheduler: "TaskScheduler") -> None:
 
 class TaskScheduler:
     """任务调度器"""
-    
+
     def __init__(self, timezone: str = "Asia/Shanghai"):
         """
         初始化调度器
-        
+
         Args:
             timezone: 时区设置
         """
@@ -48,21 +48,21 @@ class TaskScheduler:
     def update_job_summary(self, job_id: str, summary: str):
         """更新任务的进度摘要 (V1.2+ 需求)"""
         self._job_summaries[job_id] = summary
-    
+
     async def start(self):
         """启动调度器"""
         if not self._started:
             self.scheduler.start()
             self._started = True
             logger.info("TaskScheduler 已启动")
-    
+
     async def stop(self):
         """停止调度器"""
         if self._started:
             self.scheduler.shutdown(wait=True)
             self._started = False
             logger.info("TaskScheduler 已停止")
-    
+
     def add_cron_job(
         self,
         func: Callable,
@@ -74,14 +74,14 @@ class TaskScheduler:
     ) -> str:
         """
         添加 cron 定时任务
-        
+
         Args:
             func: 任务函数
             job_id: 任务ID
             hour: 小时 (0-23)
             minute: 分钟 (0-59)
             second: 秒 (0-59)
-            
+
         Returns:
             任务ID
         """
@@ -89,9 +89,14 @@ class TaskScheduler:
         if self.scheduler.get_job(job_id):
             self.scheduler.remove_job(job_id)
             logger.info(f"删除已存在的任务: {job_id}")
-        
+
         try:
-            trigger = CronTrigger(hour=hour, minute=minute, second=second, timezone=self.timezone, **kwargs)
+            trigger = CronTrigger(
+                hour=hour,
+                minute=minute,
+                second=second,
+                timezone=self.timezone,
+                **kwargs)
             self.scheduler.add_job(
                 func,
                 trigger=trigger,
@@ -100,12 +105,16 @@ class TaskScheduler:
                 replace_existing=True,
                 **kwargs
             )
-            logger.info(f"添加cron任务: {job_id}, 执行时间: {hour:02d}:{minute:02d}:{second:02d}")
+            logger.info(
+                f"添加cron任务: {job_id}, 执行时间: {
+                    hour:02d}:{
+                    minute:02d}:{
+                    second:02d}")
             return job_id
         except Exception as e:
             logger.error(f"添加cron任务失败: {e}", exc_info=True)
             raise
-    
+
     def add_daily_job(
         self,
         func: Callable,
@@ -116,21 +125,26 @@ class TaskScheduler:
     ) -> str:
         """
         添加每日定时任务
-        
+
         Args:
             func: 任务函数
             hour: 小时 (0-23)
             minute: 分钟 (0-59)
             job_id: 任务ID，默认使用函数名
-            
+
         Returns:
             任务ID
         """
         if job_id is None:
             job_id = f"daily_{func.__name__}"
-        
-        return self.add_cron_job(func, job_id, hour=hour, minute=minute, **kwargs)
-    
+
+        return self.add_cron_job(
+            func,
+            job_id,
+            hour=hour,
+            minute=minute,
+            **kwargs)
+
     def add_interval_job(
         self,
         func: Callable,
@@ -142,28 +156,30 @@ class TaskScheduler:
     ) -> str:
         """
         添加间隔任务
-        
+
         Args:
             func: 任务函数
             job_id: 任务ID
             seconds: 间隔秒数
             minutes: 间隔分钟数
             hours: 间隔小时数
-            
+
         Returns:
             任务ID
         """
         total_interval = seconds + minutes * 60 + hours * 3600
-        
+
         if total_interval <= 0:
             raise ValueError("间隔时间必须大于0")
-        
+
         # 如果任务已存在，先删除
         if self.scheduler.get_job(job_id):
             self.scheduler.remove_job(job_id)
-        
+
         try:
-            trigger = IntervalTrigger(seconds=total_interval, timezone=self.timezone)
+            trigger = IntervalTrigger(
+                seconds=total_interval,
+                timezone=self.timezone)
             self.scheduler.add_job(
                 func,
                 trigger=trigger,
@@ -177,7 +193,7 @@ class TaskScheduler:
         except Exception as e:
             logger.error(f"添加间隔任务失败: {e}", exc_info=True)
             raise
-    
+
     def add_hourly_job(
         self,
         func: Callable,
@@ -187,28 +203,29 @@ class TaskScheduler:
     ) -> str:
         """
         添加每小时定时任务
-        
+
         Args:
             func: 任务函数
             minute: 分钟 (0-59)
             job_id: 任务ID
-            
+
         Returns:
             任务ID
         """
         if job_id is None:
             job_id = f"hourly_{func.__name__}"
-        
+
         # 使用 cron 表达式：每小时的第 minute 分钟
-        return self.add_cron_job(func, job_id, hour="*", minute=minute, **kwargs)
-    
+        return self.add_cron_job(
+            func, job_id, hour="*", minute=minute, **kwargs)
+
     def remove_job(self, job_id: str) -> bool:
         """
         删除任务
-        
+
         Args:
             job_id: 任务ID
-            
+
         Returns:
             是否成功删除
         """
@@ -219,7 +236,7 @@ class TaskScheduler:
         except Exception as e:
             logger.error(f"删除任务失败 {job_id}: {e}")
             return False
-    
+
     def pause_job(self, job_id: str) -> bool:
         """暂停任务"""
         try:
@@ -229,7 +246,7 @@ class TaskScheduler:
         except Exception as e:
             logger.error(f"暂停任务失败 {job_id}: {e}")
             return False
-    
+
     def resume_job(self, job_id: str) -> bool:
         """恢复任务"""
         try:
@@ -240,22 +257,27 @@ class TaskScheduler:
             logger.error(f"恢复任务失败 {job_id}: {e}")
             return False
 
-    async def run_job_now(self, job_id: str, args: tuple = None, kwargs: Dict[str, Any] = None) -> bool:
+    async def run_job_now(self,
+                          job_id: str,
+                          args: tuple = None,
+                          kwargs: Dict[str,
+                                       Any] = None) -> bool:
         """立即执行任务 (支持动态传参)"""
         job = self.scheduler.get_job(job_id)
         if not job:
             return False
-            
+
         try:
             # 获取任务函数和参数
             func = job.func
             job_args = job.args if args is None else args
             job_kwargs = job.kwargs.copy()
             if kwargs:
-                job_kwargs.update(kwargs) # 动态参数覆盖默认参数
-            
-            logger.info(f"手动触发任务执行: {job_id}, args={job_args}, kwargs={job_kwargs}")
-            
+                job_kwargs.update(kwargs)  # 动态参数覆盖默认参数
+
+            logger.info(
+                f"手动触发任务执行: {job_id}, args={job_args}, kwargs={job_kwargs}")
+
             # 定义包装器来跟踪执行状态
             async def run_and_track():
                 if not hasattr(self, "_current_running_jobs"):
@@ -275,12 +297,11 @@ class TaskScheduler:
             logger.error(f"手动触发任务失败 {job_id}: {e}")
             return False
 
-    
     def get_jobs(self) -> List[Dict[str, Any]]:
         """获取所有任务列表 (适配前端规范 V1.2)"""
         if not hasattr(self, "_current_running_jobs"):
             self._current_running_jobs = set()
-            
+
         jobs = []
         for job in self.scheduler.get_jobs():
             # 状态逻辑: 运行中 > 暂停 > 激活
@@ -289,7 +310,7 @@ class TaskScheduler:
                 status = "running"
             elif not job.next_run_time:
                 status = "paused"
-                
+
             jobs.append({
                 "id": job.id,
                 "name": job.name,
@@ -298,17 +319,18 @@ class TaskScheduler:
                 "status": status
             })
         return jobs
-    
-    async def get_job_logs(self, job_id: str, limit: int = 50) -> Dict[str, Any]:
+
+    async def get_job_logs(
+            self, job_id: str, limit: int = 50) -> Dict[str, Any]:
         """读取任务关联的最新日志并提取摘要 (适配 V1.2)"""
         log_file = "/app/logs/app.log"
         if not os.path.exists(log_file):
             log_file = "logs/app.log"
-            
+
         default_resp = {"logs": ["暂无日志记录"], "summary": "准备就绪"}
         if not os.path.exists(log_file):
             return default_resp
-            
+
         try:
             # 简单实现：读取最后 N 行并在内存中根据 job_id 简单过滤
             # 使用 asyncio.create_subprocess_exec 避免阻塞
@@ -318,21 +340,22 @@ class TaskScheduler:
                 stderr=asyncio.subprocess.PIPE
             )
             stdout, stderr = await proc.communicate()
-            
+
             if proc.returncode != 0:
                 logger.error(f"读取日志失败: {stderr.decode()}")
                 return default_resp
 
             lines = stdout.decode().splitlines()
-            
+
             # 过滤属于该任务的日志
-            filtered = [l for l in lines if job_id in l or "scheduler" in l.lower()]
+            filtered = [
+                l for l in lines if job_id in l or "scheduler" in l.lower()]
             final_logs = filtered[-limit:] if filtered else lines[-limit:]
-            
+
             # 提取摘要
             # 1. 优先使用手动设置的摘要
             summary = self._job_summaries.get(job_id)
-            
+
             # 2. 从最后一条 JSON 日志中提取 message 作为摘要
             if not summary and final_logs:
                 last_line = final_logs[-1]
@@ -341,7 +364,7 @@ class TaskScheduler:
                         import json
                         log_data = json.loads(last_line)
                         summary = log_data.get("message", "运行中...")
-                    except:
+                    except BaseException:
                         summary = last_line
                 else:
                     summary = last_line
@@ -358,9 +381,11 @@ class TaskScheduler:
         job = self.scheduler.get_job(job_id)
         if not job:
             return None
-        
+
         status = "active"
-        if hasattr(self, "_current_running_jobs") and job_id in self._current_running_jobs:
+        if hasattr(
+                self,
+                "_current_running_jobs") and job_id in self._current_running_jobs:
             status = "running"
         elif not job.next_run_time:
             status = "paused"
@@ -368,13 +393,15 @@ class TaskScheduler:
         return {
             "id": job.id,
             "name": job.name,
-            "next_run_time": str(job.next_run_time) if job.next_run_time else None,
-            "trigger": str(job.trigger),
+            "next_run_time": str(
+                job.next_run_time) if job.next_run_time else None,
+            "trigger": str(
+                job.trigger),
             "func": job.func.__name__,
             "status": status,
             "pending": job.pending,
         }
-    
+
     @property
     def is_running(self) -> bool:
         """调度器是否正在运行"""

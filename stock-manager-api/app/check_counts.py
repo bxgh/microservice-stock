@@ -1,6 +1,7 @@
 from app.utils.database import db
 import asyncio
 
+
 async def check():
     await db.connect()
     r1 = await db.execute("SELECT COUNT(*) FROM stock_restricted_release")

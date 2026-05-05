@@ -5,6 +5,7 @@ from app.models.data_audit import DataAuditResponse, DataAuditSummary, DataAudit
 
 router = APIRouter()
 
+
 @router.get("", response_model=DataAuditResponse)
 async def list_data_audits(
     page: int = Query(1, ge=1),
@@ -18,14 +19,15 @@ async def list_data_audits(
     """
     try:
         return await data_audit_service.get_summaries(
-            page=page, 
-            size=size, 
+            page=page,
+            size=size,
             trade_date=trade_date,
             data_type=data_type,
             level=level
         )
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
 
 @router.get("/{id}", response_model=DataAuditSummary)
 async def get_data_audit_summary(
@@ -37,12 +39,15 @@ async def get_data_audit_summary(
     try:
         result = await data_audit_service.get_summary_by_id(id)
         if not result:
-            raise HTTPException(status_code=404, detail="Audit summary not found")
+            raise HTTPException(
+                status_code=404,
+                detail="Audit summary not found")
         return result
     except HTTPException:
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
 
 @router.get("/{id}/details", response_model=DataAuditDetailResponse)
 async def get_data_audit_details(
@@ -55,8 +60,10 @@ async def get_data_audit_details(
         # Check if exists first
         summary = await data_audit_service.get_summary_by_id(id)
         if not summary:
-            raise HTTPException(status_code=404, detail="Audit summary not found")
-            
+            raise HTTPException(
+                status_code=404,
+                detail="Audit summary not found")
+
         details = await data_audit_service.get_details(id)
         return {"items": details}
     except HTTPException:

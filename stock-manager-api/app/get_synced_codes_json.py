@@ -1,9 +1,10 @@
+import json
+from app.utils.database import db
 import asyncio
 import os
 import sys
 sys.path.append('.')
-from app.utils.database import db
-import json
+
 
 async def main():
     try:

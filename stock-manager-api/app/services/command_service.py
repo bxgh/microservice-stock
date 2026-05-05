@@ -7,11 +7,13 @@ from app.services.scheduler_proxy import SchedulerProxyService
 
 logger = get_logger("stock-manager.command_service")
 
+
 class CommandService:
     def __init__(self):
         self.scheduler_proxy = SchedulerProxyService()
 
-    async def create_command(self, task_id: str, params: Dict[str, Any], request_id: str) -> Dict[str, Any]:
+    async def create_command(
+            self, task_id: str, params: Dict[str, Any], request_id: str) -> Dict[str, Any]:
         """创建异步命令"""
         try:
             params_json = json.dumps(params)
@@ -22,11 +24,11 @@ class CommandService:
             created_at = datetime.datetime.now()
             # MySQL Connector (aiomysql) uses %s
             await db.execute(sql, (task_id, params_json, 'PENDING', request_id, created_at))
-            
+
             # 获取刚插入的 ID
             id_res = await db.execute("SELECT LAST_INSERT_ID()")
             command_id = id_res[0][0]
-            
+
             # 异步触发执行 (简单起见，这里直接调用，后续可改为真正的后台队列)
             # 注意：在 FastAPI 中可以通过 BackgroundTasks 触发，或者在这里简单 await
             # 为了符合 PENDING -> RUNNING 的 spec，我们在 service 层做状态转换
@@ -45,15 +47,15 @@ class CommandService:
         rows = await db.execute(sql, (command_id,))
         if not rows:
             return None
-        
+
         row = rows[0]
         params_val = row[7]
         if isinstance(params_val, str):
             try:
                 params_val = json.loads(params_val)
-            except:
+            except BaseException:
                 params_val = {}
-                
+
         return {
             "id": row[0],
             "task_id": row[1],
@@ -62,8 +64,7 @@ class CommandService:
             "executed_at": row[4].strftime("%Y-%m-%dT%H:%M:%S") if row[4] else None,
             "finished_at": row[5].strftime("%Y-%m-%dT%H:%M:%S") if row[5] else None,
             "result": row[6],
-            "params": params_val
-        }
+            "params": params_val}
 
     async def list_commands(self, limit: int = 20) -> List[Dict[str, Any]]:
         """获取命令历史"""

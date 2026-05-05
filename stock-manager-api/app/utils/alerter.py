@@ -8,13 +8,14 @@ from app.config import settings
 
 logger = logging.getLogger("stock-manager.alerter")
 
+
 class Alerter:
     """系统告警器"""
-    
+
     LEVELS = {"DEBUG": 0, "INFO": 1, "WARN": 2, "ERROR": 3, "CRITICAL": 4}
-    
+
     _instance = None
-    _dedup_cache = {} # 简单内存防抖
+    _dedup_cache = {}  # 简单内存防抖
 
     def __new__(cls):
         if cls._instance is None:
@@ -56,9 +57,10 @@ class Alerter:
     async def _send_email(self, level, title, context):
         """异步发送邮件"""
         subject = f"[{level}][stock-system] {title}"
-        
+
         # 渲染正文
-        ctx_str = "\n".join([f"- {k}: {v}" for k, v in (context or {}).items()])
+        ctx_str = "\n".join(
+            [f"- {k}: {v}" for k, v in (context or {}).items()])
         body = f"""
 股票调度系统告警通知
 ---------------------------------------
@@ -73,7 +75,7 @@ class Alerter:
 ---------------------------------------
 (自动发送，请勿回复)
 """
-        
+
         msg = MIMEText(body, "plain", "utf-8")
         msg["Subject"] = subject
         msg["From"] = settings.SMTP_USER
@@ -93,6 +95,7 @@ class Alerter:
             logger.info(f"告警邮件发送成功: {title}")
         except Exception as e:
             logger.error(f"告警邮件发送失败: {e}")
+
 
 # 全局单例
 alerter = Alerter()

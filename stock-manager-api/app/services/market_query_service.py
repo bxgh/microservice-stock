@@ -5,8 +5,10 @@ from app.utils.logger import get_logger
 
 logger = get_logger("stock-manager.market_query")
 
+
 class MarketQueryService:
-    async def get_l1_overview(self, target_date: str = None) -> Optional[Dict[str, Any]]:
+    async def get_l1_overview(
+            self, target_date: str = None) -> Optional[Dict[str, Any]]:
         """获取 L1 市场全景数据"""
         try:
             if not target_date:
@@ -14,34 +16,64 @@ class MarketQueryService:
                 sql_latest = "SELECT MAX(trade_date) FROM ads_l1_market_overview"
                 res = await db.execute(sql_latest)
                 target_date = str(res[0][0]) if res and res[0][0] else None
-            
+
             logger.info(f"Fetching L1 overview for date: {target_date}")
-            
+
             if not target_date:
                 return None
 
             # 1. 获取主记录 (使用显式列名，确保映射正确)
             columns = [
-                'trade_date', 'idx_sh_close', 'idx_sh_pct', 'idx_sz_close', 'idx_sz_pct',
-                'idx_cyb_close', 'idx_cyb_pct', 'idx_kc50_close', 'idx_kc50_pct', 'idx_bz50_close',
-                'idx_bz50_pct', 'idx_hs300_close', 'idx_hs300_pct', 'idx_zz500_close', 'idx_zz500_pct',
-                'idx_zz1000_close', 'idx_zz1000_pct', 'idx_zz2000_close', 'idx_zz2000_pct',
-                'idx_winda_close', 'idx_winda_pct', 'turnover_total', 'turnover_ma5', 'turnover_ma20',
-                'turnover_pct_vs_ma20', 'turnover_pctile_1y', 'up_count', 'down_count', 'flat_count',
-                'up_down_ratio', 'limit_up_count', 'limit_down_count', 'blast_count', 'lian_count',
-                'max_board_height', 'high_60d_count', 'low_60d_count', 'market_breadth', 'market_regime'
-            ]
+                'trade_date',
+                'idx_sh_close',
+                'idx_sh_pct',
+                'idx_sz_close',
+                'idx_sz_pct',
+                'idx_cyb_close',
+                'idx_cyb_pct',
+                'idx_kc50_close',
+                'idx_kc50_pct',
+                'idx_bz50_close',
+                'idx_bz50_pct',
+                'idx_hs300_close',
+                'idx_hs300_pct',
+                'idx_zz500_close',
+                'idx_zz500_pct',
+                'idx_zz1000_close',
+                'idx_zz1000_pct',
+                'idx_zz2000_close',
+                'idx_zz2000_pct',
+                'idx_winda_close',
+                'idx_winda_pct',
+                'turnover_total',
+                'turnover_ma5',
+                'turnover_ma20',
+                'turnover_pct_vs_ma20',
+                'turnover_pctile_1y',
+                'up_count',
+                'down_count',
+                'flat_count',
+                'up_down_ratio',
+                'limit_up_count',
+                'limit_down_count',
+                'blast_count',
+                'lian_count',
+                'max_board_height',
+                'high_60d_count',
+                'low_60d_count',
+                'market_breadth',
+                'market_regime']
             col_str = ", ".join(columns)
             sql_main = f"SELECT {col_str} FROM ads_l1_market_overview WHERE trade_date = %s"
             rows = await db.execute(sql_main, (target_date,))
             if not rows:
                 return None
-            
+
             data = dict(zip(columns, rows[0]))
 
             # 2. 获取核心指数列表 (从 ODS 同步)
             sql_indices = """
-                SELECT b.name, d.close, d.pct_chg 
+                SELECT b.name, d.close, d.pct_chg
                 FROM ods_index_daily d
                 JOIN index_basic b ON d.ts_code = b.ts_code
                 WHERE d.trade_date = %s AND b.is_core = 1
@@ -55,7 +87,7 @@ class MarketQueryService:
                     "name": ir[0],
                     "close": f"{float(ir[1]):,.2f}" if ir[1] is not None else "-",
                     "pct": pct,
-                    "pct_display": f"{pct*100:+.2f}%"
+                    "pct_display": f"{pct * 100:+.2f}%"
                 })
 
             # 3. 格式化数据 (增加空值处理)
@@ -74,7 +106,7 @@ class MarketQueryService:
             turnover_val = safe_float(data.get('turnover_total')) / 1e12
             ma5 = safe_float(data.get('turnover_ma5'))
             ma20 = safe_float(data.get('turnover_ma20'))
-            
+
             regime_map = {
                 "broad_up": {"label": "普涨行情", "desc": "市场广度极高，赚钱效应显著。"},
                 "broad_down": {"label": "普跌行情", "desc": "市场情绪低迷，风险偏好收缩。"},
@@ -83,7 +115,7 @@ class MarketQueryService:
                 "normal": {"label": "常规震荡", "desc": "市场波动率正常，无极值表现。"}
             }
             regime_key = data.get('market_regime', 'normal')
-            
+
             # 计算百分比变化
             vs_ma5 = "-"
             vs_ma5_color = "neutral"
@@ -108,7 +140,7 @@ class MarketQueryService:
                     "vs_ma5_color": vs_ma5_color,
                     "vs_ma20": vs_ma20,
                     "vs_ma20_color": vs_ma20_color,
-                    "pctile": f"{safe_float(data.get('turnover_pctile_1y'))*100:.1f}%"
+                    "pctile": f"{safe_float(data.get('turnover_pctile_1y')) * 100:.1f}%"
                 },
                 "breadth": {
                     "up": safe_int(data.get('up_count')),

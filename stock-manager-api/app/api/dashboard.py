@@ -4,6 +4,7 @@ from app.services.dashboard_service import DashboardService
 router = APIRouter()
 dashboard_service = DashboardService()
 
+
 @router.get("/overview")
 async def get_overview():
     """获取仪表盘概览"""

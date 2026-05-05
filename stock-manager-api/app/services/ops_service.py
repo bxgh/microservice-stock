@@ -5,23 +5,28 @@ from app.utils.logger import get_logger
 
 logger = get_logger("stock-manager.ops")
 
+
 class OpsService:
     """运维服务"""
-    
+
     async def get_sync_freshness(self) -> Dict[str, Any]:
         """获取数据时效性指标"""
         try:
             sql = "SELECT MAX(created_at) FROM stock_kline_daily"
             res = await db.execute(sql)
             last_sync_time = res[0][0] if res and res[0][0] else None
-            
+
             if not last_sync_time:
-                return {"lastSyncTime": None, "lagMinutes": -1, "status": "critical"}
-            
+                return {
+                    "lastSyncTime": None,
+                    "lagMinutes": -1,
+                    "status": "critical"}
+
             now = datetime.datetime.now()
             lag = int((now - last_sync_time).total_seconds() / 60)
-            status = "normal" if lag <= 30 else ("warning" if lag <= 120 else "critical")
-            
+            status = "normal" if lag <= 30 else (
+                "warning" if lag <= 120 else "critical")
+
             return {
                 "lastSyncTime": last_sync_time.strftime("%Y-%m-%d %H:%M:%S"),
                 "lagMinutes": lag,
@@ -31,23 +36,24 @@ class OpsService:
             logger.error(f"Freshness check 异常: {e}")
             return {"error": str(e)}
 
-    async def get_adjust_factor_by_date(self, date: str = None) -> Dict[str, Any]:
+    async def get_adjust_factor_by_date(
+            self, date: str = None) -> Dict[str, Any]:
         """获取指定日期的复权因子数据"""
         try:
             # 如果没有指定日期，使用今天
             if not date:
                 date = datetime.date.today().strftime("%Y-%m-%d")
-            
+
             # 查询指定日期的复权因子数量
             sql = "SELECT COUNT(DISTINCT ts_code) FROM stock_adjust_factor WHERE adjust_date = %s"
             res = await db.execute(sql, (date,))
             count = res[0][0] if res and res[0] else 0
-            
+
             # 获取部分股票代码示例
             sql_codes = "SELECT DISTINCT ts_code FROM stock_adjust_factor WHERE adjust_date = %s LIMIT 10"
             codes_res = await db.execute(sql_codes, (date,))
             codes = [row[0] for row in codes_res] if codes_res else []
-            
+
             return {
                 "date": date,
                 "count": count,
@@ -56,9 +62,14 @@ class OpsService:
         except Exception as e:
             logger.error(f"获取复权因子数据异常: {e}")
             return {"date": date, "count": 0, "error": str(e)}
-    async def remediate_data(self, date: str, data_type: str = "kline", scope: str = "incremental") -> Dict[str, Any]:
+
+    async def remediate_data(self,
+                             date: str,
+                             data_type: str = "kline",
+                             scope: str = "incremental") -> Dict[str,
+                                                                 Any]:
         """触发指定日期的数据补偿
-        
+
         Args:
             date: 日期 YYYY-MM-DD
             data_type: 数据类型，目前仅支持 kline
@@ -86,27 +97,28 @@ class OpsService:
         try:
             if not date:
                 date = datetime.date.today().strftime("%Y-%m-%d")
-            
+
             # 1. 统计总拒绝数
             sql_count = "SELECT COUNT(*) FROM staging_rejected WHERE trade_date = %s"
             res_count = await db.execute(sql_count, (date,))
             total_rejected = res_count[0][0] if res_count else 0
-            
+
             # 2. 按原因分布统计
             sql_dist = """
-                SELECT reject_reason, COUNT(*) as count 
-                FROM staging_rejected 
-                WHERE trade_date = %s 
+                SELECT reject_reason, COUNT(*) as count
+                FROM staging_rejected
+                WHERE trade_date = %s
                 GROUP BY reject_reason
             """
             res_dist = await db.execute(sql_dist, (date,))
-            distribution = {row[0]: row[1] for row in res_dist} if res_dist else {}
-            
+            distribution = {row[0]: row[1]
+                            for row in res_dist} if res_dist else {}
+
             # 3. 获取前 20 条详细信息
             sql_details = """
-                SELECT ts_code, reject_reason, raw_data 
-                FROM staging_rejected 
-                WHERE trade_date = %s 
+                SELECT ts_code, reject_reason, raw_data
+                FROM staging_rejected
+                WHERE trade_date = %s
                 LIMIT 20
             """
             res_details = await db.execute(sql_details, (date,))
@@ -117,7 +129,7 @@ class OpsService:
                     "reason": row[1],
                     "raw": row[2]
                 })
-                
+
             return {
                 "date": date,
                 "total_rejected": total_rejected,
