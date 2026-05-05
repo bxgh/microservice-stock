@@ -16,6 +16,40 @@
 | 数据频率 | T+0 盘后（17:00 后批量计算）|
 | 版本 | 详见各章节文档 |
 
+## 0.1 代码仓库
+
+| 角色 | 仓库 / 路径 | 部署目标 |
+|---|---|---|
+| 数据采集 | `bxgh/microservice-stock` | 腾讯云 |
+| 小程序后端 API(网关) | `bxgh/microservice-stock` 的 `wxch-gateway/` | 腾讯云(同仓部署) |
+| 内网计算 + MySQL/CK 双写 | `bxgh/microservice-stock-ck` | 内网服务器(16C / 64G / 160G SSD) |
+| 小程序前端代码 | `bxgh/microstock-taro` | 微信开放平台 |
+
+> 主分支约定、服务器地址、SSH 配置、密钥**不录入 project knowledge**,见各仓 README / 内部运维文档。
+
+**仓间关系**:两仓为**独立代码基线**,不存在代码同步关系,仅通过数据通道交互。
+
+## 0.2 跨网数据流
+
+```
+[腾讯云 microservice-stock]
+   采集 ods_*(Tushare / akshare / 长桥)
+        │
+        ▼  跨网同步(SLA < 5 min)
+[内网 microservice-stock-ck]
+   计算 dwd_* / ads_* / app_*
+   双写 MySQL + ClickHouse
+        │
+        ▼  双写回流到云端 MySQL
+[腾讯云 microservice-stock / wxch-gateway]
+   暴露 HTTP API
+        │
+        ▼
+[微信小程序前端]
+```
+
+调度时点见第 4 节。SLA / 死线见异动管线 v1.1(第 5 章 / 横切方案)。
+
 ## 1. 技术栈
 
 | 层 | 选型 | 备注 |
@@ -224,6 +258,12 @@ DDL 规则：所有 DDL 进 migrations/ 目录，使用 Alembic 或独立 SQL �
 
 **状态**：✅ 设计已交付（终版） / 🚧 待开发
 
+- **跨仓字段契约**:
+  - `ods_*` 表结构由云端仓 `microservice-stock` 定义,内网仓 `microservice-stock-ck` 消费
+  - `ads_*` / `app_*` 表由内网仓产出,云端 `wxch-gateway` 消费
+  - 任一仓修改跨仓表 schema(字段增删 / 类型变更 / 单位变更),必须在 `IMPLEMENTATION_FEEDBACK.md` 标注「跨仓 schema 变更:仓 A → 仓 B」并通知对侧
+  - 字段命名 / 单位规范见第 2 节,跨仓不允许各自约定
+
 ### 第 9 章 · 行情追溯与假设验证（观察点系统）
 
 **核心表**：`obs_observation_point`、`obs_hypothesis`、`obs_target_pool`（多对多绑定）、`obs_verification_window`、`obs_verification_result`
@@ -331,3 +371,4 @@ DDL 规则：所有 DDL 进 migrations/ 目录，使用 Alembic 或独立 SQL �
 | 日期 | 版本 | 变更 | 作者 |
 |---|---|---|---|
 | 2026-05-05 | v0.1 | 初稿，基于过去 17 天对话整合 | Claude 协助 |
+| 2026-05-05 | v0.2 | 新增 0.1 代码仓库 / 0.2 跨网数据流;第 8 节补跨仓字段契约 | Claude 协助 |
