@@ -2,6 +2,18 @@
 
 本项目文档统一存放在 `docs/` 目录下，按以下分类进行组织：
 
+## 🤖 AI 上下文知识库 (AI Context)
+从 `.agent/context/` 迁入的核心参考文档，供 AI 助手和开发者快速检索。
+
+| 文件 | 用途 | 优先级 |
+|------|------|--------|
+| [architecture.md](architecture.md) | 项目架构、服务职责、技术栈 | 🔴 必读 |
+| [api-endpoints.md](api-endpoints.md) | API 端点清单 | 🔴 必读 |
+| [data-sources.md](data-sources.md) | 数据源特性与异常处理 | 🟡 按需 |
+| [troubleshooting.md](troubleshooting.md) | 故障排查手册 | 🟡 按需 |
+| [code-templates.md](code-templates.md) | 代码模板与规范 | 🟡 按需 |
+| [performance.md](performance.md) | 性能基线与监控 | 🟢 参考 |
+
 ## 🏗️ 架构设计 (Architecture)
 包含系统整体架构、数据获取架构及核心设计决策。
 - [系统整体架构设计](architecture/架构设计.md)
@@ -31,4 +43,4 @@
 - [E5: 业务规则校验](design/数据管线/历史数据校验体系/E5_业务规则校验.md)
 
 ---
-*最后更新: 2025-12-21*
+*最后更新: 2026-05-06*
