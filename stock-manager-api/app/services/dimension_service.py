@@ -36,31 +36,8 @@ class DimensionService:
         suspend_res = await db.execute(sql_suspend, (trade_date,))
         suspended_codes = {r[0] for r in suspend_res}
 
-        # 3. 准备写入数据
-        trade_date_obj = datetime.datetime.strptime(
-            trade_date, "%Y-%m-%d").date()
-        insert_args = []
-        for ts_code, name, list_date, market in basic_info:
-            is_st = 1 if 'ST' in name.upper() else 0
-            is_suspended = 1 if ts_code in suspended_codes else 0
-
-            # 判断新股 (上市 N 日内，此处定义为 5 个交易日，简化为 7 个自然日)
-            is_new = 1 if list_date and (
-                trade_date_obj - list_date).days <= 7 else 0
-
-            # 状态枚举
-            status = 'NORMAL'
-            if is_suspended:
-                status = 'SUSPEND'
-            elif is_st:
-                status = 'ST'
-            elif is_new:
-                status = 'NEW'
-
-            insert_args.append((
-                ts_code, trade_date, status, is_st, is_suspended, is_new
-            ))
-
+        # 3. 准备写入数据 (分批处理以节省内存，每批 500 条)
+        trade_date_obj = datetime.datetime.strptime(trade_date, "%Y-%m-%d").date()
         query = """
             INSERT INTO dim_stock_status (
                 ts_code, trade_date, status, is_st, is_suspended, is_new
@@ -69,8 +46,30 @@ class DimensionService:
             status=VALUES(status), is_st=VALUES(is_st),
             is_suspended=VALUES(is_suspended), is_new=VALUES(is_new)
         """
-        await db.execute_many(query, insert_args)
-        logger.info(f"股票状态同步完成: {len(insert_args)} 条")
+        total_synced = 0
+        batch_size = 500
+        for i in range(0, len(basic_info), batch_size):
+            batch = basic_info[i:i+batch_size]
+            insert_args = []
+            for ts_code, name, list_date, market in batch:
+                is_st = 1 if 'ST' in name.upper() else 0
+                is_suspended = 1 if ts_code in suspended_codes else 0
+                is_new = 1 if list_date and (trade_date_obj - list_date).days <= 7 else 0
+
+                status = 'NORMAL'
+                if is_suspended: status = 'SUSPEND'
+                elif is_st: status = 'ST'
+                elif is_new: status = 'NEW'
+
+                insert_args.append((ts_code, trade_date, status, is_st, is_suspended, is_new))
+
+            if insert_args:
+                await db.execute_many(query, insert_args)
+                total_synced += len(insert_args)
+
+        logger.info(f"股票状态同步完成: {total_synced} 条")
+        return total_synced
+
 
     async def sync_corporate_actions(self, ts_code: str = ''):
         """同步除权除息流水 (Story E5-S1)"""
@@ -186,6 +185,7 @@ class DimensionService:
         """
         await db.execute_many(query, insert_args)
         logger.info(f"涨跌幅限制生成完成: {len(insert_args)} 条")
+        return len(insert_args)
 
 
 dimension_service = DimensionService()

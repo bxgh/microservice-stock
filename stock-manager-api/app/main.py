@@ -5,26 +5,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI, Request, HTTPException
 from fastapi.responses import JSONResponse
 
-from app.api import (
-    metadata,
-    audit,
-    scheduler,
-    ops,
-    system,
-    dashboard,
-    market_dashboard,
-    shareholders,
-    chips,
-    game,
-    information,
-    commands,
-    task_commands,
-    data_audit,
-    suspension,
-    monitor,
-    finance,
-    dq,
-    backfill)
+from app.api import metadata, audit, scheduler, ops, system, dashboard, market_dashboard, shareholders, chips, game, information, commands, task_commands, data_audit, suspension, monitor, finance, dq, backfill
 from app.api.market import router as market_router
 
 from app.utils.logger import setup_logger, request_id_var
@@ -69,6 +50,14 @@ async def lifespan(app: FastAPI):
             job_id="readiness_prober"
         )
 
+        # 1.3 注册股票基础信息同步任务 (每天 08:30)
+        scheduler.add_daily_job(
+            job_funcs.daily_stock_basic_sync_job,
+            hour=8,
+            minute=30,
+            job_id="daily_stock_basic_sync"
+        )
+
         # 2. 注册早盘停牌数据同步任务 (每天 09:15)
         scheduler.add_daily_job(
             job_funcs.daily_suspension_morning_sync_job,
@@ -101,12 +90,20 @@ async def lifespan(app: FastAPI):
             minute=30
         )
 
-        # 6. 注册市场全景数据同步任务 (每日 19:30)
+        # 6. 注册市场全景数据同步任务 (每日 19:00)
         scheduler.add_daily_job(
             job_funcs.daily_market_overview_sync_job,
             job_id="daily_market_overview_sync",
             hour=19,
-            minute=30
+            minute=0
+        )
+
+        # 6.1 注册每日基金/ETF同步任务 (每日 16:15)
+        scheduler.add_daily_job(
+            job_funcs.daily_fund_sync_job,
+            job_id="daily_fund_sync",
+            hour=16,
+            minute=15
         )
 
         # 7. 注册机构评级同步任务 (每日 03:00)
@@ -133,12 +130,12 @@ async def lifespan(app: FastAPI):
             minute=30
         )
 
-        # 10. 注册业务规则校验任务 (每日 20:30)
+        # 10. 注册业务规则校验任务 (每日 20:00)
         scheduler.add_daily_job(
             job_funcs.daily_business_rule_check_job,
             job_id="daily_business_rule_check",
             hour=20,
-            minute=30
+            minute=0
         )
 
         # 11. 注册复权因子对账任务 (每周日 05:00)

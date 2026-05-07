@@ -27,7 +27,7 @@ async def price_limit_handler(rule: Any, context: Dict[str, Any]):
     """涨跌幅超限校验逻辑"""
     trade_date = context.get("trade_date")
     if not trade_date:
-        return
+        return {"checked_count": 0, "rejected_count": 0}
 
     sql = """
         SELECT k.ts_code, k.open, k.high, k.low, k.close, k.pre_close,
@@ -38,7 +38,7 @@ async def price_limit_handler(rule: Any, context: Dict[str, Any]):
     """
     records = await db.execute(sql, (trade_date,))
     if not records:
-        return
+        return {"checked_count": 0, "rejected_count": 0}
 
     issues = []
     for row in records:
@@ -55,15 +55,17 @@ async def price_limit_handler(rule: Any, context: Dict[str, Any]):
                 "trade_date": trade_date,
                 "rule_id": rule.id,
                 "severity": rule.severity,
-                "finding_msg": f"涨跌幅超限: H={h}, L={l}, 理论区间=[{theo_down}, {theo_up}], 规则={rule_desc}",
-                "diff_data": {
-                    "ohlc": {"o": float(o), "h": float(h), "l": float(l), "c": float(c)},
-                    "pre_close": float(pre_c),
-                    "limits": {"up": theo_up, "down": theo_down}
-                }
+                "finding_msg": f"涨跌幅超限: H={h}, L={l}, 理论区间=[{theo_down}, {theo_up}]",
+                "diff_data": {"h": float(h), "l": float(l), "up": theo_up, "down": theo_down}
             })
+            # 如果异常过多，分批写入，防止 issues 列表过大
+            if len(issues) >= 100:
+                await _log_findings(issues)
+                issues = []
 
-    await _log_findings(issues)
+    if issues:
+        await _log_findings(issues)
+    return {"checked_count": len(records), "rejected_count": len(issues)}
 
 
 async def factor_reconcile_handler(rule: Any, context: Dict[str, Any]):

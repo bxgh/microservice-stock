@@ -5,7 +5,7 @@ import socket
 from typing import Dict, Any
 from app.utils.database import db
 from app.utils.alerter import alerter
-from app.common.scheduler_decorators import trading_day_only
+from app.common.scheduler_decorators import trading_day_only, notify_result
 
 logger = logging.getLogger("stock-manager.system-jobs")
 
@@ -129,13 +129,14 @@ async def readiness_prober_job() -> Dict[str, Any]:
             _ready_cache[biz_date_str] = "ALL_READY"
             logger.info(f"【探测器】当日所有核心数据已就绪: {biz_date_str}")
 
-        return {"status": "success", "details": results}
+        return {"status": "success", "探测详情": results}
 
     except Exception as e:
         logger.error(f"就绪探测器致命异常: {e}")
         return {"status": "error", "message": str(e)}
 
 
+@notify_result
 @trading_day_only()
 async def daily_audit_job() -> Dict[str, Any]:
     """日终审计任务 (23:30)"""
@@ -162,7 +163,7 @@ async def daily_audit_job() -> Dict[str, Any]:
             })
             return {"status": "failed", "missing": missing}
 
-        return {"status": "success", "message": "All core data ready"}
+        return {"status": "success", "message": "所有核心数据已就绪"}
     except Exception as e:
         logger.error(f"日终审计异常: {e}")
         return {"status": "error", "message": str(e)}
@@ -190,6 +191,7 @@ async def backfill_processor_job():
         return {"status": "error", "message": str(e)}
 
 
+@notify_result
 @trading_day_only()
 async def daily_dq_report_job() -> Dict[str, Any]:
     """每日数据质量报告任务 (09:05)"""
@@ -222,7 +224,7 @@ async def daily_dq_report_job() -> Dict[str, Any]:
                 **metrics
             })
 
-        return {"status": "success", "date": target_date, "metrics": metrics}
+        return {"status": "success", "日期": target_date, "质量指标": metrics}
     except Exception as e:
         logger.error(f"DQ 报告任务异常: {e}")
-        return {"status": "error", "message": str(e)}
+        return {"status": "error", "message": f"计算失败: {str(e)}"}

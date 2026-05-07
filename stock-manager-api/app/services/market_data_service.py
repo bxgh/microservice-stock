@@ -18,6 +18,98 @@ class MarketDataService:
     def __init__(self):
         self.tushare_url = settings.TUSHARE_API_URL
         self.akshare_url = settings.AKSHARE_API_URL
+        self._valid_codes_cache = None
+
+    async def _get_valid_a_share_codes(self) -> List[str]:
+        """从数据库获取当前有效的核心 A 股代码列表 (缓存 1 小时)"""
+        if self._valid_codes_cache:
+            return self._valid_codes_cache
+        
+        sql = """
+            SELECT ts_code FROM stock_basic_info 
+            WHERE list_status = 'L' 
+            AND market IN ('主板', '创业板', '科创板', '中小板')
+        """
+        rows = await db.execute(sql)
+        self._valid_codes_cache = [r[0] for r in rows]
+        return self._valid_codes_cache
+
+    async def sync_stock_basic(self):
+        """按交易所同步核心 A 股基础信息，彻底规避 5000 条限制"""
+        exchanges = ['SSE', 'SZSE']
+        statuses = ['L', 'D', 'P']
+        total_synced = 0
+        
+        # 预定义 SQL
+        query = """
+            INSERT INTO stock_basic_info (
+                ts_code, symbol, name, area, industry, market, list_status, list_date, delist_date
+            ) VALUES (
+                %s, %s, %s, %s, %s, %s, %s, %s, %s
+            ) ON DUPLICATE KEY UPDATE
+                name=VALUES(name),
+                area=VALUES(area),
+                industry=VALUES(industry),
+                market=VALUES(market),
+                list_status=VALUES(list_status),
+                list_date=VALUES(list_date),
+                delist_date=VALUES(delist_date)
+        """
+
+        for status in statuses:
+            for exchange in exchanges:
+                try:
+                    logger.info(f"正在同步: 状态={status} | 交易所={exchange}")
+                    url = f"{self.tushare_url}/api/v1/stock/basic"
+                    params = {"list_status": status, "exchange": exchange}
+                    async with httpx.AsyncClient(timeout=60.0) as client:
+                        resp = await client.get(url, params=params)
+                        resp.raise_for_status()
+                        data = resp.json().get("data", [])
+
+                    if not data:
+                        continue
+
+                    args = []
+                    for i in data:
+                        code = i.get("ts_code", "")
+                        # 推断市场类型
+                        market = None
+                        if code.startswith(('600', '601', '603', '605')): market = '主板'
+                        elif code.startswith(('000', '001', '002', '003')): market = '主板'
+                        elif code.startswith('300'): market = '创业板'
+                        elif code.startswith('688'): market = '科创板'
+                        
+                        if not market: continue
+
+                        ld = i.get("list_date")
+                        list_date = f"{ld[:4]}-{ld[4:6]}-{ld[6:8]}" if ld and len(ld) == 8 else None
+                        dd = i.get("delist_date")
+                        delist_date = f"{dd[:4]}-{dd[4:6]}-{dd[6:8]}" if dd and len(dd) == 8 else None
+
+                        args.append((
+                            code, i.get("symbol"), i.get("name"), i.get("area"),
+                            i.get("industry"), market, status, list_date, delist_date
+                        ))
+
+                    if args:
+                        await db.execute_many(query, args)
+                        total_synced += len(args)
+                        logger.info(f"交易所 {exchange}({status}) 同步完成: {len(args)} 条")
+                        
+                except Exception as e:
+                    logger.error(f"同步交易所 {exchange} 失败: {e}")
+                    continue
+        
+        # 物理清理冗余数据
+        try:
+            cleanup_sql = "DELETE FROM stock_basic_info WHERE market NOT IN ('主板', '创业板', '科创板')"
+            await db.execute(cleanup_sql)
+            logger.info("物理清理非核心标的完成")
+        except Exception as e:
+            logger.error(f"清理异常: {e}")
+
+        return total_synced
 
     async def sync_index_basic(self, market: str = ''):
         """从 Tushare 同步指数基础信息到 index_basic"""
@@ -99,23 +191,30 @@ class MarketDataService:
                 data = resp.json().get("data", [])
 
             if data:
-                # 写入数据库逻辑...
-                await self._save_stock_daily_to_db(data)
-                logger.info(f"Tushare 同步股票日线完成: {len(data)} 条")
+                # 1. 过滤掉非核心 A 股标的
+                valid_codes = set(await self._get_valid_a_share_codes())
+                
+                # 2. 分批处理以节省内存 (每 1000 条处理一次)
+                batch_size = 1000
+                total_synced = 0
+                for i in range(0, len(data), batch_size):
+                    batch = [item for item in data[i:i+batch_size] if item.get("ts_code") in valid_codes]
+                    if batch:
+                        await self._save_stock_daily_to_db(batch)
+                        total_synced += len(batch)
+                
+                logger.info(f"Tushare 同步股票日线完成: {total_synced} 条")
 
-                # P0: 只要有 K 线写入，就必须同步填充当天的复权因子缓存
-                # 否则视图 JOIN 会因为缺日期导致当天复权行情为空
-                if data:
-                    unique_codes = list(
-                        set([i.get("ts_code") for i in data if i.get("ts_code")]))
-                    dates = [i.get("trade_date")
-                             for i in data if i.get("trade_date")]
+                # 3. 增量刷新复权因子缓存
+                if total_synced > 0:
+                    unique_codes = list(set([i.get("ts_code") for i in data if i.get("ts_code") in valid_codes]))
+                    dates = [i.get("trade_date") for i in data if i.get("trade_date")]
                     if unique_codes and dates:
                         s_date = f"{min(dates)[:4]}-{min(dates)[4:6]}-{min(dates)[6:8]}"
                         e_date = f"{max(dates)[:4]}-{max(dates)[4:6]}-{max(dates)[6:8]}"
                         await self._refresh_factor_cache(unique_codes, s_date, e_date)
 
-                return len(data)
+                return total_synced
             else:
                 logger.warning(
                     f"Tushare 未返回数据: {
@@ -127,57 +226,48 @@ class MarketDataService:
             return await self._sync_stock_daily_baostock_fallback(trade_date)
 
     async def _save_stock_daily_to_db(self, data: List[Dict[str, Any]]):
-        """统一将 Tushare 格式的日线保存到数据库"""
+        """统一将 Tushare 格式的日线保存到数据库 (内存优化版)"""
         query = """
             INSERT IGNORE INTO stock_kline_daily (
                 ts_code, trade_date, open, high, low, close,
                 pre_close, pct_chg, volume, amount
             ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
         """
-        args = []
-        # 转换日期格式以便校验
+        # 1. 转换日期格式并预处理 (直接转换为校验器需要的格式)
         transformed_data = []
         for i in data:
             d = i.get("trade_date")
             dt_str = f"{d[:4]}-{d[4:6]}-{d[6:8]}"
-            # 预处理金额和涨跌幅，方便校验
-            pct_chg = float(i.get("pct_chg", 0)) / \
-                100.0 if i.get("pct_chg") is not None else None
-            amount = float(i.get("amount", 0)) * \
-                1000.0 if i.get("amount") is not None else None
-
-            transformed_item = {
-                **i,
+            transformed_data.append({
+                "ts_code": i.get("ts_code"),
                 "trade_date": dt_str,
-                "pct_chg": pct_chg,
-                "amount": amount,
-                "volume": i.get("vol")  # 统一字段名
-            }
-            transformed_data.append(transformed_item)
+                "open": i.get("open"),
+                "high": i.get("high"),
+                "low": i.get("low"),
+                "close": i.get("close"),
+                "pre_close": i.get("pre_close"),
+                "pct_chg": float(i.get("pct_chg", 0)) / 100.0 if i.get("pct_chg") is not None else None,
+                "amount": float(i.get("amount", 0)) * 1000.0 if i.get("amount") is not None else None,
+                "volume": float(i.get("vol", 0)) * 100.0 if i.get("vol") is not None else None,
+                "source_table": "stock_kline_daily"
+            })
 
-        # 执行校验
-        passed, rejected = DataValidator.validate_kline_batch(
-            transformed_data, "stock_kline_daily")
+        # 2. 执行校验
+        passed, rejected = DataValidator.validate_kline_batch(transformed_data, "stock_kline_daily")
 
         if rejected:
-            logger.warning(f"发现 {len(rejected)} 条脏数据，已拦截并记录至 staging_rejected")
+            logger.warning(f"发现 {len(rejected)} 条脏数据，已拦截")
             await self._log_rejected_data(rejected)
 
         if not passed:
             return
 
-        for i in passed:
-            args.append(
-                (i.get("ts_code"),
-                 i.get("trade_date"),
-                    i.get("open"),
-                    i.get("high"),
-                    i.get("low"),
-                    i.get("close"),
-                    i.get("pre_close"),
-                    i.get("pct_chg"),
-                    i.get("volume"),
-                    i.get("amount")))
+        # 3. 构造参数并执行批量写入
+        args = [
+            (i["ts_code"], i["trade_date"], i["open"], i["high"], i["low"], 
+             i["close"], i["pre_close"], i["pct_chg"], i["volume"], i["amount"])
+            for i in passed
+        ]
         await db.execute_many(query, args)
 
     async def _log_rejected_data(self, rejected: List[Dict[str, Any]]):
@@ -265,45 +355,42 @@ class MarketDataService:
             logger.error(f"同步复权因子失败: {e}")
             raise
 
-    async def _refresh_factor_cache(
-            self,
-            ts_codes: Any,
-            start_date: str,
-            end_date: str):
-        """增量刷新 ods_stock_factor_daily 缓存表 (MySQL 5.7 兼容版)"""
+    async def _refresh_factor_cache(self, ts_codes: List[str], start_date: str, end_date: str):
+        """分批刷新复权因子缓存 (MySQL 5.7 兼容版，内存优化)"""
         try:
-            if isinstance(ts_codes, str):
-                ts_codes = [ts_codes]
-
-            logger.info(
-                f"正在增量刷新复权因子缓存: {
-                    len(ts_codes)} 只股票 ({start_date} ~ {end_date})")
-
-            # MySQL 5.7 兼容语法：使用关联子查询寻找最接近的因子记录
-            sql = f"""
-                INSERT INTO ods_stock_factor_daily (ts_code, trade_date, adjust_factor)
-                SELECT
-                    f_codes.ts_code,
-                    c.cal_date,
-                    (SELECT f2.adjust_factor
-                     FROM stock_adjust_factor f2
-                     WHERE f2.ts_code = f_codes.ts_code
-                       AND f2.adjust_date <= c.cal_date
-                     ORDER BY f2.adjust_date DESC LIMIT 1) as adjust_factor
-                FROM trade_cal c
-                CROSS JOIN (
-                    SELECT DISTINCT ts_code FROM stock_adjust_factor
-                    WHERE ts_code IN ({','.join(['%s'] * len(ts_codes))})
-                ) f_codes
-                WHERE c.is_open = 1
-                  AND c.cal_date BETWEEN %s AND %s
-                ON DUPLICATE KEY UPDATE
-                    adjust_factor = VALUES(adjust_factor)
-
-            """
-            params = ts_codes + [start_date, end_date]
-            await db.execute(sql, tuple(params))
-            logger.info(f"复权因子缓存刷新完成: {len(ts_codes)} 只股票")
+            if not ts_codes:
+                return
+                
+            logger.info(f"正在增量刷新复权因子缓存: {len(ts_codes)} 只股票 ({start_date} ~ {end_date})")
+            
+            # 每 200 只股票一个批次，避免 CROSS JOIN 产生过大中间结果
+            batch_size = 200
+            for i in range(0, len(ts_codes), batch_size):
+                batch = ts_codes[i:i+batch_size]
+                sql = f"""
+                    INSERT INTO ods_stock_factor_daily (ts_code, trade_date, adjust_factor)
+                    SELECT
+                        f_codes.ts_code,
+                        c.cal_date,
+                        (SELECT f2.adjust_factor
+                         FROM stock_adjust_factor f2
+                         WHERE f2.ts_code = f_codes.ts_code
+                           AND f2.adjust_date <= c.cal_date
+                         ORDER BY f2.adjust_date DESC LIMIT 1) as adjust_factor
+                    FROM trade_cal c
+                    CROSS JOIN (
+                        SELECT DISTINCT ts_code FROM stock_adjust_factor
+                        WHERE ts_code IN ({','.join(['%s'] * len(batch))})
+                    ) f_codes
+                    WHERE c.is_open = 1
+                      AND c.cal_date BETWEEN %s AND %s
+                    ON DUPLICATE KEY UPDATE
+                        adjust_factor = VALUES(adjust_factor)
+                """
+                params = batch + [start_date, end_date]
+                await db.execute(sql, tuple(params))
+            
+            logger.info(f"复权因子缓存分批刷新完成: {len(ts_codes)} 只股票")
         except Exception as e:
             logger.error(f"刷新复权因子缓存失败: {e}")
 

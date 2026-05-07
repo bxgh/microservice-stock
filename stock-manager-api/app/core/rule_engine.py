@@ -46,8 +46,9 @@ class RuleEngine:
         """注册规则处理器"""
         self._handlers[name] = handler
 
-    async def execute_all(self, context: Dict[str, Any]):
-        """执行所有已启用的规则"""
+    async def execute_all(self, context: Dict[str, Any]) -> List[Dict[str, Any]]:
+        """执行所有已启用的规则，并返回执行结果摘要"""
+        results = []
         for rule in self.rules:
             if not rule.enabled:
                 continue
@@ -59,9 +60,21 @@ class RuleEngine:
 
             try:
                 logger.debug(f"正在执行规则: {rule.name} ({rule.id})")
-                await handler(rule, context)
+                res = await handler(rule, context)
+                results.append({
+                    "rule_id": rule.id,
+                    "rule_name": rule.name,
+                    "result": res
+                })
             except Exception as e:
                 logger.error(f"规则 {rule.id} 执行异常: {e}")
+                results.append({
+                    "rule_id": rule.id,
+                    "rule_name": rule.name,
+                    "error": str(e)
+                })
+        
+        return results
 
 
 rule_engine = RuleEngine()
