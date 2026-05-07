@@ -8,7 +8,7 @@ description: 股票数据源微服务开发规范 - 编码时自动应用
 - Python 3.12+
 - FastAPI (必须)
 - 基础镜像: python:3.12-slim
-- 内存限制: ≤128MB
+- 内存限制: 默认 ≤128MB (特定服务除外)
 
 ## 异步规范
 - **必须** 使用 `async/await` 处理所有 I/O

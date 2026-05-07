@@ -178,21 +178,6 @@ services:
     networks:
       - stock-network
 
-  # Frontend Mobile - React H5 App
-  frontend-mobile:
-    build: ./frontend-mobile
-    image: frontend-mobile:latest
-    container_name: frontend-mobile
-    restart: unless-stopped
-    ports:
-      - "8080:80"
-    depends_on:
-      - baostock-api
-      - akshare-api
-      - pywencai-api
-      - stock-manager
-    networks:
-      - stock-network
 
   # Monitor Service - 监控评分与资金指标同步
   monitor-service:
