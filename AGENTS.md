@@ -1,4 +1,4 @@
-# AGENTS.md — A 股盘后系统(内网仓)实施约束
+# AGENTS.md — A 股盘后系统(腾讯云端仓)实施约束
 
 > 本文件是 Gemini / Antigravity 在本仓实施时**永远生效**的硬约束。任何指令冲突时,本文件的规则**优先于通用最佳实践和 LLM 偏好**。
 >
@@ -8,10 +8,13 @@
 
 ## 1. 项目认知
 
-**仓库角色**:本项目(GitHub 仓名为 `microservice-stock-ck`,本地目录通常为 `microservice-stock`)是 A 股盘后分析系统的**内网计算 + 双写仓**。
+**仓库角色**:本项目(GitHub 仓名为 `microservice-stock`,本地目录通常为 `microservice-stock`)是 A 股盘后分析系统的**腾讯云端服务仓**。
 
-- 数据上游:腾讯云仓 `bxgh/microservice-stock` 通过跨网同步推送 `ods_*` 表
-- 本仓职责:计算 `dwd_*` / `ads_*` / `app_*` / `dim_*` / `obs_*` / `train_*` 层
+- 数据上游:Tushare / AkShare / BaoStock 等三方 API
+- 本仓职责:负责数据采集、数据就绪探测(Readiness Probing)、任务状态监控、对外 API 提供
+- 开发边界:**只负责云端服务逻辑,严禁编写内网服务器(如 Node-41 / stock-compute)的业务代码**
+
+
 - 数据下游:双写到 ClickHouse(本地,历史回算)+ MySQL(回流到云端,供 wxch-gateway 给小程序读)
 - 设计 source of truth:`docs/PROJECT_OVERVIEW.md` / `docs/TABLES_INDEX.md`
 
@@ -214,7 +217,8 @@ KEY idx_updated_at (updated_at)
 
 `docs/` 下设计文档使用 `Epic → Story → Task → AC(Given-When-Then)` 结构。实施时:
 
-1. **AC 即测试用例**:每条 Given-When-Then AC 直接转成对应测试函数
+1. **设计优先,禁止抢跑**: 在设计规划阶段(即产出/修改 `docs/` 下的 Markdown 时),**严禁编写或修改任何生产代码(Python/SQL/JS 等)**。必须在用户对设计文档表达「同意」、「开始实施」或类似的明确授权后,方可进入代码编写阶段。
+2. **AC 即测试用例**:每条 Given-When-Then AC 直接转成对应测试函数
    - Given → fixture / setup
    - When → 被测调用
    - Then → assert
