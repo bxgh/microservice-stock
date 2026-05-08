@@ -20,5 +20,6 @@
 | 2026-05-07 | E3-S1 | 盘后一致性审计 (Gate-3) 实施 | docs/分笔数据/盘后全市场同步/implementation_logs/E3/S1/ | IN_PROGRESS |
 | 2026-05-07 | Doc Align | 对齐 stock_kline_daily 表名与 volume (股) 单位 | docs/分笔数据/盘后全市场同步/01_DATA_SCHEMA.md | DONE |
 | 2026-05-07 | E4-S1 | 任务状态机接口封装 (E4-S1-T2) | docs/design/数据管线/任务交接事件化/implementation_logs/E4/S1/ | DONE |
-| 2026-05-07 | E5/E6 | 任务交接事件化后续规划 | docs/design/数据管线/任务交接事件化/readme.md | PLANNED |
-
+| 2026-05-07 | E5/E6 | 任务交接事件化后续规划 | docs/design/数据管线/任务交接事件化/readme.md | DONE |
+| 2026-05-08 | E6-S1 | 任务触发模式切换实施 | docs/design/数据管线/任务交接事件化/implementation_logs/E6/S1/ | DONE |
+| 2026-05-08 | E5-S1 | 云端四阶段流水线管理器实施 | docs/design/数据管线/任务交接事件化/implementation_logs/E5/S1/ | DONE |
