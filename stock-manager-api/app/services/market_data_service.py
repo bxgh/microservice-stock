@@ -20,6 +20,24 @@ class MarketDataService:
         self.akshare_url = settings.AKSHARE_API_URL
         self._valid_codes_cache = None
 
+    async def check_canary_ready(self, trade_date: str) -> bool:
+        """检查金丝雀标的 (贵州茅台) 是否已产出今日数据 (Tushare 探测)"""
+        try:
+            url = f"{self.tushare_url}/api/v1/stock/daily"
+            params = {
+                "ts_code": "600519.SH",
+                "trade_date": trade_date.replace("-", ""),
+            }
+            async with httpx.AsyncClient(timeout=10.0) as client:
+                resp = await client.get(url, params=params)
+                if resp.status_code != 200:
+                    return False
+                data = resp.json().get("data", [])
+            return len(data) > 0
+        except Exception as e:
+            logger.error(f"Canary 探测异常: {e}")
+            return False
+
     async def _get_valid_a_share_codes(self) -> List[str]:
         """从数据库获取当前有效的核心 A 股代码列表 (缓存 1 小时)"""
         if self._valid_codes_cache:
