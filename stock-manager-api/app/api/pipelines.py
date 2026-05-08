@@ -38,3 +38,23 @@ async def get_pipeline_stats(
         return stats
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+@router.post("/runs", summary="手动触发流水线阶段")
+async def trigger_pipeline_stage(
+    stage_name: str = Query(..., description="阶段名称 (STAGE_A/B/C/D)"),
+    biz_date: str = Query(..., description="业务日期 (YYYY-MM-DD)")
+):
+    """
+    手动触发指定的流水线阶段。
+    """
+    try:
+        from app.services.workflow_service import workflow_service
+        from datetime import datetime
+        dt = datetime.strptime(biz_date, "%Y-%m-%d")
+        
+        # 异步执行
+        import asyncio
+        asyncio.create_task(workflow_service.execute_stage(stage_name, dt))
+        
+        return {"message": f"阶段 {stage_name} 已在后台启动", "biz_date": biz_date}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
