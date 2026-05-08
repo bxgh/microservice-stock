@@ -38,7 +38,7 @@ class PipelineService:
                     started_at, finished_at, duration_sec, retry_count, 
                     max_retry, error_message, error_stack, output_summary
                 FROM meta_pipeline_run 
-                WHERE 1=1
+                WHERE is_deleted = 0
             """
             params = []
             if pipeline_id:
@@ -112,5 +112,50 @@ class PipelineService:
         except Exception as e:
             logger.error(f"Failed to get daily stats for {biz_date}: {e}")
             raise e
+
+    async def create_run(self, pipeline_id: str, biz_date: str, task_id: str) -> str:
+        """创建任务运行记录"""
+        import time
+        run_id = f"run_{int(time.time())}_{task_id}"
+        try:
+            sql = """
+                INSERT INTO meta_pipeline_run (run_id, pipeline_id, biz_date, task_id, status, started_at)
+                VALUES (%s, %s, %s, %s, 'RUNNING', NOW())
+            """
+            await db.execute(sql, (run_id, pipeline_id, biz_date, task_id))
+            return run_id
+        except Exception as e:
+            logger.error(f"Failed to create pipeline run: {e}")
+            raise e
+
+    async def update_run(self, run_id: str, status: str, error_msg: Optional[str] = None, output_summary: Optional[Dict[str, Any]] = None):
+        """更新任务运行记录"""
+        try:
+            sql = """
+                UPDATE meta_pipeline_run 
+                SET status = %s, finished_at = NOW(), 
+                    duration_sec = TIMESTAMPDIFF(SECOND, started_at, NOW()),
+                    error_message = %s, output_summary = %s
+                WHERE run_id = %s
+            """
+            output_json = json.dumps(output_summary) if output_summary else None
+            await db.execute(sql, (status, error_msg, output_json, run_id))
+        except Exception as e:
+            logger.error(f"Failed to update pipeline run {run_id}: {e}")
+            raise e
+
+    async def is_stage_success(self, pipeline_id: str, biz_date: str, task_id: str) -> bool:
+        """检查特定阶段是否已成功执行"""
+        try:
+            sql = """
+                SELECT COUNT(*) FROM meta_pipeline_run 
+                WHERE pipeline_id = %s AND biz_date = %s AND task_id = %s AND status = 'SUCCESS'
+                AND is_deleted = 0
+            """
+            rows = await db.execute(sql, (pipeline_id, biz_date, task_id))
+            return rows[0][0] > 0
+        except Exception as e:
+            logger.error(f"Failed to check stage success: {e}")
+            return False
 
 pipeline_service = PipelineService()

@@ -1,0 +1,4 @@
+- [x] **E6-S1-T1**: [MODIFY] `system_jobs.py` - 增加保底扫描任务 `safety_workflow_scan_job`
+- [x] **E6-S1-T2**: [MODIFY] `workflow_service.py` - 优化流水线执行日志
+- [x] **E6-S1-T3**: [MODIFY] `main.py` - 切换触发模式：移除冗余 Cron，注册保底 Cron
+- [x] **E6-S1-T4**: [VERIFY] 验证保底扫描与模式切换效果
