@@ -23,3 +23,7 @@
 | 2026-05-07 | E5/E6 | 任务交接事件化后续规划 | docs/design/数据管线/任务交接事件化/readme.md | DONE |
 | 2026-05-08 | E6-S1 | 任务触发模式切换实施 | docs/design/数据管线/任务交接事件化/implementation_logs/E6/S1/ | DONE |
 | 2026-05-08 | E5-S1 | 云端四阶段流水线管理器实施 | docs/design/数据管线/任务交接事件化/implementation_logs/E5/S1/ | DONE |
+| 2026-05-09 | E100-S1 | Agent 治理体系升级与规约解耦 | docs/architecture/archive/agent-rules-skills/implementation_logs/E100/S1/ | DONE |
+| 2026-05-09 | E100-S2 | 引入 ROLES.md 建立角色化责任闭环 | docs/architecture/archive/agent-rules-skills/implementation_logs/E100/S2/ | DONE |
+| 2026-05-09 | E100-S3 | 物理门禁：自动化审计脚本迁移 | docs/architecture/archive/agent-rules-skills/implementation_logs/E100/S3/ | DONE |
+| 2026-05-09 | E100-S4 | 标准化交付模板实施 | docs/architecture/archive/agent-rules-skills/implementation_logs/E100/S4/ | DONE |

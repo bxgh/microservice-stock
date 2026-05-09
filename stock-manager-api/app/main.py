@@ -90,13 +90,7 @@ async def lifespan(app: FastAPI):
             minute=30
         )
 
-        # 6. 注册市场全景数据同步任务 (每日 19:00)
-        scheduler.add_daily_job(
-            job_funcs.daily_market_overview_sync_job,
-            job_id="daily_market_overview_sync",
-            hour=19,
-            minute=0
-        )
+        # 6. 市场全景数据同步任务已迁移至 WorkflowManager 触发 (E5-S1)
 
         # 6.1 注册每日基金/ETF同步任务 (每日 16:15)
         scheduler.add_daily_job(
@@ -122,19 +116,13 @@ async def lifespan(app: FastAPI):
             minute=0
         )
 
-        # 9. 注册日终自检审计任务 (每日 23:30)
+        # 9. 日终审计与业务校验已迁移至 WorkflowManager 触发 (E5-S1)
+        
+        # 10. 注册流水线保底扫描任务 (E6-S1)
         scheduler.add_daily_job(
-            sys_job_funcs.daily_audit_job,
-            job_id="daily_audit",
+            sys_job_funcs.safety_workflow_scan_job,
+            job_id="safety_workflow_scan",
             hour=23,
-            minute=30
-        )
-
-        # 10. 注册业务规则校验任务 (每日 20:00)
-        scheduler.add_daily_job(
-            job_funcs.daily_business_rule_check_job,
-            job_id="daily_business_rule_check",
-            hour=20,
             minute=0
         )
 

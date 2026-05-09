@@ -13,6 +13,7 @@ class DQFindingBase(BaseModel):
     finding_msg: str
     diff_data: Optional[Dict[str, Any]] = None
     status: int = 0
+    is_deleted: bool = False
 
 
 class DQFindingCreate(DQFindingBase):

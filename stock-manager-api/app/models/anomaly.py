@@ -70,6 +70,7 @@ class AnomalySignal(BaseModel):
     extra: Optional[Dict[str, Any]] = None
     schema_version: str = "v1.0"
     created_at: Optional[datetime] = None
+    is_deleted: bool = False
 
 
 class AnomalyTop10(BaseModel):
@@ -91,6 +92,7 @@ class AnomalyTop10(BaseModel):
     headline: Optional[str] = None
     key_features: Optional[Dict[str, Any]] = None
     created_at: Optional[datetime] = None
+    is_deleted: bool = False
 
 
 class TagDictionary(BaseModel):
@@ -126,6 +128,7 @@ class MarketState(BaseModel):
     note: Optional[str] = None
     extra: Optional[Dict[str, Any]] = None
     created_at: Optional[datetime] = None
+    is_deleted: bool = False
 
 
 class AnomalyScoreWeight(BaseModel):
@@ -148,3 +151,4 @@ class UserSectorPref(BaseModel):
     is_active: bool = True
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
+    is_deleted: bool = False
