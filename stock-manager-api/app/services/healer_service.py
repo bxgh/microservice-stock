@@ -82,17 +82,29 @@ class HealerService:
             await self._update_record(target_table, correct_data)
             after_snapshot = await self._get_record_snapshot(target_table, ts_code, t_date)
             
-            # 6. 记录修复日志
-            await self._log_repair_success(finding_id, ts_code, t_date, target_table, suggested_source, before_snapshot, after_snapshot)
+            # 获取当前 LSN 作为一个基准 (Wait for Stage F)
+            base_lsn = await self._get_current_sync_lsn(target_table)
             
-            # 7. 更新异常状态
+            # 6. 等待同步 ACK (Stage F)
+            sync_result = await self.wait_for_sync_ack(target_table, base_lsn, timeout=60)
+            
+            # 7. 记录修复日志
+            repair_id = await self._log_repair_success(
+                finding_id, ts_code, t_date, target_table, 
+                suggested_source, before_snapshot, after_snapshot,
+                sync_lsn=sync_result.get("lsn", 0),
+                sync_status=sync_result.get("status", "PENDING")
+            )
+            
+            # 8. 更新异常状态
             await db.execute("UPDATE dq_findings SET status = 'RESOLVED' WHERE id = %s", (finding_id,))
             
-            # 8. 触发级联失效 (E200-S3 预热)
-            from app.services.backfill_service import backfill_service
-            await backfill_service.invalidate_downstream(ts_code, t_date, target_table, f"HEAL-{finding_id}")
+            # 9. 触发级联失效 (Stage G)
+            if sync_result.get("status") in ["ACKED", "ORPHAN"]:
+                from app.services.backfill_service import backfill_service
+                await backfill_service.invalidate_downstream(ts_code, t_date, target_table, f"HEAL-{finding_id}")
             
-            logger.info(f"成功修复异常 {finding_id}: {ts_code}@{t_date} via {suggested_source}")
+            logger.info(f"成功修复异常 {finding_id}: {ts_code}@{t_date} via {suggested_source}, Sync: {sync_result.get('status')}")
             return True
         except Exception as e:
             await self._log_repair_failure(finding_id, ts_code, t_date, target_table, suggested_source, f"更新数据库失败: {str(e)}")
@@ -213,6 +225,34 @@ class HealerService:
         # 略
         return None
 
+    async def wait_for_sync_ack(self, table: str, base_lsn: int, timeout: int = 60) -> Dict[str, Any]:
+        """等待同步 ACK (Stage F)"""
+        start_time = datetime.now()
+        logger.info(f"等待同步 ACK: 表={table}, 基准 LSN={base_lsn}, 超时={timeout}s")
+        
+        while (datetime.now() - start_time).total_seconds() < timeout:
+            current_lsn = await self._get_current_sync_lsn(table)
+            if current_lsn > base_lsn:
+                logger.info(f"收到同步 ACK: 表={table}, 当前 LSN={current_lsn}")
+                return {"status": "ACKED", "lsn": current_lsn}
+            
+            # 每 2 秒检查一次
+            await asyncio.sleep(2)
+            
+        logger.warning(f"同步 ACK 超时 ({timeout}s): 表={table}, 数据判定为 ORPHAN 状态")
+        return {"status": "ORPHAN", "lsn": base_lsn}
+
+    async def _get_current_sync_lsn(self, table: str) -> int:
+        """从 meta_sync_status 获取当前确认的 LSN"""
+        try:
+            sql = "SELECT last_commit_lsn FROM meta_sync_status WHERE table_name = %s"
+            res = await db.execute(sql, (table,))
+            if res:
+                return res[0][0]
+        except Exception as e:
+            logger.error(f"获取 LSN 失败: {e}")
+        return 0
+
     async def _update_record(self, table: str, data: Dict):
         """更新 ODS 记录"""
         # 动态构建 SQL (仅限受控字段以防注入)
@@ -224,16 +264,20 @@ class HealerService:
         values.extend([data["ts_code"], data["trade_date"]])
         await db.execute(sql, tuple(values))
 
-    async def _log_repair_success(self, finding_id, ts_code, t_date, table, source, before, after):
+    async def _log_repair_success(self, finding_id, ts_code, t_date, table, source, before, after, sync_lsn=0, sync_status="PENDING"):
         # 处理 Decimal 无法序列化的问题
         before_json = self._sanitize_snapshot(before)
-        after_json = self._sanitize_snapshot(after)
+        after_snapshot = self._sanitize_snapshot(after)
         
         sql = """
-            INSERT INTO meta_repair_log (finding_id, ts_code, trade_date, table_name, source_used, before_snapshot, after_snapshot, status)
-            VALUES (%s, %s, %s, %s, %s, %s, %s, 'SUCCESS')
+            INSERT INTO meta_repair_log (finding_id, ts_code, trade_date, table_name, source_used, before_snapshot, after_snapshot, status, sync_lsn, sync_status)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, 'SUCCESS', %s, %s)
         """
-        await db.execute(sql, (finding_id, ts_code, t_date, table, source, json.dumps(before_json), json.dumps(after_json)))
+        await db.execute(sql, (finding_id, ts_code, t_date, table, source, json.dumps(before_json), json.dumps(after_snapshot), sync_lsn, sync_status))
+        
+        # 获取刚才插入的 ID
+        res = await db.execute("SELECT LAST_INSERT_ID()")
+        return res[0][0] if res else 0
 
     def _sanitize_snapshot(self, snapshot: Any) -> Any:
         """递归转换 Decimal 为 float 以便 JSON 序列化"""
