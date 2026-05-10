@@ -402,3 +402,23 @@ async def daily_fund_sync_job() -> Dict[str, Any]:
             '同步条数': count
         }
     }
+
+@notify_result
+@trading_day_only()
+async def daily_financial_data_sync_job() -> Dict[str, Any]:
+    """每日财务报表同步任务 (18:30)
+    
+    扫描今日披露的财报并同步 ODS 数据
+    """
+    try:
+        from app.services.financial_data_service import FinancialDataService
+        target_date = datetime.datetime.now().strftime("%Y-%m-%d")
+        logger.info(f"【定时任务】开始扫描财报披露: {target_date}")
+        
+        service = FinancialDataService()
+        count = await service.sync_daily_disclosures(target_date)
+        
+        return {'status': 'success', 'message': f'财报同步完成: {count} 只股票'}
+    except Exception as e:
+        logger.error(f"【定时任务】财报同步失败: {e}")
+        return {'status': 'error', 'message': str(e)}

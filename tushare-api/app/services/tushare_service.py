@@ -36,7 +36,7 @@ class TushareService:
             except Exception as e:
                 err_msg = str(e)
                 # 处理限流错误
-                if "每分钟内最多查询" in err_msg or "频次限制" in err_msg or "请求过于频繁" in err_msg:
+                if any(p in err_msg for p in ["每分钟内最多查询", "频次限制", "请求过于频繁", "频率超限"]):
                     wait_time = (attempt + 1) * 3
                     logger.warning(f"Tushare 限流 [{api_name}], 等待 {wait_time}s 后重试 ({attempt+1}/3)...")
                     await asyncio.sleep(wait_time)
@@ -119,4 +119,29 @@ class TushareService:
     async def get_stk_rating(self, ts_code: str = '', ann_date: str = '', start_date: str = '', end_date: str = '') -> List[Dict[str, Any]]:
         """获取机构评级 (600积分)"""
         df = await self._execute('stk_rating', ts_code=ts_code, ann_date=ann_date, start_date=start_date, end_date=end_date)
+        return self._df_to_records(df)
+
+    async def get_balancesheet(self, ts_code: str = '', ann_date: str = '', start_date: str = '', end_date: str = '', period: str = '') -> List[Dict[str, Any]]:
+        """获取资产负债表 (2000积分)"""
+        df = await self._execute('balancesheet', ts_code=ts_code, ann_date=ann_date, start_date=start_date, end_date=end_date, period=period)
+        return self._df_to_records(df)
+
+    async def get_income(self, ts_code: str = '', ann_date: str = '', start_date: str = '', end_date: str = '', period: str = '') -> List[Dict[str, Any]]:
+        """获取利润表 (2000积分)"""
+        df = await self._execute('income', ts_code=ts_code, ann_date=ann_date, start_date=start_date, end_date=end_date, period=period)
+        return self._df_to_records(df)
+
+    async def get_cashflow(self, ts_code: str = '', ann_date: str = '', start_date: str = '', end_date: str = '', period: str = '') -> List[Dict[str, Any]]:
+        """获取现金流量表 (2000积分)"""
+        df = await self._execute('cashflow', ts_code=ts_code, ann_date=ann_date, start_date=start_date, end_date=end_date, period=period)
+        return self._df_to_records(df)
+
+    async def get_fina_indicator(self, ts_code: str = '', ann_date: str = '', start_date: str = '', end_date: str = '', period: str = '') -> List[Dict[str, Any]]:
+        """获取财务指标数据 (2000积分)"""
+        df = await self._execute('fina_indicator', ts_code=ts_code, ann_date=ann_date, start_date=start_date, end_date=end_date, period=period)
+        return self._df_to_records(df)
+
+    async def get_disclosure_date(self, ts_code: str = '', end_date: str = '', pre_date: str = '', actual_date: str = '') -> List[Dict[str, Any]]:
+        """获取财报披露日期 (2000积分)"""
+        df = await self._execute('disclosure_date', ts_code=ts_code, end_date=end_date, pre_date=pre_date, actual_date=actual_date)
         return self._df_to_records(df)
