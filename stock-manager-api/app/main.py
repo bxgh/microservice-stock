@@ -5,7 +5,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI, Request, HTTPException
 from fastapi.responses import JSONResponse
 
-from app.api import metadata, audit, scheduler, ops, system, dashboard, market_dashboard, shareholders, chips, game, information, commands, task_commands, pipelines, data_audit, suspension, monitor, finance, dq, backfill
+from app.api import metadata, audit, scheduler, ops, system, dashboard, market_dashboard, shareholders, chips, game, information, commands, task_commands, pipelines, data_audit, suspension, monitor, finance, dq, backfill, healer
 from app.api.market import router as market_router
 
 from app.utils.logger import setup_logger, request_id_var
@@ -244,3 +244,4 @@ app.include_router(market_router, prefix="/api/v1/market", tags=["行情数据"]
 app.include_router(dq.router, prefix="/api/v1/dq", tags=["数据质量"])
 app.include_router(pipelines.router, prefix="/api/v1/pipelines", tags=["任务状态机"])
 app.include_router(backfill.router, prefix="/api/v1/backfill", tags=["补数与重算"])
+app.include_router(healer.router, prefix="/api/v1", tags=["自愈修复"])
