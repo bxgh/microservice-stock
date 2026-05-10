@@ -363,8 +363,8 @@ DDL 规则：所有 DDL 进 migrations/ 目录，使用 Alembic 或独立 SQL �
 
 ## 11. 部署与网络环境
 
-- **新服务默认部署在 41 服务器**，对应编排文件 `docker-compose.node-41.yml`。禁止擅自编排到其他节点（58/111）
-- **内网环境隔离**：外部 API 调用（akshare/Tushare）、SMTP 发信等跨网请求，必须配置网络代理（`.env` 中的 `HTTP_PROXY` / `HTTPS_PROXY` 或 gost 隧道），否则直接超时
+- **本仓服务默认部署在腾讯云环境**（CVM/容器），对应编排文件 `docker-compose.yml`。禁止擅自部署至内网 Node-41。
+- **外部 API 访问与韧性**：针对 Tushare/akshare 等外部 API，必须实现熔断（CircuitBreaker）与重试机制。云端环境通常具备直接公网访问能力，无需 gost 隧道，但需遵循流量控制与安全组策略。
 
 ## 附录：本文件维护规则
 
@@ -383,3 +383,4 @@ DDL 规则：所有 DDL 进 migrations/ 目录，使用 Alembic 或独立 SQL �
 | 2026-05-05 | v0.1 | 初稿，基于过去 17 天对话整合 | Claude 协助 |
 | 2026-05-05 | v0.2 | 新增 0.1 代码仓库 / 0.2 跨网数据流;第 8 节补跨仓字段契约 | Claude 协助 |
 | 2026-05-06 | v0.3 | 补充 Gate-3 审计节点、熔断器/并发安全、部署节点约束、ORM 豁免、测试隔离、CK 结果集红线,与 AGENTS.md v0.6 对齐 | Gemini 协助 |
+| 2026-05-10 | v0.4 | 修正第 11 节部署与网络环境描述，使其与腾讯云生产仓实际情况对齐 | Gemini 协助 |
