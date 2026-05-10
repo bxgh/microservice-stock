@@ -1,0 +1,4 @@
+- [x] E100-S3-T1: 更新 `ROLES.md` 角色的 [Data Quality Steward] 禁令
+- [x] E100-S3-T2: 更新 `AGENTS.md` 增加 5.4 节 数据质量闭环
+- [x] E100-S3-T3: 编写 `docs/architecture/QC_GUIDELINES.md`
+- [x] E100-S3-T4: 验证修复后的现金流量表数据并输出最终 QC 报告
