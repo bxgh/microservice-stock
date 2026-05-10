@@ -63,33 +63,52 @@ def notify_result(func: Callable[..., Any]):
     async def wrapper(*args, **kwargs):
         from app.utils.alerter import alerter
         
-        # 优先从 docstring 提取第一行作为中文任务名，否则回退到函数名
-        job_display_name = func.__doc__.split('\n')[0].strip() if func.__doc__ else func.__name__
+        # 1. 解析 Docstring 提取元数据
+        doc = func.__doc__ or ""
+        lines = [line.strip() for line in doc.strip().split('\n')]
         
+        # 任务描述 (第一行)
+        job_display_name = lines[0] if lines and lines[0] else func.__name__
+        
+        # 提取字段: 目标表, 功能描述
+        target_table = "未知"
+        func_desc = "无"
+        
+        for line in lines:
+            if "目标表:" in line or "目标表：" in line:
+                target_table = line.split(":", 1)[-1].split("：", 1)[-1].strip()
+            elif "功能描述:" in line or "功能描述：" in line:
+                func_desc = line.split(":", 1)[-1].split("：", 1)[-1].strip()
+
         try:
             result = await func(*args, **kwargs)
             
-            # 根据返回状态决定通知级别
+            # 2. 状态判定与汉化
             raw_status = result.get("status", "success") if isinstance(result, dict) else "success"
             
-            # 状态汉化
-            status_map = {"success": "成功", "error": "失败", "failed": "失败", "warning": "警告"}
-            cn_status = status_map.get(raw_status, raw_status)
-
             # 如果是 skipped (非交易日)，通常不需要邮件通知
             if raw_status == "skipped":
                 return result
 
+            status_map = {"success": "成功", "error": "失败", "failed": "失败", "warning": "警告"}
+            cn_status = status_map.get(raw_status, raw_status)
             level = "INFO" if raw_status == "success" else "ERROR"
             
-            # 构造汉化后的详情
-            cn_details = {"任务状态": cn_status}
+            # 3. 构造增强后的上下文
+            cn_details = {
+                "任务名称": job_display_name,
+                "目标表名": target_table,
+                "功能描述": func_desc,
+                "任务状态": cn_status
+            }
+            
+            # 合并原始返回详情
             if isinstance(result, dict):
                 for k, v in result.items():
                     if k not in ["status"]:
                         cn_details[k] = v
             else:
-                cn_details["执行结果"] = str(result)
+                cn_details["执行详情"] = str(result)
 
             await alerter.alert(
                 level,
@@ -101,7 +120,11 @@ def notify_result(func: Callable[..., Any]):
             await alerter.alert(
                 "CRITICAL",
                 f"任务崩溃: {job_display_name}",
-                {"错误原因": str(e)}
+                {
+                    "任务名称": job_display_name,
+                    "目标表名": target_table,
+                    "错误原因": str(e)
+                }
             )
             raise e
     return wrapper

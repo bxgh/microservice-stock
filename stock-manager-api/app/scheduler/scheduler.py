@@ -91,19 +91,27 @@ class TaskScheduler:
             logger.info(f"删除已存在的任务: {job_id}")
 
         try:
+            # 过滤出 CronTrigger 接受的参数
+            cron_keys = ['year', 'month', 'day', 'week', 'day_of_week', 'hour', 'minute', 'second', 'start_date', 'end_date', 'timezone', 'jitter']
+            cron_kwargs = {k: v for k, v in kwargs.items() if k in cron_keys}
+            
             trigger = CronTrigger(
                 hour=hour,
                 minute=minute,
                 second=second,
                 timezone=self.timezone,
-                **kwargs)
+                **cron_kwargs)
+                
+            # 过滤出 add_job 接受的参数 (主要是 args, kwargs)
+            job_kwargs = {k: v for k, v in kwargs.items() if k not in cron_keys}
+            
             self.scheduler.add_job(
                 func,
                 trigger=trigger,
                 id=job_id,
                 name=f"{func.__name__}_{hour:02d}:{minute:02d}",
                 replace_existing=True,
-                **kwargs
+                **job_kwargs
             )
             logger.info(
                 f"添加cron任务: {job_id}, 执行时间: {

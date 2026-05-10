@@ -43,82 +43,27 @@ async def lifespan(app: FastAPI):
             job_id="system_health_monitor"
         )
 
-        # 1.2 注册数据就绪探测 (每 2 分钟)
+        # 1.2 注册全生命周期就绪探测器 (每 2 分钟)
+        # 职责: 08:00-09:30 探测晨间信号; 15:30-19:00 探测收盘信号; 19:00-23:00 高频探测
         scheduler.add_interval_job(
             sys_job_funcs.readiness_prober_job,
             minutes=2,
             job_id="readiness_prober"
         )
 
-        # 1.3 注册股票基础信息同步任务 (每天 08:30)
+        # 2. 注册深夜维护流水线 (每日 01:00)
+        # 职责: 财务指标同步、机构评级、股东数据、错峰执行
+        from app.services.workflow_service import workflow_service
+        import datetime
         scheduler.add_daily_job(
-            job_funcs.daily_stock_basic_sync_job,
-            hour=8,
-            minute=30,
-            job_id="daily_stock_basic_sync"
+            workflow_service.process_maintenance_trigger,
+            job_id="daily_maintenance_pipeline",
+            hour=1,
+            minute=0,
+            args=[datetime.date.today()]
         )
 
-        # 2. 注册早盘停牌数据同步任务 (每天 09:15)
-        scheduler.add_daily_job(
-            job_funcs.daily_suspension_morning_sync_job,
-            hour=9,
-            minute=15,
-            job_id="daily_suspension_morning_sync"
-        )
-
-        # 3. 注册早盘业绩预告同步任务 (每天 08:45)
-        scheduler.add_daily_job(
-            job_funcs.daily_performance_forecast_sync_job,
-            hour=8,
-            minute=45,
-            job_id="daily_performance_forecast_sync"
-        )
-
-        # 4. 注册资金监测数据定时同步任务 (每天 15:30)
-        scheduler.add_daily_job(
-            job_funcs.daily_monitor_data_sync_job,
-            hour=15,
-            minute=30,
-            job_id="daily_monitor_data_sync"
-        )
-
-        # 5. 注册全市场财务衍生指标同步任务 (每日 02:30)
-        scheduler.add_daily_job(
-            job_funcs.weekly_financial_indicators_sync_job,
-            job_id="daily_finance_indicators_sync",
-            hour=2,
-            minute=30
-        )
-
-        # 6. 市场全景数据同步任务已迁移至 WorkflowManager 触发 (E5-S1)
-
-        # 6.1 注册每日基金/ETF同步任务 (每日 16:15)
-        scheduler.add_daily_job(
-            job_funcs.daily_fund_sync_job,
-            job_id="daily_fund_sync",
-            hour=16,
-            minute=15
-        )
-
-        # 7. 注册机构评级同步任务 (每日 03:00)
-        scheduler.add_daily_job(
-            job_funcs.daily_analyst_rating_sync_job,
-            job_id="daily_analyst_rating_sync",
-            hour=3,
-            minute=0
-        )
-
-        # 8. 注册股东数据同步任务 (每日 04:00)
-        scheduler.add_daily_job(
-            job_funcs.daily_shareholder_sync_job,
-            job_id="daily_shareholder_sync",
-            hour=4,
-            minute=0
-        )
-
-        # 9. 日终审计与业务校验已迁移至 WorkflowManager 触发 (E5-S1)
-        
-        # 10. 注册流水线保底扫描任务 (E6-S1)
+        # 3. 注册流水线保底扫描任务 (23:00)
         scheduler.add_daily_job(
             sys_job_funcs.safety_workflow_scan_job,
             job_id="safety_workflow_scan",
@@ -126,16 +71,23 @@ async def lifespan(app: FastAPI):
             minute=0
         )
 
-        # 11. 注册复权因子对账任务 (每周日 05:00)
-        scheduler.add_cron_job(
-            job_funcs.weekly_factor_reconcile_job,
-            job_id="weekly_factor_reconcile",
-            day_of_week='sun',
-            hour=5,
+        # 4. 注册每日任务总结报告
+        # 初次总结 (23:45)
+        scheduler.add_daily_job(
+            sys_job_funcs.daily_pipeline_summary_job,
+            job_id="daily_summary_night",
+            hour=23,
+            minute=45
+        )
+        # 最终报告 (次日 06:00)
+        scheduler.add_daily_job(
+            sys_job_funcs.daily_pipeline_summary_job,
+            job_id="daily_summary_final",
+            hour=6,
             minute=0
         )
 
-        # 12. 注册补数扫描与处理任务 (E6)
+        # 5. 注册补数扫描与处理任务
         scheduler.add_interval_job(
             sys_job_funcs.backfill_enqueue_job,
             hours=1,
@@ -147,12 +99,13 @@ async def lifespan(app: FastAPI):
             job_id="backfill_processor"
         )
 
-        # 13. 注册每日数据质量报告任务 (每天 09:05)
-        scheduler.add_daily_job(
-            sys_job_funcs.daily_dq_report_job,
-            job_id="daily_dq_report",
-            hour=9,
-            minute=5
+        # 5. 注册每周复权因子对账任务 (每周日 05:00)
+        scheduler.add_cron_job(
+            job_funcs.weekly_factor_reconcile_job,
+            job_id="weekly_factor_reconcile",
+            day_of_week='sun',
+            hour=5,
+            minute=0
         )
 
         # 启动

@@ -32,8 +32,8 @@ async def _update_readiness(
 @notify_result
 async def daily_stock_basic_sync_job() -> Dict[str, Any]:
     """每日股票基础信息同步任务 (08:30)
-    
-    同步上市、退市、暂停上市标的清单
+    目标表: stock_basic_info
+    功能描述: 同步 A 股全市场股票列表，包含上市、退市及暂停上市状态标的。
     """
     try:
         logger.info("【定时任务】开始执行每日股票基础信息同步")
@@ -49,7 +49,10 @@ async def daily_stock_basic_sync_job() -> Dict[str, Any]:
 @notify_result
 @trading_day_only()
 async def daily_suspension_morning_sync_job() -> Dict[str, Any]:
-    """每日早盘停牌数据同步任务 (09:15)"""
+    """每日早盘停牌数据同步任务 (09:15)
+    目标表: dim_stock_suspend
+    功能描述: 同步当日 Tushare 投放的最新停复牌明细，用于盘中交易决策支持。
+    """
     try:
         logger.info("【定时任务】开始执行每日早盘停牌数据同步")
 
@@ -75,7 +78,10 @@ async def daily_suspension_morning_sync_job() -> Dict[str, Any]:
 @notify_result
 @trading_day_only(check_next=True)
 async def daily_performance_forecast_sync_job() -> Dict[str, Any]:
-    """每日早盘业绩预告同步任务 (08:45)"""
+    """每日早盘业绩预告同步任务 (08:45)
+    目标表: ods_stock_performance_forecast
+    功能描述: 同步 A 股业绩快报与预告数据，监控个股业绩变动风险。
+    """
     try:
 
         from app.services.pre_market_service import PreMarketService

@@ -45,17 +45,45 @@ async def system_health_monitor_job() -> Dict[str, Any]:
 
 @trading_day_only()
 async def readiness_prober_job() -> Dict[str, Any]:
-    """数据就绪状态探测器 (带压制逻辑)"""
+    """数据就绪状态探测器 (全生命周期感知)"""
     now = datetime.datetime.now()
-
-    # 1. 活跃窗口压制：仅在 19:00 - 23:00 期间执行高频探测
-    if not (datetime.time(19, 0) <= now.time() <= datetime.time(23, 0)):
-        return {"status": "outside_window"}
-
     biz_date = datetime.date.today()
     biz_date_str = biz_date.isoformat()
+    
+    from app.services.workflow_service import workflow_service
+    from app.services.pipeline_service import pipeline_service
+    from app.services.market_data_service import MarketDataService
+    market_service = MarketDataService()
 
-    # 2. 内存缓存压制：如果当日已标记为 ALL_READY，则不再查询数据库
+    # --- 1. 晨间预就绪探测 (08:00 - 09:30) ---
+    if datetime.time(8, 0) <= now.time() <= datetime.time(9, 30):
+        # 检查 Morning Pipeline 是否已成功执行
+        if not await pipeline_service.is_stage_success(workflow_service.PIPELINE_MORNING, biz_date_str, workflow_service.STAGE_M1):
+            logger.debug(f"【探测】执行晨间就绪探测 (Morning Prep)")
+            # 探测 Tushare 停复牌数据是否已投放今日数据 (作为晨间就绪的 Canary)
+            is_ready = await market_service.sync_stock_suspend(suspend_date=biz_date_str)
+            if is_ready > 0:
+                logger.info(f"【探测】晨间数据源已就绪，启动 Phase I (Morning Prep)")
+                asyncio.create_task(workflow_service.process_morning_trigger(biz_date))
+                return {"status": "morning_triggered"}
+            else:
+                return {"status": "morning_pending"}
+
+    # --- 2. 活跃窗口压制：仅在 19:00 - 23:00 期间执行高频探测 ---
+    if not (datetime.time(19, 0) <= now.time() <= datetime.time(23, 0)):
+        # 补充：下午收盘后的 Canary 探测 (15:30 - 19:00)
+        if datetime.time(15, 30) <= now.time() <= datetime.time(19, 0):
+             if not await pipeline_service.is_stage_success(workflow_service.PIPELINE_POST_MARKET, biz_date_str, workflow_service.STAGE_A):
+                logger.debug(f"【探测】执行收盘后 Canary 探测 ({biz_date_str})")
+                is_ready = await market_service.check_canary_ready(biz_date_str)
+                if is_ready:
+                    logger.info(f"【探测】Canary 就绪，触发 Stage A (基础采集)")
+                    asyncio.create_task(workflow_service.execute_stage(workflow_service.STAGE_A, biz_date))
+                    return {"status": "stage_a_triggered"}
+        
+        return {"status": "outside_active_window"}
+
+    # --- 3. 晚间高频状态探测 (19:00 - 23:00) ---
     global _ready_cache
     if _ready_cache.get(biz_date_str) == "ALL_READY":
         return {"status": "all_ready_cached"}
@@ -64,16 +92,10 @@ async def readiness_prober_job() -> Dict[str, Any]:
         from app.utils.database import db
 
         # --- 动态校准逻辑 ---
-        # 获取当前在市股票总数作为基准
         sql_total = "SELECT COUNT(*) FROM stock_basic_info WHERE list_status = 'L'"
         total_listed_rows = await db.execute(sql_total)
-        # 兜底值
         total_listed = total_listed_rows[0][0] if total_listed_rows else 5000
-
-        # 设定 K 线预期最小行数为上市总数的 95%
         kline_min_threshold = int(total_listed * 0.95)
-        logger.debug(
-            f"【动态校准】当日上市股票总数: {total_listed}, K线就绪阈值设定为: {kline_min_threshold}")
         # ------------------
 
         # 探测规则: (表名, 日期字段, 预期最小行数)
@@ -87,71 +109,34 @@ async def readiness_prober_job() -> Dict[str, Any]:
         results = []
         all_ready = True
         for table, date_col, min_rows in PROBE_RULES:
-            try:
-                # 如果缓存中该表当日已就绪，跳过查询
-                cache_key = f"{biz_date_str}_{table}"
-                if _ready_cache.get(cache_key):
-                    results.append(
-                        {"table": table, "status": "READY (cached)"})
-                    continue
+            cache_key = f"{biz_date_str}_{table}"
+            if _ready_cache.get(cache_key):
+                results.append({"table": table, "status": "READY (cached)"})
+                continue
 
-                sql = f"SELECT COUNT(*) FROM {table} WHERE {date_col} = %s AND is_deleted = 0"
-                rows = await db.execute(sql, (biz_date,))
-                count = rows[0][0] if rows else 0
+            sql = f"SELECT COUNT(*) FROM {table} WHERE {date_col} = %s AND is_deleted = 0"
+            rows = await db.execute(sql, (biz_date,))
+            count = rows[0][0] if rows else 0
+            status = "READY" if count >= min_rows else ("PARTIAL" if count > 0 else "PENDING")
 
-                status = "READY" if count >= min_rows else (
-                    "PARTIAL" if count > 0 else "PENDING")
-
-                if status == "READY":
-                    _ready_cache[cache_key] = True
-                else:
-                    all_ready = False
-
-                # 写入 readiness 表
-                upsert_sql = """
-                INSERT INTO meta_data_readiness
-                (table_name, biz_date, storage, record_count, expected_min, producer_node, ready_at, status)
-                VALUES (%s, %s, 'cloud_mysql', %s, %s, 'cloud', NOW(), %s)
-                ON DUPLICATE KEY UPDATE
-                    record_count=VALUES(record_count),
-                    ready_at=VALUES(ready_at),
-                    status=VALUES(status)
-                """
-                await db.execute(upsert_sql, (table, biz_date, count, min_rows, status))
-                results.append(
-                    {"table": table, "status": status, "count": count})
-
-            except Exception as e:
+            if status == "READY":
+                _ready_cache[cache_key] = True
+            else:
                 all_ready = False
-                logger.error(f"探测表 {table} 失败: {e}")
 
-        # 3. 核心探测：探测 Tushare 数据投放 (Canary Probe)
-        # 条件：16:00 以后，且今日 Stage A 尚未成功
-        from app.services.workflow_service import workflow_service
-        from app.services.pipeline_service import pipeline_service
-        
-        if now.hour >= 16:
-            if not await pipeline_service.is_stage_success(workflow_service.PIPELINE_ID, biz_date_str, workflow_service.STAGE_A):
-                from app.services.market_data_service import MarketDataService
-                market_service = MarketDataService()
-                
-                logger.debug(f"【探测】执行 Tushare Canary 探测 ({biz_date_str})")
-                is_ready = await market_service.check_canary_ready(biz_date_str)
-                
-                if is_ready:
-                    logger.info(f"【探测】Canary 就绪，触发 Stage A (基础采集)")
-                    # 异步触发 Workflow 阶段执行
-                    asyncio.create_task(workflow_service.execute_stage(workflow_service.STAGE_A, biz_date))
-                else:
-                    logger.debug("【探测】Canary 尚未就绪")
+            upsert_sql = """
+            INSERT INTO meta_data_readiness
+            (table_name, biz_date, storage, record_count, expected_min, producer_node, ready_at, status)
+            VALUES (%s, %s, 'cloud_mysql', %s, %s, 'cloud', NOW(), %s)
+            ON DUPLICATE KEY UPDATE
+                record_count=VALUES(record_count), ready_at=VALUES(ready_at), status=VALUES(status)
+            """
+            await db.execute(upsert_sql, (table, biz_date, count, min_rows, status))
+            results.append({"table": table, "status": status, "count": count})
 
-        # 4. 触发 WorkflowManager
-        # 提取已就绪的表清单
+        # 触发 WorkflowManager
         ready_tables = [r["table"] for r in results if "READY" in r["status"]]
         if ready_tables:
-            from app.services.workflow_service import workflow_service
-            # 使用 create_task 异步触发，避免阻塞探测循环
-            import asyncio
             asyncio.create_task(workflow_service.process_event(biz_date, ready_tables))
 
         if all_ready:
@@ -223,7 +208,10 @@ async def backfill_processor_job():
 @notify_result
 @trading_day_only()
 async def daily_dq_report_job() -> Dict[str, Any]:
-    """每日数据质量报告任务 (09:05)"""
+    """每日数据质量报告任务 (09:05)
+    目标表: meta_dq_metrics
+    功能描述: 计算并统计 T-1 日全量数据的质量指标（空值率、对齐度等），并发送质量摘要邮件。
+    """
     from app.services.dq_metrics_service import dq_metrics_service
 
     # 获取最近一个交易日
@@ -263,8 +251,8 @@ async def daily_dq_report_job() -> Dict[str, Any]:
 @trading_day_only()
 async def safety_workflow_scan_job() -> Dict[str, Any]:
     """流水线保底扫描任务 (23:00)
-    
-    职责: 查询当日所有已就绪表，尝试驱动 WorkflowManager，防止事件丢失。
+    目标表: meta_pipeline_run
+    功能描述: 扫描当日所有 READY 状态的数据表，强制驱动一次状态机流转，防止因事件丢失导致的管线中断。
     """
     biz_date = datetime.date.today()
     try:
@@ -287,4 +275,20 @@ async def safety_workflow_scan_job() -> Dict[str, Any]:
         }
     except Exception as e:
         logger.error(f"【保底扫描】执行异常: {e}")
+        return {"status": "error", "message": str(e)}
+
+
+@notify_result
+async def daily_pipeline_summary_job() -> Dict[str, Any]:
+    """每日数据管线执行总结报告 (23:45)
+    目标表: meta_pipeline_run
+    功能描述: 汇总当日所有流水线阶段的执行状态、耗时、异常详情，并发送 HTML 标准化报表邮件。
+    """
+    biz_date = datetime.date.today()
+    from app.services.workflow_service import workflow_service
+    try:
+        await workflow_service.send_daily_summary_report(biz_date)
+        return {"status": "success", "date": biz_date.isoformat()}
+    except Exception as e:
+        logger.error(f"【总结报告】执行异常: {e}")
         return {"status": "error", "message": str(e)}

@@ -139,3 +139,58 @@ class OpsService:
         except Exception as e:
             logger.error(f"获取拒绝报告异常: {e}")
             return {"date": date, "error": str(e)}
+
+    async def get_mission_control(self, date: str = None) -> Dict[str, Any]:
+        """获取全天流水线执行看板 (Mission Control)"""
+        try:
+            if not date:
+                date = datetime.date.today().strftime("%Y-%m-%d")
+
+            from app.services.workflow_service import workflow_service
+            pipelines = [
+                {"id": workflow_service.PIPELINE_MORNING, "name": "Phase I: 晨间预就绪"},
+                {"id": workflow_service.PIPELINE_POST_MARKET, "name": "Phase II: 盘后流水线"},
+                {"id": workflow_service.PIPELINE_MAINTENANCE, "name": "Phase III: 深夜维护"}
+            ]
+
+            results = []
+            for p in pipelines:
+                sql = """
+                    SELECT task_id, status, started_at, finished_at, duration_sec, error_message
+                    FROM meta_pipeline_run 
+                    WHERE pipeline_id = %s AND biz_date = %s AND is_deleted = 0
+                    ORDER BY started_at ASC
+                """
+                rows = await db.execute(sql, (p["id"], date))
+                
+                stages = []
+                all_success = True if rows else False
+                for row in rows:
+                    stages.append({
+                        "stage": row[0],
+                        "status": row[1],
+                        "start": row[2].strftime("%H:%M:%S") if row[2] else None,
+                        "end": row[3].strftime("%H:%M:%S") if row[3] else None,
+                        "duration": row[4],
+                        "error": row[5]
+                    })
+                    if row[1] != "SUCCESS":
+                        all_success = False
+
+                results.append({
+                    "pipeline_id": p["id"],
+                    "name": p["name"],
+                    "status": "COMPLETED" if all_success else ("IN_PROGRESS" if rows else "PENDING"),
+                    "stages": stages
+                })
+
+            return {
+                "date": date,
+                "pipelines": results
+            }
+        except Exception as e:
+            logger.error(f"Mission Control 异常: {e}")
+            return {"error": str(e)}
+
+
+ops_service = OpsService()

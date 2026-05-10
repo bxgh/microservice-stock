@@ -28,6 +28,7 @@ class Settings(BaseSettings):
     SMTP_PASS: str = ""
     ALERT_RECEIVER: str = ""
     ALERT_LEVEL_THRESHOLD: str = "INFO"
+    SERVER_NAME: str = "Tencent Cloud - Node-Cloud"
 
     model_config = SettingsConfigDict(
         env_file="../.env",
