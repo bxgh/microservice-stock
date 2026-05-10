@@ -14,6 +14,9 @@ lineage:
         window_size: 20
     target_tables:
       - test_cascade_table
+      - ads_kline_adj
+      - ads_indicator_ma
+      - ads_strategy_signal
 
   stock_adjust_factor:
     indicators:

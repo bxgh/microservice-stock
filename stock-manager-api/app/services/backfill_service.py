@@ -284,10 +284,14 @@ class BackfillService:
 
         target_tables = config.get("target_tables", [])
         for table in target_tables:
+            # 针对不同表类型可能有不同清理策略，目前统一使用 DELETE 以触发重算
             sql_del = f"DELETE FROM {table} WHERE ts_code = %s AND trade_date >= %s"
-            await db.execute(sql_del, (ts_code, t_date))
-            logger.info(
-                f"[{request_id}] 已清理下游表数据: {table} | {ts_code} >= {t_date}")
+            try:
+                await db.execute(sql_del, (ts_code, t_date))
+                logger.info(
+                    f"[{request_id}] 已清理下游表数据: {table} | {ts_code} >= {t_date}")
+            except Exception as e:
+                logger.error(f"[{request_id}] 清理下游表 {table} 失败: {e}")
 
         sql_sig = """
             INSERT INTO recalc_signal (ts_code, start_date, end_date, request_id)
