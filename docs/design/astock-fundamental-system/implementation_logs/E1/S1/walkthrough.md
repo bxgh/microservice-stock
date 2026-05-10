@@ -35,6 +35,18 @@ Sample data: (('000513.SZ', datetime.date(2026, 3, 31), Decimal('24193940942.970
 - [x] 接口连通性验证: Tushare API 返回 200。
 - [x] 逻辑验证: 成功处理 `total_liab` -> `total_liabilities` 等字段映射。
 
+## 问题修复与数据维护 (2026-05-10)
+
+### 1. 现金流量表映射修复
+- **问题**: `FinancialDataService.sync_cashflow` 缺失字段映射，导致 `net_cash_flows_oper_act` 等字段入库为 NULL。
+- **修复**: 在 `stock-manager-api` 中增加了 Tushare 字段到 ODS 字段的显式映射。
+- **修复脚本**: 编写并执行了 `scripts/repair_cashflow_history.py`。
+- **状态**: 正在后台全量修复现金流量表历史数据。
+
 ## 当前状态
-- **后台任务**: 全量历史回填脚本 `init_financial_history.py` 正在执行中。
-- **日志监控**: `tail -f logs/init_financial_history.log` 可实时查看同步进度。
+- **后台任务**: `scripts/repair_cashflow_history.py` 正在修复现金流量表数据。
+- **数据总量**: 
+    - 资产负债表: 25.5万+
+    - 利润表: 30.9万+
+    - 现金流量表: 27.8万+ (修复中)
+    - 财务指标: 23.3万+

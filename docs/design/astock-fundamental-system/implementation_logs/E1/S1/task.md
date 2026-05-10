@@ -14,4 +14,6 @@
 - [x] E1-S1-T4: 历史回填与验证
     - [x] 编写 `init_financial_history.py`
     - [x] 启动后台执行 2015-2026 核心标的历史同步 (PID 已生成)
-    - [ ] 执行数据质量抽验
+    - [x] 执行数据质量抽验
+    - [x] 发现并修复 `ods_fin_cashflow` 字段映射 bug (n_cashflow_act -> net_cash_flows_oper_act)
+    - [x] 启动 `scripts/repair_cashflow_history.py` 修复历史数据

@@ -141,6 +141,12 @@ class FinancialDataService:
         if not data:
             return 0
             
+        mapping = {
+            "n_cashflow_act": "net_cash_flows_oper_act",
+            "n_cashflow_inv_act": "net_cash_flows_inv_act",
+            "n_cash_flows_fnc_act": "net_cash_flows_fnc_act"
+        }
+        
         sql = """
             INSERT INTO ods_fin_cashflow
             (ts_code, ann_date, f_ann_date, end_date, report_type, comp_type,
@@ -158,6 +164,10 @@ class FinancialDataService:
                 if item.get(d_key):
                     d = item[d_key]
                     item[d_key] = f"{d[:4]}-{d[4:6]}-{d[6:]}"
+            # 字段映射
+            for ts_key, db_key in mapping.items():
+                if ts_key in item:
+                    item[db_key] = item.pop(ts_key)
             for col in ["net_cash_flows_oper_act", "net_cash_flows_inv_act", "net_cash_flows_fnc_act", "free_cashflow"]:
                 if col not in item:
                     item[col] = None
