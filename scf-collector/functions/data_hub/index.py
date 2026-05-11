@@ -5,7 +5,12 @@ import logging
 
 # 为了能在云端正确引包，需要将共享目录加入 PYTHONPATH
 current_dir = os.path.dirname(os.path.abspath(__file__))
-shared_dir = os.path.abspath(os.path.join(current_dir, '../../'))
+# 自动寻找 shared 目录：优先检查同级目录（用于根目录部署），否则查找上两级目录（用于开发目录结构）
+if os.path.exists(os.path.join(current_dir, 'shared')):
+    shared_dir = current_dir
+else:
+    shared_dir = os.path.abspath(os.path.join(current_dir, '../../'))
+
 if shared_dir not in sys.path:
     sys.path.insert(0, shared_dir)
 
