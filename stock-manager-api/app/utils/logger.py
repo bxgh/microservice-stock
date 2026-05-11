@@ -1,5 +1,6 @@
 import logging
 import sys
+import os
 from contextvars import ContextVar
 from pythonjsonlogger import jsonlogger
 
@@ -18,21 +19,38 @@ class CustomJsonFormatter(jsonlogger.JsonFormatter):
 
 def setup_logger(name: str) -> logging.Logger:
     """配置日志器"""
+    level_name = os.getenv("LOG_LEVEL", "INFO").upper()
+    level = getattr(logging, level_name, logging.INFO)
+    
     logger = logging.getLogger(name)
-    logger.setLevel(logging.INFO)
+    logger.setLevel(level)
+
+    # 同时也设置父级 logger 级别，确保全局生效
+    if "." in name:
+        parent_name = name.split(".")[0]
+        logging.getLogger(parent_name).setLevel(level)
+    elif name == "stock-manager":
+        # 如果设置的是 root，确保以后 get_logger 的都能继承
+        pass
 
     # 控制台输出
-    handler = logging.StreamHandler(sys.stdout)
-    formatter = CustomJsonFormatter(
-        '%(asctime)s %(levelname)s %(name)s %(message)s',
-        datefmt='%Y-%m-%d %H:%M:%S'
-    )
-    handler.setFormatter(formatter)
-    logger.addHandler(handler)
+    if not logger.handlers:
+        handler = logging.StreamHandler(sys.stdout)
+        formatter = CustomJsonFormatter(
+            '%(asctime)s %(levelname)s %(name)s %(message)s',
+            datefmt='%Y-%m-%d %H:%M:%S'
+        )
+        handler.setFormatter(formatter)
+        logger.addHandler(handler)
 
     return logger
 
 
 def get_logger(name: str) -> logging.Logger:
     """获取日志器"""
-    return logging.getLogger(name)
+    # 确保级别继承
+    level_name = os.getenv("LOG_LEVEL", "INFO").upper()
+    level = getattr(logging, level_name, logging.INFO)
+    logger = logging.getLogger(name)
+    logger.setLevel(level)
+    return logger

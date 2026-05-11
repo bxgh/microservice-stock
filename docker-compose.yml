@@ -34,39 +34,6 @@ services:
     networks:
       - stock-network
 
-  # BaoStock服务 - K线/指数/行业数据
-  baostock-api:
-    build: ./baostock-api
-    image: baostock-api:latest
-    container_name: baostock-api
-    restart: unless-stopped
-    ports:
-      - "8001:8000"
-    environment:
-      - TZ=Asia/Shanghai
-      - LOG_LEVEL=${LOG_LEVEL:-INFO}
-      - PYTHONUNBUFFERED=1
-    env_file:
-      - .env
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
-      interval: 60s
-      timeout: 10s
-      retries: 3
-      start_period: 15s
-    deploy:
-      resources:
-        limits:
-          cpus: '0.5'
-          memory: 128M
-        reservations:
-          cpus: '0.1'
-          memory: 50M
-    mem_limit: 128m
-    cpus: 0.5
-    networks:
-      - stock-network
-
   # PyWencai服务 - 问财智能选股
   pywencai-api:
     build: ./pywencai-api
@@ -133,7 +100,6 @@ services:
     networks:
       - stock-network
 
-
   # Stock Manager - 数据管理中台
   stock-manager:
     build: ./stock-manager-api
@@ -146,10 +112,10 @@ services:
       - TZ=Asia/Shanghai
       - LOG_LEVEL=${LOG_LEVEL:-INFO}
       - PYTHONUNBUFFERED=1
-      - BAOSTOCK_API_URL=http://baostock-api:8000
       - AKSHARE_API_URL=http://akshare-api:8000
       - PYWENCAI_API_URL=http://pywencai-api:8000
       - TUSHARE_API_URL=http://tushare-api:8000
+      - MOOTDX_API_URL=http://mootdx-api:8000
 
     env_file:
       - .env
@@ -160,7 +126,6 @@ services:
       retries: 3
       start_period: 15s
     depends_on:
-      - baostock-api
       - akshare-api
       - pywencai-api
       - tushare-api
@@ -206,6 +171,39 @@ services:
           memory: 128M
     mem_limit: 256m
     cpus: 0.4
+    networks:
+      - stock-network
+
+  # Mootdx-api - 通达信直连行情服务
+  mootdx-api:
+    build: ./mootdx-api
+    image: mootdx-api:latest
+    container_name: mootdx-api
+    restart: unless-stopped
+    ports:
+      - "8007:8000"
+    environment:
+      - TZ=Asia/Shanghai
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+      - PYTHONUNBUFFERED=1
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - REDIS_PASSWORD=${REDIS_PASSWORD:-redis123}
+      - TDX_POOL_SIZE=${TDX_POOL_SIZE:-3}
+      - TDX_HOSTS=${TDX_HOSTS:-}
+    env_file:
+      - .env
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 60s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+    mem_limit: 256m
     networks:
       - stock-network
 

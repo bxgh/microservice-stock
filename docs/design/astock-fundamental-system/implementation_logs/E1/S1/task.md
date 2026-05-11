@@ -1,0 +1,19 @@
+- [x] E1-S1-T2: 扩展 `tushare-api` 的 `TushareService`
+    - [x] 增加 `get_balancesheet` 接口
+    - [x] 增加 `get_income` 接口
+    - [x] 增加 `get_cashflow` 接口
+    - [x] 增加 `get_fina_indicator` 接口
+    - [x] 增加 `get_disclosure_date` 接口
+- [x] E1-S1-DB: 部署 ODS 层财务表 DDL
+    - [x] 编写 `20260509_create_ods_financial_tables.sql`
+    - [x] 执行 DDL 并在 MySQL 确认表结构
+- [x] E1-S1-T3: 开发 `stock-manager-api` 同步服务
+    - [x] 创建 `FinancialDataService`
+    - [x] 实现增量同步逻辑
+    - [x] 注册 `daily_financial_data_sync_job` 定时任务
+- [x] E1-S1-T4: 历史回填与验证
+    - [x] 编写 `init_financial_history.py`
+    - [x] 启动后台执行 2015-2026 核心标的历史同步 (PID 已生成)
+    - [x] 执行数据质量抽验
+    - [x] 发现并修复 `ods_fin_cashflow` 字段映射 bug (n_cashflow_act -> net_cash_flows_oper_act)
+    - [x] 启动 `scripts/repair_cashflow_history.py` 修复历史数据

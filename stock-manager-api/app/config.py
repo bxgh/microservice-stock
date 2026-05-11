@@ -15,6 +15,7 @@ class Settings(BaseSettings):
     BAOSTOCK_API_URL: str = "http://baostock-api:8000"
     AKSHARE_API_URL: str = "http://akshare-api:8000"
     TUSHARE_API_URL: str = "http://tushare-api:8000"
+    MOOTDX_API_URL: str = "http://mootdx-api:8000"
     PYWENCAI_API_URL: str = "http://pywencai-api:8000"
     MONITOR_SERVICE_URL: str = "http://monitor-service:8000"
 
@@ -28,6 +29,7 @@ class Settings(BaseSettings):
     SMTP_PASS: str = ""
     ALERT_RECEIVER: str = ""
     ALERT_LEVEL_THRESHOLD: str = "INFO"
+    SERVER_NAME: str = "Tencent Cloud - Node-Cloud"
 
     model_config = SettingsConfigDict(
         env_file="../.env",

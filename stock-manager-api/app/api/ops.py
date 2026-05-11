@@ -57,3 +57,12 @@ async def get_reject_report(date: str = None):
         return await ops_service.get_reject_report(date)
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Internal Error: {e}")
+
+
+@router.get("/mission-control")
+async def get_mission_control(date: str = None):
+    """获取全天任务全生命周期执行看板"""
+    try:
+        return await ops_service.get_mission_control(date)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Internal Error: {e}")

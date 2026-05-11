@@ -191,3 +191,82 @@ async def stk_rating(
         return {"data": data}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+@router.get("/balancesheet")
+async def balancesheet(
+    request: Request,
+    ts_code: Optional[str] = None,
+    ann_date: Optional[str] = None,
+    start_date: Optional[str] = None,
+    end_date: Optional[str] = None,
+    period: Optional[str] = None
+):
+    service = get_service(request)
+    try:
+        data = await service.get_balancesheet(ts_code=ts_code, ann_date=ann_date, start_date=start_date, end_date=end_date, period=period)
+        return {"data": data}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.get("/income")
+async def income(
+    request: Request,
+    ts_code: Optional[str] = None,
+    ann_date: Optional[str] = None,
+    start_date: Optional[str] = None,
+    end_date: Optional[str] = None,
+    period: Optional[str] = None
+):
+    service = get_service(request)
+    try:
+        data = await service.get_income(ts_code=ts_code, ann_date=ann_date, start_date=start_date, end_date=end_date, period=period)
+        return {"data": data}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.get("/cashflow")
+async def cashflow(
+    request: Request,
+    ts_code: Optional[str] = None,
+    ann_date: Optional[str] = None,
+    start_date: Optional[str] = None,
+    end_date: Optional[str] = None,
+    period: Optional[str] = None
+):
+    service = get_service(request)
+    try:
+        data = await service.get_cashflow(ts_code=ts_code, ann_date=ann_date, start_date=start_date, end_date=end_date, period=period)
+        return {"data": data}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.get("/fina_indicator")
+async def fina_indicator(
+    request: Request,
+    ts_code: Optional[str] = None,
+    ann_date: Optional[str] = None,
+    start_date: Optional[str] = None,
+    end_date: Optional[str] = None,
+    period: Optional[str] = None
+):
+    service = get_service(request)
+    try:
+        data = await service.get_fina_indicator(ts_code=ts_code, ann_date=ann_date, start_date=start_date, end_date=end_date, period=period)
+        return {"data": data}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.get("/disclosure_date")
+async def disclosure_date(
+    request: Request,
+    ts_code: Optional[str] = None,
+    end_date: Optional[str] = None,
+    pre_date: Optional[str] = None,
+    actual_date: Optional[str] = None
+):
+    service = get_service(request)
+    try:
+        data = await service.get_disclosure_date(ts_code=ts_code, end_date=end_date, pre_date=pre_date, actual_date=actual_date)
+        return {"data": data}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
