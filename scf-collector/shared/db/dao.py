@@ -22,21 +22,19 @@ class StockDAO:
         sql = """
         INSERT INTO stock_kline_daily (
             ts_code, trade_date, open, high, low, close, 
-            pre_close, `change`, pct_chg, vol, amount
+            pre_close, pct_chg, volume, amount
         ) VALUES (
             %(ts_code)s, %(trade_date)s, %(open)s, %(high)s, %(low)s, %(close)s, 
-            %(pre_close)s, %(change)s, %(pct_chg)s, %(vol)s, %(amount)s
+            %(pre_close)s, %(pct_chg)s, %(volume)s, %(amount)s
         ) ON DUPLICATE KEY UPDATE 
             open = VALUES(open), 
             high = VALUES(high), 
             low = VALUES(low), 
             close = VALUES(close), 
             pre_close = VALUES(pre_close), 
-            `change` = VALUES(`change`), 
             pct_chg = VALUES(pct_chg), 
-            vol = VALUES(vol), 
-            amount = VALUES(amount),
-            updated_at = CURRENT_TIMESTAMP
+            volume = VALUES(volume), 
+            amount = VALUES(amount)
         """
         
         # 注意：aiomysql 的 executemany 在某些版本下对 Dict 格式支持有差异
@@ -51,37 +49,37 @@ class StockDAO:
         return count
 
     @staticmethod
-    async def log_pipeline_run(pipeline_name: str, status: str, error_msg: str = None, run_id: str = None) -> int:
+    async def log_pipeline_run(pipeline_id: str, status: str, error_message: str = None, run_id: str = None, biz_date: str = None) -> int:
         """
-        记录任务流水审计
+        记录任务流水审计 (使用 meta_pipeline_run)
         """
         sql = """
-        INSERT INTO pipeline_run (
-            run_id, pipeline_name, status, error_msg, start_at, end_at
+        INSERT INTO meta_pipeline_run (
+            run_id, pipeline_id, biz_date, status, error_message, started_at, finished_at
         ) VALUES (
-            %s, %s, %s, %s, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+            %s, %s, %s, %s, %s, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
         ) ON DUPLICATE KEY UPDATE 
             status = VALUES(status), 
-            error_msg = VALUES(error_msg), 
-            end_at = CURRENT_TIMESTAMP
+            error_message = VALUES(error_message), 
+            finished_at = CURRENT_TIMESTAMP
         """
-        params = (run_id, pipeline_name, status, error_msg)
+        params = (run_id, pipeline_id, biz_date, status, error_message)
         return await execute_query(sql, params, is_select=False)
 
     @staticmethod
-    async def update_data_readiness(trade_date: str, source: str, row_count: int) -> int:
+    async def update_data_readiness(biz_date: str, table_name: str, row_count: int) -> int:
         """
-        更新数据就绪状态探测表
+        更新数据就绪状态探测表 (绝对对齐 meta_data_readiness)
         """
         sql = """
-        INSERT INTO data_readiness (
-            data_source, trade_date, ready_at, status, row_count
+        INSERT INTO meta_data_readiness (
+            table_name, biz_date, storage, record_count, ready_at, status
         ) VALUES (
-            %s, %s, CURRENT_TIMESTAMP, 'ready', %s
+            %s, %s, 'MYSQL', %s, CURRENT_TIMESTAMP, 'READY'
         ) ON DUPLICATE KEY UPDATE 
+            record_count = VALUES(record_count),
             ready_at = CURRENT_TIMESTAMP, 
-            status = 'ready', 
-            row_count = VALUES(row_count)
+            status = 'READY'
         """
-        params = (source, trade_date, row_count)
+        params = (table_name, biz_date, row_count)
         return await execute_query(sql, params, is_select=False)

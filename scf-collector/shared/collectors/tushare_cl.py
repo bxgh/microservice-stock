@@ -68,7 +68,7 @@ class TushareCollector(BaseCollector):
                 "pre_close": float(row.get('pre_close', 0)),
                 "change": float(row.get('change', 0)),
                 "pct_chg": round(pct_chg_raw / 100.0, 6),
-                "vol": float(row.get('vol', 0)), # Tushare 默认手
+                "volume": float(row.get('vol', 0)), # Tushare 默认手
                 "amount": round(amount_raw * 1000.0, 2)
             })
         return results

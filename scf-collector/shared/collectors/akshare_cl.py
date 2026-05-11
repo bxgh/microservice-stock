@@ -75,7 +75,7 @@ class AkShareCollector(BaseCollector):
                 "pre_close": round(pre_close, 4),
                 "change": round(change, 4),
                 "pct_chg": pct_chg,
-                "vol": float(row.get('成交量', 0)), # AkShare 通常是手
+                "volume": float(row.get('成交量', 0)), # AkShare 通常是手
                 "amount": float(row.get('成交额', 0)) # AkShare 通常是元
             })
         return results
