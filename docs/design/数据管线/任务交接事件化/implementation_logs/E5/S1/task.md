@@ -1,0 +1,4 @@
+- [x] **E5-S1-T1**: [MODIFY] `pipeline_service.py` - 增加流水线状态写入与校验方法
+- [x] **E5-S1-T2**: [NEW] `workflow_service.py` - 实现核心流水线编排逻辑
+- [x] **E5-S1-T3**: [MODIFY] `system_jobs.py` - 在就绪探测器中集成触发逻辑
+- [x] **E5-S1-T4**: [VERIFY] 验证 Given-When-Then 验收标准

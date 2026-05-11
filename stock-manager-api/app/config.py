@@ -27,7 +27,7 @@ class Settings(BaseSettings):
     SMTP_USER: str = ""
     SMTP_PASS: str = ""
     ALERT_RECEIVER: str = ""
-    ALERT_LEVEL_THRESHOLD: str = "WARN"
+    ALERT_LEVEL_THRESHOLD: str = "INFO"
 
     model_config = SettingsConfigDict(
         env_file="../.env",

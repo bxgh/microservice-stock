@@ -5,26 +5,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI, Request, HTTPException
 from fastapi.responses import JSONResponse
 
-from app.api import (
-    metadata,
-    audit,
-    scheduler,
-    ops,
-    system,
-    dashboard,
-    market_dashboard,
-    shareholders,
-    chips,
-    game,
-    information,
-    commands,
-    task_commands,
-    data_audit,
-    suspension,
-    monitor,
-    finance,
-    dq,
-    backfill)
+from app.api import metadata, audit, scheduler, ops, system, dashboard, market_dashboard, shareholders, chips, game, information, commands, task_commands, pipelines, data_audit, suspension, monitor, finance, dq, backfill
 from app.api.market import router as market_router
 
 from app.utils.logger import setup_logger, request_id_var
@@ -69,6 +50,14 @@ async def lifespan(app: FastAPI):
             job_id="readiness_prober"
         )
 
+        # 1.3 注册股票基础信息同步任务 (每天 08:30)
+        scheduler.add_daily_job(
+            job_funcs.daily_stock_basic_sync_job,
+            hour=8,
+            minute=30,
+            job_id="daily_stock_basic_sync"
+        )
+
         # 2. 注册早盘停牌数据同步任务 (每天 09:15)
         scheduler.add_daily_job(
             job_funcs.daily_suspension_morning_sync_job,
@@ -101,12 +90,14 @@ async def lifespan(app: FastAPI):
             minute=30
         )
 
-        # 6. 注册市场全景数据同步任务 (每日 19:30)
+        # 6. 市场全景数据同步任务已迁移至 WorkflowManager 触发 (E5-S1)
+
+        # 6.1 注册每日基金/ETF同步任务 (每日 16:15)
         scheduler.add_daily_job(
-            job_funcs.daily_market_overview_sync_job,
-            job_id="daily_market_overview_sync",
-            hour=19,
-            minute=30
+            job_funcs.daily_fund_sync_job,
+            job_id="daily_fund_sync",
+            hour=16,
+            minute=15
         )
 
         # 7. 注册机构评级同步任务 (每日 03:00)
@@ -125,20 +116,14 @@ async def lifespan(app: FastAPI):
             minute=0
         )
 
-        # 9. 注册日终自检审计任务 (每日 23:30)
+        # 9. 日终审计与业务校验已迁移至 WorkflowManager 触发 (E5-S1)
+        
+        # 10. 注册流水线保底扫描任务 (E6-S1)
         scheduler.add_daily_job(
-            sys_job_funcs.daily_audit_job,
-            job_id="daily_audit",
+            sys_job_funcs.safety_workflow_scan_job,
+            job_id="safety_workflow_scan",
             hour=23,
-            minute=30
-        )
-
-        # 10. 注册业务规则校验任务 (每日 20:30)
-        scheduler.add_daily_job(
-            job_funcs.daily_business_rule_check_job,
-            job_id="daily_business_rule_check",
-            hour=20,
-            minute=30
+            minute=0
         )
 
         # 11. 注册复权因子对账任务 (每周日 05:00)
@@ -304,4 +289,5 @@ app.include_router(monitor.router, prefix="/api/v1/monitor", tags=["监控指标
 app.include_router(finance.router, prefix="/api/v1/finance", tags=["财务数据"])
 app.include_router(market_router, prefix="/api/v1/market", tags=["行情数据"])
 app.include_router(dq.router, prefix="/api/v1/dq", tags=["数据质量"])
+app.include_router(pipelines.router, prefix="/api/v1/pipelines", tags=["任务状态机"])
 app.include_router(backfill.router, prefix="/api/v1/backfill", tags=["补数与重算"])

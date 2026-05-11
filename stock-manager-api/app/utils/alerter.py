@@ -56,6 +56,7 @@ class Alerter:
 
     async def _send_email(self, level, title, context):
         """异步发送邮件"""
+        print(f"DEBUG: [Alerter] 正在尝试发送邮件: {title} (Level: {level})")
         subject = f"[{level}][stock-system] {title}"
 
         # 渲染正文

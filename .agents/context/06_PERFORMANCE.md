@@ -26,9 +26,9 @@
 | 服务 | 内存限制 | CPU 限制 | 内存峰值 |
 |------|----------|----------|----------|
 | baostock-api | 128MB | 0.5 核 | ~100MB |
-| akshare-api | 128MB | 0.5 核 | ~60MB |
-| pywencai-api | 128MB | 0.5 核 | ~50MB |
-| stock-manager | 128MB | 0.5 核 | ~30MB |
+| akshare-api | 256MB | 0.5 核 | ~180MB |
+| pywencai-api | 512MB | 0.5 核 | ~400MB |
+| stock-manager | 192MB | 0.5 核 | ~150MB |
 
 ---
 

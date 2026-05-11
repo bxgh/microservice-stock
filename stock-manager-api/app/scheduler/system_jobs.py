@@ -5,7 +5,7 @@ import socket
 from typing import Dict, Any
 from app.utils.database import db
 from app.utils.alerter import alerter
-from app.common.scheduler_decorators import trading_day_only
+from app.common.scheduler_decorators import trading_day_only, notify_result
 
 logger = logging.getLogger("stock-manager.system-jobs")
 
@@ -70,8 +70,8 @@ async def readiness_prober_job() -> Dict[str, Any]:
         # 兜底值
         total_listed = total_listed_rows[0][0] if total_listed_rows else 5000
 
-        # 设定 K 线预期最小行数为上市总数的 98%
-        kline_min_threshold = int(total_listed * 0.98)
+        # 设定 K 线预期最小行数为上市总数的 95%
+        kline_min_threshold = int(total_listed * 0.95)
         logger.debug(
             f"【动态校准】当日上市股票总数: {total_listed}, K线就绪阈值设定为: {kline_min_threshold}")
         # ------------------
@@ -95,7 +95,7 @@ async def readiness_prober_job() -> Dict[str, Any]:
                         {"table": table, "status": "READY (cached)"})
                     continue
 
-                sql = f"SELECT COUNT(*) FROM {table} WHERE {date_col} = %s"
+                sql = f"SELECT COUNT(*) FROM {table} WHERE {date_col} = %s AND is_deleted = 0"
                 rows = await db.execute(sql, (biz_date,))
                 count = rows[0][0] if rows else 0
 
@@ -125,17 +125,47 @@ async def readiness_prober_job() -> Dict[str, Any]:
                 all_ready = False
                 logger.error(f"探测表 {table} 失败: {e}")
 
+        # 3. 核心探测：探测 Tushare 数据投放 (Canary Probe)
+        # 条件：16:00 以后，且今日 Stage A 尚未成功
+        from app.services.workflow_service import workflow_service
+        from app.services.pipeline_service import pipeline_service
+        
+        if now.hour >= 16:
+            if not await pipeline_service.is_stage_success(workflow_service.PIPELINE_ID, biz_date_str, workflow_service.STAGE_A):
+                from app.services.market_data_service import MarketDataService
+                market_service = MarketDataService()
+                
+                logger.debug(f"【探测】执行 Tushare Canary 探测 ({biz_date_str})")
+                is_ready = await market_service.check_canary_ready(biz_date_str)
+                
+                if is_ready:
+                    logger.info(f"【探测】Canary 就绪，触发 Stage A (基础采集)")
+                    # 异步触发 Workflow 阶段执行
+                    asyncio.create_task(workflow_service.execute_stage(workflow_service.STAGE_A, biz_date))
+                else:
+                    logger.debug("【探测】Canary 尚未就绪")
+
+        # 4. 触发 WorkflowManager
+        # 提取已就绪的表清单
+        ready_tables = [r["table"] for r in results if "READY" in r["status"]]
+        if ready_tables:
+            from app.services.workflow_service import workflow_service
+            # 使用 create_task 异步触发，避免阻塞探测循环
+            import asyncio
+            asyncio.create_task(workflow_service.process_event(biz_date, ready_tables))
+
         if all_ready:
             _ready_cache[biz_date_str] = "ALL_READY"
             logger.info(f"【探测器】当日所有核心数据已就绪: {biz_date_str}")
 
-        return {"status": "success", "details": results}
+        return {"status": "success", "探测详情": results, "ready_tables": ready_tables}
 
     except Exception as e:
         logger.error(f"就绪探测器致命异常: {e}")
         return {"status": "error", "message": str(e)}
 
 
+@notify_result
 @trading_day_only()
 async def daily_audit_job() -> Dict[str, Any]:
     """日终审计任务 (23:30)"""
@@ -143,7 +173,7 @@ async def daily_audit_job() -> Dict[str, Any]:
 
     # 检查核心数据是否全部就绪
     try:
-        sql = "SELECT table_name, status FROM meta_data_readiness WHERE biz_date = %s"
+        sql = "SELECT table_name, status FROM meta_data_readiness WHERE biz_date = %s AND is_deleted = 0"
         rows = await db.execute(sql, (biz_date,))
 
         status_map = {row[0]: row[1] for row in rows}
@@ -162,7 +192,7 @@ async def daily_audit_job() -> Dict[str, Any]:
             })
             return {"status": "failed", "missing": missing}
 
-        return {"status": "success", "message": "All core data ready"}
+        return {"status": "success", "message": "所有核心数据已就绪"}
     except Exception as e:
         logger.error(f"日终审计异常: {e}")
         return {"status": "error", "message": str(e)}
@@ -190,6 +220,7 @@ async def backfill_processor_job():
         return {"status": "error", "message": str(e)}
 
 
+@notify_result
 @trading_day_only()
 async def daily_dq_report_job() -> Dict[str, Any]:
     """每日数据质量报告任务 (09:05)"""
@@ -222,7 +253,38 @@ async def daily_dq_report_job() -> Dict[str, Any]:
                 **metrics
             })
 
-        return {"status": "success", "date": target_date, "metrics": metrics}
+        return {"status": "success", "日期": target_date, "质量指标": metrics}
     except Exception as e:
         logger.error(f"DQ 报告任务异常: {e}")
+        return {"status": "error", "message": f"计算失败: {str(e)}"}
+
+
+@notify_result
+@trading_day_only()
+async def safety_workflow_scan_job() -> Dict[str, Any]:
+    """流水线保底扫描任务 (23:00)
+    
+    职责: 查询当日所有已就绪表，尝试驱动 WorkflowManager，防止事件丢失。
+    """
+    biz_date = datetime.date.today()
+    try:
+        # 查询当日所有 READY 的表
+        sql = "SELECT table_name FROM meta_data_readiness WHERE biz_date = %s AND status = 'READY' AND is_deleted = 0"
+        rows = await db.execute(sql, (biz_date,))
+        ready_tables = [row[0] for row in rows]
+        
+        if not ready_tables:
+            return {"status": "skipped", "reason": "no_ready_tables_found"}
+            
+        from app.services.workflow_service import workflow_service
+        # 同步调用（await），确保在 Job 结束前流水线触发逻辑已走完
+        await workflow_service.process_event(biz_date, ready_tables)
+        
+        return {
+            "status": "success", 
+            "biz_date": biz_date.isoformat(),
+            "ready_tables_count": len(ready_tables)
+        }
+    except Exception as e:
+        logger.error(f"【保底扫描】执行异常: {e}")
         return {"status": "error", "message": str(e)}

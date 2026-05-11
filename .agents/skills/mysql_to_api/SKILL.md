@@ -10,7 +10,7 @@ description: 自动化从 MySQL 表或 SQL 语句创建 FastAPI 接口的完整�
 ## 前置条件
 - 工作目录位于 `stock-manager-api` 或具备数据库访问能力的 FastAPI 服务目录。
 - `.env` 文件已配置正确的数据库连接信息。
-- `.agent/skills/mysql_to_api/scripts/inspect_db.py` 脚本存在。
+- `.agents/skills/mysql_to_api/scripts/inspect_db.py` 脚本存在。
 
 ## 工作流步骤
 
@@ -23,9 +23,9 @@ description: 自动化从 MySQL 表或 SQL 语句创建 FastAPI 接口的完整�
 ### 2. 数据库架构检查 (Inspect Schema)
 运行检查脚本获取 JSON 格式的架构信息。
 ```bash
-.venv/bin/python3 .agent/skills/mysql_to_api/scripts/inspect_db.py --table <TABLE_NAME>
+.venv/bin/python3 .agents/skills/mysql_to_api/scripts/inspect_db.py --table <TABLE_NAME>
 # 或
-.venv/bin/python3 .agent/skills/mysql_to_api/scripts/inspect_db.py --sql "<SQL_QUERY>"
+.venv/bin/python3 .agents/skills/mysql_to_api/scripts/inspect_db.py --sql "<SQL_QUERY>"
 ```
 
 ### 3. 代码生成 (Code Generation)

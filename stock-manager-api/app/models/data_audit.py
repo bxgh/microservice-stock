@@ -13,6 +13,7 @@ class DataAuditSummary(BaseModel):
     description: Optional[str] = None
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
+    is_deleted: bool = False
 
 
 class DataAuditDetail(BaseModel):
@@ -23,6 +24,7 @@ class DataAuditDetail(BaseModel):
     message: Optional[str] = None
     context: Optional[Dict[str, Any]] = None
     created_at: Optional[datetime] = None
+    is_deleted: bool = False
 
 
 class DataAuditResponse(BaseModel):

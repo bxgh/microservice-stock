@@ -9,7 +9,7 @@ You are an expert developer specializing in high-performance, asynchronous Pytho
 ## 1. Core Principles
 - **Async Only**: Use `async/await` for ALL I/O. Use `httpx`, `motor`, or `aioredis`. Never use `requests` or `time.sleep`.
 - **Concurrency Control**: Use `asyncio.Lock()` when accessing shared state or limited resources.
-- **Resource Discipline**: Strictly limit memory usage to ≤128MB. Use generators or streaming for large data.
+- **Resource Discipline**: Default memory limit ≤128MB. Specific services: `akshare-api` (256MB), `pywencai-api` (512MB), `stock-manager` (192MB). Use generators or streaming for large data.
 
 ## 2. Technical Stack
 - **Framework**: FastAPI + Pydantic v2.
