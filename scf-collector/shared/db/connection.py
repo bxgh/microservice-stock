@@ -16,8 +16,16 @@ class DBManager:
     @classmethod
     async def get_pool(cls) -> aiomysql.Pool:
         """
-        获取连接池 (单例模式)
+        获取连接池 (针对 SCF 优化的单例模式)
         """
+        current_loop = asyncio.get_running_loop()
+        
+        # 核心修复：检查现有池是否绑定在已关闭或不同的 Loop 上
+        if cls._pool is not None:
+            if cls._pool._loop != current_loop or cls._pool._loop.is_closed():
+                logger.info("Event loop changed or closed. Resetting database pool.")
+                cls._pool = None
+
         if cls._pool is not None:
             return cls._pool
 

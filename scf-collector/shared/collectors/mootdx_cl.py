@@ -1,3 +1,7 @@
+import os
+# 强制设置缓存路径 (必须在任何 mootdx 相关导入之前)
+os.environ['MOOTDX_CACHE_DIR'] = '/tmp'
+
 import asyncio
 import logging
 import pandas as pd
@@ -73,7 +77,7 @@ class MootdxCollector(BaseCollector):
                 "pre_close": pre_close,
                 "change": round(change, 4),
                 "pct_chg": pct_chg, # 小数形式
-                "vol": float(row.get('vol', 0)),
+                "volume": float(row.get('vol', 0)),
                 "amount": float(row.get('amount', 0))
             })
         return results
