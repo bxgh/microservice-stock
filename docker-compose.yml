@@ -115,6 +115,7 @@ services:
       - AKSHARE_API_URL=http://akshare-api:8000
       - PYWENCAI_API_URL=http://pywencai-api:8000
       - TUSHARE_API_URL=http://tushare-api:8000
+      - MOOTDX_API_URL=http://mootdx-api:8000
 
     env_file:
       - .env
