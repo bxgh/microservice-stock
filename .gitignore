@@ -49,3 +49,5 @@ check_*.py
 *.txt
 migration.log
 *.db
+scf-collector/layers/
+.serverless/

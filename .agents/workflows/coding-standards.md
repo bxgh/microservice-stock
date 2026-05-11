@@ -62,3 +62,10 @@ description: 股票数据源微服务开发规范 - 编码时自动应用
 ## Git 提交与语言
 - 使用 Conventional Commits: feat/fix/docs/test/refactor
 - **强制要求**: 所有提交说明 (Commit Message)、文档、以及代码注释必须使用 **中文**。
+
+## Serverless 开发规范 (SCF)
+- **部署基准**: 必须使用 `serverless.yml`，不再使用 Docker Compose 进行微服务网连。
+- **环境要求**: 原生运行时强制使用 Python 3.10。
+- **调度剥离**: 严禁在代码中写 `while True` 或使用 `APScheduler`。定时任务必须交由 **SCF 定时触发器** 执行。
+- **状态分离**: 不要在内存中保存全局状态，每次函数调用都应视为全新的独立实例。
+- **体积优化**: 重型依赖（如 Pandas, mootdx）建议打包为 SCF Layer，保持核心业务代码极简（< 50MB）。
