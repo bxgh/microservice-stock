@@ -64,59 +64,121 @@ class CrossCompareService:
     async def compare_stock(
             self, ts_code: str, date_str: str) -> Optional[Dict[str, Any]]:
         """执行单只股票的跨源比对 (Triple Source Check)"""
-        # 1. 获取源 A (Tushare / Local ODS)
-        sql = "SELECT open, high, low, close, volume, amount FROM stock_kline_daily WHERE ts_code=%s AND trade_date=%s"
-        res_ods = await db.execute(sql, (ts_code, date_str))
-        if not res_ods:
+        # 1. 获取三个源的数据
+        # Source A: Local ODS (Tushare)
+        # Source B: Mootdx
+        # Source C: AkShare
+        source_a = await self._fetch_from_ods(ts_code, date_str)
+        if not source_a:
             return None
 
-        source_a = {
-            "open": float(res_ods[0][0]), "high": float(res_ods[0][1]),
-            "low": float(res_ods[0][2]), "close": float(res_ods[0][3]),
-            "volume": float(res_ods[0][4]), "amount": float(res_ods[0][5])
+        # 并发获取外部源
+        source_b, source_c = await asyncio.gather(
+            self._fetch_from_mootdx(ts_code, date_str),
+            self._fetch_from_akshare(ts_code, date_str),
+            return_exceptions=True
+        )
+        
+        # 处理异常
+        if isinstance(source_b, Exception):
+            logger.warning(f"Fetch from Mootdx failed: {source_b}")
+            source_b = None
+        if isinstance(source_c, Exception):
+            logger.warning(f"Fetch from AkShare failed: {source_c}")
+            source_c = None
+
+        # 2. 执行三源仲裁逻辑
+        arbitration = self._arbitrate_triple(source_a, source_b, source_c)
+        
+        if not arbitration["has_issue"]:
+            return None
+
+        # 3. 记录结果
+        await self._log_finding(
+            ts_code, 
+            date_str, 
+            arbitration["severity"], 
+            arbitration["description"], 
+            arbitration["diff_data"]
+        )
+        return {"ts_code": ts_code, "severity": arbitration["severity"]}
+
+    def _is_match(self, s1: Optional[Dict], s2: Optional[Dict]) -> bool:
+        """判定两个源是否一致"""
+        if not s1 or not s2:
+            return False
+        diffs = self._calculate_diffs(s1, s2)
+        return len(diffs) == 0
+
+    def _arbitrate_triple(self, s_a: Dict, s_b: Optional[Dict], s_c: Optional[Dict]) -> Dict:
+        """
+        三源仲裁核心逻辑 (取二一致)
+        """
+        res = {
+            "has_issue": False,
+            "severity": "INFO",
+            "description": "",
+            "diff_data": {
+                "source_a": s_a,
+                "source_b": s_b,
+                "source_c": s_c,
+                "winner": "none"
+            }
         }
 
-        # 2. 获取源 B (BaoStock)
-        source_b = await self._fetch_from_baostock(ts_code, date_str)
+        # 情况 1: A 与 B 一致 (最常见，数据正确)
+        if self._is_match(s_a, s_b):
+            # 检查 C 是否也一致 (如果 C 存在)
+            if s_c and not self._is_match(s_a, s_c):
+                res.update({
+                    "has_issue": True,
+                    "severity": "WARN",
+                    "description": "跨源比对: AkShare 与主源不一致 (A=B!=C)",
+                })
+                res["diff_data"]["winner"] = "source_a_b"
+                return res
+            return res # 全部一致或 C 不存在，无问题
 
-        # 3. 如果 A 和 B 存在显著差异，引入源 C (AkShare) 进行仲裁
-        has_diff_ab = self._calculate_diffs(
-            source_a, source_b) if source_b else []
+        # 情况 2: A 与 C 一致，但 B 不一致
+        if self._is_match(s_a, s_c):
+            res.update({
+                "has_issue": True,
+                "severity": "WARN",
+                "description": "跨源比对: Mootdx 与主源不一致 (A=C!=B)",
+            })
+            res["diff_data"]["winner"] = "source_a_c"
+            return res
 
-        if not has_diff_ab:
-            return None
+        # 情况 3: B 与 C 一致，但 A (ODS) 不一致 -> 重点关注，ODS 可能有误
+        if self._is_match(s_b, s_c):
+            res.update({
+                "has_issue": True,
+                "severity": "ERROR",
+                "description": "跨源比对: 本地 ODS 与外部源不一致 (B=C!=A). 建议修复 ODS.",
+            })
+            res["diff_data"]["winner"] = "source_b_c"
+            return res
 
-        # 发现差异，引入 AkShare
-        source_c = await self._fetch_from_akshare(ts_code, date_str)
+        # 情况 4: 三者均不一致
+        if s_b and s_c:
+            res.update({
+                "has_issue": True,
+                "severity": "ERROR",
+                "description": "跨源比对: 三方数据均不一致 (A!=B!=C). 需人工介入.",
+            })
+            res["diff_data"]["winner"] = "none"
+            return res
+        
+        # 情况 5: 只有一个外部源可用且不一致
+        if (s_b and not s_c) or (not s_b and s_c):
+            res.update({
+                "has_issue": True,
+                "severity": "WARN",
+                "description": "跨源比对: 外部单源与主源不一致. (由于缺少仲裁源，无法判定胜负)",
+            })
+            return res
 
-        # 4. 执行三重比对逻辑
-        final_diffs = has_diff_ab
-        tie_breaker_msg = ""
-
-        if source_c:
-            diff_ac = self._calculate_diffs(source_a, source_c)
-            diff_bc = self._calculate_diffs(
-                source_b, source_c) if source_b else []
-
-            if not diff_bc and diff_ac:
-                tie_breaker_msg = " [仲裁: BaoStock 与 AkShare 一致, Tushare 可能有误]"
-            elif not diff_ac and diff_bc:
-                tie_breaker_msg = " [仲裁: Tushare 与 AkShare 一致, BaoStock 可能有误]"
-            elif diff_ac and diff_bc:
-                tie_breaker_msg = " [仲裁: 三方数据均不一致, 需人工介入]"
-
-        # 5. 记录结果
-        max_diff = max([d["diff"] for d in final_diffs])
-        severity = "ERROR" if max_diff > 0.05 else "WARN"
-        finding_msg = f"跨源比对差异: {len(final_diffs)} 个字段超限.{tie_breaker_msg}"
-
-        await self._log_finding(ts_code, date_str, severity, finding_msg, {
-            "source_a": source_a,
-            "source_b": source_b,
-            "source_c": source_c,
-            "diff_details": final_diffs
-        })
-        return {"ts_code": ts_code, "severity": severity}
+        return res
 
     def _calculate_diffs(self, s1: Dict, s2: Dict) -> List[Dict]:
         """计算两个源之间的差异"""
@@ -141,27 +203,47 @@ class CrossCompareService:
                              "v2": v2, "diff": rel_diff})
         return diffs
 
-    async def _fetch_from_baostock(
+    async def _fetch_from_ods(
             self, ts_code: str, date_str: str) -> Optional[Dict[str, Any]]:
-        """从 BaoStock 获取数据"""
+        """从本地 ODS (Tushare) 获取数据"""
         try:
-            parts = ts_code.split(".")
-            bs_code = f"{parts[1].lower()}.{parts[0]}"
-            resp = await http_client.get("baostock", f"/api/v1/history/kline/{bs_code}",
-                                         params={"start_date": date_str, "end_date": date_str, "adjust": 3})
-            if resp and isinstance(resp, list) and len(resp) > 0:
-                item = resp[0]
+            sql = "SELECT open, high, low, close, volume, amount FROM stock_kline_daily WHERE ts_code=%s AND trade_date=%s"
+            res = await db.execute(sql, (ts_code, date_str))
+            if res:
                 return {
-                    k: float(
-                        item[k]) for k in [
-                        "open",
-                        "high",
-                        "low",
-                        "close",
-                        "volume",
-                        "amount"]}
+                    "open": float(res[0][0]), "high": float(res[0][1]),
+                    "low": float(res[0][2]), "close": float(res[0][3]),
+                    "volume": float(res[0][4]), "amount": float(res[0][5])
+                }
             return None
-        except Exception:
+        except Exception as e:
+            logger.error(f"Fetch from ODS failed: {e}")
+            return None
+
+    async def _fetch_from_mootdx(
+            self, ts_code: str, date_str: str) -> Optional[Dict[str, Any]]:
+        """从 Mootdx 获取数据"""
+        try:
+            code = ts_code.split(".")[0]
+            # 获取最近的历史记录
+            resp = await http_client.get("mootdx", f"/api/v1/history/{code}", 
+                                         params={"offset": 10})
+            if resp and isinstance(resp, list):
+                for item in resp:
+                    # 匹配日期
+                    item_date = item.get("datetime", "").split(" ")[0]
+                    if item_date == date_str:
+                        return {
+                            "open": float(item["open"]),
+                            "high": float(item["high"]),
+                            "low": float(item["low"]),
+                            "close": float(item["close"]),
+                            "volume": float(item.get("vol", 0)) * 100,
+                            "amount": float(item["amount"])
+                        }
+            return None
+        except Exception as e:
+            logger.error(f"Fetch from Mootdx failed: {e}")
             return None
 
     async def _fetch_from_akshare(

@@ -15,7 +15,8 @@ class ContainerClient:
             "baostock": settings.BAOSTOCK_API_URL,
             "akshare": settings.AKSHARE_API_URL,
             "tushare": settings.TUSHARE_API_URL,
-            "pywencai": settings.PYWENCAI_API_URL
+            "pywencai": settings.PYWENCAI_API_URL,
+            "mootdx": settings.MOOTDX_API_URL
         }
 
     async def get(self, container: str, path: str, **kwargs) -> Dict[str, Any]:
