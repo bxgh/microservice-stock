@@ -19,7 +19,7 @@ except ImportError:
 
 def package_code():
     """自动打包 index.py 和 shared/ 目录"""
-    print("📦 Packaging code...")
+    print("[Package] Packaging code...")
     zip_path = 'code.zip'
     with zipfile.ZipFile(zip_path, 'w', zipfile.ZIP_DEFLATED) as zf:
         # 写入入口文件
@@ -42,7 +42,7 @@ def deploy():
     client = scf_client.ScfClient(cred, region)
     
     # 3. 读取代码并更新
-    print(f"🚀 Updating code for {func_name} in {region}...")
+    print(f"[Deploy] Updating code for {func_name} in {region}...")
     with open(zip_file, 'rb') as f:
         code_base64 = base64.b64encode(f.read()).decode('utf-8')
     
@@ -52,9 +52,9 @@ def deploy():
     
     try:
         client.UpdateFunctionCode(req)
-        print("✅ Code Updated Successfully!")
+        print("Success: Code Updated Successfully!")
     except Exception as e:
-        print(f"❌ Deployment failed: {e}")
+        print(f"Error: Deployment failed: {e}")
 
 if __name__ == "__main__":
     deploy()

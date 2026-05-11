@@ -92,7 +92,7 @@ async def async_handler(event, context):
             await StockDAO.log_pipeline_run("Data-Hub", "error", error_message=err_msg, run_id=request_id, biz_date=trade_date)
             return {"status": "failed", "error": err_msg, "request_id": request_id}
     else:
-        err_msg = "All sources failed."
+        err_msg = "All sources failed ..."
         logger.error(f"[{request_id}] {err_msg}")
         await StockDAO.log_pipeline_run("Data-Hub", "error", error_message=err_msg, run_id=request_id, biz_date=trade_date)
         return {"status": "failed", "error": err_msg, "request_id": request_id}
