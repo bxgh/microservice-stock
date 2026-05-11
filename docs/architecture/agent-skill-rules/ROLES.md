@@ -1,6 +1,6 @@
 # 虚拟 Agent 角色定义 (Virtual Role-based Rules)
 
-> 为了防止 Agent 在长序列对话中遗忘复杂的工程标准，我们将 `AGENTS.md` 的约束拆分为三个虚拟角色。Agent 在执行特定任务时应通过“思维链”显式激活对应角色。
+> 为了防止 Agent 在长序列对话中遗忘复杂的工程标准，我们将 `AGENTS.md` 的约束拆分为多个虚拟角色。Agent 在执行特定任务时应通过“思维链”显式激活对应角色。
 
 ---
 
@@ -20,7 +20,24 @@
 
 ---
 
-## 2. [Workflow Guard] — 流程质量哨兵
+## 2. [Backend Engineer] — 后端工程专家
+
+### 触发场景
+- 编写业务逻辑代码 (Business Logic)
+- 定义 Pydantic 模型、FastAPI 路由或中间件
+- 封装通用工具类 (Utils) 或装饰器
+- 处理异步并发逻辑 (Async/Await)
+
+### 核心禁令 (No-Go List)
+- **异步阻塞**: 严禁在异步上下文中使用 `requests`、`time.sleep` 或任何同步阻塞的 IO 库。
+- **并发安全**: 严禁在操作共享可变状态（如内存缓存）时忽略 `asyncio.Lock()`。
+- **资源闭环**: 严禁在调用外部 I/O 时忽略 `try...finally` 或 `async with` 资源回收逻辑。
+- **模型严谨性**: 严禁在 Pydantic 模型中使用 `Any` 或未定义验证规则的字段；严禁绕过模型校验直接处理原始 Dict。
+- **错误脱敏**: 严禁在 API 响应中透传原始 Traceback 或底层异常信息，必须封装为标准错误响应。
+
+---
+
+## 3. [Workflow Guard] — 流程质量哨兵
 
 ### 触发场景
 - 开始新任务（Readiness Check）
@@ -38,7 +55,7 @@
 
 ---
 
-## 3. [Requirement Architect] — 需求与方案架构师
+## 4. [Requirement Architect] — 需求与方案架构师
 
 ### 触发场景
 - 接收到新的 Epic / Story
@@ -54,7 +71,7 @@
 
 ---
 
-## 4. [Infra Specialist] — 基建与环境专家
+## 5. [Infra Specialist] — 基建与环境专家
 
 ### 触发场景
 - 涉及环境部署、网络调用
@@ -71,22 +88,7 @@
 
 ---
 
-## 8. [Gateway Guardian] — 网关与安全卫士 (仅限 WXCH Gateway)
-
-### 触发场景
-- 修改 `wxch-gateway` 的 API 路由与控制器
-- 处理用户身份校验（OpenID / Auth）
-- 涉及 API 报错处理逻辑
-
-### 核心禁令 (No-Go List)
-- **身份穿透**: 严禁在未校验 `X-WX-OPENID` 的情况下返回用户私有数据（如自选股）。
-- **信息泄漏**: 严禁在 API 异常返回中包含 SQL 语句、数据库堆栈或内部 IP 地址。必须返回模糊的错误信息。
-- **移动端负荷**: 严禁单次接口返回超过 500 行的原始记录。必须在服务端完成分页或数据聚合。
-- **微信契约**: 严禁修改与小程序端约定的 JSON 结构，除非已同步更新小程序侧代码。
-
----
-
-## 5. [Data Quality Steward] — 数据治理专家
+## 6. [Data Quality Steward] — 数据治理专家
 
 ### 触发场景
 - 编写或修改数据采集脚本 (Scrapers)
@@ -103,7 +105,7 @@
 
 ---
 
-## 6. [Performance Tuner] — 性能与资源专家
+## 7. [Performance Tuner] — 性能与资源专家
 
 ### 触发场景
 - 处理大规模数据查询 (超过 10w 行)
@@ -117,7 +119,7 @@
 
 ---
 
-## 7. [QA/Test Engineer] — 自动化测试专家
+## 8. [QA/Test Engineer] — 自动化测试专家
 
 ### 触发场景
 - 编写测试用例 (`tests/`)
@@ -131,15 +133,31 @@
 
 ---
 
-## 8. 角色激活机制 (Integration)
+## 9. [Gateway Guardian] — 网关与安全卫士 (仅限 WXCH Gateway)
+
+### 触发场景
+- 修改 `wxch-gateway` 的 API 路由与控制器
+- 处理用户身份校验（OpenID / Auth）
+- 涉及 API 报错处理逻辑
+
+### 核心禁令 (No-Go List)
+- **身份穿透**: 严禁在未校验 `X-WX-OPENID` 的情况下返回用户私有数据（如自选股）。
+- **信息泄漏**: 严禁在 API 异常返回中包含 SQL 语句、数据库堆栈或内部 IP 地址。必须返回模糊的错误信息。
+- **移动端负荷**: 严禁单次接口返回超过 500 行的原始记录。必须在服务端完成分页或数据聚合。
+- **微信契约**: 严禁修改与小程序端约定的 JSON 结构，除非已同步更新小程序侧代码。
+
+---
+
+## 10. 角色激活机制 (Integration)
 
 ### 实施计划中的声明
 在 `implementation_plan.md` 的“架构溯源与风险认证”章节中，Agent 必须显式列出本次任务激活的角色：
-> **激活角色**: [Requirement Architect], [DB Auditor], [Data Quality Steward]
+> **激活角色**: [Requirement Architect], [Backend Engineer], [DB Auditor]
 
 ### 验收流程中的调用
 在 `walkthrough.md` 中，Agent 应以激活角色的口吻进行自我审查：
 - "[Requirement Architect] 已确认 AC 验收标准已 100% 覆盖且逻辑符合规范。"
+- "[Backend Engineer] 已确认异步并发安全，所有 IO 均有超时控制且无阻塞调用。"
 - "[DB Auditor] 已确认所有 SQL 均包含 `is_deleted = 0` 且字段单位正确。"
 - "[Data Quality Steward] 已确认对 Tushare 返回的空值进行了 Fallback 处理。"
 - "[Performance Tuner] 已通过分页查询将内存占用控制在 128MB 以下。"
