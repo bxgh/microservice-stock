@@ -1,0 +1,60 @@
+# 腾讯云 SCF 部署配置文件
+# 官方组件文档: https://github.com/serverless-components/tencent-scf
+
+component: scf
+name: stock-serverless-collector
+
+inputs:
+  name: ${name}
+  region: ap-guangzhou  # 默认地域
+  handler: functions/data_hub/index.main_handler
+  runtime: Python3.10
+  memorySize: 256
+  timeout: 900
+  
+  # 源代码管理
+  src:
+    src: ./
+    exclude:
+      - .env
+      - tests/**
+      - docs/**
+      - .git/**
+      - README.md
+  
+  # 环境变量 (由云函数运行时注入)
+  environment:
+    variables:
+      MYSQL_HOST: ${env:MYSQL_HOST}
+      MYSQL_PORT: ${env:MYSQL_PORT}
+      MYSQL_USER: ${env:MYSQL_USER}
+      MYSQL_PASSWORD: ${env:MYSQL_PASSWORD}
+      MYSQL_DB: ${env:MYSQL_DB}
+      TUSHARE_TOKEN: ${env:TUSHARE_TOKEN}
+      SMTP_SERVER: ${env:SMTP_SERVER}
+      SMTP_PORT: ${env:SMTP_PORT}
+      SMTP_USER: ${env:SMTP_USER}
+      SMTP_PASSWORD: ${env:SMTP_PASSWORD}
+      SMTP_RECEIVER: ${env:SMTP_RECEIVER}
+
+  # VPC 配置 (内网访问自建 MySQL 的关键)
+  # 请在部署前在腾讯云控制台获取对应的 ID 并填入 .env
+  vpcConfig:
+    vpcId: ${env:VPC_ID}
+    subnetId: ${env:SUBNET_ID}
+
+  # 触发器配置 (每日盘后 15:40 自动执行)
+  triggers:
+    - timer:
+        name: daily_market_close_collect
+        parameters:
+          # 每周一至周五 15:40 触发 (注意：SCF Timer 使用 UTC 时间或特定表达式，此处为标准 Cron)
+          cronExpression: '0 40 15 * * MON-FRI *'
+          enable: true
+          # 默认参数
+          argument: '{"ts_code": "000001.SZ", "trade_date": "auto", "source": "tushare"}'
+
+  # 层配置 (用于加速部署，建议将 requirements.txt 安装到 Layer 中)
+  # layers:
+  #   - name: stock_collector_layer
+  #     version: 1
