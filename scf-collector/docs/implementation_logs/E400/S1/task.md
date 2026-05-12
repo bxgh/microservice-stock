@@ -1,18 +1,27 @@
 # Tasks: E400-S1 P0 核心行情与因子同步
 
-- [ ] **T1: 采集器能力扩展 (TushareCollector)**
-    - [ ] 实现 `fetch_batch_daily_kline` (全 A 单日)
-    - [ ] 实现 `fetch_adj_factor` (复权因子)
-    - [ ] 实现 `fetch_index_daily` (指数行情)
-    - [ ] 实现 `fetch_sw_industry_members` (拉链表逻辑)
-- [ ] **T2: DAO 层存量对齐与扩展 (StockDAO)**
-    - [ ] 实现 `save_adj_factor` (写入 `stock_adjust_factor`)
-    - [ ] 实现 `save_industry_members` (写入 `dim_sw_industry_member`)
-    - [ ] 优化 `save_kline_data` 支持大批量写入性能
-- [ ] **T3: 函数逻辑集成 (daily_quotes & meta_sync)**
-    - [ ] 在 `daily_quotes` 中集成 `sync_kline_daily` 与 `sync_adj_factor`
-    - [ ] 在 `meta_sync` 中集成 `sync_sw_industry_member`
-    - [ ] 确保 `meta_data_readiness` 信号准确触发
-- [ ] **T4: 验证与存证**
-    - [ ] 执行本地冒烟测试
-    - [ ] 产出 `walkthrough.md` 与 `REPORT.md`
+- [x] **T1: 采集器能力扩展 (TushareCollector)**
+    - [x] 实现 `fetch_batch_daily_kline` (全 A 单日)
+    - [x] 实现 `fetch_adj_factor` (复权因子)
+    - [x] 实现 `fetch_index_daily` (指数行情)
+    - [x] 实现 `fetch_sw_industry_members` (拉链表逻辑)
+- [x] **T2: DAO 层存量对齐与扩展 (StockDAO)**
+    - [x] 实现 `save_adj_factor` (写入 `stock_adjust_factor`)
+    - [x] 实现 `save_industry_members` (写入 `dim_sw_industry_member`)
+    - [x] 优化 `save_kline_data` 支持大批量写入性能
+- [x] **T3: 函数逻辑集成 (daily_quotes & meta_sync)**
+    - [x] 在 `daily_quotes` 中集成 `sync_kline_daily` 与 `sync_adj_factor`
+    - [x] 在 `meta_sync` 中集成 `sync_sw_industry_member`
+    - [x] 确保 `meta_data_readiness` 信号准确触发
+- [x] **T4: 验证与存证**
+    - [x] 创建 DDL 迁移文件 `20260512_E400_S1_init_tables.sql`
+    - [x] 执行本地冒烟测试
+    - [x] 产出 `walkthrough.md` 与 `REPORT.md`
+- [x] **T5: 腾讯云 SCF 部署与触发器配置**
+    - [x] 部署 `daily_quotes` 与 `meta_sync` 函数
+    - [x] 配置环境变量与 VPC 网络
+    - [x] 自动化配置 Cron 定时触发器 (16:30, 06:30)
+- [x] **T6: 生产环境首次运行与 QC**
+    - [x] 远程触发今日 (2026-05-12) 数据同步
+    - [x] 物理查验 `stock_kline_daily` (5490) 与 `stock_adjust_factor` (5521)
+    - [x] 确认 `meta_data_readiness` 信号就绪
