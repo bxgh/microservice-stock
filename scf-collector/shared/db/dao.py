@@ -37,15 +37,97 @@ class StockDAO:
             amount = VALUES(amount)
         """
         
-        # 注意：aiomysql 的 executemany 在某些版本下对 Dict 格式支持有差异
-        # 建议手动循环或使用适配格式
         count = 0
         for item in data:
-            # 确保日期格式符合 MySQL 要求
             res = await execute_query(sql, item, is_select=False)
             count += res
         
         logger.info(f"Successfully saved {len(data)} records to stock_kline_daily (affected: {count}).")
+        return count
+
+    @staticmethod
+    async def save_adj_factor(data: List[Dict[str, Any]]) -> int:
+        """保存复权因子"""
+        if not data:
+            return 0
+        
+        sql = """
+        INSERT INTO stock_adjust_factor (ts_code, adjust_date, adjust_factor)
+        VALUES (%(ts_code)s, %(trade_date)s, %(adj_factor)s)
+        ON DUPLICATE KEY UPDATE adjust_factor = VALUES(adjust_factor)
+        """
+        
+        count = 0
+        for item in data:
+            # Tushare 返回的是 trade_date, 对应表中的 adjust_date
+            # 确保日期格式
+            trade_date = item.get('trade_date')
+            if trade_date and len(trade_date) == 8:
+                 item['trade_date'] = f"{trade_date[:4]}-{trade_date[4:6]}-{trade_date[6:]}"
+            
+            res = await execute_query(sql, item, is_select=False)
+            count += res
+        return count
+
+    @staticmethod
+    async def save_industry_members(data: List[Dict[str, Any]]) -> int:
+        """保存申万行业成员 (拉链表逻辑)"""
+        if not data:
+            return 0
+        
+        sql = """
+        INSERT INTO dim_sw_industry_member (
+            index_code, index_name, con_code, con_name, in_date, out_date, is_new
+        ) VALUES (
+            %(index_code)s, %(index_name)s, %(con_code)s, %(con_name)s, %(in_date)s, %(out_date)s, %(is_new)s
+        ) ON DUPLICATE KEY UPDATE 
+            index_name = VALUES(index_name),
+            con_name = VALUES(con_name),
+            out_date = VALUES(out_date),
+            is_new = VALUES(is_new)
+        """
+        
+        count = 0
+        for item in data:
+            # 日期转换
+            for key in ['in_date', 'out_date']:
+                val = item.get(key)
+                if val and len(str(val)) == 8:
+                    item[key] = f"{str(val)[:4]}-{str(val)[4:6]}-{str(val)[6:]}"
+            
+            res = await execute_query(sql, item, is_select=False)
+            count += res
+        return count
+
+    @staticmethod
+    async def save_index_kline(data: List[Dict[str, Any]], table_name: str = 'ods_index_daily') -> int:
+        """保存指数 K 线数据"""
+        if not data:
+            return 0
+        
+        # 允许通过 table_name 切换 ods_index_daily 或 ods_sw_index_daily
+        sql = f"""
+        INSERT INTO {table_name} (
+            ts_code, trade_date, open, high, low, close, 
+            pre_close, pct_chg, vol, amount
+        ) VALUES (
+            %(ts_code)s, %(trade_date)s, %(open)s, %(high)s, %(low)s, %(close)s, 
+            %(pre_close)s, %(pct_chg)s, %(volume)s, %(amount)s
+        ) ON DUPLICATE KEY UPDATE 
+            open = VALUES(open), 
+            high = VALUES(high), 
+            low = VALUES(low), 
+            close = VALUES(close), 
+            pre_close = VALUES(pre_close), 
+            pct_chg = VALUES(pct_chg), 
+            vol = VALUES(vol), 
+            amount = VALUES(amount)
+        """
+        
+        count = 0
+        for item in data:
+            res = await execute_query(sql, item, is_select=False)
+            count += res
         return count
 
     @staticmethod
