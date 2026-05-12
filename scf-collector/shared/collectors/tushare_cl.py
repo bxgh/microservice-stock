@@ -32,7 +32,7 @@ class TushareCollector(BaseCollector):
             return df
         except Exception as e:
             logger.error(f"[tushare] fetch error for {ts_code} on {date_str}: {e}")
-            return pd.DataFrame()
+            raise
 
     async def fetch_daily_kline(self, ts_code: str, trade_date: str) -> List[Dict[str, Any]]:
         date_str = self._convert_date(trade_date)
@@ -44,6 +44,39 @@ class TushareCollector(BaseCollector):
             return []
             
         return self.normalize_data(df, ts_code, trade_date)
+
+    def _fetch_calendar_sync(self, start_date: str, end_date: str) -> pd.DataFrame:
+        import tushare as ts
+        token = os.getenv("TUSHARE_TOKEN")
+        try:
+            pro = ts.pro_api(token)
+            return pro.trade_cal(exchange='', start_date=start_date, end_date=end_date)
+        except Exception as e:
+            logger.error(f"[tushare] fetch calendar error: {e}")
+            raise
+
+    async def fetch_trading_calendar(self, start_date: str, end_date: str) -> List[Dict[str, Any]]:
+        """获取交易日历"""
+        s_date = self._convert_date(start_date)
+        e_date = self._convert_date(end_date)
+        df = await asyncio.to_thread(self._fetch_calendar_sync, s_date, e_date)
+        return df.to_dict('records') if not df.empty else []
+
+    def _fetch_stock_list_sync(self) -> pd.DataFrame:
+        import tushare as ts
+        token = os.getenv("TUSHARE_TOKEN")
+        try:
+            pro = ts.pro_api(token)
+            # 获取上市状态为 L 的所有股票
+            return pro.stock_basic(list_status='L', fields='ts_code,symbol,name,area,industry,fullname,enname,cnspell,market,exchange,curr_type,list_status,list_date,delist_date,is_hs,act_name,act_ent_type')
+        except Exception as e:
+            logger.error(f"[tushare] fetch stock list error: {e}")
+            raise
+
+    async def fetch_stock_list(self) -> List[Dict[str, Any]]:
+        """获取全量股票列表"""
+        df = await asyncio.to_thread(self._fetch_stock_list_sync)
+        return df.to_dict('records') if not df.empty else []
 
     def normalize_data(self, df: pd.DataFrame, ts_code: str, trade_date: str) -> List[Dict[str, Any]]:
         results = []

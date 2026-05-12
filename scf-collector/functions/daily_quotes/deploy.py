@@ -6,7 +6,8 @@ from dotenv import load_dotenv
 # 加载配置
 import sys
 base_path = os.path.dirname(os.path.abspath(__file__))
-load_dotenv(os.path.join(base_path, '.env'))
+project_root = os.path.dirname(os.path.dirname(base_path))
+load_dotenv(os.path.join(project_root, '.env'))
 secret_id = os.environ.get('TENCENT_SECRET_ID')
 secret_key = os.environ.get('TENCENT_SECRET_KEY')
 region = os.environ.get('REGION', 'ap-guangzhou')
@@ -27,24 +28,29 @@ except ImportError:
     exit(1)
 
 def package_code():
-    """自动打包 index.py 和 shared/ 目录"""
+    """自动打包 index.py 和全局 shared/ 目录"""
     print("[Package] Packaging code...")
-    base_path = os.path.dirname(os.path.abspath(__file__))
-    zip_path = os.path.join(base_path, 'code.zip')
+    zip_path = os.path.join(project_root, '.output', 'daily_quotes_code.zip')
     
     with zipfile.ZipFile(zip_path, 'w', zipfile.ZIP_DEFLATED) as zf:
         # 写入入口文件
         index_file = os.path.join(base_path, 'index.py')
         zf.write(index_file, 'index.py')
+        
+        # 写入 .env 文件
+        env_file = os.path.join(project_root, '.env')
+        if os.path.exists(env_file):
+            zf.write(env_file, '.env')
+            
         # 递归写入 shared 目录
-        shared_dir = os.path.join(base_path, 'shared')
+        shared_dir = os.path.join(project_root, 'shared')
         for root, _, files in os.walk(shared_dir):
             for f in files:
                 if f.endswith('.pyc') or '__pycache__' in root:
                     continue
                 full_path = os.path.join(root, f)
                 # 计算在 zip 中的相对路径
-                rel_path = os.path.relpath(full_path, base_path)
+                rel_path = os.path.relpath(full_path, project_root)
                 zf.write(full_path, rel_path)
     return zip_path
 

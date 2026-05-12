@@ -1,0 +1,5 @@
+.output/
+invoke_result.json
+__pycache__/
+*.pyc
+*.zip

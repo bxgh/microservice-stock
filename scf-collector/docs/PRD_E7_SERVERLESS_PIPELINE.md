@@ -31,8 +31,8 @@
 
 ### ### E7-S1: 基础元数据云端同步 (Meta Foundation)
 **目标**: 剥离低频任务，建立云端“真源”基础。
-- **AC1 (Calendar)**: 每日 08:30 自动同步 Tushare 交易日历，更新 `meta_trading_calendar`。
-- **AC2 (StockList)**: 每日 09:00 同步全市场股票列表、行业分类、退市状态。
+- **AC1 (Calendar)**: 每日 08:30 自动同步 Tushare 交易日历，更新 `trade_cal` (保持物理表名不变)。
+- **AC2 (StockList)**: 每日 09:00 同步全市场股票列表 (目标表 `stock_basic_info`)、行业分类、退市状态。
 - **AC3 (Isolation)**: 作为一个独立的 SCF (`stock-scf-meta`) 运行。
 
 ### ### E7-S2: 深度行情与复权因子扩展 (Data Enrichment)

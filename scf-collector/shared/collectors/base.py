@@ -4,7 +4,7 @@ from typing import List, Dict, Any
 class BaseCollector(abc.ABC):
     """
     抽象数据采集器基类。
-    所有具体的数据源适配器（如 AkShare, Tushare, mootdx）都必须继承该类。
+    所有具体的数据源适配器（如 AkShare, Tushare）都必须继承该类。
     """
     
     @property

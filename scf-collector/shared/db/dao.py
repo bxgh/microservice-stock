@@ -83,3 +83,75 @@ class StockDAO:
         """
         params = (table_name, biz_date, row_count)
         return await execute_query(sql, params, is_select=False)
+
+    @staticmethod
+    def _format_tushare_date(date_str: str) -> str:
+        """将 '20260508' 转换为 '2026-05-08'"""
+        if not date_str or not isinstance(date_str, str) or len(date_str) != 8:
+            return None
+        return f"{date_str[:4]}-{date_str[4:6]}-{date_str[6:]}"
+
+    @classmethod
+    async def save_trading_calendar(cls, data: List[Dict[str, Any]]) -> int:
+        """保存交易日历"""
+        if not data:
+            return 0
+        
+        sql = """
+        INSERT INTO trade_cal (cal_date, exchange, is_open, pretrade_date)
+        VALUES (%(cal_date)s, %(exchange)s, %(is_open)s, %(pretrade_date)s)
+        ON DUPLICATE KEY UPDATE 
+            is_open = VALUES(is_open),
+            pretrade_date = VALUES(pretrade_date)
+        """
+        
+        count = 0
+        for item in data:
+            # 数据转换
+            formatted_item = {
+                "cal_date": cls._format_tushare_date(item.get('cal_date')),
+                "exchange": item.get('exchange'),
+                "is_open": int(item.get('is_open', 0)),
+                "pretrade_date": cls._format_tushare_date(item.get('pretrade_date'))
+            }
+            res = await execute_query(sql, formatted_item, is_select=False)
+            count += res
+            
+        logger.info(f"Saved {len(data)} calendar records to trade_cal.")
+        return count
+
+    @classmethod
+    async def save_stock_list(cls, data: List[Dict[str, Any]]) -> int:
+        """保存股票列表"""
+        if not data:
+            return 0
+            
+        sql = """
+        INSERT INTO stock_basic_info (
+            ts_code, symbol, name, area, industry, fullname, enname, cnspell, 
+            market, exchange, curr_type, list_status, list_date, delist_date, 
+            is_hs, act_name, act_ent_type
+        ) VALUES (
+            %(ts_code)s, %(symbol)s, %(name)s, %(area)s, %(industry)s, %(fullname)s, %(enname)s, %(cnspell)s, 
+            %(market)s, %(exchange)s, %(curr_type)s, %(list_status)s, %(list_date)s, %(delist_date)s, 
+            %(is_hs)s, %(act_name)s, %(act_ent_type)s
+        ) ON DUPLICATE KEY UPDATE 
+            name = VALUES(name),
+            area = VALUES(area),
+            industry = VALUES(industry),
+            list_status = VALUES(list_status),
+            delist_date = VALUES(delist_date),
+            is_hs = VALUES(is_hs)
+        """
+        
+        count = 0
+        for item in data:
+            # 日期处理
+            item['list_date'] = cls._format_tushare_date(item.get('list_date'))
+            item['delist_date'] = cls._format_tushare_date(item.get('delist_date'))
+            
+            res = await execute_query(sql, item, is_select=False)
+            count += res
+            
+        logger.info(f"Saved {len(data)} stock list records to stock_basic_info.")
+        return count

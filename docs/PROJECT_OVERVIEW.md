@@ -363,8 +363,13 @@ DDL 规则：所有 DDL 进 migrations/ 目录，使用 Alembic 或独立 SQL �
 
 ## 11. 部署与网络环境
 
-- **本仓服务默认部署在腾讯云环境**（CVM/容器），对应编排文件 `docker-compose.yml`。禁止擅自部署至内网 Node-41。
-- **外部 API 访问与韧性**：针对 Tushare/akshare 等外部 API，必须实现熔断（CircuitBreaker）与重试机制。云端环境通常具备直接公网访问能力，无需 gost 隧道，但需遵循流量控制与安全组策略。
+- **本仓服务默认部署在腾讯云环境**。其中：
+  - **API 网关类** (`wxch-gateway`) 部署于 CVM/容器，对应 `docker-compose.yml`。禁止部署至内网 Node-41。
+  - **数据采集器** (`scf-collector`) 已升级为 **Serverless Monorepo** 架构，部署于腾讯云函数 (SCF)。
+    - **函数物理隔离**: `functions/meta_sync/` 和 `functions/daily_quotes/` 各自独立打包，共享 `shared/` 业务组件。
+    - **云端网络隔离 (VPC)**: SCF 必须绑定 VPC 直连内网 MySQL，同时必须显式开启 `PublicNetConfig` 才能请求外部公网 API。
+    - **生命周期安全**: 在 `asyncio.run` 模型下，必须显式在 `finally` 中关闭 DB 连接池，防止 `RuntimeError`。
+- **外部 API 访问与韧性**：针对 Tushare/akshare 等外部 API，必须实现熔断（CircuitBreaker）与重试机制。遵循流量控制与安全组策略。
 
 ## 附录：本文件维护规则
 
@@ -384,3 +389,4 @@ DDL 规则：所有 DDL 进 migrations/ 目录，使用 Alembic 或独立 SQL �
 | 2026-05-05 | v0.2 | 新增 0.1 代码仓库 / 0.2 跨网数据流;第 8 节补跨仓字段契约 | Claude 协助 |
 | 2026-05-06 | v0.3 | 补充 Gate-3 审计节点、熔断器/并发安全、部署节点约束、ORM 豁免、测试隔离、CK 结果集红线,与 AGENTS.md v0.6 对齐 | Gemini 协助 |
 | 2026-05-10 | v0.4 | 修正第 11 节部署与网络环境描述，使其与腾讯云生产仓实际情况对齐 | Gemini 协助 |
+| 2026-05-12 | v0.5 | 引入 Serverless Monorepo 架构与 SCF 网络/生命周期约束 | Antigravity |

@@ -16,6 +16,8 @@ description: 指导 Agent 如何通过腾讯云 SDK 直接完成 SCF 的全流�
     os.environ['HOME'] = '/tmp'
     os.environ['MOOTDX_CACHE_DIR'] = '/tmp'
     ```
+- **网络隔离 (VPC)**: 绑定 VPC 访问私有数据库后，SCF 会失去默认公网访问能力。必须显式开启 `PublicNetConfig` 才能访问外部数据源 API。
+- **生命周期 (Asyncio)**: 在 `asyncio.run` 环境下，必须显式在 `finally` 中关闭异步连接池，防止 Event Loop 关闭后的 GC 报错。
 - **无状态设计**: SCF 实例随时可能被销毁，严禁将持久状态保存在内存中。
 - **调度剥离**: 严禁使用 `APScheduler` 等长驻轮询，改用 SCF Timer 触发器或外部事件流。
 
@@ -56,3 +58,25 @@ docker_cmd = [
 
 完成部署后，**必须**编写远程触发脚本，使用 `models.InvokeRequest()` 同步触发 SCF，并将返回值与详细报错信息打印到本地。
 这能 100% 暴露出因网络隔离、端口拦截（如 7709 被封）或 Layer 版本缺失导致的云端真实问题，避免被本地代理造成的“伪连通”误导。
+
+## 5. 核心避坑指南 (Hard-won Lessons)
+
+### 5.1 VPC 环境下的公网访问
+**陷阱**：SCF 绑定 VPC 访问私有数据库后，会默认失去公网访问权限，导致请求外部数据源 API 失败。
+**方案**：在 `UpdateFunctionConfiguration` 时必须显式配置：
+```python
+req.PublicNetConfig = models.PublicNetConfigIn()
+req.PublicNetConfig.PublicNetStatus = "ENABLE"
+req.PublicNetConfig.EipConfig = models.EipConfigIn()
+req.PublicNetConfig.EipConfig.EipStatus = "DISABLE" # 使用共享公网 IP
+```
+
+### 5.2 异步连接池的优雅退出
+**陷阱**：使用 `asyncio.run` 时，Loop 会在任务结束时关闭，而 `aiomysql` 的 GC 可能在关闭后触发，产生 `RuntimeError: Event loop is closed`。
+**方案**：在业务逻辑的 `finally` 块中显式关闭连接池：
+```python
+try:
+    # 业务代码
+finally:
+    await DBManager.close_pool() # 必须在 asyncio.run 退出前完成
+```
