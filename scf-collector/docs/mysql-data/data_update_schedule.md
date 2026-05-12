@@ -1,28 +1,30 @@
-# 数据原始采集计划手册 v0.2
+# 数据原始采集计划手册 v0.2 漏项补遗
 
-> **版本说明**：本版基于 v0.1 文档补全。v0.1 覆盖约 30% 的原始数据采集任务，本版补齐 L3 资金流 / L6 公告 / L7 跨市场三章及调度元数据机制，并修正时序冲突。
-> **本手册定位**：定义 `ods_*` / `dim_*` / `meta_*` 三类原始数据的采集频率、时机、上游、关键约束。计算层（`ads_*` / `app_*`）由后续手册覆盖，不在本版范围。
+> **本文件用途**：作为 v0.2 文档的**补丁包**，专项处理评审中发现的 11 张漏掉的原始数据表，以及 1 处关键备注错误。
+> **关联文档**：`data_update_schedule_v0.2.md`。本文件预期下一版（v0.3）合并入主文档。
+> **生成日期**：2026-05-12
 
 ---
 
 ## 背景
 
-v0.1 文档存在以下结构性问题：
+v0.2 文档发布后 review 发现以下结构性问题：
 
-1. **覆盖度不足**：仅列出 8 张 ods_* 表，对照 `TABLES_INDEX.md` 仍缺约 15 张
-2. **时序冲突**：`daily_basic` 20:00 采集与 `PROJECT_OVERVIEW` 第 4 节锁定的「17:00 L1-L4 ETL 完成」相冲突
-3. **数据契约缺失**：未引入异动管线 v1.1 的 `data_readiness` 写入机制
-4. **单源风险**：每个任务仅标一个上游，未声明备用源
-5. **命名混用**：legacy 表名（`stock_kline_daily`）与标准前缀（`ods_*`）混用无标注
+1. **复权因子完全未规划**：`stock_kline_daily` 实测落库为**不复权原始价**（用户已确认），v0.2 备注「前复权数据」为错误描述，且**全文档无 `ods_adj_factor` 采集任务**
+2. **资金五维理解偏差**：`PROJECT_OVERVIEW` 第 4 章明确为「主力 / 北向 / 两融 / ETF / 龙虎榜」5 维，v0.2 漏了**主力维**（`pro.moneyflow`），多算了「大宗 / 游资」当独立维
+3. **L2 行业成员关系无显式维表**：当前 `ads_l2_industry_daily` 已跑通 31 行业，但 TABLES_INDEX 无 `dim_sw_industry_member`，属 **schema 漂移**（实施侧大概率运行时调用 `pro.index_member()` 或误用中信分类）
+4. **ETF 申赎计算依赖 `nav` 但无 nav 采集任务**：v0.2 第 5.5 节公式 `share_chg × nav × 1e8` 中的 `nav` 数据源缺失
+
+补遗合计 **11 张新表 + 1 处备注修正**。
 
 ---
 
 ## 目标
 
-- 覆盖 `PROJECT_OVERVIEW` 第 1-7 章涉及的全部原始数据表
-- 时机严格对齐第 4 节锁定的盘后流水线
-- 引入 `data_readiness` 数据就绪契约 + 多源备份策略 + 阻塞影响分级
-- 跨期 / 长假特殊处理在表备注中显式声明
+- 补齐 v0.2 漏掉的 11 张原始数据表清单
+- 修正 `stock_kline_daily` 备注错误
+- 评估对**已产出 ads_\* 数据**的污染范围（是否需要历史回灌）
+- 提供 P0 表的 schema 草案，供 Gemini 立即落地
 
 ---
 
@@ -30,323 +32,458 @@ v0.1 文档存在以下结构性问题：
 
 | 包含 | 不包含 |
 |---|---|
-| `ods_*` 原始数据采集 | `ads_*` / `app_*` 计算层 |
-| `dim_*` 维度表同步 | 计算指标的 ETL 设计 |
-| `meta_*` 系统元数据 | 第 8 章训练系统数据采集（用户产生数据） |
-| Tushare / akshare / 长桥 API 接入 | 第 9 章观察点系统采集逻辑 |
-| 数据就绪契约写入机制 | 跨网同步链路（v1.1 E4 单独文档） |
+| 11 张漏掉的 ods_* / dim_* 表的采集任务定义 | ETL 计算层重构 |
+| 关键 P0 表的 schema 草案 | 跨网同步链路（仍走 v1.1 E4） |
+| 已产出 ads_* 数据的污染评估 | 实际重灌脚本 |
+| 备注错误修正 | 完整 v0.3 文档重写（合入主文档后单独发） |
 
 ## 非目标
 
-- 不覆盖具体 ETL 代码实现
-- 不定义采集失败的重试策略细节（仅声明分级）
-- 不写跨网同步链路设计（属异动管线 v1.1 E4）
-- 不规划计算层 ads_* / app_* 的产出时机
+- 不重写 v0.2 全文，仅以补遗形式存在
+- 不规划 ads_* 层重构（先把原始数据修好再说）
+- 不定义 `ods_adj_factor` 应用到下游的具体 ETL 逻辑
 
 ---
 
-## 设计原则
+## E1 复权因子缺失（P0 紧急）
 
-### P1. 命名规范
+**Epic 描述**：补齐复权因子采集 + 评估对已产出技术指标的污染范围。预计耗时 1 工作日采集 + 3-5 工作日历史回灌。
 
-| 类别 | 命名约定 | 处置 |
-|---|---|---|
-| 新建表 | `ods_*` / `dim_*` / `meta_*` 前缀 | 强制 |
-| Legacy 在用表 | `stock_*` / `daily_*` 等 | 保留，本版不迁移；表格中以「(legacy)」标注 |
-| Legacy 计划迁移表 | 见 `TABLES_INDEX.md` 第 8 节 | 各章首次落地时一并迁移 |
+### E1-S1 建立 `ods_adj_factor` 采集任务
 
-### P2. 时序对齐
+**作为** L2 / L5 / L8 计算层，**我希望** 拿到每只票每个交易日的复权因子，**以便** 正确计算复权后的 K 线衍生指标（均线 / 涨跌幅 / 波动率 / dist_to_ma 等）。
 
-所有采集任务时点严格满足 `PROJECT_OVERVIEW` 第 4 节锁定的盘后流水线：
+#### 任务
 
-```
-15:00  收盘
-16:30  Tushare / akshare 增量数据基本就绪（采集启动死线下限）
-17:00  L1-L4 ETL 完成 → 行情类采集必须 17:00 前结束
-17:15  L6-L8 ETL 完成 → 公告 / 资金类采集允许 17:15 前结束
-17:30  综合输出完成
-20:30  异动管线 v1.1 数据就绪契约满足
-21:00  异动结果产出（死线 22:00）
-```
+- E1-S1-T1 在采集层新增 `ods_adj_factor` 表
+- E1-S1-T2 在调度配置中新增采集任务，时机 16:30（与 `stock_kline_daily` 同批）
+- E1-S1-T3 历史回补：拉取 2010-01-01 起全 A 复权因子
+- E1-S1-T4 采集结束写 `data_readiness`
 
-任何采集任务时机违反上述链路均视为设计缺陷。
-
-### P3. 数据就绪契约（强制）
-
-**每个 ods 采集任务结束后必须写入 `data_readiness` 表一行**：
+#### 表结构草案
 
 ```sql
-INSERT INTO data_readiness (data_source, trade_date, ready_at, status, row_count)
-VALUES (:source_key, :trade_date, NOW(), 'ready', :row_count);
+CREATE TABLE `ods_adj_factor` (
+  `ts_code`     VARCHAR(20) NOT NULL,
+  `trade_date`  DATE        NOT NULL,
+  `adj_factor`  DECIMAL(20,6) NOT NULL COMMENT '复权因子,基期=1.0',
+  `created_at`  TIMESTAMP   DEFAULT CURRENT_TIMESTAMP,
+  `updated_at`  TIMESTAMP   DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  `is_deleted`  TINYINT(1)  DEFAULT 0,
+  PRIMARY KEY (`ts_code`, `trade_date`),
+  KEY `idx_trade_date` (`trade_date`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+  ROW_FORMAT=DYNAMIC COMMENT='Tushare 复权因子,每日全 A';
 ```
 
-下游 ETL 通过订阅契约启动，不允许通过「估算时间」或「轮询表行数」的方式判断就绪。
+#### 上游接口
 
-### P4. 多源备份
+```python
+# Tushare 调用示例
+ts.pro_api().adj_factor(ts_code='', trade_date='20260512')
+# 全 A 单日返回约 5000 行
+```
 
-| 风险等级 | 含义 | 处置要求 |
+#### 验收标准（AC）
+
+- **AC1**：日度采集就绪
+  - **Given** 交易日 16:30 触发采集
+  - **When** Tushare 接口返回数据
+  - **Then** `ods_adj_factor` 当日新增 ≈ 5000 行（与 `stock_kline_daily` 行数差异 < 1%），且 `data_readiness` 写入 `('adj_factor', :trade_date, 'ready', 5000±)`
+
+- **AC2**：历史回补完整
+  - **Given** 历史回补脚本对 2010-01-01 至今全 A 执行
+  - **When** 回补完成
+  - **Then** 任取一只 2023-06-30 除权的票（如 `600519.SH`），`adj_factor` 在除权日**有跳变**，且与 Tushare API 实时拉取的结果一致
+
+- **AC3**：单位与基准正确
+  - **Given** 任一票最早的 `trade_date`
+  - **When** 查询其 `adj_factor`
+  - **Then** 值为 `1.000000`（基期约定）；后续日期 ≥ 该值（前复权基准）
+
+### E1-S2 修正 v0.2 备注 + 评估 ads_* 污染
+
+**作为** 数据治理者，**我希望** 知道当前 ads_* 层用了不复权价的范围，**以便** 评估历史数据是否需要回灌。
+
+#### 任务
+
+- E1-S2-T1 修正 v0.2 文档第 2 节 `stock_kline_daily` 的「前复权数据」备注，改为「不复权原始价；前复权需 JOIN `ods_adj_factor`」
+- E1-S2-T2 自检 SQL，确认 `ads_stock_derived_metrics` 当前实现是否做了复权
+- E1-S2-T3 如未做复权，列出受影响的 ads_* / app_* 表清单
+- E1-S2-T4 制定回灌优先级（建议：近 1 年 P0，1-3 年 P1，> 3 年 P2）
+
+#### 自检 SQL
+
+```sql
+-- 核查 1: stock_kline_daily 除权日跳变(确认不复权)
+SELECT trade_date, close, pre_close,
+       ROUND((close - pre_close) / pre_close * 100, 2) AS jump_pct
+FROM stock_kline_daily
+WHERE ts_code = '600519.SH'
+  AND trade_date BETWEEN '2023-06-28' AND '2023-07-04'
+ORDER BY trade_date;
+-- 预期: 2023-06-30 jump_pct < -15% (除权日)
+
+-- 核查 2: ads_stock_derived_metrics 的 dist_to_ma20 是否在除权日突变
+SELECT ts_code, trade_date, dist_to_ma20
+FROM ads_stock_derived_metrics
+WHERE ts_code = '600519.SH'
+  AND trade_date BETWEEN '2023-06-28' AND '2023-07-10'
+ORDER BY trade_date;
+-- 若 06-30 的 dist_to_ma20 突变 > 5%, 则 100% 未做复权,所有派生指标受污染
+```
+
+#### 验收标准（AC）
+
+- **AC1**：自检结论明确
+  - **Given** 上述两条 SQL 在生产库执行
+  - **When** 拿到结果
+  - **Then** 形成结论文档「`ads_stock_derived_metrics` 是否做了复权处理 = 是/否」
+
+- **AC2**：受污染表清单完整
+  - **Given** 自检结论为「未做复权」
+  - **When** 输出受影响表清单
+  - **Then** 至少覆盖：`ads_stock_derived_metrics` / `ads_l8_unified_signal` / `ads_l2_industry_daily`（行业指数自身包含成分股复权）/ 第 5 章异动评分 / 第 8 章 outcome_inference 验证数据
+
+---
+
+## E2 行业 / 概念成员关系缺失（P0）
+
+**Epic 描述**：补齐申万行业 + 同花顺概念的成员归属维表，消除当前 schema 漂移。预计耗时 2 工作日。
+
+### E2-S1 建立 `dim_sw_industry_member`
+
+**作为** L2 行业广度计算（`internal_breadth = 行业内上涨股数 / 总成员数`），**我希望** 有一张拉链表记录每只票的申万 L1 / L2 归属及历史变更，**以便** 行业广度计算口径正确、可历史回算。
+
+#### 任务
+
+- E2-S1-T1 建表 `dim_sw_industry_member`
+- E2-S1-T2 全量初始化：从 Tushare `pro.index_member_all()` 拉一次
+- E2-S1-T3 月更增量：每月 1 号 06:30 触发，对比变化以拉链方式更新
+- E2-S1-T4 提供 `is_in_industry(ts_code, sw_l1_code, trade_date)` 这类查询的视图或 SQL 范式（供下游 ETL 复用）
+
+#### 表结构草案
+
+```sql
+CREATE TABLE `dim_sw_industry_member` (
+  `id`          BIGINT      NOT NULL AUTO_INCREMENT,
+  `ts_code`     VARCHAR(20) NOT NULL,
+  `sw_l1_code`  VARCHAR(10) NOT NULL COMMENT '申万一级行业代码,如 801010.SI',
+  `sw_l1_name`  VARCHAR(50) NOT NULL,
+  `sw_l2_code`  VARCHAR(10) DEFAULT NULL,
+  `sw_l2_name`  VARCHAR(50) DEFAULT NULL,
+  `in_date`     DATE        NOT NULL COMMENT '纳入日',
+  `out_date`    DATE        DEFAULT NULL COMMENT '剔除日,NULL=仍在',
+  `is_active`   TINYINT(1)  DEFAULT 1,
+  `created_at`  TIMESTAMP   DEFAULT CURRENT_TIMESTAMP,
+  `updated_at`  TIMESTAMP   DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  `is_deleted`  TINYINT(1)  DEFAULT 0,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_ts_l1_in` (`ts_code`, `sw_l1_code`, `in_date`),
+  KEY `idx_ts_code` (`ts_code`),
+  KEY `idx_sw_l1_active` (`sw_l1_code`, `is_active`),
+  KEY `idx_in_out_date` (`in_date`, `out_date`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+  ROW_FORMAT=DYNAMIC COMMENT='申万行业成员拉链表';
+```
+
+#### 验收标准（AC）
+
+- **AC1**：成员关系覆盖完整
+  - **Given** 全量初始化完成
+  - **When** 查询 `SELECT COUNT(DISTINCT ts_code) FROM dim_sw_industry_member WHERE is_active=1`
+  - **Then** 结果 ≈ 全 A 上市股票数（5000+），不能有大批量未归类
+
+- **AC2**：历史变更可追溯
+  - **Given** 某只票历史上发生过行业调整（如「东方财富」从「计算机」调入「非银金融」）
+  - **When** 用 `in_date` / `out_date` 过滤查询
+  - **Then** 能拿到该票在任意历史日期的正确行业归属，**不能用今天的口径回算历史**
+
+- **AC3**：月更增量正确
+  - **Given** 行业调整发生（旧归属 out_date 不为 NULL，新归属 in_date 为调整日）
+  - **When** 月更任务执行
+  - **Then** 拉链表记录完整变更链，原行 `is_active=0`，新行 `is_active=1`
+
+### E2-S2 建立 `dim_concept_member`
+
+**作为** L2 概念板块计算，**我希望** 知道每只票属于哪些概念，**以便** 计算概念广度。
+
+#### 任务
+
+- E2-S2-T1 建表 `dim_concept_member`（结构类似 sw_member，但 ts_code 可属多个概念）
+- E2-S2-T2 周更增量：每周一 06:30
+- E2-S2-T3 同名概念去重处理（「机器人 / 机器人概念 / 人形机器人」三选一保留，规则 TBD）
+
+#### 表结构草案
+
+```sql
+CREATE TABLE `dim_concept_member` (
+  `id`            BIGINT      NOT NULL AUTO_INCREMENT,
+  `ts_code`       VARCHAR(20) NOT NULL,
+  `concept_code`  VARCHAR(20) NOT NULL,
+  `concept_name`  VARCHAR(100) NOT NULL,
+  `source`        VARCHAR(20) DEFAULT NULL COMMENT 'ths / akshare',
+  `in_date`       DATE        NOT NULL,
+  `out_date`      DATE        DEFAULT NULL,
+  `is_active`     TINYINT(1)  DEFAULT 1,
+  `member_count`  INT         DEFAULT NULL COMMENT '该概念冗余字段,成员总数',
+  `created_at`    TIMESTAMP   DEFAULT CURRENT_TIMESTAMP,
+  `updated_at`    TIMESTAMP   DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  `is_deleted`    TINYINT(1)  DEFAULT 0,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_ts_concept_in` (`ts_code`, `concept_code`, `in_date`),
+  KEY `idx_concept_active` (`concept_code`, `is_active`),
+  KEY `idx_member_count` (`member_count`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+  ROW_FORMAT=DYNAMIC COMMENT='同花顺概念成员拉链表';
+```
+
+#### 验收标准（AC）
+
+- **AC1**：member_count 字段可用于过滤
+  - **Given** 概念 X 当前成员数 < 10
+  - **When** 查询时加 `WHERE member_count >= 10`
+  - **Then** 不返回成员过少的概念（消除 PROJECT_OVERVIEW 第 3 节「半数 < 10 只无统计意义」问题）
+
+---
+
+## E3 资金五维补齐（P1）
+
+**Epic 描述**：补齐「主力资金流」维度，对齐 PROJECT_OVERVIEW 第 4 章定义的五维口径。预计耗时 1 工作日。
+
+### E3-S1 建立 `ods_moneyflow`
+
+**作为** L3 资金流计算，**我希望** 拿到个股主力 / 大单 / 中单 / 小单的净流入数据，**以便** 完成「主力」维计算。
+
+#### 任务
+
+- E3-S1-T1 建表 `ods_moneyflow`
+- E3-S1-T2 调度时机：17:00（与北向资金同批）
+- E3-S1-T3 修正 v0.2 第 5 节标题为「资金五维 = 主力 / 北向 / 两融 / ETF / 龙虎榜」，「大宗交易」「游资席位」归入扩展子项
+
+#### 表结构草案
+
+```sql
+CREATE TABLE `ods_moneyflow` (
+  `ts_code`         VARCHAR(20)    NOT NULL,
+  `trade_date`      DATE           NOT NULL,
+  `buy_sm_amount`   DECIMAL(20,2)  COMMENT '小单买入金额(元)',
+  `sell_sm_amount`  DECIMAL(20,2),
+  `buy_md_amount`   DECIMAL(20,2)  COMMENT '中单',
+  `sell_md_amount`  DECIMAL(20,2),
+  `buy_lg_amount`   DECIMAL(20,2)  COMMENT '大单',
+  `sell_lg_amount`  DECIMAL(20,2),
+  `buy_elg_amount`  DECIMAL(20,2)  COMMENT '特大单',
+  `sell_elg_amount` DECIMAL(20,2),
+  `net_mf_amount`   DECIMAL(20,2)  COMMENT '主力净流入(大+特大)',
+  `created_at`      TIMESTAMP      DEFAULT CURRENT_TIMESTAMP,
+  `updated_at`      TIMESTAMP      DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  `is_deleted`      TINYINT(1)     DEFAULT 0,
+  PRIMARY KEY (`ts_code`, `trade_date`),
+  KEY `idx_trade_date` (`trade_date`),
+  KEY `idx_net_mf` (`trade_date`, `net_mf_amount`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+  ROW_FORMAT=DYNAMIC COMMENT='Tushare 个股资金流(主力大中小单)';
+```
+
+#### 验收标准（AC）
+
+- **AC1**：单位统一为元
+  - **Given** Tushare `pro.moneyflow()` 返回数据
+  - **When** 入库
+  - **Then** 所有 amount 字段单位为元（Tushare 原始返回为「万元」，**采集层 `× 10000`**）
+
+- **AC2**：主力净流入字段计算正确
+  - **Given** 任一票任一日
+  - **When** 查询 `net_mf_amount`
+  - **Then** 等于 `(buy_lg + buy_elg) - (sell_lg + sell_elg)`
+
+---
+
+## E4 其他 P1 / P2 漏项
+
+合并处理，按章节追加表清单。每个 Story 不展开 AC，由 Gemini 落地时按 E1 / E2 / E3 模板补 AC。
+
+### E4-S1 停复牌 `ods_suspend_d`（P1）
+
+| 字段 | 类型 | 说明 |
 |---|---|---|
-| 单源 P0 | 失败直接阻塞 L1 / L8 全链路 | 必须配备用源 |
-| 单源 P1 | 失败影响单一章节 | 备用源可异步建设 |
-| 单源 P2 | 失败仅影响综述质量 | 接受单源 |
+| ts_code | VARCHAR(20) | 主键 |
+| suspend_date | DATE | 主键，停牌日 |
+| resume_date | DATE | 复牌日，NULL=未复牌 |
+| suspend_type | VARCHAR(20) | S=停牌 R=复牌 |
+| reason | VARCHAR(200) | 停牌原因 |
 
-### P5. 跨期 / 长假处理
+频率：交易日 16:30。上游：Tushare `pro.suspend_d()`。
 
-以下场景必须在调度配置中预留 hook（具体实现见各章节备注）：
+### E4-S2 基金净值 `ods_fund_nav`（P1）
 
-- ST 状态变更：长假后第一日采集前，先做全表 `name LIKE '%ST%'` 对照
-- 龙虎榜：跨期累积口径，长假后第一日采集时拉前 N 个交易日
-- 北向资金：2024-08-19 后口径变更，跨该日期的回算不可比
-
-### P6. 失败告警分级
-
-| 阻塞等级 | 告警级别 | 响应时效 | 触发条件 |
-|---|---|---|---|
-| P0 | CRITICAL | 立即电话 / 邮件 | 阻塞 L1 / L5 / L8 全链路 |
-| P1 | ERROR | 邮件 | 阻塞单章节 |
-| P2 | WARN | 日报汇总 | 仅影响综述生成 |
-
-与异动管线 v1.1 E6 邮件告警保持一致。
-
----
-
-## 1. 系统元数据 (meta_*)
-
-| 任务名称 | 关联表 | 更新频率 | 触发时机 | 上游 | 备注 |
-|---|---|---|---|---|---|
-| 股票列表同步 | `stock_basic_info` (legacy → `dim_stock_basic`) | 每日 | 06:00 | Tushare | 含上市状态变更、退市标记 |
-| 交易日历同步 | `trade_cal` (legacy → `meta_trading_calendar`) | 每月 | 1 号 06:30 | Tushare | 上市 ≥ 60 个交易日判定依赖此表 |
-| 数据就绪契约 | `data_readiness` (→ `meta_data_readiness`) | T+0 实时 | 各 ods 任务完成时 | 各采集任务 | 异动管线 v1.1 E2 核心，详见 P3 |
-| 任务编排状态 | `pipeline_run` (→ `meta_pipeline_run`) | T+0 实时 | 各 pipeline 启停时 | APScheduler | 异动管线 v1.1 E3 核心 |
-
----
-
-## 2. 交易行情数据
-
-| 任务名称 | 关联表 | 频率 | 时机 | 上游（主 / 备） | 备注 |
-|---|---|---|---|---|---|
-| 个股日线 | `stock_kline_daily` (legacy) | 交易日 | 16:30 | Tushare / akshare | 1200 万+ 记录，T+0 增量；前复权数据 |
-| 指数日线 | `ods_index_daily` | 交易日 | 16:30 | Tushare / 长桥 | 10 个核心宽基 + 万得全 A 用 `985.SH` 替代 |
-| 每日指标 | `daily_basic` (legacy) | 交易日 | **16:45** ⚠️ | Tushare | **含 PE/PB/市值，L1 计算依赖；v0.1 标 20:00 与 17:00 ETL 冲突，已修正** |
-| 涨跌停池 | `ods_event_limit_pool` | 交易日 | **16:30** ⚠️ | Tushare | **v0.1 标 16:00 早于上游就绪时间，已修正**；含 `pool_type ∈ {zt, dt, zb, lian}`、`board_height`、`seal_money` |
-| 申万行业行情 | `ods_sw_index_daily` | 交易日 | **16:45** ⚠️ | Tushare | 申万 l1 + l2，~530 行；**v0.1 标 17:00 留给 L2 计算时间过短** |
-| 概念板块行情 | `ods_concept_kline_daily` | 交易日 | **16:50** ⚠️ | akshare / 同花顺 | 反爬限速 ≥ 1s；同名多版本（机器人 / 人形机器人）需消歧；半数 < 10 只无统计意义 |
-| 市场广度 | `ods_market_breadth_daily` | 交易日 | 16:55 | Tushare 计算 | 涨跌家数 / 涨停 / 跌停 / 炸板数 |
-
-### 时序冲突修正说明
-
-v0.1 文档中以下三处时机与 `PROJECT_OVERVIEW` 第 4 节冲突，本版修正：
-
-| 字段 | v0.1 | v0.2 | 修正理由 |
-|---|---|---|---|
-| `daily_basic` | 20:00 | 16:45 | L1 计算 17:00 启动，必须前置 |
-| `ods_event_limit_pool` | 16:00 | 16:30 | Tushare 通常 16:30 才完整就绪 |
-| `ods_sw_index_daily` | 17:00 | 16:45 | L2 计算 17:20 启动，留 35 min 缓冲 |
-
----
-
-## 3. 财务与基本面 (Financial Data)
-
-| 任务名称 | 关联表 | 频率 | 触发方式 | 上游 | 备注 |
-|---|---|---|---|---|---|
-| 资产负债表 | `stock_balance_sheet` (legacy) | 季度 | 增量扫描 `f_ann_date` | Tushare | 4/8/10 月高峰；retry 窗口 +7 天 |
-| 利润表 | `stock_income_statement` (legacy) | 季度 | 同上 | Tushare | 同上 |
-| 现金流量表 | `stock_cash_flow_statement` (legacy) | 季度 | 同上 | Tushare | 同上 |
-| 财务指标 | `stock_finance_indicators` (legacy) | 季度 | 报表入库后触发 | Tushare | ROE / 毛利 / EPS 等 |
-| 股东人数 | `stock_shareholder_count` (legacy) | 每月 | 15 号 / 月底 21:00 | Tushare | — |
-| 前十大股东 | `stock_top10_shareholders` (legacy) | 每月 | 同上 | Tushare | 流通股东表单独同步（TBD：是否合并） |
-
-> ⚠️ Tushare 财报数据 `f_ann_date`（实际公告日）和 `ann_date`（计划公告日）字段语义不同，采集逻辑以 `f_ann_date` 为准。
-
----
-
-## 4. 情绪 / 估值底层指标
-
-| 任务名称 | 关联表 | 频率 | 时机 | 上游 | 备注 |
-|---|---|---|---|---|---|
-| 监控指标历史 | `monitor_indicators_history` | 交易日 | 17:00 | Tushare | 含 ERP / 国债收益率；**`yield_pct` 入库一律小数（采集层 `/100`）**；`cn_gov_yield` 接口名 TBD 已确认（具体接口名待 Gemini 反馈填入）|
-
----
-
-## 5. 资金五维（v0.1 完全缺失）⭐
-
-### 5.1 北向资金
-
-| 任务名称 | 关联表 | 频率 | 时机 | 上游（主 / 备） | 备注 |
-|---|---|---|---|---|---|
-| 北向资金日终 | `stock_north_funds_daily` | 交易日 | 17:00 | Tushare / 港交所 | **2024-08-19 后口径变更**：仅日终成交净额，无个股盘中；个股北向已不可用 |
-| 沪深港通汇总 | `north_capital_daily` | 交易日 | 17:00 | Tushare | TBD：与上表口径区别 / 是否合并 |
-
-### 5.2 龙虎榜
-
-| 任务名称 | 关联表 | 频率 | 时机 | 上游（主 / 备） | 备注 |
-|---|---|---|---|---|---|
-| 龙虎榜营业部明细 | `stock_lhb_daily` | 交易日 | **17:30** | Tushare / akshare | akshare **必须串行 + 间隔 ≥ 1s**（反爬）；关联 `dim_yz_seat`；上市日有时滞 |
-| 龙虎榜个股明细 | `stock_lhb_stock` (TBD 表名) | 交易日 | 17:30 | Tushare | 上龙虎榜个股净买入 |
-
-### 5.3 大宗交易
-
-| 任务名称 | 关联表 | 频率 | 时机 | 上游 | 备注 |
-|---|---|---|---|---|---|
-| 大宗交易 | `stock_block_trade` | 交易日 | 18:00 | Tushare | `discount_pct` **入库一律小数**；同一标的同日多笔以 `sn` 区分 |
-
-### 5.4 融资融券
-
-| 任务名称 | 关联表 | 频率 | 时机 | 上游 | 备注 |
-|---|---|---|---|---|---|
-| 两融余额（市场级） | `ods_margin_total` (TBD 表名) | 交易日 | T+1 09:00 | Tushare | T+1 数据，**当日采不到** |
-| 两融个股明细 | `ods_margin_detail` (TBD 表名) | 交易日 | T+1 09:00 | Tushare | 同上 |
-
-### 5.5 ETF 申赎
-
-| 任务名称 | 关联表 | 频率 | 时机 | 上游（主 / 备） | 备注 |
-|---|---|---|---|---|---|
-| ETF 申赎 | `ods_etf_share_chg` (TBD 表名) | 交易日 | 19:00 | Tushare / akshare | **单位陷阱：share_chg 单位「亿份」**，净申购 = `share_chg × nav × 1e8`（元）；采集层不做单位转换，保留原始单位，转换在 ETL 层 |
-
-### 5.6 游资席位维表
-
-| 任务名称 | 关联表 | 频率 | 触发 | 上游 | 备注 |
-|---|---|---|---|---|---|
-| 游资席位库 | `dim_yz_seat` | 不定期 | 手工录入 | 人工 | 首批 50-100 席位录入中；`aliases` JSON 字段；**别名命中率目标 > 90%** |
-
----
-
-## 6. 公告事件（v0.1 完全缺失）⭐
-
-| 任务名称 | 关联表 | 频率 | 时机 | 上游 | 备注 |
-|---|---|---|---|---|---|
-| 增减持公告 | `ods_holdertrade` | 交易日 | 18:00 | Tushare | **`change_ratio` 单位陷阱**：上游有时百分比有时小数，采集层统一 `/100` |
-| 回购公告 | `ods_repurchase` | 交易日 | 18:00 | Tushare | 主键含 `sn`，同公司多笔区分 |
-| 分红方案 | `ods_dividend` | 交易日 | 18:00 | Tushare | 含 `ex_date` / `record_date`；除权除息日为重要事件 |
-| ST 状态变更 | `ods_st_change` | 交易日 | 18:00 | Tushare 计算 | **跨周末 / 长假处理**：长假后第一日先做 `name LIKE '%ST%'` 全表对照再差分 |
-| 立案调查 | `ods_investigation` | 交易日 | 18:00 | Tushare | 含 `authority` 字段；P1 风险事件 |
-| 业绩预告 | `ods_forecast` (TBD 表名) | 交易日 | 18:30 | Tushare | 财报季高峰（1/4/7/10 月）；第 9 章事件日历依赖 |
-| 业绩快报 | `ods_express` (TBD 表名) | 交易日 | 18:30 | Tushare | 同上 |
-| 限售解禁 | `ods_share_release` (TBD 表名) | 每周 | 周五 19:00 | Tushare | 解禁日历，前瞻 30/60/90 天窗口 |
-| 公告主表 | `ods_announcement` (TBD 是否单独建) | 交易日 | 18:00 | Tushare | 用于第 9 章事件日历兜底；停复牌 / 风险警示 / 重大事项 |
-
----
-
-## 7. 跨市场指数（v0.1 完全缺失）
-
-| 任务名称 | 关联表 | 频率 | 时机 | 上游（主 / 备） | 备注 |
-|---|---|---|---|---|---|
-| 海外指数日线 | `ods_index_global_daily` | 交易日 | **T+1 09:00** | 长桥 / Tushare | HSI / HSTECH / IXIC / SPX / DJI / VIX；**因时差 T+1 采集**，A 股盘前用前夜数据 |
-| 海外指数维表 | `dim_index_global` | 静态 | 初始化一次 | 人工 | 6 个海外指数维度信息（指数名 / 市场 / 时区） |
-
----
-
-## 8. 阻塞影响矩阵（P0/P1/P2 分级）
-
-> 用于决定告警分级、重试次数、降级策略。
-
-### P0（CRITICAL，阻塞全链路）
-
-| 表 | 缺失影响 | 主源失败处置 |
+| 字段 | 类型 | 说明 |
 |---|---|---|
-| `stock_kline_daily` | L1 / L2 / L5 / L8 全瘫 | 切 akshare 主源；T+0 22:00 前补完 |
-| `daily_basic` | L1 / L5 / L8 全瘫 | 单源风险 P0；**重试 5 次后人工介入** |
-| `ods_event_limit_pool` | L1 / L3 / L8 瘫 | 切 akshare；akshare 限速注意 |
-| `ods_index_daily` | L1 / L7 瘫 | 切长桥指数源 |
-| `trade_cal` | 全链路装饰器失效 | 月任务，T+0 不影响；缺失立即报警 |
+| ts_code | VARCHAR(20) | 主键，基金代码 |
+| trade_date | DATE | 主键 |
+| unit_nav | DECIMAL(14,4) | 单位净值 |
+| accum_nav | DECIMAL(14,4) | 累计净值 |
 
-### P1（ERROR，阻塞单章节）
+频率：交易日 19:00（与 ETF 申赎前置）。上游：Tushare `pro.fund_nav()`。**E3 ETF 申赎计算依赖此表**。
 
-| 表 | 缺失影响 |
-|---|---|
-| `monitor_indicators_history` | L4 情绪 ERP 缺失 |
-| `stock_north_funds_daily` | L3 北向缺失 |
-| `stock_lhb_daily` | L3 龙虎榜 + L8 游资识别 |
-| `ods_sw_index_daily` | L2 行业全瘫 |
-| `ods_concept_kline_daily` | L2 概念部分 |
-| `ods_holdertrade` / `ods_repurchase` / `ods_dividend` | L6 公告部分缺失 |
-| `dim_yz_seat` | L8 游资标签精度下降 |
+### E4-S3 指数权重 `ods_index_weight`（P2）
 
-### P2（WARN，仅影响综述质量）
+| 字段 | 类型 | 说明 |
+|---|---|---|
+| index_code | VARCHAR(20) | 主键 |
+| con_code | VARCHAR(20) | 主键，成分股 |
+| trade_date | DATE | 主键 |
+| weight | DECIMAL(10,6) | 权重(%) |
 
-| 表 | 缺失影响 |
-|---|---|
-| `ods_index_global_daily` | L7 跨市场 + 综述质量 |
-| `stock_block_trade` | L3 大宗交易维度缺失 |
-| `ods_investigation` / `ods_forecast` / `ods_express` | L6 事件日历局部 |
-| `ods_share_release` | L9 解禁前瞻 |
+频率：月更（每月 1 号 07:00）。上游：Tushare `pro.index_weight()`。覆盖沪深 300 / 中证 500 / 上证 50 / 创业板指。
+
+### E4-S4 新股 / IPO 日历 `ods_new_share`（P2）
+
+| 字段 | 类型 | 说明 |
+|---|---|---|
+| ts_code | VARCHAR(20) | 主键 |
+| ipo_date | DATE | 上市日 |
+| issue_date | DATE | 发行日 |
+| amount | DECIMAL(20,2) | 发行金额 |
+| issue_price | DECIMAL(10,2) | 发行价 |
+
+频率：每日 09:00。上游：Tushare `pro.new_share()`。第 9 章事件日历依赖。
+
+### E4-S5 沪深港通持仓 `ods_hsgt_holding`（P2）
+
+| 字段 | 类型 | 说明 |
+|---|---|---|
+| ts_code | VARCHAR(20) | 主键 |
+| trade_date | DATE | 主键 |
+| vol | BIGINT | 持股量 |
+| ratio | DECIMAL(10,6) | 持股比例(小数) |
+| exchange | VARCHAR(10) | SH / SZ |
+
+频率：交易日 19:00。上游：Tushare `pro.hk_hold()`。**TBD：2024-08-19 后是否仍有日终个股数据**（北向盘中已不可用，但日终持仓接口可能还在）。
+
+### E4-S6 股本变动 `ods_share_float`（P2）
+
+| 字段 | 类型 | 说明 |
+|---|---|---|
+| ts_code | VARCHAR(20) | 主键 |
+| ann_date | DATE | 主键 |
+| float_share | DECIMAL(20,4) | 流通股本（万股） |
+| float_ratio | DECIMAL(10,6) | 流通占比 |
+| holder_name | VARCHAR(100) | 解禁股东 |
+
+频率：交易日 18:30。上游：Tushare `pro.share_float()`。
+
+### E4-S7 股权质押统计 `ods_pledge_stat`（P2）
+
+| 字段 | 类型 | 说明 |
+|---|---|---|
+| ts_code | VARCHAR(20) | 主键 |
+| end_date | DATE | 主键，统计截止日 |
+| pledge_count | INT | 质押次数 |
+| unrest_pledge | DECIMAL(20,4) | 无限售股质押数 |
+| pledge_ratio | DECIMAL(10,6) | 质押比例 |
+
+频率：每周五 19:00。上游：Tushare `pro.pledge_stat()`。
 
 ---
 
-## 9. 调度时序总图
+## 漏项汇总表
 
-```
-06:00 ── stock_basic_info (legacy → dim_stock_basic)
-06:30 ── trade_cal 月任务
-09:00 ── ods_index_global_daily（前夜海外指数 T+1）
-       └ ods_margin_total / ods_margin_detail（两融 T+1）
-─── 15:00 收盘 ───
-16:30 ── stock_kline_daily / ods_index_daily / ods_event_limit_pool
-16:45 ── daily_basic / ods_sw_index_daily
-16:50 ── ods_concept_kline_daily (akshare 限速)
-16:55 ── ods_market_breadth_daily
-17:00 ── monitor_indicators_history / stock_north_funds_daily / north_capital_daily
-       │  ↑ 写 data_readiness
-       └─→ L1-L4 ETL 启动（17:00-17:15）
-17:30 ── stock_lhb_daily（akshare 限速串行）
-       │
-       └─→ L6-L8 ETL 启动（17:15-17:30，分批）
-18:00 ── stock_block_trade / ods_holdertrade / ods_repurchase / ods_dividend
-       └ ods_st_change / ods_investigation / ods_announcement
-18:30 ── ods_forecast / ods_express
-19:00 ── ods_etf_share_chg
-21:00 ── 月底 / 15 号：stock_shareholder_count / stock_top10_shareholders
-─── 22:00 数据采集死线 ───
-       │
-       └─→ 异动管线 v1.1：20:30 数据就绪 → 21:00 异动结果产出
-```
+| ID | 表名 | 章节 | 优先级 | 频率 | 上游接口 |
+|---|---|---|---|---|---|
+| 1 | `ods_adj_factor` | 2 (行情) | **P0** | 交易日 16:30 | `pro.adj_factor()` |
+| 2 | `dim_sw_industry_member` | 2 (行情) | **P0** | 月更 1 号 06:30 | `pro.index_member_all()` |
+| 3 | `dim_concept_member` | 2 (行情) | P1 | 周更 一 06:30 | akshare / 同花顺 |
+| 4 | `ods_moneyflow` | 5 (资金) | P1 | 交易日 17:00 | `pro.moneyflow()` |
+| 5 | `ods_suspend_d` | 2 (行情) | P1 | 交易日 16:30 | `pro.suspend_d()` |
+| 6 | `ods_fund_nav` | 5 (资金) | P1 | 交易日 19:00 | `pro.fund_nav()` |
+| 7 | `ods_index_weight` | 7 (跨市场) | P2 | 月更 1 号 07:00 | `pro.index_weight()` |
+| 8 | `ods_new_share` | 6 (公告) | P2 | 每日 09:00 | `pro.new_share()` |
+| 9 | `ods_hsgt_holding` | 5 (资金) | P2 | 交易日 19:00 | `pro.hk_hold()` |
+| 10 | `ods_share_float` | 6 (公告) | P2 | 交易日 18:30 | `pro.share_float()` |
+| 11 | `ods_pledge_stat` | 6 (公告) | P2 | 每周五 19:00 | `pro.pledge_stat()` |
+
+**新增 P0：2 张** | **新增 P1：4 张** | **新增 P2：5 张** | **合计 11 张**
+
+合并后 v0.3 总表数 = **38 + 11 = 49 张**
 
 ---
 
-## 10. 调度建议（替换 v0.1 第 5 节）
+## v0.2 备注勘误
 
-### 10.1 双触发策略
-- **首采**：按上表标定时机触发
-- **校验补漏**：T+0 22:00 检查 `data_readiness` 表，对未就绪的 P0/P1 任务发起重试
+| 位置 | 错误描述 | 正确描述 |
+|---|---|---|
+| 第 2 节 `stock_kline_daily` | 「前复权数据」 | 「不复权原始价；前复权需 JOIN `ods_adj_factor`」 |
+| 第 5 节标题 | 「资金五维（北向 / 龙虎榜 / 大宗 / 两融 / ETF / 游资）」(6 项) | 「资金五维（主力 / 北向 / 两融 / ETF / 龙虎榜）」（大宗 / 游资归扩展子项）|
 
-### 10.2 重试策略
+---
 
-| 阻塞等级 | 重试次数 | 间隔 | 失败后处置 |
+## 已产出数据污染评估
+
+### E1-S2 自检结果决定影响范围
+
+**情形 A**：自检发现 `ads_stock_derived_metrics` **未做复权**
+- 影响表：`ads_stock_derived_metrics` / `ads_l8_unified_signal` / `ads_l2_style_factor` / `app_anomaly_top10_daily`（历史）
+- 处置：补齐 `ods_adj_factor` → ETL 加 JOIN 复权计算 → 历史回灌近 1 年（P0），1-3 年（P1），> 3 年看需求
+
+**情形 B**：自检发现 ETL 用的是 `daily_basic.pct_chg`（Tushare 已修正）
+- 影响表：`ads_l8_unified_signal.dist_to_ma20` 等技术指标仍可能有错（如果是自算）
+- 处置：聚焦核查 ma_n 类指标的算法
+
+**情形 C**：自检发现 ETL 用了某种隐式复权方式
+- 处置：补齐 `ods_adj_factor` 后将 ETL 显式化，避免后续维护风险
+
+---
+
+## 风险与缓解
+
+| 风险 | 影响 | 概率 | 缓解 |
 |---|---|---|---|
-| P0 | 5 | 指数退避 1/2/4/8/16 min | CRITICAL 告警，人工介入 |
-| P1 | 3 | 5 min 固定 | ERROR 告警，T+1 补 |
-| P2 | 2 | 10 min 固定 | WARN 告警，可跳过 |
-
-### 10.3 限速控制
-
-| 数据源 | 限速规则 |
-|---|---|
-| Tushare | 按账户积分级别，2000 积分约 500 次/分钟 |
-| akshare | 龙虎榜 / ETF / 概念接口：**串行 + 间隔 ≥ 1s** |
-| 长桥 API | 见长桥文档，TBD 实测限速 |
-
-### 10.4 跨期 / 长假 hook
-
-- 长假后第一日 06:00 任务前：先跑 `ST 状态全表对照` 子任务
-- 北向资金跨 2024-08-19 的回算：拒绝执行，提示口径变更
-- 龙虎榜跨期累积：长假后第一日采集时拉前 N 个交易日（N = 假期工作日数）
+| 自检确认 `ads_stock_derived_metrics` 未复权 | 近年异动评分 / 风格因子全部错 | 高 | E1 优先级置顶；近 1 年数据立即回灌 |
+| 行业成员当前用 `stock_basic_info.industry`（中信） | L2 行业广度系统性偏差 | 中 | E2 同步落地；切换前后做 diff 验证差异范围 |
+| `dim_sw_industry_member` 历史拉链初始化困难（早期 Tushare 数据可能缺失） | 历史回算精度受限 | 中 | 接受 2018 年前的行业归属用「最早可得快照」近似，文档显式声明 |
+| `ods_hsgt_holding` 2024-08-19 后失效 | E4-S5 接入失败 | 中 | 接入前调用 `pro.hk_hold()` 实测，失败则降级为 P3 不实施 |
+| ETF 申赎计算公式 `share_chg × nav × 1e8` 中 nav 用法 TBD | E4-S2 落地后 ETL 仍可能算错 | 低 | 用 `unit_nav` 还是 `accum_nav`，需 Gemini 实施侧明确（见 TBD-C-3）|
 
 ---
 
-## 11. 待确认事项 (TBD)
+## 待确认事项（TBD）
 
 | ID | 描述 | 影响 | 优先级 |
 |---|---|---|---|
-| TBD-1 | `cn_gov_yield` 接口名（Tushare 实测） | 第 4 节 `monitor_indicators_history` | 中 |
-| TBD-2 | `stock_north_funds_daily` 与 `north_capital_daily` 口径区别 / 是否合并 | 第 5.1 节 | 中 |
-| TBD-3 | 两融数据表名（`ods_margin_total` / `ods_margin_detail`） | 第 5.4 节 | 中 |
-| TBD-4 | ETF 申赎表名（`ods_etf_share_chg`） | 第 5.5 节 | 中 |
-| TBD-5 | 业绩预告 / 快报表名（`ods_forecast` / `ods_express`） | 第 6 节 | 中 |
-| TBD-6 | 限售解禁表名（`ods_share_release`） | 第 6 节 | 中 |
-| TBD-7 | 公告主表是否单独建（`ods_announcement`） | 第 6 节 | 低 |
-| TBD-8 | 长桥 API 实测限速规则 | 第 10.3 节 | 低 |
-| TBD-9 | 流通股东表是否与十大股东表合并 | 第 3 节 | 低 |
-| TBD-10 | `data_readiness` / `pipeline_run` 从 legacy 命名迁到 `meta_*` 前缀的时点 | 第 1 节 | 低 |
+| TBD-C-1 | 自检 SQL 结果：`ads_stock_derived_metrics` 当前是否做了复权？ | 决定历史回灌范围 | **P0** |
+| TBD-C-2 | L2 行业广度当前如何获取行业成员？（运行时调 Tushare / `stock_basic_info.industry` / 其他）| 决定 E2 切换风险 | **P0** |
+| TBD-C-3 | ETF 申赎计算公式中的 `nav` 用 `unit_nav` 还是 `accum_nav`？ | E4-S2 落地正确性 | P1 |
+| TBD-C-4 | `pro.hk_hold()` 在 2024-08-19 后是否仍返回日终个股持仓？ | 决定 E4-S5 是否实施 | P2 |
+| TBD-C-5 | 同名概念去重规则（机器人 / 机器人概念 / 人形机器人 三选一保留哪个）| E2-S2 落地 | P2 |
+| TBD-C-6 | `dim_sw_industry_member` 历史拉链回溯到哪一年？ | 决定历史回灌窗口 | P2 |
+
+---
+
+## 里程碑
+
+| 里程碑 | 计划日期 | 交付物 |
+|---|---|---|
+| M1 | TBD+1 工作日 | E1-S2 自检 SQL 结果，确认 ads_* 污染范围 |
+| M2 | TBD+2 工作日 | E1-S1 `ods_adj_factor` 采集任务上线，历史回补完成 |
+| M3 | TBD+4 工作日 | E2-S1 `dim_sw_industry_member` 上线 + L2 ETL 切换 |
+| M4 | TBD+5 工作日 | E3-S1 `ods_moneyflow` 上线，L3 主力维补齐 |
+| M5 | TBD+7 工作日 | E4 全部 P1 任务上线（停复牌 / 基金净值 / 概念成员）|
+| M6 | TBD+10 工作日 | E4 全部 P2 任务上线，本补遗合并入 v0.3 主文档 |
+
+---
+
+## 度量指标
+
+### 业务指标
+- 异动评分修正前后 Top 10 重合度：< 80% 视为「确认有复权污染」
+- L2 行业广度切换前后差异：> 5% 视为「确认有中信 / 申万错配」
+
+### 技术指标
+- `ods_adj_factor` 日采集行数与 `stock_kline_daily` 差异 < 1%
+- `dim_sw_industry_member` 月更后 schema diff 落库时间 < 5 min
+- 所有新表 `data_readiness` 写入率 = 100%
 
 ---
 
@@ -354,5 +491,4 @@ v0.1 文档中以下三处时机与 `PROJECT_OVERVIEW` 第 4 节冲突，本版�
 
 | 日期 | 版本 | 变更 | 作者 |
 |---|---|---|---|
-| 2026-05-? | v0.1 | 初版采集计划（覆盖 ~30% ods_* 表） | (原作者) |
-| 2026-05-12 | v0.2 | 补全 L3 / L6 / L7 共 16 张表；修正 daily_basic / 涨跌停 / 行业行情时序冲突；引入 data_readiness 数据契约、多源备份策略、阻塞影响分级 (P0/P1/P2)、跨期 / 长假处理 hook；新增第 10 节限速 / 重试策略 | Claude 协助 |
+| 2026-05-12 | v0.2-addendum | v0.2 漏项补遗：11 张表 + 1 处备注修正 + 已产出数据污染评估 | Claude 协助 |

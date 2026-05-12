@@ -16,9 +16,14 @@
 - 设计 source of truth:`docs/PROJECT_OVERVIEW.md` / `docs/TABLES_INDEX.md`
 
 **协作分工**:
-- 设计在 Claude(Anthropic),交付为 `docs/` 下 Markdown 文档(Epic-Story-Task-AC 结构)
-- 实施在 Gemini(本仓),按文档写代码
+- 设计在 Claude(Anthropic), 交付为 Markdown 文档 (Epic-Story-Task-AC 结构)。
+- **文档归口原则**: 
+  - 全局架构类设计存放于根目录 `docs/`。
+  - **微服务专属设计与实施文档** (含 Epic/Story/Plan/Task) **必须** 存放于该服务目录下的 `docs/` 中。
 - **实施日志路径**: 必须按照设计文档同目录下的 `implementation_logs/E{N}/S{M}/` 文件夹进行物理存证。
+
+> [!IMPORTANT]
+> **文档归口原则**: 严禁在根目录 `docs/` 存放微服务专属的开发设计文档。针对 `scf-collector`, `tushare-api` 等微服务的所有 Epic/Story 设计及实施日志，**必须** 物理存放于该微服务根目录下的 `docs/` 文件夹中。
 
 ---
 
@@ -119,3 +124,4 @@
 | 2026-05-10 | v1.3 | **环境对齐**: 修正“核心禁令”中关于 Node-41 和 Gost 隧道的错误描述，明确腾讯云环境约束。 |
 | 2026-05-10 | v1.4 | **质量对齐**: 建立 5.4 节数据质量闭环，强化 [Data Quality Steward] 约束。 |
 | 2026-05-10 | v1.5 | **交付对齐**: 强化 5.3 节，要求每个 Story 必须产出 REPORT.md 和 API.md 存证。 |
+| 2026-05-12 | v1.6 | **文档归口**: 明确微服务专属设计与实施文档需存放在服务内部的 `docs/` 目录下。 |

@@ -1,11 +1,20 @@
 # SCF Collector: 生产环境部署与全链路对齐手册
 
-## 1. 系统角色与架构
+## 1. 文档索引 (Documentation Index)
+
+- **核心 PRD**: [PRD_SCF_COLLECTOR.md](PRD_SCF_COLLECTOR.md) (业务目标与数据契约)
+- **实施 Epic (E400)**: [E400_SCF_Collector_Implementation.md](E400_SCF_Collector_Implementation.md) (当前执行计划)
+- **审计报告 (E300)**: [audit/E300_Data_Ingestion_Verification.md](audit/E300_Data_Ingestion_Verification.md) (存量数据资产核查)
+- **任务看板**: [todo-list-tables.md](todo-list-tables.md) (49 张表采集清单)
+
+---
+
+## 2. 系统角色与架构
 `scf-collector` 是 A 股盘后分析系统的“数据前哨”，运行在腾讯云云函数 (SCF) 环境下。
 - **职责**: 负责从 Tushare/AkShare 采集原始数据，同步元数据，并对齐业务表与审计元数据。
 - **网络**: 必须绑定 VPC (`vpc-0qlg45u2`) 以直连内网 MySQL (`172.17.0.10`)，**并同时开启公网访问 (PublicNetConfig=ENABLE)** 以请求外部数据源。
 
-### 1.1 Serverless Monorepo 架构 (2026-05-12 升级)
+### 2.1 Serverless Monorepo 架构 (2026-05-12 升级)
 为支持多任务并发开发与部署，本项目采用 **Serverless Monorepo** 架构：
 - `functions/`: 所有独立云函数的物理隔离区。
   - `meta_sync/`: 基础元数据同步函数 (`stock-scf-meta`)。
@@ -15,14 +24,14 @@
 
 ---
 
-## 2. 核心技术复盘 (2026-05-11)
+## 3. 核心技术复盘 (2026-05-11)
 
-### 2.1 依赖与环境治理
+### 3.1 依赖与环境治理
 - **动态路径插入**: 在 `index.py` 中强制扫描 `/opt/python`，解决了 Layer 依赖加载的顽疾。
 - **只读系统绕行**: 针对 SCF 只读环境。
 - **API 部署模式**: 切换为基于 Python SDK 的 `UpdateFunctionCode` 模式，确保大包上传的稳定性。
 
-### 2.2 数据库“真源”对齐 (Critical)
+### 3.2 数据库“真源”对齐 (Critical)
 经过多轮审计，系统已实现与生产库的物理对齐：
 - **业务表 (`stock_kline_daily`)**: 使用 `volume`, `amount`, `pct_chg` (移除 `vol`, `change`)。
 - **审计表 (`meta_pipeline_run`)**: 严格匹配 `biz_date`, `error_message`, `started_at` 等 DDL 字段。
@@ -30,7 +39,7 @@
 
 ---
 
-## 3. 运维与测试指南
+## 4. 运维与测试指南
 
 ### 3.1 部署命令
 在本地目录下执行对应的函数部署脚本（会自动回溯打包 `shared/` 目录及 `.env` 配置）：
@@ -75,7 +84,7 @@ python3 functions/daily_quotes/deploy.py
 
 ---
 
-## 4. 依赖清单 (Layer 绑定)
+## 5. 依赖清单 (Layer 绑定)
 - `pandas`: 数据处理
 - `tushare`: P0 采集源
 - `akshare`: P1 补充源
