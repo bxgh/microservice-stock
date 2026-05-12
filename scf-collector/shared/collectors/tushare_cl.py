@@ -45,6 +45,127 @@ class TushareCollector(BaseCollector):
             
         return self.normalize_data(df, ts_code, trade_date)
 
+    def _fetch_batch_daily_sync(self, date_str: str) -> pd.DataFrame:
+        import tushare as ts
+        token = os.getenv("TUSHARE_TOKEN")
+        try:
+            pro = ts.pro_api(token)
+            return pro.daily(trade_date=date_str)
+        except Exception as e:
+            logger.error(f"[tushare] fetch batch daily error for {date_str}: {e}")
+            raise
+
+    async def fetch_batch_daily_kline(self, trade_date: str) -> List[Dict[str, Any]]:
+        """批量获取单日全 A 股票 K 线"""
+        date_str = self._convert_date(trade_date)
+        df = await asyncio.to_thread(self._fetch_batch_daily_sync, date_str)
+        if df is None or df.empty:
+            return []
+        
+        # 批量归一化逻辑
+        results = []
+        for _, row in df.iterrows():
+            pct_chg_raw = float(row.get('pct_chg', 0)) if row.get('pct_chg') is not None else 0
+            amount_raw = float(row.get('amount', 0)) if row.get('amount') is not None else 0
+            results.append({
+                "ts_code": row.get('ts_code'),
+                "trade_date": trade_date,
+                "open": float(row.get('open', 0)),
+                "high": float(row.get('high', 0)),
+                "low": float(row.get('low', 0)),
+                "close": float(row.get('close', 0)),
+                "pre_close": float(row.get('pre_close', 0)),
+                "change": float(row.get('change', 0)),
+                "pct_chg": round(pct_chg_raw / 100.0, 6),
+                "volume": float(row.get('vol', 0)),
+                "amount": round(amount_raw * 1000.0, 2)
+            })
+        return results
+
+    def _fetch_adj_factor_sync(self, date_str: str) -> pd.DataFrame:
+        import tushare as ts
+        token = os.getenv("TUSHARE_TOKEN")
+        try:
+            pro = ts.pro_api(token)
+            return pro.adj_factor(trade_date=date_str)
+        except Exception as e:
+            logger.error(f"[tushare] fetch adj factor error for {date_str}: {e}")
+            raise
+
+    async def fetch_adj_factor(self, trade_date: str) -> List[Dict[str, Any]]:
+        """获取复权因子"""
+        date_str = self._convert_date(trade_date)
+        df = await asyncio.to_thread(self._fetch_adj_factor_sync, date_str)
+        return df.to_dict('records') if not df.empty else []
+
+    def _fetch_sw_industry_members_sync(self) -> pd.DataFrame:
+        import tushare as ts
+        token = os.getenv("TUSHARE_TOKEN")
+        try:
+            pro = ts.pro_api(token)
+            # 获取申万行业成员 (全量拉链数据)
+            return pro.index_member_all()
+        except Exception as e:
+            logger.error(f"[tushare] fetch sw industry members error: {e}")
+            raise
+
+    async def fetch_sw_industry_members(self) -> List[Dict[str, Any]]:
+        """获取申万行业成员 (处理字段映射)"""
+        df = await asyncio.to_thread(self._fetch_sw_industry_members_sync)
+        if df is None or df.empty:
+            return []
+        
+        # 归一化字段: l1_code -> index_code, ts_code -> con_code
+        results = []
+        for _, row in df.iterrows():
+            results.append({
+                "index_code": row.get('l1_code'),
+                "index_name": row.get('l1_name'),
+                "con_code": row.get('ts_code'),
+                "con_name": row.get('name'),
+                "in_date": row.get('in_date'),
+                "out_date": row.get('out_date'),
+                "is_new": row.get('is_new')
+            })
+        return results
+
+    def _fetch_index_daily_sync(self, ts_code: str, date_str: str) -> pd.DataFrame:
+        import tushare as ts
+        token = os.getenv("TUSHARE_TOKEN")
+        try:
+            pro = ts.pro_api(token)
+            return pro.index_daily(ts_code=ts_code, trade_date=date_str)
+        except Exception as e:
+            logger.error(f"[tushare] fetch index daily error for {ts_code} on {date_str}: {e}")
+            raise
+
+    async def fetch_index_daily(self, ts_code: str, trade_date: str) -> List[Dict[str, Any]]:
+        """获取指数行情"""
+        date_str = self._convert_date(trade_date)
+        df = await asyncio.to_thread(self._fetch_index_daily_sync, ts_code, date_str)
+        if df is None or df.empty:
+            return []
+        
+        # 归一化指数数据
+        results = []
+        for _, row in df.iterrows():
+            pct_chg_raw = float(row.get('pct_chg', 0)) if row.get('pct_chg') is not None else 0
+            amount_raw = float(row.get('amount', 0)) if row.get('amount') is not None else 0
+            results.append({
+                "ts_code": ts_code,
+                "trade_date": trade_date,
+                "open": float(row.get('open', 0)),
+                "high": float(row.get('high', 0)),
+                "low": float(row.get('low', 0)),
+                "close": float(row.get('close', 0)),
+                "pre_close": float(row.get('pre_close', 0)),
+                "change": float(row.get('change', 0)),
+                "pct_chg": round(pct_chg_raw / 100.0, 6),
+                "volume": float(row.get('vol', 0)),
+                "amount": round(amount_raw * 1000.0, 2)
+            })
+        return results
+
     def _fetch_calendar_sync(self, start_date: str, end_date: str) -> pd.DataFrame:
         import tushare as ts
         token = os.getenv("TUSHARE_TOKEN")
