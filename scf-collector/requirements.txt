@@ -1,0 +1,9 @@
+aiomysql
+akshare
+tushare
+pandas
+pydantic
+cryptography
+python-dotenv
+easyquotation
+

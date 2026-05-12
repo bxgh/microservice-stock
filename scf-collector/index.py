@@ -1,7 +1,9 @@
 import sys
 import os
 
-# 0. 强制设置缓存路径 (解决 SCF 只读文件系统报错，必须在 import mootdx 之前)
+# 0. 强制重定向环境路径 (解决 SCF 只读文件系统报错)
+# 必须在 import 任何第三方行情库之前设置
+os.environ['HOME'] = '/tmp'
 os.environ['MOOTDX_CACHE_DIR'] = '/tmp'
 
 import logging
@@ -25,7 +27,7 @@ logger.setLevel(logging.INFO)
 # 引入自定义模块
 from shared.collectors.tushare_cl import TushareCollector
 from shared.collectors.akshare_cl import AkShareCollector
-from shared.collectors.mootdx_cl import MootdxCollector
+from shared.collectors.easyquotation_cl import EasyQuotationCollector
 from shared.db.dao import StockDAO
 from shared.utils.notifier import EmailNotifier
 
@@ -33,19 +35,35 @@ from shared.utils.notifier import EmailNotifier
 COLLECTORS = {
     'tushare': TushareCollector(),
     'akshare': AkShareCollector(),
-    'mootdx': MootdxCollector()
+    'easyquotation': EasyQuotationCollector()
 }
 
-FALLBACK_CHAIN = ['tushare', 'mootdx', 'akshare']
+FALLBACK_CHAIN = ['tushare', 'akshare', 'easyquotation']
 
 async def async_handler(event, context):
+    op = event.get('op', 'collect')
     ts_code = event.get('ts_code', '600519.SH')
-    trade_date = event.get('trade_date', '20260511')
+    trade_date = event.get('trade_date', '2026-05-11')
+    request_id = getattr(context, 'request_id', 'local_test')
+
+    if op == 'verify':
+        logger.info(f"[{request_id}] Entering Cloud Verification Mode...")
+        results = {}
+        for name, collector in COLLECTORS.items():
+            try:
+                # 统一测试 茅台 2026-05-11
+                data = await collector.fetch_daily_kline(ts_code, trade_date)
+                if data and len(data) > 0:
+                    results[name] = f"SUCCESS ({data[0]['close']})"
+                else:
+                    results[name] = "FAILED (Empty)"
+            except Exception as e:
+                results[name] = f"ERROR ({str(e)})"
+        return {"status": "verify_result", "data": results, "request_id": request_id}
+
     preferred_source = event.get('source', 'tushare')
     auto_fallback = event.get('auto_fallback', True)
-    request_id = getattr(context, 'request_id', 'local_test')
     
-    logger.info(f">>> SCF Collector Heartbeat: Verification mode enabled. Request ID: {request_id} <<<")
     logger.info(f"[{request_id}] Start collecting {ts_code} for {trade_date}. Preferred: {preferred_source}")
     
     try_sources = [preferred_source]
@@ -78,7 +96,6 @@ async def async_handler(event, context):
             await StockDAO.save_kline_data(final_data)
             await StockDAO.log_pipeline_run("Data-Hub", "success", run_id=request_id, biz_date=trade_date)
             await StockDAO.update_data_readiness(trade_date, "stock_kline_daily", len(final_data))
-            await EmailNotifier.notify_success("Data-Hub", trade_date, len(final_data))
             
             return {
                 "status": "success",

@@ -4,11 +4,20 @@ import base64
 from dotenv import load_dotenv
 
 # 加载配置
-load_dotenv('.env')
+import sys
+base_path = os.path.dirname(os.path.abspath(__file__))
+load_dotenv(os.path.join(base_path, '.env'))
 secret_id = os.environ.get('TENCENT_SECRET_ID')
 secret_key = os.environ.get('TENCENT_SECRET_KEY')
 region = os.environ.get('REGION', 'ap-guangzhou')
+
+# 根据命令行参数决定部署目标
 func_name = 'stock-serverless-collector'
+if '--test' in sys.argv:
+    func_name = 'stock-collector-test'
+    print(f"[Mode] Target function: {func_name} (Staging)")
+else:
+    print(f"[Mode] Target function: {func_name} (Production)")
 
 try:
     from tencentcloud.common import credential
@@ -20,17 +29,23 @@ except ImportError:
 def package_code():
     """自动打包 index.py 和 shared/ 目录"""
     print("[Package] Packaging code...")
-    zip_path = 'code.zip'
+    base_path = os.path.dirname(os.path.abspath(__file__))
+    zip_path = os.path.join(base_path, 'code.zip')
+    
     with zipfile.ZipFile(zip_path, 'w', zipfile.ZIP_DEFLATED) as zf:
         # 写入入口文件
-        zf.write('index.py', 'index.py')
+        index_file = os.path.join(base_path, 'index.py')
+        zf.write(index_file, 'index.py')
         # 递归写入 shared 目录
-        for root, _, files in os.walk('shared'):
+        shared_dir = os.path.join(base_path, 'shared')
+        for root, _, files in os.walk(shared_dir):
             for f in files:
                 if f.endswith('.pyc') or '__pycache__' in root:
                     continue
-                path = os.path.join(root, f)
-                zf.write(path, path)
+                full_path = os.path.join(root, f)
+                # 计算在 zip 中的相对路径
+                rel_path = os.path.relpath(full_path, base_path)
+                zf.write(full_path, rel_path)
     return zip_path
 
 def deploy():
