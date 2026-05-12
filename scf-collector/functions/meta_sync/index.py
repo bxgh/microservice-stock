@@ -72,6 +72,18 @@ async def async_handler(event, context):
             else:
                 raise Exception("Fetched empty stock list data")
         
+        elif op == 'sync_sw_industry_member':
+            logger.info(f"[{request_id}] Fetching SW industry members...")
+            data = await TUSHARE.fetch_sw_industry_members()
+            
+            if data:
+                count = await StockDAO.save_industry_members(data)
+                await StockDAO.log_pipeline_run("Meta-Industry", "success", run_id=request_id, biz_date=biz_date)
+                await StockDAO.update_data_readiness(biz_date, "dim_sw_industry_member", len(data))
+                return {"status": "success", "op": op, "count": count, "request_id": request_id}
+            else:
+                raise Exception("Fetched empty SW industry members data")
+        
         else:
             return {"status": "error", "message": f"Unknown operation: {op}", "request_id": request_id}
 

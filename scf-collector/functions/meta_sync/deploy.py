@@ -200,6 +200,11 @@ def setup_triggers():
             "name": "MonthlyCalendar",
             "cron": "0 30 6 1 * * *",
             "payload": {"op": "sync_calendar"}
+        },
+        {
+            "name": "MonthlySWIndustry",
+            "cron": "0 30 6 1 * * *",
+            "payload": {"op": "sync_sw_industry_member"}
         }
     ]
     

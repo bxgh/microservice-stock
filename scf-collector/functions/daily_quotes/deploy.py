@@ -77,5 +77,95 @@ def deploy():
     except Exception as e:
         print(f"Error: Deployment failed: {e}")
 
+def sync_config():
+    """同步环境变量到云端配置"""
+    cred = credential.Credential(secret_id, secret_key)
+    client = scf_client.ScfClient(cred, region)
+    
+    req = models.UpdateFunctionConfigurationRequest()
+    req.FunctionName = func_name
+    
+    # 同步环境变量
+    env_vars = [
+        "MYSQL_HOST", "MYSQL_PORT", "MYSQL_USER", "MYSQL_PASSWORD", "MYSQL_DB",
+        "TUSHARE_TOKEN", "VPC_ID", "SUBNET_ID"
+    ]
+    req.Environment = models.Environment()
+    req.Environment.Variables = []
+    for v in env_vars:
+        val = os.environ.get(v)
+        if val:
+            kv = models.Variable()
+            kv.Key = v
+            kv.Value = str(val)
+            req.Environment.Variables.append(kv)
+    
+    # 强制同步 VPC 和开启公网访问
+    vpc_id = os.environ.get('VPC_ID')
+    subnet_id = os.environ.get('SUBNET_ID')
+    if vpc_id and subnet_id:
+        req.VpcConfig = models.VpcConfig()
+        req.VpcConfig.VpcId = vpc_id
+        req.VpcConfig.SubnetId = subnet_id
+    
+    # 开启公网访问
+    req.PublicNetConfig = models.PublicNetConfigIn()
+    req.PublicNetConfig.PublicNetStatus = "ENABLE"
+    req.PublicNetConfig.EipConfig = models.EipConfigIn()
+    req.PublicNetConfig.EipConfig.EipStatus = "DISABLE"
+            
+    try:
+        client.UpdateFunctionConfiguration(req)
+        print(f"[Config] Environment variables synchronized for {func_name}")
+    except Exception as e:
+        print(f"[Config] Error syncing env vars: {e}")
+
+def setup_triggers():
+    """自动化配置定时触发器"""
+    import json
+    cred = credential.Credential(secret_id, secret_key)
+    client = scf_client.ScfClient(cred, region)
+    
+    triggers = [
+        {
+            "name": "DailyKline",
+            "cron": "0 30 16 * * * *",
+            "payload": {"op": "sync_kline_daily"}
+        },
+        {
+            "name": "DailyAdjFactor",
+            "cron": "0 35 16 * * * *",
+            "payload": {"op": "sync_adj_factor"}
+        },
+        {
+            "name": "DailyIndex",
+            "cron": "0 40 16 * * * *",
+            "payload": {"op": "sync_index_daily"}
+        }
+    ]
+    
+    print(f"[Trigger] Syncing triggers for {func_name}...")
+    for t in triggers:
+        req = models.CreateTriggerRequest()
+        req.FunctionName = func_name
+        req.TriggerName = t["name"]
+        req.Type = "timer"
+        req.TriggerDesc = t["cron"]
+        req.CustomArgument = json.dumps(t["payload"])
+        
+        try:
+            client.CreateTrigger(req)
+            print(f"Success: Trigger {t['name']} created ({t['cron']})")
+        except Exception as e:
+            if "ResourceInUse" in str(e) or "AlreadyExists" in str(e):
+                print(f"Info: Trigger {t['name']} already exists. Skipping creation.")
+            else:
+                print(f"Error: Failed to setup trigger {t['name']}: {e}")
+
 if __name__ == "__main__":
     deploy()
+    import time
+    print("Waiting for function to be active (10s)...")
+    time.sleep(10)
+    sync_config()
+    setup_triggers()

@@ -64,6 +64,64 @@ async def async_handler(event, context):
                 results[name] = f"ERROR ({str(e)})"
         return {"status": "verify_result", "data": results, "request_id": request_id}
 
+    if op == 'sync_kline_daily':
+        # 批量同步全 A 日 K 线 (不复权)
+        logger.info(f"[{request_id}] Starting batch K-line sync for {trade_date}...")
+        collector = COLLECTORS.get('tushare')
+        try:
+            data = await collector.fetch_batch_daily_kline(trade_date)
+            if data:
+                count = await StockDAO.save_kline_data(data)
+                await StockDAO.update_data_readiness(trade_date, "stock_kline_daily", len(data))
+                await StockDAO.log_pipeline_run("Daily-K-Line", "success", run_id=request_id, biz_date=trade_date)
+                return {"status": "success", "count": count, "request_id": request_id}
+            else:
+                return {"status": "empty", "count": 0, "request_id": request_id}
+        except Exception as e:
+            err_msg = f"Batch K-line sync error: {str(e)}"
+            logger.error(f"[{request_id}] {err_msg}")
+            await StockDAO.log_pipeline_run("Daily-K-Line", "error", error_message=err_msg, run_id=request_id, biz_date=trade_date)
+            return {"status": "error", "message": err_msg, "request_id": request_id}
+
+    if op == 'sync_adj_factor':
+        # 批量同步复权因子
+        logger.info(f"[{request_id}] Starting batch adj factor sync for {trade_date}...")
+        collector = COLLECTORS.get('tushare')
+        try:
+            data = await collector.fetch_adj_factor(trade_date)
+            if data:
+                count = await StockDAO.save_adj_factor(data)
+                await StockDAO.update_data_readiness(trade_date, "stock_adjust_factor", len(data))
+                await StockDAO.log_pipeline_run("Adj-Factor", "success", run_id=request_id, biz_date=trade_date)
+                return {"status": "success", "count": count, "request_id": request_id}
+            else:
+                return {"status": "empty", "count": 0, "request_id": request_id}
+        except Exception as e:
+            err_msg = f"Batch adj factor sync error: {str(e)}"
+            logger.error(f"[{request_id}] {err_msg}")
+            await StockDAO.log_pipeline_run("Adj-Factor", "error", error_message=err_msg, run_id=request_id, biz_date=trade_date)
+            return {"status": "error", "message": err_msg, "request_id": request_id}
+
+    if op == 'sync_index_daily':
+        # 批量同步指定指数行情
+        ts_codes = event.get('ts_codes', '000001.SH,399001.SZ,399006.SZ,000300.SH,000905.SH,000852.SH,985.SH')
+        logger.info(f"[{request_id}] Starting index sync for {trade_date}, codes: {ts_codes}...")
+        collector = COLLECTORS.get('tushare')
+        all_data = []
+        for code in ts_codes.split(','):
+            try:
+                data = await collector.fetch_index_daily(code.strip(), trade_date)
+                all_data.extend(data)
+            except Exception as e:
+                logger.error(f"[{request_id}] Error fetching index {code}: {e}")
+        
+        if all_data:
+            count = await StockDAO.save_index_kline(all_data)
+            await StockDAO.update_data_readiness(trade_date, "ods_index_daily", len(all_data))
+            await StockDAO.log_pipeline_run("Index-Daily", "success", run_id=request_id, biz_date=trade_date)
+            return {"status": "success", "count": count, "request_id": request_id}
+        return {"status": "empty", "request_id": request_id}
+
     try:
         preferred_source = event.get('source', 'tushare')
         auto_fallback = event.get('auto_fallback', True)
