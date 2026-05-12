@@ -40,6 +40,12 @@ python3 deploy.py
   "source": "tushare",
   "auto_fallback": true
 }
+{
+  "ts_code": "000004.SZ",
+  "trade_date": "2026-05-11",
+  "source": "tushare"
+}
+
 ```
 
 ### 3.3 故障排查

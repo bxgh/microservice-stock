@@ -50,4 +50,4 @@ check_*.py
 migration.log
 *.db
 scf-collector/layers/
-.serverless/*.zip
+*.zip
