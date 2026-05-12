@@ -1,67 +1,58 @@
 ---
 name: 腾讯云 SCF 部署与调试 (scf-deployment)
-description: 指导 Agent 如何编写 serverless.yml、打包 Layer 以及在腾讯云 SCF (Serverless Cloud Function) 上部署和调试应用。
+description: 指导 Agent 如何通过腾讯云 SDK 直接完成 SCF 的全流程部署（代码更新、Layer 打包发布及绑定），以及解决跨平台依赖与只读环境问题的关键策略。
 ---
 
-# 腾讯云 SCF 部署规范与工作流
+# 腾讯云 SCF 部署规范与实战避坑指南
 
-当用户要求部署、重构、或测试基于腾讯云 Serverless 的架构时，请严格遵守以下操作规程。
+当用户要求部署、重构、或测试基于腾讯云 Serverless 的架构时，请严格遵守以下基于真实环境实战总结的操作规程。本规范推荐使用 **Tencent Cloud SDK (Python)** 直接部署，而非笨重的 Serverless CLI。
 
-## 1. 核心约束
-- **运行环境**: 原生环境仅支持至 `Python 3.10`。
-- **无状态设计**: SCF 实例随时可能被销毁，**严禁**将临时文件或全局状态保存在内存中。持久化需依赖 MySQL 或 COS（对象存储）。
-- **调度剥离**: **严禁**在代码中使用 `APScheduler`、`time.sleep()` 轮询等长驻模式。必须配置 `timer` 触发器交由云端调度。
+## 1. 核心环境约束与解决方案 (Critical)
 
-## 2. Serverless 框架结构 (serverless.yml)
-编写或修改 `serverless.yml` 时，必须符合腾讯云组件规范 (`component: scf`)。
+- **运行环境**: 腾讯云函数底层为只读文件系统 (`/home/qcloud` 等路径不可写)，仅 `/tmp` 具有写权限。
+  - **🚨 避坑方案 (Mootdx 等底层包报错)**: 必须在入口文件 (`index.py`) **任何第三方库导入之前**，强制重定向内核环境变量：
+    ```python
+    import os
+    os.environ['HOME'] = '/tmp'
+    os.environ['MOOTDX_CACHE_DIR'] = '/tmp'
+    ```
+- **无状态设计**: SCF 实例随时可能被销毁，严禁将持久状态保存在内存中。
+- **调度剥离**: 严禁使用 `APScheduler` 等长驻轮询，改用 SCF Timer 触发器或外部事件流。
 
-### 基础模板参考:
-```yaml
-component: scf
-name: stock-scf-app
+## 2. API-Driven 全流程部署策略 (取代 serverless.yml)
 
-inputs:
-  name: function-name
-  src:
-    src: ./src        # 代码源目录
-    exclude:
-      - .env          # 严禁将 .env 传至云端
-      - .git/**
-  region: ap-guangzhou
-  runtime: Python3.10
-  memorySize: 256
-  timeout: 900
-  
-  # VPC 配置 (连接内网数据库必填)
-  vpcConfig:
-    vpcId: vpc-xxx
-    subnetId: subnet-xxx
+相比维护 `serverless.yml` 并依赖 CLI，在微服务架构中，强烈建议直接编写自动化部署脚本 (`deploy.py`, `deploy_layer.py`)。
 
-  # 层配置 (加速部署与冷启动)
-  layers:
-    - name: data-science-layer
-      version: 1
+### 核心 SDK 方法：
+1. **代码发布**: `client.UpdateFunctionCode(req)` (将代码 zip 转 base64 上传)
+2. **Layer 发布**: `client.PublishLayerVersion(req)` (上传 layer.zip)
+3. **Layer 绑定**: `client.UpdateFunctionConfiguration(req)` (更新 Layers 配置数组)
 
-  # 触发器配置
-  triggers:
-    - timer:
-        name: daily_task
-        parameters:
-          cronExpression: '0 30 15 * * MON-FRI *'
-          enable: true
-          argument: '{"action": "collect"}'
+**注意**: 更新 Layer 配置后，云端已有容器可能不会立刻挂载新层。**最佳实践是在绑定新 Layer 之后，立刻执行一次 `UpdateFunctionCode` 强制刷新容器实例 (Cold Start)。**
+
+## 3. Layer (层) 打包实战：彻底解决跨平台编译循环
+
+在 Windows 环境下打包包含 C 扩展（如 Pandas, Cryptography）的库供云端 Linux 使用时，极易陷入 `pip` 解析死循环。
+
+### 策略 A：增量纯 Python 补丁层 (Patch Layer) - 首选！
+如果云端已经存在一个包含庞大底层库（Pandas/Numpy）的底层 Layer，并且你只需新增轻量级包（如 EasyQuotation），**绝对不要尝试重新打全量包**。
+- **做法**: 仅针对缺失包打增量 Layer。
+- **关键指令**: 必须加上 `--no-deps` 防止它递归下载本地系统不兼容的底层 C 库：
+  `pip install easyquotation mootdx -t layers/python --no-cache-dir --no-deps`
+
+### 策略 B：Docker Linux 环境原生构建
+若必须打包全量 C 扩展库，严禁在 Windows 主机直接使用 `--platform manylinux2014_x86_64`。必须启动临时 Docker 容器构建：
+```python
+docker_cmd = [
+    'docker', 'run', '--rm',
+    '-v', f"{mount_path}:/app", # 注意：Windows 挂载目录应为 /e/xxx/ 格式防止 invalid mode
+    '-w', '/app',
+    'python:3.10-slim',
+    'pip', 'install', '-r', 'requirements.txt', '-t', 'layers/python'
+]
 ```
 
-## 3. Layer (层) 分离策略
-为防止部署包体积过大导致报错或冷启动慢，对于 `mootdx`、`pandas` 等依赖包：
-1. **禁止** 将它们直接放在代码的 `src/` 根目录。
-2. **要求** 将它们安装在一个单独的目录（如 `layers/`），并作为 SCF Layer 上传。
-3. Agent 操作指令：使用 `pip install -r requirements.txt -t layers/python/` 组织依赖。
+## 4. 远程验证与 Debug (Remote Trigger)
 
-## 4. 调试与排错 (Troubleshooting)
-- **依赖不兼容**: Windows 环境下安装的 C 语言扩展库 (如 NumPy/Pandas) 上传到基于 Linux 的 SCF 可能会报错。**解决思路**：必须下载 `manylinux` 的 whl 包，或者利用腾讯云在线依赖安装功能。
-- **冷启动超时**: 遇到首屏响应慢的问题，检查 `pool_recycle` 配置并确认数据库唤醒重试逻辑已激活。
-- **日志断层**: 提醒用户或通过代码接入腾讯云 CLS 日志系统，使用标准 `logging` 模块即可自动上报。
-
-## 5. 参考资源
-- [TencentCloud Serverless 官方 GitHub](https://github.com/TencentCloud/serverless)
+完成部署后，**必须**编写远程触发脚本，使用 `models.InvokeRequest()` 同步触发 SCF，并将返回值与详细报错信息打印到本地。
+这能 100% 暴露出因网络隔离、端口拦截（如 7709 被封）或 Layer 版本缺失导致的云端真实问题，避免被本地代理造成的“伪连通”误导。
