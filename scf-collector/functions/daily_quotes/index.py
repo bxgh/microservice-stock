@@ -34,9 +34,11 @@ from shared.collectors.easyquotation_cl import EasyQuotationCollector
 from shared.db.dao import StockDAO
 from shared.utils.notifier import EmailNotifier
 from shared.utils.shadow_auditor import ShadowAuditor
+from shared.utils.trading_day import TradingDayGuard
 import datetime
 import uuid
 
+# 缓存采集器实例
 # 缓存采集器实例
 try:
     COLLECTORS = {
@@ -66,6 +68,16 @@ async def async_handler(event, context):
     # 如果没传日期，默认为当天
     trade_date = event.get('trade_date', datetime.datetime.now().strftime('%Y-%m-%d'))
     request_id = getattr(context, 'request_id', 'local_test')
+
+    # [E7-S5-T4] 交易日准入校验
+    if await TradingDayGuard.should_skip(op, trade_date):
+        return {
+            "status": "skipped", 
+            "reason": "not_a_trading_day", 
+            "op": op, 
+            "biz_date": trade_date,
+            "request_id": request_id
+        }
 
     if op == 'verify':
         logger.info(f"[{request_id}] Entering Cloud Verification Mode...")
