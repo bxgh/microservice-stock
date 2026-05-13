@@ -80,3 +80,27 @@ try:
 finally:
     await DBManager.close_pool() # 必须在 asyncio.run 退出前完成
 ```
+
+### 5.3 定时触发器 (Timer Trigger) 的参数嵌套陷阱 ⭐
+**陷阱**：在 SCF 控制台配置的“附加信息”（CustomArgument）不会直接映射到 `event` 根对象。腾讯云会将其作为字符串封装在 `event["Message"]` 字段中。如果直接使用 `event.get("param")`，会因为拿不到值而误触发代码中的默认逻辑。
+
+**方案**：所有 `index.py` 入口函数必须包含“解包”逻辑，且严禁在未确认参数的情况下使用业务默认值：
+```python
+import json
+
+def main_handler(event, context):
+    # 1. 尝试从 Message 字段解包 (兼容 Timer Trigger)
+    if 'Message' in event:
+        try:
+            msg_data = json.loads(event['Message'])
+            if isinstance(msg_data, dict):
+                event.update(msg_data)
+        except Exception as e:
+            print(f"Warning: Failed to parse Message field: {e}")
+    
+    # 2. 获取参数，缺失则显式报错，避免静默失败
+    op = event.get('op')
+    if not op:
+         # 抛出异常或记录 unknown，严禁静默执行默认任务
+        raise Exception("Missing required parameter: 'op'")
+```

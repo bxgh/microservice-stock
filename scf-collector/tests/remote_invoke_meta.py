@@ -42,10 +42,13 @@ def invoke_test(op='sync_calendar'):
     req.FunctionName = 'stock-scf-meta'
     req.Namespace = 'default'
     # 模拟 event
-    event = {
-        "op": op,
-        "biz_date": "2026-05-12"
-    }
+    if op == 'empty_test':
+        event = {}
+    else:
+        event = {
+            "op": op,
+            "biz_date": "2026-05-12"
+        }
     req.ClientContext = json.dumps(event)
     req.LogType = "Tail" # 获取日志
     

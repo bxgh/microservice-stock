@@ -36,11 +36,29 @@ from shared.db.dao import StockDAO
 TUSHARE = TushareCollector()
 
 async def async_handler(event, context):
-    op = event.get('op', 'sync_calendar')
+    # 增强日志：打印原始 event 以便排查
+    logger.info(f"Raw event received: {json.dumps(event, ensure_ascii=False)}")
+    
+    # 1. 尝试从 Message 字段解包 (Timer Trigger 专用)
+    if 'Message' in event:
+        try:
+            msg_data = json.loads(event['Message'])
+            if isinstance(msg_data, dict):
+                # 将解包后的参数合并回 event，确保后续业务逻辑透明
+                event.update(msg_data)
+                logger.info(f"Unpacked parameters from Message: {json.dumps(msg_data)}")
+        except Exception as e:
+            logger.warning(f"Failed to parse Message field: {e}")
+
+    # 2. 现在可以安全地从 event 中获取参数了
+    op = event.get('op')
+    if not op:
+        op = 'unknown'
+        
     request_id = getattr(context, 'request_id', str(uuid.uuid4()))
     biz_date = event.get('biz_date', datetime.datetime.now().strftime('%Y-%m-%d'))
     
-    logger.info(f"[{request_id}] Starting Meta Sync task: {op} for {biz_date}")
+    logger.info(f"[{request_id}] Final resolved task: {op} for {biz_date}")
     
     try:
         if op == 'sync_calendar':

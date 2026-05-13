@@ -33,6 +33,8 @@ from shared.collectors.akshare_cl import AkShareCollector
 from shared.collectors.easyquotation_cl import EasyQuotationCollector
 from shared.db.dao import StockDAO
 from shared.utils.notifier import EmailNotifier
+import datetime
+import uuid
 
 # 缓存采集器实例
 COLLECTORS = {
@@ -44,9 +46,19 @@ COLLECTORS = {
 FALLBACK_CHAIN = ['tushare', 'akshare', 'easyquotation']
 
 async def async_handler(event, context):
+    # 1. 尝试从 Message 字段解包 (Timer Trigger 专用)
+    if 'Message' in event:
+        try:
+            msg_data = json.loads(event['Message'])
+            if isinstance(msg_data, dict):
+                event.update(msg_data)
+        except Exception as e:
+            logger.warning(f"Failed to parse Message field: {e}")
+
     op = event.get('op', 'collect')
     ts_code = event.get('ts_code', '600519.SH')
-    trade_date = event.get('trade_date', '2026-05-11')
+    # 如果没传日期，默认为当天
+    trade_date = event.get('trade_date', datetime.datetime.now().strftime('%Y-%m-%d'))
     request_id = getattr(context, 'request_id', 'local_test')
 
     if op == 'verify':
