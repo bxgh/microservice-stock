@@ -31,6 +31,7 @@ logger.setLevel(logging.INFO)
 # 引入自定义模块
 from shared.collectors.tushare_cl import TushareCollector
 from shared.db.dao import StockDAO
+from shared.utils.trading_day import TradingDayGuard
 
 # 缓存采集器实例
 TUSHARE = TushareCollector()
@@ -58,6 +59,16 @@ async def async_handler(event, context):
     request_id = getattr(context, 'request_id', str(uuid.uuid4()))
     biz_date = event.get('biz_date', datetime.datetime.now().strftime('%Y-%m-%d'))
     
+    # [E7-S5-T3] 交易日准入校验
+    if await TradingDayGuard.should_skip(op, biz_date):
+        return {
+            "status": "skipped", 
+            "reason": "not_a_trading_day", 
+            "op": op, 
+            "biz_date": biz_date,
+            "request_id": request_id
+        }
+
     logger.info(f"[{request_id}] Final resolved task: {op} for {biz_date}")
     
     try:
