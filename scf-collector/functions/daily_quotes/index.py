@@ -33,19 +33,25 @@ from shared.collectors.akshare_cl import AkShareCollector
 from shared.collectors.easyquotation_cl import EasyQuotationCollector
 from shared.db.dao import StockDAO
 from shared.utils.notifier import EmailNotifier
+from shared.utils.shadow_auditor import ShadowAuditor
 import datetime
 import uuid
 
 # 缓存采集器实例
-COLLECTORS = {
-    'tushare': TushareCollector(),
-    'akshare': AkShareCollector(),
-    'easyquotation': EasyQuotationCollector()
-}
+try:
+    COLLECTORS = {
+        'tushare': TushareCollector(),
+        'akshare': AkShareCollector(),
+        'easyquotation': EasyQuotationCollector()
+    }
+except Exception as e:
+    logger.error(f"Critical: Failed to initialize collectors: {e}")
+    COLLECTORS = {}
 
 FALLBACK_CHAIN = ['tushare', 'akshare', 'easyquotation']
 
 async def async_handler(event, context):
+    logger.info(f"Received event: {event}")
     # 1. 尝试从 Message 字段解包 (Timer Trigger 专用)
     if 'Message' in event:
         try:
@@ -76,6 +82,25 @@ async def async_handler(event, context):
                 results[name] = f"ERROR ({str(e)})"
         return {"status": "verify_result", "data": results, "request_id": request_id}
 
+    if op == 'migrate':
+        logger.info(f"[{request_id}] Entering Cloud Source Inspection Mode (Disabled)...")
+        return {"status": "success", "message": "Migration mode disabled for production"}
+
+    if op == 'shadow_audit':
+        # 执行影子审计：对比主源与备份源
+        logger.info(f"[{request_id}] Starting shadow audit mission for {trade_date}...")
+        auditor = ShadowAuditor()
+        try:
+            result = await auditor.run_audit(trade_date)
+            overlap = result.get('overlap_count', 0)
+            # 使用静态方法（与其他分支一致）
+            await EmailNotifier.notify_success("数据源影子审计", trade_date, overlap, table_name="meta_data_audit_log")
+            return {"status": "success", "audit": result, "request_id": request_id}
+        except Exception as e:
+            logger.error(f"Shadow audit failed: {e}")
+            await EmailNotifier.notify_failure("数据源影子审计", trade_date, str(e))
+            return {"status": "error", "message": str(e), "request_id": request_id}
+
     if op == 'sync_kline_daily':
         # 批量同步全 A 日 K 线 (不复权)
         logger.info(f"[{request_id}] Starting batch K-line sync for {trade_date}...")
@@ -86,13 +111,23 @@ async def async_handler(event, context):
                 count = await StockDAO.save_kline_data(data)
                 await StockDAO.update_data_readiness(trade_date, "stock_kline_daily", len(data))
                 await StockDAO.log_pipeline_run("Daily-K-Line", "success", run_id=request_id, biz_date=trade_date)
+                
+                # 发送成功邮件 (增加表名)
+                await EmailNotifier.notify_success("日K线批量采集", trade_date, count, table_name="stock_kline_daily")
+                
                 return {"status": "success", "count": count, "request_id": request_id}
             else:
+                msg = "Tushare returned empty data (possibly non-trading day)."
+                logger.info(f"[{request_id}] {msg}")
                 return {"status": "empty", "count": 0, "request_id": request_id}
         except Exception as e:
             err_msg = f"Batch K-line sync error: {str(e)}"
             logger.error(f"[{request_id}] {err_msg}")
             await StockDAO.log_pipeline_run("Daily-K-Line", "error", error_message=err_msg, run_id=request_id, biz_date=trade_date)
+            
+            # 发送失败邮件
+            await EmailNotifier.notify_failure("日K线批量采集", trade_date, err_msg)
+            
             return {"status": "error", "message": err_msg, "request_id": request_id}
 
     if op == 'sync_adj_factor':
@@ -105,6 +140,10 @@ async def async_handler(event, context):
                 count = await StockDAO.save_adj_factor(data)
                 await StockDAO.update_data_readiness(trade_date, "stock_adjust_factor", len(data))
                 await StockDAO.log_pipeline_run("Adj-Factor", "success", run_id=request_id, biz_date=trade_date)
+                
+                # 发送成功邮件 (增加表名)
+                await EmailNotifier.notify_success("复权因子批量采集", trade_date, count, table_name="stock_adjust_factor")
+                
                 return {"status": "success", "count": count, "request_id": request_id}
             else:
                 return {"status": "empty", "count": 0, "request_id": request_id}
@@ -112,6 +151,10 @@ async def async_handler(event, context):
             err_msg = f"Batch adj factor sync error: {str(e)}"
             logger.error(f"[{request_id}] {err_msg}")
             await StockDAO.log_pipeline_run("Adj-Factor", "error", error_message=err_msg, run_id=request_id, biz_date=trade_date)
+            
+            # 发送失败邮件
+            await EmailNotifier.notify_failure("复权因子批量采集", trade_date, err_msg)
+            
             return {"status": "error", "message": err_msg, "request_id": request_id}
 
     if op == 'sync_index_daily':
@@ -131,6 +174,10 @@ async def async_handler(event, context):
             count = await StockDAO.save_index_kline(all_data)
             await StockDAO.update_data_readiness(trade_date, "ods_index_daily", len(all_data))
             await StockDAO.log_pipeline_run("Index-Daily", "success", run_id=request_id, biz_date=trade_date)
+            
+            # 发送成功邮件
+            await EmailNotifier.notify_success("指数K线同步", trade_date, count, table_name="ods_index_daily")
+            
             return {"status": "success", "count": count, "request_id": request_id}
         return {"status": "empty", "request_id": request_id}
 
