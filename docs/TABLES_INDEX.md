@@ -57,6 +57,7 @@
 | ods_event_limit_pool | (ts_code, trade_date) | pool_type / board_height / seal_money / pct_chg / amount | T+0 17:00 | Tushare | `pool_type ∈ {zt, dt, zb, lian}`;首板 `board_height = 1` |
 | ods_market_breadth_daily | trade_date | up_count / down_count / limit_up_count / limit_down_count | T+0 17:00 | Tushare 计算 | 涨跌家数 |
 | ods_suspend_d | (ts_code, suspend_date) | resume_date / suspend_reason | T+0 09:30 | Tushare | 每日停牌信息 |
+| stock_adjust_factor | (ts_code, adjust_date) | adjust_factor / back_adjust_factor | T+0 17:00 | Tushare | 复权因子；`fore_adjust_factor` 已废弃 |
 
 ### 第 2 章 · L2 行业风格
 
@@ -188,6 +189,7 @@
 | 涨跌停阈值 | 主板 9.7% / 创业板 19.7% / ST 4.7% / 北交所 29.7% | 当前简化版 9.7%,**前端必须注明** |
 | 个股北向 | 2024-08-19 后无盘中数据 | 跨期不可比,放弃个股北向 |
 | `is_deleted` | 软删除字段 | 默认 0,查询必须过滤 `is_deleted = 0` |
+| `stock_adjust_factor` | `fore_adjust_factor` 数据漂移 | **已废弃**。统一使用 `adjust_factor` 作为累积因子进行动态计算 |
 
 ---
 
