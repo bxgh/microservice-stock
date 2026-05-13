@@ -108,6 +108,31 @@
 
 ---
 
+### ### E7-S5: 交易日准入检查与定时任务对齐 (Trading Day Aware Trigger Control)
+
+**作为** 采集系统，**我希望** 在 SCF 定时任务启动后首先校验当日是否为 A 股真实交易日，**以便于** 避免在法定节假日或休市期间执行无效的数据采集操作。
+
+#### 任务 (Tasks)
+- [x] **E7-S5-T1**: 扩展 `StockDAO` 添加 `is_trading_day(biz_date: str)` 异步查询方法。
+- [x] **E7-S5-T2**: 在 `shared/utils/` 下实现 `TradingDayGuard` 准入控制类。
+- [x] **E7-S5-T3**: 重构 `meta_sync` 和 `daily_quotes` 的 `async_handler`，集成交易日拦截逻辑。
+- [x] **E7-S5-T4**: 定义操作白名单（Whitelist），确保 `sync_calendar` 等维护任务不受限于交易日。
+
+#### 验收标准 (AC)
+- **AC1: 节假日自动拦截**
+  - **Given** 当日为 2026-05-01 (劳动节，非交易日)
+  - **When** SCF 定时触发器启动 `sync_kline_daily` 任务
+  - **Then** 系统立即退出并返回 `{"status": "skipped", "reason": "not_a_trading_day"}`，不执行数据抓取。
+- **AC2: 白名单穿透执行**
+  - **Given** 当日为非交易日
+  - **When** 任务操作码 (`op`) 为 `sync_calendar` (属于白名单)
+  - **Then** 系统忽略交易日限制，继续执行日历同步。
+- **AC3: 真实交易日正常工作**
+  - **Given** 当日为 2026-05-08 (周五，正常交易日)
+  - **When** SCF 启动任何采集任务
+  - **Then** 系统通过准入检查，按既定逻辑执行。
+
+
 
 ## 4. 数据采集率统一口径规范 (Unified Collection Rate Standard)
 
@@ -150,3 +175,4 @@ $$R_{final} = \frac{Count(M_{received} \cup M_{suspended})}{Count(Universe_{base
 ## 5. 维护记录
 
 - **2026-05-13**: [Antigravity] 根据“17:00 死线、全量切换、常态化审计”原则初版设计。
+- **2026-05-13**: [Antigravity] 增加 E7-S5 交易日准入检查，解决 SCF 定时触发器偏差问题。
