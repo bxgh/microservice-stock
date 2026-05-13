@@ -50,26 +50,58 @@ class StockDAO:
 
     @staticmethod
     async def save_adj_factor(data: List[Dict[str, Any]]) -> int:
-        """保存复权因子"""
+        """
+        保存复权因子 - 变动检测写入
+        仅在因子发生变化时写入，实现变动点存储。
+        """
         if not data:
             return 0
         
-        sql = """
-        INSERT INTO stock_adjust_factor (ts_code, adjust_date, adjust_factor)
-        VALUES (%(ts_code)s, %(trade_date)s, %(adj_factor)s)
-        ON DUPLICATE KEY UPDATE adjust_factor = VALUES(adjust_factor)
+        sql_select = """
+        SELECT adjust_factor FROM stock_adjust_factor
+        WHERE ts_code = %s
+        ORDER BY adjust_date DESC
+        LIMIT 1
+        """
+        
+        sql_insert = """
+        INSERT INTO stock_adjust_factor 
+            (ts_code, adjust_date, fore_adjust_factor, back_adjust_factor, adjust_factor)
+        VALUES (%(ts_code)s, %(trade_date)s, NULL, %(adj_factor)s, %(adj_factor)s)
         """
         
         count = 0
         for item in data:
-            # Tushare 返回的是 trade_date, 对应表中的 adjust_date
-            # 确保日期格式
-            trade_date = item.get('trade_date')
-            if trade_date and len(trade_date) == 8:
-                 item['trade_date'] = f"{trade_date[:4]}-{trade_date[4:6]}-{trade_date[6:]}"
+            ts_code = item.get('ts_code')
+            adj_factor = item.get('adj_factor')
             
-            res = await execute_query(sql, item, is_select=False)
+            # 安全检查：跳过缺失关键字段的数据项
+            if not ts_code or adj_factor is None:
+                logger.warning(f"Skipping record due to missing ts_code or adj_factor: {item}")
+                continue
+            
+            # 日期转换: 20240510 -> 2024-05-10
+            trade_date = item.get('trade_date')
+            if trade_date and len(str(trade_date)) == 8:
+                 item['trade_date'] = f"{str(trade_date)[:4]}-{str(trade_date)[4:6]}-{str(trade_date)[6:]}"
+            
+            # 1. 查询库中最新值
+            rows = await execute_query(sql_select, (ts_code,), is_select=True)
+            latest_factor = rows[0]['adjust_factor'] if rows else None
+            
+            # 2. 对比 (浮点数阈值 1e-8)
+            try:
+                # 注意：Tushare 返回的 adj_factor 可能是字符串或数字，需转换
+                if latest_factor is not None and abs(float(adj_factor) - float(latest_factor)) < 1e-8:
+                    continue
+            except (ValueError, TypeError) as e:
+                logger.error(f"Data conversion error for {ts_code} on {trade_date}: {e}")
+                continue
+                
+            # 3. 执行插入
+            res = await execute_query(sql_insert, item, is_select=False)
             count += res
+            
         return count
 
     @staticmethod
