@@ -1,0 +1,6 @@
+- [x] `[E7-S3-T1]` 迁移并统一定义 `KLineModel` 至 `shared/collectors/base.py` (改为在 base.py 导入并强制契约)
+- [x] `[E7-S3-T2]` 完善 `AkShareAdapter`：代码格式、单位换算、EM 源映射
+- [x] `[E7-S3-T3]` 实现停牌清洗逻辑：`vol == 0` 且 `ohl == 0` 过滤
+- [x] `[E7-S3-T4]` 实现字段合成器：`pre_close = close / (1 + pct_chg)`
+- [x] `[E7-S3-T5]` 适配 `StockDAO` 支持 Pydantic 模型批量插入
+- [x] `[E7-S3-T6]` 适配所有 Collector 子类符合 `List[KLineModel]` 契约

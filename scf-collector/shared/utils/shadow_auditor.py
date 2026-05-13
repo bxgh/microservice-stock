@@ -1,4 +1,4 @@
-import os
+import json
 import logging
 import asyncio
 import pandas as pd
@@ -63,6 +63,11 @@ class ShadowAuditor:
         if not ak_models:
             return {"status": "ERROR", "message": "Adaptation failed", "trade_date": trade_date}
 
+        # [E7-S4] 加载盘前基准快照
+        snapshot = await StockDAO.get_universe_snapshot(trade_date)
+        baseline_n = snapshot['expected_count'] if snapshot else len(df_p)
+        baseline_codes = set(snapshot['codes']) if snapshot else set(df_p['ts_code'].tolist())
+
         # 4. 内存对账 (Pandas)
         df_p = pd.DataFrame(primary_data)
         df_s = pd.DataFrame([m.model_dump() for m in ak_models])
@@ -93,14 +98,23 @@ class ShadowAuditor:
         outliers = merged[merged['price_diff_rate'] > 0.01]
         outlier_count = len(outliers)
 
-        # 5. 判定状态 (仅以 close_mae 为准)
-        status = "PASS"
-        if overlap_count < len(df_p) * 0.95: status = "WARNING"
-        if mae_results['close_mae'] > 0.05: status = "FAIL"
-        if outlier_count > 10: status = "FAIL" # 异常个股过多也视为失败
+        # 5. 判定状态
+        # 修改为基于 09:30 基准的覆盖率判定
+        primary_codes = set(df_p['ts_code'].tolist())
+        coverage_rate = len(primary_codes) / baseline_n if baseline_n > 0 else 0
+        diff_list = list(baseline_codes - primary_codes) if snapshot else []
 
-        # 6. 生成报告内容 (返回 Markdown 字符串)
-        report_content = self._generate_report_v2(trade_date, df_p, df_s, merged, mae_results, outlier_count, status, source_type)
+        status = "PASS"
+        if coverage_rate < 0.98: status = "WARNING"
+        if coverage_rate < 0.95: status = "FAIL"
+        if mae_results['close_mae'] > 0.05: status = "FAIL"
+        if outlier_count > 10: status = "FAIL"
+
+        # 6. 生成报告内容
+        report_content = self._generate_report_v2(
+            trade_date, df_p, df_s, merged, mae_results, outlier_count, status, source_type, 
+            baseline_n, coverage_rate
+        )
 
         # 7. 存库
         audit_result = {
@@ -111,12 +125,14 @@ class ShadowAuditor:
             "primary_count": len(df_p),
             "secondary_count": len(df_s),
             "overlap_count": overlap_count,
-            "expected_count": len(df_p), # 暂时取主源数为预期
-            "coverage_rate": round(overlap_count / len(df_p), 4) if len(df_p) > 0 else 0,
+            "expected_count": baseline_n, 
+            "coverage_rate": round(coverage_rate, 4),
             "status": status,
-            "report_path": "", # 移除物理路径
+            "report_path": "",
             "report_content": report_content,
             "outlier_count": outlier_count,
+            "diff_list": json.dumps(diff_list[:1000]), # 限制存储长度
+            "source_tag": "TUSHARE_P0", # 默认标记，Fail-over 时由 index.py 覆盖
             **{k: round(v, 6) for k, v in mae_results.items()}
         }
         
@@ -128,7 +144,7 @@ class ShadowAuditor:
         logger.info(f"Audit completed: {status}. Overlap: {overlap_count}, Close MAE: {mae_results['close_mae']:.4f}")
         return audit_result
 
-    def _generate_report_v2(self, date, df_p, df_s, merged, mae_res, outlier_count, status, src_type) -> str:
+    def _generate_report_v2(self, date, df_p, df_s, merged, mae_res, outlier_count, status, src_type, baseline_n, coverage) -> str:
         """生成增强版 Markdown 报告"""
         now_str = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
         
@@ -151,13 +167,14 @@ class ShadowAuditor:
 - **判定结论**: **{status}**
 - **备份源类型**: AkShare ({src_type})
 
-## 2. 覆盖率审计 (Coverage)
+## 2. 完整性审计 (Integrity)
 | 指标 | 数值 | 备注 |
 | :--- | :--- | :--- |
-| 主源 (Tushare) | {len(df_p)} | 数据库已入库 |
-| 备份源 (AkShare) | {len(df_s)} | 接口实时抓取 |
+| **理论应采 (09:30 基准)** | **{baseline_n}** | meta_universe_snapshot |
+| 实际入库 (主源) | {len(df_p)} | 数据库已入库 |
+| **最终覆盖率** | **{coverage*100:.2f}%** | 熔断阈值: 95% |
+| 影子源 (AkShare) | {len(df_s)} | 接口实时抓取 |
 | 重叠样本数 | {len(merged)} | 参与对账总数 |
-| 覆盖率 | {len(merged)/len(df_p)*100:.2f}% | 目标 > 95% |
 
 ## 3. 7维对账矩阵 (7D MAE Matrix)
 | 字段 | 平均绝对误差 (MAE) | 状态 |

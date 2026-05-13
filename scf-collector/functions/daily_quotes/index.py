@@ -179,7 +179,91 @@ async def async_handler(event, context):
             await EmailNotifier.notify_success("指数K线同步", trade_date, count, table_name="ods_index_daily")
             
             return {"status": "success", "count": count, "request_id": request_id}
-        return {"status": "empty", "request_id": request_id}
+        return {"status": "success", "count": count, "request_id": request_id}
+    if op == 'validate_and_failover':
+        # 17:00 完整性校验与熔断编排
+        logger.info(f"[{request_id}] Starting integrity validation & fail-over for {trade_date}...")
+        
+        # 1. 加载基准
+        snapshot = await StockDAO.get_universe_snapshot(trade_date)
+        if not snapshot:
+            logger.warning(f"[{request_id}] No baseline snapshot found for {trade_date}. Skipping validation.")
+            return {"status": "skipped", "reason": "no_snapshot"}
+        
+        expected_n = snapshot['expected_count']
+        
+        # 2. 检查当前已入库量
+        current_data = await StockDAO.get_kline_daily(trade_date)
+        current_n = len(current_data)
+        coverage = current_n / expected_n if expected_n > 0 else 0
+        
+        logger.info(f"[{request_id}] Initial check: Expected={expected_n}, Actual={current_n}, Coverage={coverage:.2%}")
+        
+        # 3. 判定与补救逻辑
+        source_tag = "TUSHARE_P0"
+        
+        # 如果覆盖率不足 98%，触发重试或熔断
+        if coverage < 0.98:
+            if coverage < 0.95:
+                logger.warning(f"[{request_id}] Critical coverage gap detected (<95%).")
+            else:
+                logger.info(f"[{request_id}] Warning coverage gap detected (<98%).")
+                
+            # A. 原位重试一次 Tushare
+            logger.info(f"[{request_id}] Attempting Tushare in-place retry...")
+            collector_ts = COLLECTORS.get('tushare')
+            try:
+                retry_data = await collector_ts.fetch_batch_daily_kline(trade_date)
+                if retry_data and len(retry_data) > current_n:
+                    await StockDAO.save_kline_data(retry_data)
+                    current_data = await StockDAO.get_kline_daily(trade_date)
+                    current_n = len(current_data)
+                    coverage = current_n / expected_n
+                    logger.info(f"[{request_id}] Retry success. New count: {current_n}, Coverage: {coverage:.2%}")
+            except Exception as e:
+                logger.error(f"[{request_id}] Tushare retry failed: {e}")
+
+            # B. 最终裁定：若重试后仍不足 95%，执行全量接管
+            if coverage < 0.95:
+                logger.critical(f"[{request_id}] FAIL-OVER TRIGGERED: Switching to AkShare.")
+                collector_ak = COLLECTORS.get('akshare')
+                try:
+                    # 使用全量快照补齐
+                    import akshare as ak
+                    df_ak = await asyncio.to_thread(ak.stock_zh_a_spot_em)
+                    from shared.collectors.akshare_adapter import AkShareAdapter
+                    final_ak_models = AkShareAdapter.from_em_spot_records(df_ak.to_dict(orient='records'), trade_date)
+                    
+                    if final_ak_models:
+                        await StockDAO.save_kline_data(final_ak_models)
+                        source_tag = "AKSHARE_P1_FAILOVER"
+                        logger.info(f"[{request_id}] Fail-over successful. Records saved from AkShare.")
+                        await EmailNotifier.notify_failure("Tushare完整性熔断", trade_date, f"已自动切换至AkShare补救。覆盖率:{coverage:.2%}")
+                except Exception as e:
+                    logger.error(f"[{request_id}] Fail-over execution error: {e}")
+                    await EmailNotifier.notify_failure("数据采集全面失效", trade_date, f"主备源均无法满足完整性要求。{str(e)}")
+
+        # 4. 运行影子审计并同步 source_tag
+        from shared.utils.shadow_auditor import ShadowAuditor
+        auditor = ShadowAuditor()
+        audit_res = await auditor.run_audit(trade_date)
+        
+        # 覆盖审计日志中的 source_tag
+        audit_res['source_tag'] = source_tag
+        await StockDAO.save_audit_log(audit_res)
+        
+        # 5. 更新就绪状态
+        # 只要审计判定为 PASS 或 WARNING (非 FAIL)，且已完成补救，则更新信号
+        if audit_res['status'] in ['PASS', 'WARNING']:
+            await StockDAO.update_data_readiness(trade_date, "stock_kline_daily", current_n)
+            
+        return {
+            "status": "completed",
+            "coverage": coverage,
+            "source_tag": source_tag,
+            "audit_status": audit_res['status'],
+            "request_id": request_id
+        }
 
     try:
         preferred_source = event.get('source', 'tushare')

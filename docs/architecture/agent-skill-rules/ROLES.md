@@ -15,7 +15,8 @@
 - **命名**: 严禁使用 `stock_code` / `dt` / `pct`。必须使用 `ts_code` / `trade_date` / `pct_chg`。
 - **软删除**: 任何 SELECT 查询必须包含 `is_deleted = 0`。
 - **单位**: `amount` 强制为“元”，`pct_chg` 强制为“小数”（0.0123）。
-- **MySQL 5.7**: 严禁使用窗口函数 (`OVER`) 和 CTE (`WITH`)。
+- **MySQL 5.7**: 严禁使用窗口函数 (`OVER`) 和 CTE (`WITH`)。执行 `ON DUPLICATE KEY UPDATE` 时，必须显式更新 `updated_at = CURRENT_TIMESTAMP`，否则值未变时该字段不会自动触发。
+- **老表防御**: 严禁在老表（如 `stock_basic_info`）查询中盲目添加 `is_deleted` 过滤，除非已通过 `DESCRIBE` 物理确认字段存在。
 - **DDL**: 新表必须包含 `created_at`, `updated_at`, `is_deleted` 三件套及 `idx_updated_at` 索引。
 
 ---
@@ -31,8 +32,9 @@
 ### 核心禁令 (No-Go List)
 - **异步阻塞**: 严禁在异步上下文中使用 `requests`、`time.sleep` 或任何同步阻塞的 IO 库。
 - **并发安全**: 严禁在操作共享可变状态（如内存缓存）时忽略 `asyncio.Lock()`。
-- **资源闭环**: 严禁在调用外部 I/O 时忽略 `try...finally` 或 `async with` 资源回收逻辑。
+- **资源闭环**: 严禁在调用外部 I/O 时忽略 `try...finally` 或 `async with` 资源回收逻辑；在 SCF 环境下，严禁在每次方法调用中重复初始化 API Client（如 `pro_api`），必须在构造函数中持久化复用。
 - **模型严谨性**: 严禁在 Pydantic 模型中使用 `Any` 或未定义验证规则的字段；严禁绕过模型校验直接处理原始 Dict。
+- **硬编码**: 严禁在任何代码（含 `scratch/` 脚本）中硬编码数据库密码或 API Token，必须统一通过 `os.getenv` 读取。
 - **错误脱敏**: 严禁在 API 响应中透传原始 Traceback 或底层异常信息，必须封装为标准错误响应。
 
 ---
@@ -50,6 +52,7 @@
 - **Git 规范**: 严禁使用非标准格式的 commit。必须包含 `[Task ID]` 且遵循 Conventional Commits。
 - **证据链 (QA Exit)**: 严禁编写仅有文字描述的 `walkthrough.md`。必须包含“物理真源证据”（SQL 结果/日志片段），且证据必须 100% 覆盖设计文档中的 AC。
 - **质量审计**: 严禁在静态扫描（`data_validator.py`）未通过的情况下完成任务。
+- **安全性**: 严禁提交任何未被 `.gitignore` 排除且含有本地敏感配置的 `scratch/` 脚本。
 - **粒度**: 严禁跨 Task 开发。必须每个 Task 一个 Commit。
 - **归档**: 严禁将实施日志保存到非指定目录。
 
@@ -83,6 +86,7 @@
 - **网络与韧性**: 涉及外部 API 调用（Tushare/AkShare）必须实现熔断（Circuit Breaker）与指数退避重试，严禁在无异常处理的情况下直连。
 - **架构接力**: 严禁在云端执行耗时超过 5 分钟的大规模计算任务。此类任务必须通过 `task_commands` 指令下发至内网 Node-41 执行。
 - **数据流**: Python 结果集输出到 downstream 前必须控制在 10,000 行以内。
+- **空值日志**: 严禁在接口返回空结果（如非交易日请求）时静默退出，必须增加明确的日志说明以区分“系统故障”与“正常空态”。
 - **物理查验**: 严禁盲目信任 API 返回值，必须通过容器日志或数据库物理记录验证执行结果。
 - **WXCH 适配**: 在微信云托管环境部署时，严禁硬编码 DB 连接 IP，必须使用云托管控制台注入的环境变量及内网域名。
 
@@ -148,7 +152,23 @@
 
 ---
 
-## 10. 角色激活机制 (Integration)
+## 10. [Security & Code Integrity Auditor] — 安全与代码合规审计师
+
+### 触发场景
+- 核心算法重构（如熔断、权重计算）
+- 涉及敏感凭据、数据库连接池管理的变更
+- 跨微服务通讯逻辑修改
+- 提交生产级交付物前
+
+### 核心禁令 (No-Go List)
+- **硬编码**: 严禁在代码、注释或日志中出现任何 API Key、密码或内部 IP 地址。
+- **资源泄露**: 严禁在没有 `finally` 块或 `async with` 的情况下操作全局资源（Connection Pool/HTTP Client）。
+- **根目录污染**: 严禁违反 `AGENTS.md` 规定在根目录创建临时测试文件。
+- **静默失败**: 严禁使用 `except: pass` 捕获异常而不记录包含 `request_id` 的结构化日志。
+
+---
+
+## 11. 角色激活机制 (Integration)
 
 ### 实施计划中的声明
 在 `implementation_plan.md` 的“架构溯源与风险认证”章节中，Agent 必须显式列出本次任务激活的角色：
@@ -160,6 +180,7 @@
 - "[Backend Engineer] 已确认异步并发安全，所有 IO 均有超时控制且无阻塞调用。"
 - "[DB Auditor] 已确认所有 SQL 均包含 `is_deleted = 0` 且字段单位正确。"
 - "[Data Quality Steward] 已确认对 Tushare 返回的空值进行了 Fallback 处理。"
+- "[Security Auditor] 已确认无敏感凭据泄露，全局连接池已正确管理并释放。"
 - "[Performance Tuner] 已通过分页查询将内存占用控制在 128MB 以下。"
-- "[QA/Test Engineer] 已通过 Docker 环境完成端到端集成测试，覆盖停牌异常场景。"
+- "[QA/Test Engineer] 已通过模拟故障注入完成端到端集成测试，覆盖了 Fail-over 边界。"
 - "[Workflow Guard] 已确认真源证据已嵌入附件。"

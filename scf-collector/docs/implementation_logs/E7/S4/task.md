@@ -1,0 +1,17 @@
+- [x] **`[E7-S4-T1]`** 增强 `ShadowAuditor` 基准对齐
+    - [x] DAO 新增 `get_universe_snapshot(biz_date)` 读取方法
+    - [x] 修正 `expected_count` 来源：从 `len(df_p)` 改为 09:30 快照值
+    - [x] 修正覆盖率公式：`len(df_p) / baseline_n`
+    - [x] 增加 `diff_list` (缺失代码差集) 返回字段
+- [x] **`[E7-S4-T2]`** 新增 `validate_and_failover` 编排逻辑
+    - [x] `index.py` 增加 17:00 触发的 `validate_and_failover` 操作分支
+    - [x] 实现覆盖率判定 + Tushare 原位重试
+    - [x] 实现 AkShare 全量补录 Fail-over
+    - [x] 记录 `source_tag` 至 `meta_data_audit_log`
+- [x] **`[E7-S4-T3]`** DDL 与存证
+    - [x] 编写 `V1.4_E7_S4_Audit_Enhancement.sql`：增加 `diff_list`, `source_tag` 字段
+    - [x] 邮件通知集成（Fail-over 触发时发送告警邮件）
+- [x] **`[E7-S4-T4]`** QA 故障注入专项测试
+    - [x] **Case 1**: 模拟 Tushare 接口报错（500 错误），验证系统是否能平滑进入 AkShare 补救逻辑。
+    - [x] **Case 2**: 模拟数据极端缺失（覆盖率 < 50%），验证邮件告警是否含有正确的 `source_tag`。
+    - [x] **Case 3**: 验证 SCF 内存消耗，确认 7 维全量对账过程中 `pandas` 未造成 OOM。

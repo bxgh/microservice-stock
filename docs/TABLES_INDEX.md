@@ -29,6 +29,7 @@
 | trade_cal | cal_date | is_open / pretrade_date | 年初批量 | 交易日历(legacy);装饰器 + SQL 计算「上市 ≥ 60 个交易日」均依赖此表 |
 | data_readiness | (data_source, trade_date) | ready_at / status / row_count | T+0 实时 | 数据就绪契约(异动管线 v1.1 E2) |
 | pipeline_run | run_id | pipeline_name / start_at / end_at / status / error_msg | T+0 实时 | 任务编排状态机(异动管线 v1.1 E3) |
+| meta_universe_snapshot | biz_date | expected_count / codes_json | T+0 09:30 | 采集基准快照(E7-S1) |
 
 > ⚠️ 上述三张表当前仍使用 legacy 命名（无 `meta_` 前缀），计划在 v1.2 统一迁移。
 
@@ -55,6 +56,7 @@
 | ods_index_daily | (ts_code, trade_date) | open / close / pre_close / pct_chg / amount / vol | T+0 17:00 | Tushare | 10 个核心宽基日线;万得全 A 用 `985.SH` 中证全指替代 |
 | ods_event_limit_pool | (ts_code, trade_date) | pool_type / board_height / seal_money / pct_chg / amount | T+0 17:00 | Tushare | `pool_type ∈ {zt, dt, zb, lian}`;首板 `board_height = 1` |
 | ods_market_breadth_daily | trade_date | up_count / down_count / limit_up_count / limit_down_count | T+0 17:00 | Tushare 计算 | 涨跌家数 |
+| ods_suspend_d | (ts_code, suspend_date) | resume_date / suspend_reason | T+0 09:30 | Tushare | 每日停牌信息 |
 
 ### 第 2 章 · L2 行业风格
 

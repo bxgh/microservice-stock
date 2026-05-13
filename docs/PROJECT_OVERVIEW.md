@@ -18,37 +18,37 @@
 
 ## 0.1 代码仓库
 
-| 角色 | 仓库 / 路径 | 部署目标 |
-|---|---|---|
-| 数据采集 | `bxgh/microservice-stock` | 腾讯云 |
-| 小程序后端 API(网关) | `bxgh/microservice-stock` 的 `wxch-gateway/` | 腾讯云(同仓部署) |
-| 内网计算 + MySQL/CK 双写 | `bxgh/microservice-stock-ck`（本地目录通常为 `microservice-stock`） | 内网服务器(16C / 64G / 160G SSD) |
-| 小程序前端代码 | `bxgh/microstock-taro` | 微信开放平台 |
+| 角色 | 仓库 / 路径 | 部署目标 | 状态 |
+|---|---|---|---|
+| 数据采集 (SCF) | `scf-collector/` | 腾讯云函数 (SCF) | **生产级 / 开发重心** |
+| 存量采集 (CVM) | `scripts/` | 腾讯云 CVM | **已停更 / 维护态** |
+| 小程序后端 API | `wxch-gateway/` | 腾讯云 CVM / 容器 | 稳定运行 |
+| 内网计算 + 存储 | `microservice-stock-ck` | 内网服务器 (Node-41) | 核心计算层 |
 
 > 主分支约定、服务器地址、SSH 配置、密钥**不录入 project knowledge**,见各仓 README / 内部运维文档。
 
 **仓间关系**:两仓为**独立代码基线**,不存在代码同步关系,仅通过数据通道交互。
 
-## 0.2 跨网数据流
+## 0.2 跨网数据流 (Serverless-First)
 
-```
-[腾讯云 microservice-stock]
-   采集 ods_*(Tushare / akshare / 长桥)
-        │
-        ▼  跨网同步(SLA < 5 min)
-[内网 microservice-stock-ck]
-   计算 dwd_* / ads_* / app_*
-   双写 MySQL + ClickHouse
-        │
-        ▼  双写回流到云端 MySQL
-[腾讯云 microservice-stock / wxch-gateway]
-   暴露 HTTP API
-        │
-        ▼
-[微信小程序前端]
+```mermaid
+graph TD
+    subgraph "Tencent Cloud (Public)"
+        SCF[scf-collector / Serverless] -->|API Call| TS[Tushare/AkShare]
+        SCF -->|Write| CloudDB[(Cloud MySQL)]
+        GW[wxch-gateway] -->|Read| CloudDB
+    end
+
+    subgraph "Internal Network (Private)"
+        Node41[Node-41 / Compute] -->|Sync| CloudDB
+        Node41 -->|Calc| CK[(ClickHouse)]
+        Node41 -->|Backflow| CloudDB
+    end
+
+    User((User)) -->|HTTPS| GW
 ```
 
-调度时点见第 4 节。SLA / 死线见异动管线 v1.1(第 5 章 / 横切方案)。
+数据流转遵循 **“云端采集 -> 内网计算 -> 双写回流”** 模式。采集 SLA 见第 4 节。
 
 ## 1. 技术栈
 
@@ -113,27 +113,23 @@ DDL 规则：所有 DDL 进 migrations/ 目录，使用 Alembic 或独立 SQL �
 - JSON 路径查询性能差 → 关键字段冗余到独立列
 - 变量赋值依赖 ORDER BY 隐性行为 → 8.0 升级会失效，**避免依赖**
 
-## 4. 调度时点对齐（生产现状）
+## 4. 调度时点与质量死线 (SLA)
 
-```
-盘后数据生产流水线（交易日）：
-  15:00  收盘
-  16:30  Tushare/akshare 增量数据基本就绪
-  16:45  Gate-3（盘后审计 / Sync Consistency Audit）校验 MySQL↔CK 双写一致性
-  17:00  L1-L4 ETL 完成（Gate-3 通过后方可执行）
-  17:15  L6-L8 ETL 完成
-  17:18  派生指标层（Derived Metrics）
-  17:20  市场状态判定（Market State）
-  17:22  三池产出与标签判定（Strong/Early/Trap）
-  17:28  多维印证（Resonance/Counter/Temporal）
-  17:30  综合评分 + 中文说明
-  17:34  Top 10 推送生成
-  17:35  前端拉取窗口开启
+### 4.1 生产流水线 (交易日)
+- **09:20**: `meta_sync` (SCF) 锁定当日应采基准池 (Universe Snapshot)。
+- **15:00**: 市场收盘。
+- **17:00**: **数据采集死线 (Dead Drop)**。
+    - 触发 `daily_quotes` (SCF) 全量采集。
+    - 执行“采集率对冲算法”（见 `SPEC-DQ-01`）。
+    - 若 Tushare 覆盖率 < 95%，自动 Fail-over 切换至 AkShare。
+- **17:15**: 跨网同步完成，触发内网计算。
+- **18:00**: 数据最终就绪契约满足，发布 READY 信号。
+- **21:00**: 异动管线分析结果产出。
 
-异动管线 v1.1 修订时点：
-  20:30  数据就绪契约满足
-  21:00  异动结果产出（死线 22:00）
-```
+### 4.2 数据质量规范
+详见：[数据采集质量与完整性判定规范](file:///e:/gitee/microservice-stock/docs/spec/data_collection_quality_spec.md)
+
+---
 
 ## 5. 章节地图
 

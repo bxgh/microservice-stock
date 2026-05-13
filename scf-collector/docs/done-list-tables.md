@@ -10,7 +10,7 @@
 | `stock_basic_info` | 股票基础信息 (维表) | 每日凌晨 06:00 | 🟢 生产就绪 | `stock-scf-meta` |
 | `meta_pipeline_run` | 任务流水审计 | 实时写入 | 🟢 生产就绪 | (系统组件) |
 | `meta_data_readiness` | 数据就绪信号 | 实时写入 | 🟢 生产就绪 | (系统组件) |
-| `meta_data_audit_log` | 数据源影子审计报告 | 盘后 16:30 | 🟢 生产就绪 | `stock-serverless-collector` |
+| `meta_data_audit_log` | 数据源影子审计报告 | 盘后 17:00 | 🟢 生产就绪 | `stock-serverless-collector` |
 
 ## 2. 交易行情 (Daily Quotes)
 
@@ -23,4 +23,5 @@
 
 ---
 **更新记录**:
+- 2026-05-13: [Epic E7] 增强采集可靠性。已实现 S3 (字段契约强制) 及 S4 (完整性熔断与 AkShare 全量备份接管)，校验时点 17:00。
 - 2026-05-12: 初始化清单，记录已上线的 5 张核心表。

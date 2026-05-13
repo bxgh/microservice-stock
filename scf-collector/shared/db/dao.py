@@ -11,15 +11,15 @@ class StockDAO:
     """
 
     @staticmethod
-    async def save_kline_data(data: List[Dict[str, Any]]) -> int:
+    async def save_kline_data(data: List[Any]) -> int:
         """
         批量保存 K 线数据 (幂等插入)
+        支持 List[Dict] 或 List[KLineModel]
         """
         if not data:
             return 0
 
         # 构建批量插入 SQL
-        # 使用 ON DUPLICATE KEY UPDATE 确保幂等性
         sql = """
         INSERT INTO stock_kline_daily (
             ts_code, trade_date, open, high, low, close, 
@@ -40,7 +40,9 @@ class StockDAO:
         
         count = 0
         for item in data:
-            res = await execute_query(sql, item, is_select=False)
+            # 兼容 Pydantic 对象 (KLineModel)
+            params = item.model_dump() if hasattr(item, 'model_dump') else item
+            res = await execute_query(sql, params, is_select=False)
             count += res
         
         logger.info(f"Successfully saved {len(data)} records to stock_kline_daily (affected: {count}).")
@@ -295,6 +297,19 @@ class StockDAO:
         """
         params = (biz_date, expected_count, json.dumps(codes))
         return await execute_query(sql, params, is_select=False)
+
+    @staticmethod
+    async def get_universe_snapshot(biz_date: str) -> Dict[str, Any]:
+        """获取盘前锁定的基准快照"""
+        sql = "SELECT expected_count, codes_json FROM meta_universe_snapshot WHERE biz_date = %s AND is_deleted = 0"
+        rows = await execute_query(sql, (biz_date,), is_select=True)
+        if not rows:
+            return None
+        row = rows[0]
+        return {
+            "expected_count": row['expected_count'],
+            "codes": json.loads(row['codes_json']) if row['codes_json'] else []
+        }
     @staticmethod
     async def get_kline_daily(trade_date: str) -> List[Dict[str, Any]]:
         """获取指定日期的全量 K 线行情 (用于影子审计)"""
@@ -308,18 +323,18 @@ class StockDAO:
 
     @staticmethod
     async def save_audit_log(data: Dict[str, Any]) -> int:
-        """保存影子审计日志 (meta_data_audit_log) - 支持 v1.3 全量字段"""
+        """保存影子审计日志 (meta_data_audit_log) - 支持 v1.4 全量字段"""
         sql = """
         INSERT INTO meta_data_audit_log (
             trade_date, task_name, source_primary, source_secondary, 
             primary_count, secondary_count, overlap_count, expected_count, coverage_rate,
             open_mae, high_mae, low_mae, close_mae, volume_mae, amount_mae, pct_chg_mae,
-            outlier_count, status, report_path, report_content
+            outlier_count, status, report_path, report_content, diff_list, source_tag
         ) VALUES (
             %(trade_date)s, %(task_name)s, %(primary_source)s, %(secondary_source)s, 
             %(primary_count)s, %(secondary_count)s, %(overlap_count)s, %(expected_count)s, %(coverage_rate)s,
             %(open_mae)s, %(high_mae)s, %(low_mae)s, %(close_mae)s, %(volume_mae)s, %(amount_mae)s, %(pct_chg_mae)s,
-            %(outlier_count)s, %(status)s, %(report_path)s, %(report_content)s
+            %(outlier_count)s, %(status)s, %(report_path)s, %(report_content)s, %(diff_list)s, %(source_tag)s
         ) ON DUPLICATE KEY UPDATE 
             primary_count = VALUES(primary_count),
             secondary_count = VALUES(secondary_count),
@@ -329,6 +344,8 @@ class StockDAO:
             outlier_count = VALUES(outlier_count),
             status = VALUES(status),
             report_content = VALUES(report_content),
+            diff_list = VALUES(diff_list),
+            source_tag = VALUES(source_tag),
             updated_at = CURRENT_TIMESTAMP
         """
         return await execute_query(sql, data, is_select=False)

@@ -1,6 +1,8 @@
 import abc
 from typing import List, Dict, Any
 
+from shared.utils.models import KLineModel
+
 class BaseCollector(abc.ABC):
     """
     抽象数据采集器基类。
@@ -14,7 +16,7 @@ class BaseCollector(abc.ABC):
         pass
 
     @abc.abstractmethod
-    async def fetch_daily_kline(self, ts_code: str, trade_date: str) -> List[Dict[str, Any]]:
+    async def fetch_daily_kline(self, ts_code: str, trade_date: str) -> List[KLineModel]:
         """
         获取日线 K 线数据。
         为了符合 Async First 规范，该方法必须是 async 的。
@@ -25,19 +27,15 @@ class BaseCollector(abc.ABC):
             trade_date: 交易日期，格式为 'YYYY-MM-DD'
             
         Returns:
-            返回一个字典列表，每个字典代表一条符合 `stock_kline_daily` schema 的记录。
-            要求的标准化字段:
+            返回 KLineModel 列表，每条记录字段如下:
             - ts_code: str (e.g. '000001.SZ')
             - trade_date: str (e.g. '2026-05-08')
-            - open: float
-            - high: float
-            - low: float
-            - close: float
+            - open / high / low / close: float
             - pre_close: float
             - change: float
-            - pct_chg: float (必须是小数，如 0.05 代表 5%)
-            - vol: float (成交量)
-            - amount: float (成交额，必须是元)
+            - pct_chg: float (小数，如 0.05 代表 5%)
+            - volume: float (成交量，单位: 手)
+            - amount: float (成交额，单位: 元)
         """
         pass
 

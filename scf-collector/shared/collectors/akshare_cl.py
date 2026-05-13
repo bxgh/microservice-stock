@@ -2,6 +2,7 @@ import asyncio
 import logging
 import pandas as pd
 from typing import List, Dict, Any
+from shared.utils.models import KLineModel
 from .base import BaseCollector
 
 logger = logging.getLogger(__name__)
@@ -72,7 +73,7 @@ class AkShareCollector(BaseCollector):
         """异步封装：获取全 A 股实时快照"""
         return await asyncio.to_thread(self._fetch_all_spot_sync)
 
-    async def fetch_daily_kline(self, ts_code: str, trade_date: str) -> List[Dict[str, Any]]:
+    async def fetch_daily_kline(self, ts_code: str, trade_date: str) -> List[KLineModel]:
         symbol = self._convert_symbol(ts_code)
         date_str = self._convert_date(trade_date)
         
@@ -90,54 +91,46 @@ class AkShareCollector(BaseCollector):
             
         return self.normalize_data(df, ts_code, trade_date)
 
-    def normalize_sina_data(self, df: pd.DataFrame, ts_code: str, trade_date: str) -> List[Dict[str, Any]]:
+    def normalize_sina_data(self, df: pd.DataFrame, ts_code: str, trade_date: str) -> List[KLineModel]:
         """归一化新浪源数据"""
         results = []
         for _, row in df.iterrows():
-            # 新浪返回字段: date, open, high, low, close, volume, outstanding_share, turnover
             close_price = float(row.get('close', 0))
-            # 新浪源不提供 pre_close 和 amount，需要特殊处理或后续补偿
-            # 这里暂时设为 0，审计逻辑会识别到 PARTIAL
-            results.append({
-                "ts_code": ts_code,
-                "trade_date": trade_date,
-                "open": float(row.get('open', 0)),
-                "high": float(row.get('high', 0)),
-                "low": float(row.get('low', 0)),
-                "close": close_price,
-                "pre_close": 0.0, 
-                "pct_chg": 0.0,
-                "volume": float(row.get('volume', 0)) / 100.0, # 新浪通常是股，转为手
-                "amount": 0.0 
-            })
+            results.append(KLineModel(
+                ts_code=ts_code,
+                trade_date=trade_date,
+                open=float(row.get('open', 0)),
+                high=float(row.get('high', 0)),
+                low=float(row.get('low', 0)),
+                close=close_price,
+                pre_close=0.0, 
+                pct_chg=0.0,
+                volume=float(row.get('volume', 0)) / 100.0, 
+                amount=0.0 
+            ))
         return results
 
-    def normalize_data(self, df: pd.DataFrame, ts_code: str, trade_date: str) -> List[Dict[str, Any]]:
+    def normalize_data(self, df: pd.DataFrame, ts_code: str, trade_date: str) -> List[KLineModel]:
         results = []
         for _, row in df.iterrows():
-            # AkShare 返回字段参考: 
-            # 日期, 开盘, 收盘, 最高, 最低, 成交量, 成交额, 振幅, 涨跌幅, 涨跌额, 换手率
-            
-            open_price = float(row.get('开盘', 0))
             close_price = float(row.get('收盘', 0))
             change = float(row.get('涨跌额', 0))
             pre_close = close_price - change
             
-            # AkShare 涨跌幅通常是百分比数值 (如 5.0 代表 5%)，需转化为小数 0.05
             pct_chg_raw = float(row.get('涨跌幅', 0))
             pct_chg = round(pct_chg_raw / 100.0, 6)
 
-            results.append({
-                "ts_code": ts_code,
-                "trade_date": trade_date,
-                "open": open_price,
-                "high": float(row.get('最高', 0)),
-                "low": float(row.get('最低', 0)),
-                "close": close_price,
-                "pre_close": round(pre_close, 4),
-                "change": round(change, 4),
-                "pct_chg": pct_chg,
-                "volume": float(row.get('成交量', 0)), # AkShare 通常是手
-                "amount": float(row.get('成交额', 0)) # AkShare 通常是元
-            })
+            results.append(KLineModel(
+                ts_code=ts_code,
+                trade_date=trade_date,
+                open=float(row.get('开盘', 0)),
+                high=float(row.get('最高', 0)),
+                low=float(row.get('最低', 0)),
+                close=close_price,
+                pre_close=round(pre_close, 4),
+                change=round(change, 4),
+                pct_chg=pct_chg,
+                volume=float(row.get('成交量', 0)),
+                amount=float(row.get('成交额', 0))
+            ))
         return results

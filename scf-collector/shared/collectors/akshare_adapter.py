@@ -53,9 +53,12 @@ class AkShareAdapter:
                 ts_code = cls._convert_code(r.get('symbol', ''))
                 close_price = float(r.get('trade', 0))
                 pre_close = float(r.get('settlement', 0))
-                
-                # 健壮性：处理昨收价为 0 的极端情况
-                if pre_close == 0: pre_close = close_price
+                pct_chg_val = float(r.get('tickhum', r.get('changepercent', 0))) / 100.0
+                # 字段合成器: 当昨收缺失且涨跌幅不是 -100% 时，反推补齐
+                if pre_close == 0 and pct_chg_val != -1:
+                    pre_close = round(close_price / (1 + pct_chg_val), 3)
+                elif pre_close == 0:
+                    pre_close = close_price
 
                 m = KLineModel(
                     ts_code=ts_code,
@@ -66,8 +69,7 @@ class AkShareAdapter:
                     close=close_price,
                     pre_close=pre_close,
                     change=close_price - pre_close,
-                    # Sina 源涨跌幅可能是 tickhum 或 changepercent
-                    pct_chg=float(r.get('tickhum', r.get('changepercent', 0))) / 100.0,
+                    pct_chg=pct_chg_val,
                     volume=vol_raw / 100.0, # 股 -> 手
                     amount=float(r.get('amount', 0))
                 )
@@ -89,22 +91,38 @@ class AkShareAdapter:
                 if not raw_code: continue
                 
                 ts_code = cls._convert_code(raw_code)
+                # 停牌与无效数据清洗 (Cleaner)
                 vol_raw = float(r.get('成交量', 0))
+                open_price = float(r.get('今开', 0))
+                high_price = float(r.get('最高', 0))
+                low_price = float(r.get('最低', 0))
                 
-                # 停牌过滤
-                if vol_raw == 0: continue
+                # 若成交量为 0 且 (开盘/最高/最低任一为 0)，判定为停牌
+                if vol_raw == 0 and (open_price == 0 or high_price == 0 or low_price == 0):
+                    logger.debug(f"Skipped {ts_code} (Suspended/Invalid): vol={vol_raw}")
+                    continue
+
+                close_price = float(r.get('最新价', 0))
+                pre_close = float(r.get('昨收', 0))
+                pct_chg = float(r.get('涨跌幅', 0)) / 100.0
+
+                # 字段合成器 (Field Synthesizer): 兜底 pre_close
+                if pre_close == 0 and pct_chg != -1: # 防止除以 0
+                    pre_close = round(close_price / (1 + pct_chg), 3)
+                elif pre_close == 0:
+                    pre_close = close_price
 
                 m = KLineModel(
                     ts_code=ts_code,
                     trade_date=biz_date,
-                    open=float(r.get('今开', 0)),
-                    high=float(r.get('最高', 0)),
-                    low=float(r.get('最低', 0)),
-                    close=float(r.get('最新价', 0)),
-                    pre_close=float(r.get('昨收', 0)),
+                    open=open_price,
+                    high=high_price,
+                    low=low_price,
+                    close=close_price,
+                    pre_close=pre_close,
                     change=float(r.get('涨跌额', 0)),
-                    pct_chg=float(r.get('涨跌幅', 0)) / 100.0,
-                    volume=vol_raw / 100.0, # 经实测 AkShare EM 源也是股，需转换为手
+                    pct_chg=pct_chg,
+                    volume=vol_raw / 100.0,
                     amount=float(r.get('成交额', 0))
                 )
                 models.append(m)

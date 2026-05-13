@@ -66,14 +66,10 @@
 **作为** 下游计算节点，**我希望** 无论数据来自哪个源（Tushare/AkShare），入库字段必须 100% 完整且量纲一致，**以便于** 避免因字段缺失或单位错误导致的均线计算及量价分析报错。
 
 #### 任务 (Tasks)
-- [ ] **E7-S3-T1**: 在 `shared/collectors/base.py` 中定义 `KLineModel` 强类型契约，作为唯一入库标准。
-- [ ] **E7-S3-T2**: 开发 **AkShare Adapter (适配层)**，实现 `stock_zh_a_spot_em` 字段的原子级转换：
-    - **代码补全**: 自动将 6 位纯数字代码（如 `600519`）重构为标准 `ts_code` 格式（如 `600519.SH`）。
-    - **单位换算**: 强制将 AkShare 的 `成交量`（单位：股）除以 100 转换为“手”；确保 `成交额` 单位统一为“元”。
-    - **昨收提取**: 优先提取接口自带的 `昨收` 字段，确保 `pct_chg` 的计算基准与主源一致。
-- [ ] **E7-S3-T3**: 实现 **停牌与无效数据清洗 (Cleaner)**：
-    - 若 `今开`, `最高`, `最低` 均为 0 或成交量为 0，判定为当日停牌，标记为无效记录，防止其进入 `ods` 层。
-- [ ] **E7-S3-T4**: 增加 **字段合成器 (Field Synthesizer)** 兜底逻辑：若备份源物理缺失 `pre_close`，则通过 `close / (1 + pct_chg)` 强制反推补齐。
+- [x] **E7-S3-T1**: 在 `shared/collectors/base.py` 中定义 `KLineModel` 强类型契约... (已迁移并统合)
+- [x] **E7-S3-T2**: 开发 **AkShare Adapter (适配层)**... (已完成 EM/Sina 源归一化)
+- [x] **E7-S3-T3**: 实现 **停牌与无效数据清洗 (Cleaner)**... (已完成 OHLC 联合判定)
+- [x] **E7-S3-T4**: 增加 **字段合成器 (Field Synthesizer)** 兜底逻辑... (已实现 `close / (1 + pct_chg)` 补齐)
 
 #### 验收标准 (AC)
 - **AC1: 字段量纲一致性**
@@ -88,6 +84,30 @@
   - **Given** 某股票当日停牌，接口返回成交量为 `0`
   - **When** 进入校验层
   - **Then** 该条记录被拦截，不执行 INSERT 操作，审计日志记录一条 `Skipped (Suspended)`。
+
+---
+
+### ### E7-S4: 采集完整性熔断与全量备份源接管 (Integrity & Fail-over)
+
+**作为** 数据管线，**我希望** 在 17:00 采集完成后自动比对 09:30 锁定的基准快照，**以便于** 在主源覆盖率不足 95% 时触发“一票否决”，全量切换至备份源并存证。
+
+#### 任务 (Tasks)
+- [ ] **E7-S4-T1**: 实现 `IntegrityValidator` 类，支持 $R_{final}$ 复合公式计算及成分股探测。
+- [ ] **E7-S4-T2**: 重构 `daily_quotes` 调度逻辑，集成熔断器：若主源校验失败，彻底丢弃其批次并启动备份源全量采集。
+- [ ] **E7-S4-T3**: 完善 `meta_data_audit_log` 存证，确保记录 `expected_n`, `actual_m` 及缺失代码列表。
+
+#### 验收标准 (AC)
+- **AC1: 熔断触发验证**
+  - **Given** 基准快照 $N=5000$，Tushare 仅返回 4000 条
+  - **When** 触发 `sync_kline_daily`
+  - **Then** 日志输出 `[CRITICAL] Main source failed (80%). Triggering Fail-over.`，数据库最终记录源为 `AKSHARE_P1_FAILOVER`。
+- **AC2: 存证对账可见**
+  - **Given** 任务执行完成
+  - **When** 查询 `meta_data_audit_log`
+  - **Then** 包含详尽的代码缺失列表（`diff_list`）。
+
+---
+
 
 ## 4. 数据采集率统一口径规范 (Unified Collection Rate Standard)
 

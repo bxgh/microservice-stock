@@ -3,6 +3,7 @@ import asyncio
 import logging
 import pandas as pd
 from typing import List, Dict, Any
+from shared.utils.models import KLineModel
 from .base import BaseCollector
 
 logger = logging.getLogger(__name__)
@@ -38,7 +39,7 @@ class TushareCollector(BaseCollector):
             logger.error(f"[tushare] fetch error for {ts_code} on {date_str}: {e}")
             raise
 
-    async def fetch_daily_kline(self, ts_code: str, trade_date: str) -> List[Dict[str, Any]]:
+    async def fetch_daily_kline(self, ts_code: str, trade_date: str) -> List[KLineModel]:
         date_str = self._convert_date(trade_date)
         
         # 使用 asyncio.to_thread 将同步调用放入线程池
@@ -59,7 +60,7 @@ class TushareCollector(BaseCollector):
             logger.error(f"[tushare] fetch batch daily error for {date_str}: {e}")
             raise
 
-    async def fetch_batch_daily_kline(self, trade_date: str) -> List[Dict[str, Any]]:
+    async def fetch_batch_daily_kline(self, trade_date: str) -> List[KLineModel]:
         """批量获取单日全 A 股票 K 线"""
         date_str = self._convert_date(trade_date)
         df = await asyncio.to_thread(self._fetch_batch_daily_sync, date_str)
@@ -71,19 +72,19 @@ class TushareCollector(BaseCollector):
         for _, row in df.iterrows():
             pct_chg_raw = float(row.get('pct_chg', 0)) if row.get('pct_chg') is not None else 0
             amount_raw = float(row.get('amount', 0)) if row.get('amount') is not None else 0
-            results.append({
-                "ts_code": row.get('ts_code'),
-                "trade_date": trade_date,
-                "open": float(row.get('open', 0)),
-                "high": float(row.get('high', 0)),
-                "low": float(row.get('low', 0)),
-                "close": float(row.get('close', 0)),
-                "pre_close": float(row.get('pre_close', 0)),
-                "change": float(row.get('change', 0)),
-                "pct_chg": round(pct_chg_raw / 100.0, 6),
-                "volume": float(row.get('vol', 0)),
-                "amount": round(amount_raw * 1000.0, 2)
-            })
+            results.append(KLineModel(
+                ts_code=row.get('ts_code'),
+                trade_date=trade_date,
+                open=float(row.get('open', 0)),
+                high=float(row.get('high', 0)),
+                low=float(row.get('low', 0)),
+                close=float(row.get('close', 0)),
+                pre_close=float(row.get('pre_close', 0)),
+                change=float(row.get('change', 0)),
+                pct_chg=round(pct_chg_raw / 100.0, 6),
+                volume=float(row.get('vol', 0)),
+                amount=round(amount_raw * 1000.0, 2)
+            ))
         return results
 
     def _fetch_adj_factor_sync(self, date_str: str) -> pd.DataFrame:
@@ -143,7 +144,7 @@ class TushareCollector(BaseCollector):
             logger.error(f"[tushare] fetch index daily error for {ts_code} on {date_str}: {e}")
             raise
 
-    async def fetch_index_daily(self, ts_code: str, trade_date: str) -> List[Dict[str, Any]]:
+    async def fetch_index_daily(self, ts_code: str, trade_date: str) -> List[KLineModel]:
         """获取指数行情"""
         date_str = self._convert_date(trade_date)
         df = await asyncio.to_thread(self._fetch_index_daily_sync, ts_code, date_str)
@@ -220,30 +221,23 @@ class TushareCollector(BaseCollector):
             return []
         return df.to_dict('records')
 
-    def normalize_data(self, df: pd.DataFrame, ts_code: str, trade_date: str) -> List[Dict[str, Any]]:
+    def normalize_data(self, df: pd.DataFrame, ts_code: str, trade_date: str) -> List[KLineModel]:
         results = []
         for _, row in df.iterrows():
-            # Tushare 返回字段参考: 
-            # ts_code, trade_date, open, high, low, close, pre_close, change, pct_chg, vol, amount
-            
-            # Tushare 陷阱修复：
-            # 1. pct_chg 是百分比（如 5.0），需除以 100 转为小数
-            # 2. amount 是千元，需乘以 1000 转为元
-            
             pct_chg_raw = float(row.get('pct_chg', 0))
             amount_raw = float(row.get('amount', 0))
 
-            results.append({
-                "ts_code": ts_code,
-                "trade_date": trade_date,
-                "open": float(row.get('open', 0)),
-                "high": float(row.get('high', 0)),
-                "low": float(row.get('low', 0)),
-                "close": float(row.get('close', 0)),
-                "pre_close": float(row.get('pre_close', 0)),
-                "change": float(row.get('change', 0)),
-                "pct_chg": round(pct_chg_raw / 100.0, 6),
-                "volume": float(row.get('vol', 0)), # Tushare 默认手
-                "amount": round(amount_raw * 1000.0, 2)
-            })
+            results.append(KLineModel(
+                ts_code=ts_code,
+                trade_date=trade_date,
+                open=float(row.get('open', 0)),
+                high=float(row.get('high', 0)),
+                low=float(row.get('low', 0)),
+                close=float(row.get('close', 0)),
+                pre_close=float(row.get('pre_close', 0)),
+                change=float(row.get('change', 0)),
+                pct_chg=round(pct_chg_raw / 100.0, 6),
+                volume=float(row.get('vol', 0)), # Tushare 默认手
+                amount=round(amount_raw * 1000.0, 2)
+            ))
         return results
