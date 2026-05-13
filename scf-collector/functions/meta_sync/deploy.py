@@ -205,6 +205,11 @@ def setup_triggers():
             "name": "MonthlySWIndustry",
             "cron": "0 30 6 1 * * *",
             "payload": {"op": "sync_sw_industry_member"}
+        },
+        {
+            "name": "UniverseSnapshot",
+            "cron": "0 30 9 * * * *",
+            "payload": {"op": "create_universe_snapshot"}
         }
     ]
     

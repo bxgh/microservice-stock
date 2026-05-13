@@ -101,6 +101,49 @@ async def async_handler(event, context):
                 return {"status": "success", "op": op, "count": count, "request_id": request_id}
             else:
                 raise Exception("Fetched empty SW industry members data")
+
+        elif op == 'sync_suspension':
+            logger.info(f"[{request_id}] Fetching daily suspensions for {biz_date}...")
+            data = await TUSHARE.fetch_suspensions(biz_date)
+            count = await StockDAO.save_suspensions(data)
+            await StockDAO.log_pipeline_run("Meta-Suspension", "success", run_id=request_id, biz_date=biz_date)
+            await StockDAO.update_data_readiness(biz_date, "ods_suspend_d", len(data))
+            return {"status": "success", "op": op, "count": count, "request_id": request_id}
+
+        elif op == 'create_universe_snapshot':
+            logger.info(f"[{request_id}] Creating universe snapshot for {biz_date} (09:30 Task)...")
+            
+            # A. [Infra Specialist] 增强：停牌采集增加异常隔离，失败不阻断快照生成
+            try:
+                sus_data = await TUSHARE.fetch_suspensions(biz_date)
+                await StockDAO.save_suspensions(sus_data)
+                logger.info(f"[{request_id}] Suspension sync success: {len(sus_data)} records.")
+            except Exception as e:
+                logger.warning(f"[{request_id}] Suspension sync failed, fallback to 0: {e}")
+            
+            # B. 计算基准 (N = 上市总数 - 当日停牌)
+            all_active = await StockDAO.get_active_stock_codes(biz_date)
+            suspended = await StockDAO.get_suspended_codes(biz_date)
+            
+            # 逻辑对冲：计算真正应采的代码集合
+            universe_set = set(all_active) - set(suspended)
+            expected_count = len(universe_set)
+            
+            # C. 持久化快照
+            await StockDAO.save_universe_snapshot(biz_date, expected_count, list(universe_set))
+            
+            logger.info(f"[{request_id}] Universe locked: Expected={expected_count} (Total={len(all_active)}, Suspended={len(suspended)})")
+            
+            await StockDAO.log_pipeline_run("Meta-Snapshot", "success", run_id=request_id, biz_date=biz_date)
+            await StockDAO.update_data_readiness(biz_date, "meta_universe_snapshot", expected_count)
+            
+            return {
+                "status": "success", 
+                "op": op, 
+                "expected_count": expected_count, 
+                "suspended_count": len(suspended),
+                "request_id": request_id
+            }
         
         else:
             return {"status": "error", "message": f"Unknown operation: {op}", "request_id": request_id}

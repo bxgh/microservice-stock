@@ -141,6 +141,16 @@ def setup_triggers():
             "name": "DailyIndex",
             "cron": "0 40 16 * * * *",
             "payload": {"op": "sync_index_daily"}
+        },
+        {
+            "name": "ShadowAudit",
+            "cron": "0 0 20 * * 3,6 *",
+            "payload": {"op": "shadow_audit"}
+        },
+        {
+            "name": "FailOverCheck",
+            "cron": "0 0 17 * * * *",
+            "payload": {"op": "verify_integrity"}
         }
     ]
     

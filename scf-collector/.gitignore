@@ -3,3 +3,8 @@ invoke_result.json
 __pycache__/
 *.pyc
 *.zip
+# scratch 目录为本地临时脚本，含本地连接配置，禁止提交
+scratch/verify_phase1.py
+scratch/run_migration.py
+scratch/check_schema.py
+scratch/check_tables.py

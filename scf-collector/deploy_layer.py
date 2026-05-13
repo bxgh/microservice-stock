@@ -41,6 +41,10 @@ def deploy_layer_and_bind():
         print(f"[FAIL] Failed to publish layer: {e}")
         return
 
+    import time
+    print("Waiting for layer to be active (10s)...")
+    time.sleep(10)
+
     print(f"--- 2. Binding Layer to Function: {func_name} ---")
     
     # 获取函数当前配置

@@ -3,8 +3,8 @@
 ## 1. 文档索引 (Documentation Index)
 
 - **核心 PRD**: [PRD_SCF_COLLECTOR.md](PRD_SCF_COLLECTOR.md) (业务目标与数据契约)
-- **实施 Epic (E400)**: [E400_SCF_Collector_Implementation.md](E400_SCF_Collector_Implementation.md) (当前执行计划)
-- **审计报告 (E300)**: [audit/E300_Data_Ingestion_Verification.md](audit/E300_Data_Ingestion_Verification.md) (存量数据资产核查)
+- **可靠性增强 (E7)**: [E7_Reliability_Validation.md](E7_Reliability_Validation.md) (17:00 判定与 Fail-over 逻辑)
+- **质量规范**: [docs/spec/data_collection_quality_spec.md](../../docs/spec/data_collection_quality_spec.md) (SPEC-DQ-01)
 - **任务看板**: [todo-list-tables.md](todo-list-tables.md) (49 张表采集清单)
 
 ---
@@ -69,13 +69,18 @@ python3 functions/daily_quotes/deploy.py
 ```
 
 ### 3.3 定时触发器 (Cron) 建议
-为保证数据最新且节省成本，建议在腾讯云控制台配置以下两个触发器：
-1. **股票列表同步 (`op: sync_stock_list`)**:
-   - **频率**: 每天凌晨 01:00
-   - **Cron**: `0 0 1 * * * *`
-2. **交易日历同步 (`op: sync_calendar`)**:
-   - **频率**: 每月 1 号凌晨 01:30
-   - **Cron**: `0 30 1 1 * * *`
+
+为保证数据就绪并符合 **SPEC-DQ-01** 规范，建议配置以下触发器：
+
+1.  **盘前基准锁定 (`op: sync_stock_list`)**:
+    -   **时点**: 每天 09:20 (开盘前锁定当日 Universe Snapshot)。
+    -   **Cron**: `0 20 9 * * * *`
+2.  **行情采集死线 (`op: sync_kline_daily`)**:
+    -   **时点**: 每天 17:00 (判定 Tushare 完整性，必要时切换 AkShare)。
+    -   **Cron**: `0 0 17 * * * *`
+3.  **交易日历同步 (`op: sync_calendar`)**:
+    -   **频率**: 每月 1 号凌晨 01:30。
+    -   **Cron**: `0 30 1 1 * * *`
 
 ### 3.4 故障排查
 1. **1054 报错**: 优先核对 `docs/design/复盘/db_inventory.md` 中的物理结构。
@@ -93,6 +98,6 @@ python3 functions/daily_quotes/deploy.py
 
 ---
 **交付记录**:
-- **状态**: 🟢 生产就绪 (Production Ready) & Monorepo 架构升级
+- **状态**: 🟢 生产就绪 (Production Ready) & E7 可靠性架构升级
 - **交付人**: Antigravity AI
-- **日期**: 2026-05-12
+- **日期**: 2026-05-13

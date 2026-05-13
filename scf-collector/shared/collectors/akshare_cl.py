@@ -56,6 +56,22 @@ class AkShareCollector(BaseCollector):
             logger.error(f"[akshare] Sina source also failed for {sina_symbol}: {e}")
             return pd.DataFrame()
 
+    def _fetch_all_spot_sync(self) -> pd.DataFrame:
+        """同步方法：调用 AkShare 获取全 A 股实时快照 (东方财富源)"""
+        import akshare as ak
+        try:
+            # 接口：stock_zh_a_spot_em (全量快照)
+            # 该接口返回全 A 股当日最新行情（非历史）
+            df = ak.stock_zh_a_spot_em()
+            return df
+        except Exception as e:
+            logger.error(f"[akshare] Batch spot fetch failed: {e}")
+            return pd.DataFrame()
+
+    async def fetch_all_stock_spot(self) -> pd.DataFrame:
+        """异步封装：获取全 A 股实时快照"""
+        return await asyncio.to_thread(self._fetch_all_spot_sync)
+
     async def fetch_daily_kline(self, ts_code: str, trade_date: str) -> List[Dict[str, Any]]:
         symbol = self._convert_symbol(ts_code)
         date_str = self._convert_date(trade_date)

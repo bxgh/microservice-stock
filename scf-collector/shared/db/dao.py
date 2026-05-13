@@ -1,3 +1,4 @@
+import json
 import logging
 from typing import List, Dict, Any
 from .connection import execute_query
@@ -237,3 +238,97 @@ class StockDAO:
             
         logger.info(f"Saved {len(data)} stock list records to stock_basic_info.")
         return count
+
+    @staticmethod
+    async def save_suspensions(data: List[Dict[str, Any]]) -> int:
+        """批量保存停牌数据 (ods_suspend_d) - 审计修正版"""
+        if not data:
+            return 0
+        
+        sql = """
+        INSERT INTO ods_suspend_d (ts_code, trade_date, suspend_timing, suspend_type)
+        VALUES (%(ts_code)s, %(trade_date)s, %(suspend_timing)s, %(suspend_type)s)
+        ON DUPLICATE KEY UPDATE 
+            suspend_timing = VALUES(suspend_timing),
+            suspend_type = VALUES(suspend_type),
+            is_deleted = 0
+        """
+        count = 0
+        for item in data:
+            # 日期转换: 20240510 -> 2024-05-10
+            dt = item.get('trade_date')
+            if dt and len(str(dt)) == 8:
+                item['trade_date'] = f"{str(dt)[:4]}-{str(dt)[4:6]}-{str(dt)[6:]}"
+            
+            res = await execute_query(sql, item, is_select=False)
+            count += res
+        return count
+
+    @staticmethod
+    async def get_active_stock_codes(trade_date: str) -> List[str]:
+        """获取当日理论应采的活跃股票列表"""
+        sql = """
+        SELECT ts_code FROM stock_basic_info 
+        WHERE list_status = 'L' AND list_date <= %s
+        """
+        rows = await execute_query(sql, (trade_date,), is_select=True)
+        return [row['ts_code'] for row in rows] if rows else []
+
+    @staticmethod
+    async def get_suspended_codes(trade_date: str) -> List[str]:
+        """获取当日停牌的股票列表 - [DB Auditor] 补齐 is_deleted"""
+        sql = "SELECT ts_code FROM ods_suspend_d WHERE trade_date = %s AND is_deleted = 0"
+        rows = await execute_query(sql, (trade_date,), is_select=True)
+        return [row['ts_code'] for row in rows] if rows else []
+
+    @staticmethod
+    async def save_universe_snapshot(biz_date: str, expected_count: int, codes: List[str]) -> int:
+        """保存当日应采基准快照 (meta_universe_snapshot)"""
+        sql = """
+        INSERT INTO meta_universe_snapshot (biz_date, expected_count, codes_json)
+        VALUES (%s, %s, %s)
+        ON DUPLICATE KEY UPDATE 
+            expected_count = VALUES(expected_count),
+            codes_json = VALUES(codes_json),
+            updated_at = CURRENT_TIMESTAMP,
+            is_deleted = 0
+        """
+        params = (biz_date, expected_count, json.dumps(codes))
+        return await execute_query(sql, params, is_select=False)
+    @staticmethod
+    async def get_kline_daily(trade_date: str) -> List[Dict[str, Any]]:
+        """获取指定日期的全量 K 线行情 (用于影子审计)"""
+        sql = """
+        SELECT ts_code, trade_date, open, high, low, close, pre_close, pct_chg, volume, amount 
+        FROM stock_kline_daily 
+        WHERE trade_date = %s
+        """
+        rows = await execute_query(sql, (trade_date,), is_select=True)
+        return rows if rows else []
+
+    @staticmethod
+    async def save_audit_log(data: Dict[str, Any]) -> int:
+        """保存影子审计日志 (meta_data_audit_log) - 支持 v1.3 全量字段"""
+        sql = """
+        INSERT INTO meta_data_audit_log (
+            trade_date, task_name, source_primary, source_secondary, 
+            primary_count, secondary_count, overlap_count, expected_count, coverage_rate,
+            open_mae, high_mae, low_mae, close_mae, volume_mae, amount_mae, pct_chg_mae,
+            outlier_count, status, report_path, report_content
+        ) VALUES (
+            %(trade_date)s, %(task_name)s, %(primary_source)s, %(secondary_source)s, 
+            %(primary_count)s, %(secondary_count)s, %(overlap_count)s, %(expected_count)s, %(coverage_rate)s,
+            %(open_mae)s, %(high_mae)s, %(low_mae)s, %(close_mae)s, %(volume_mae)s, %(amount_mae)s, %(pct_chg_mae)s,
+            %(outlier_count)s, %(status)s, %(report_path)s, %(report_content)s
+        ) ON DUPLICATE KEY UPDATE 
+            primary_count = VALUES(primary_count),
+            secondary_count = VALUES(secondary_count),
+            overlap_count = VALUES(overlap_count),
+            coverage_rate = VALUES(coverage_rate),
+            close_mae = VALUES(close_mae),
+            outlier_count = VALUES(outlier_count),
+            status = VALUES(status),
+            report_content = VALUES(report_content),
+            updated_at = CURRENT_TIMESTAMP
+        """
+        return await execute_query(sql, data, is_select=False)

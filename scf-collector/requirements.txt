@@ -6,4 +6,4 @@ pydantic
 cryptography
 python-dotenv
 easyquotation
-
+aiosmtplib
