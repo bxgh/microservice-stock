@@ -1225,8 +1225,8 @@
         function renderTasks(storyId) {
             const story = findStory(storyId);
             const container = document.getElementById(`tasks-${storyId}`);
-            let html = story.tasks.map(t => `<div class="task-item ${state.taskDeleted[t.id] ? 'deleted' : ''}" id="task-${t.id}"><span class="task-id">${t.id}</span><span class="task-text">${t.text}</span><span class="task-del" onclick="toggleTask('${t.id}')">${state.taskDeleted[t.id] ? '恢复' : '移除'}</span></div>`).join('');
-            html += (state.addedTasks[storyId] || []).map((t, idx) => `<div class="task-item" id="added-${storyId}-${idx}"><span class="task-id">NEW</span><span class="task-text">${t}</span><span class="task-del" onclick="removeAddedTask('${storyId}', ${idx})">删除</span></div>`).join('');
+            let html = story.tasks.map(t => `<div class="task-item ${state.taskDeleted[t.id] ? 'deleted' : ''}" id="task-${t.id}"><div class="task-id">${t.id}</div><div class="task-text">${t.text}</div><div class="task-del" onclick="toggleTask('${t.id}')">${state.taskDeleted[t.id] ? '恢复' : '移除'}</div></div>`).join('');
+            html += (state.addedTasks[storyId] || []).map((t, idx) => `<div class="task-item" id="added-${storyId}-${idx}"><div class="task-id">NEW</div><div class="task-text">${t}</div><div class="task-del" onclick="removeAddedTask('${storyId}', ${idx})">删除</div></div>`).join('');
             container.innerHTML = html;
         }
 
