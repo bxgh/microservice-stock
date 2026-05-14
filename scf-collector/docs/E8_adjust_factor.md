@@ -93,17 +93,17 @@ def save_adj_factor(self, ts_code: str, adjust_date: str, adj_factor: float) -> 
 
 > `fore_adjust_factor` 显式写入 `NULL`，标记为废弃字段。
 
-#### 验收标准（AC）
+#### 验收标准(AC)
 
-- **AC1**：幂等性——无除权变化时不产生新记录
-  - **Given** 数据库中 `600519.SH` 最新 `adjust_factor` = `1.234`
-  - **When** SCF 采集到今日 `adj_factor` = `1.234` 并调用 `save_adj_factor`
-  - **Then** `stock_adjust_factor` 中该股票记录数不增加，返回值为 `False`
+##### AC 1: 幂等性——无除权变化时不产生新记录
+- **Given** 数据库中 `600519.SH` 最新 `adjust_factor` = `1.234`
+- **When** SCF 采集到今日 `adj_factor` = `1.234` 并调用 `save_adj_factor`
+- **Then** `stock_adjust_factor` 中该股票记录数不增加，返回值为 `False`
 
-- **AC2**：变动写入——除权后正常入库
-  - **Given** 数据库中 `600519.SH` 最新 `adjust_factor` = `1.234`
-  - **When** SCF 采集到今日 `adj_factor` = `1.356`（发生分红）并调用 `save_adj_factor`
-  - **Then** 插入一条新记录，`back_adjust_factor` = `adjust_factor` = `1.356`，`fore_adjust_factor` = `NULL`，返回值为 `True`
+##### AC 2: 变动点捕获——除权后正常入库
+- **Given** 数据库中 `600519.SH` 最新 `adjust_factor` = `1.234`
+- **When** SCF 采集到今日 `adj_factor` = `1.356`（发生分红）并调用 `save_adj_factor`
+- **Then** 插入一条新记录，`back_adjust_factor` = `adjust_factor` = `1.356`，`fore_adjust_factor` = `NULL`，返回值为 `True`
 
 ---
 
@@ -125,12 +125,11 @@ ALTER TABLE stock_adjust_factor
 
 - [ ] **E8-S2-T2** 在 `TABLES_INDEX.md` 中更新字段说明，注明废弃原因和替代方案
 
-#### 验收标准（AC）
-
-- **AC1**：
-  - **Given** 执行上述 DDL
-  - **When** `SHOW FULL COLUMNS FROM stock_adjust_factor`
-  - **Then** `fore_adjust_factor` 的 Comment 包含"已废弃"字样
+#### 验收标准(AC)
+##### AC 1: 数据库元数据审计
+- **Given** 执行上述 DDL
+- **When** `SHOW FULL COLUMNS FROM stock_adjust_factor`
+- **Then** `fore_adjust_factor` 的 Comment 包含"已废弃"字样
 
 ---
 
@@ -165,12 +164,11 @@ WHERE back_adjust_factor IS NULL AND adjust_factor IS NOT NULL;
 -- 预期结果：0
 ```
 
-#### 验收标准（AC）
-
-- **AC1**：
-  - **Given** 执行回填脚本完毕
-  - **When** 执行上述验证 SQL
-  - **Then** `remaining_nulls` = 0
+#### 验收标准(AC)
+##### AC 1: 存量数据空值审计
+- **Given** 执行回填脚本完毕
+- **When** 执行上述验证 SQL
+- **Then** `remaining_nulls` = 0
 
 ---
 
@@ -229,26 +227,16 @@ def compress_adj_factors(conn, ts_code: str) -> int:
 
 - [ ] **E8-S4-T3** 获取全量 `ts_code` 列表，循环调用上述函数，记录日志
 
-#### 验收标准（AC）
+#### 验收标准(AC)
+##### AC 1: 压缩后无相邻重复审计
+- **Given** 冗余压缩脚本执行完毕
+- **When** 对任意 `ts_code` 查询相邻两行 `adjust_factor` 相同的记录数
+- **Then** 结果为 0
 
-- **AC1**：压缩后无相邻重复
-  - **Given** 冗余压缩脚本执行完毕
-  - **When** 对任意 `ts_code` 查询相邻两行 `adjust_factor` 相同的记录数
-  - **Then** 结果为 0
-
-    ```sql
-    SELECT COUNT(*) FROM (
-        SELECT ts_code, adjust_date, adjust_factor,
-               LAG(adjust_factor) OVER (PARTITION BY ts_code ORDER BY adjust_date) AS prev_factor
-        FROM stock_adjust_factor
-    ) t
-    WHERE ABS(adjust_factor - prev_factor) < 1e-8;
-    ```
-
-- **AC2**：变动点保留完整
-  - **Given** 压缩完成后
-  - **When** 查询 `600519.SH` 在已知除权日（如 `2023-07-03`）前后的记录
-  - **Then** 该除权日对应的记录存在，且因子值与 Tushare 原始数据一致
+##### AC 2: 变动点完整性审计
+- **Given** 压缩完成后
+- **When** 查询 `600519.SH` 在已知除权日（如 `2023-07-03`）前后的记录
+- **Then** 该除权日对应的记录存在，且因子值与 Tushare 原始数据一致
 
 ---
 
@@ -297,12 +285,11 @@ def validate_fore_adj(conn, tushare_api, sample_size: int = 500):
 
 - [ ] **E8-S5-T3** 输出审计报告（CSV），记录异常点供人工复核
 
-#### 验收标准（AC）
-
-- **AC1**：
-  - **Given** 500 个样本点校验完毕
-  - **When** 统计误差 > $10^{-3}$ 的样本数
-  - **Then** 异常率 < 0.2%（即 500 个样本中异常点 ≤ 1 个）
+#### 验收标准(AC)
+##### AC 1: 算法实现一致性验证
+- **Given** 500 个样本点校验完毕
+- **When** 统计误差 > $10^{-3}$ 的样本数
+- **Then** 异常率 < 0.2%（即 500 个样本中异常点 ≤ 1 个）
 
 ---
 

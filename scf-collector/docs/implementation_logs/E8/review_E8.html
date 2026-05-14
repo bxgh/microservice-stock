@@ -1,0 +1,1341 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Epic-Story 评审台</title>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;500;700;900&family=Noto+Sans+SC:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500;700&display=swap"
+        rel="stylesheet">
+    <style>
+        :root {
+            --bg: #0e0d0b;
+            --bg-elev-1: #15130f;
+            --bg-elev-2: #1c1915;
+            --bg-elev-3: #2a2520;
+            --ink: #ede3cc;
+            --ink-dim: #ccc;
+            --ink-mute: #aaa;
+            --ink-whisper: #888;
+            --amber: #d4a23e;
+            --amber-bright: #f0c968;
+            --amber-soft: rgba(212, 162, 62, 0.18);
+            --status-strong: #8ab573;
+            --status-neutral: #c99339;
+            --status-alert: #d97a3d;
+            --status-weak: #c85a4a;
+            --status-cold: #6b8ca8;
+            --hair: #2a2520;
+            --font-serif: 'Noto Serif SC', 'Songti SC', serif;
+            --font-sans: 'Noto Sans SC', -apple-system, sans-serif;
+            --font-mono: 'JetBrains Mono', 'SF Mono', Consolas, monospace;
+            --fs-xs: 10px;
+            --fs-sm: 12px;
+            --fs-base: 13px;
+            --fs-md: 15px;
+            --fs-lg: 18px;
+            --fs-xl: 20px;
+            --fs-2xl: 22px;
+            --space-1: 2px;
+            --space-2: 4px;
+            --space-3: 8px;
+            --space-4: 12px;
+            --space-6: 16px;
+            --space-8: 24px;
+            --space-12: 32px;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        html,
+        body {
+            background: var(--bg);
+            color: var(--ink);
+            font-family: var(--font-sans);
+            font-size: var(--fs-base);
+            line-height: 1.6;
+            height: 100vh;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* noise */
+        body::before {
+            content: '';
+            position: fixed;
+            inset: 0;
+            pointer-events: none;
+            z-index: 999;
+            background: white;
+            mix-blend-mode: overlay;
+            opacity: 0.5;
+            filter: url(#noise);
+        }
+
+        /* TOP BAR */
+        .topbar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 var(--space-6);
+            height: 48px;
+            border-bottom: 1px solid var(--hair);
+            background: var(--bg-elev-1);
+            z-index: 100;
+        }
+
+        .topbar-left {
+            display: flex;
+            align-items: center;
+            gap: var(--space-4);
+        }
+
+        .topbar-brand {
+            font-family: var(--font-serif);
+            font-size: var(--fs-md);
+            color: var(--amber);
+            letter-spacing: 0.05em;
+        }
+
+        .topbar-sep {
+            width: 1px;
+            height: 20px;
+            background: var(--hair);
+        }
+
+        .topbar-doc {
+            font-size: var(--fs-sm);
+            color: var(--amber);
+            font-weight: 500;
+        }
+
+        .topbar-meta {
+            display: flex;
+            gap: var(--space-4);
+            margin-left: var(--space-2);
+            padding-left: var(--space-4);
+            border-left: 1px solid var(--hair);
+            font-family: var(--font-mono);
+            font-size: var(--fs-xs);
+            color: var(--ink-mute);
+        }
+
+        .topbar-meta-val {
+            color: var(--ink-dim);
+        }
+
+        .topbar-right {
+            display: flex;
+            align-items: center;
+            gap: var(--space-3);
+        }
+
+        .progress-wrap {
+            display: flex;
+            align-items: center;
+            gap: var(--space-2);
+        }
+
+        .progress-bar {
+            width: 120px;
+            height: 4px;
+            background: var(--hair);
+            border-radius: 2px;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: var(--amber);
+            border-radius: 2px;
+            transition: width 0.3s;
+        }
+
+        .progress-text {
+            font-family: var(--font-mono);
+            font-size: var(--fs-xs);
+            color: var(--ink-mute);
+        }
+
+        .btn {
+            font-family: var(--font-sans);
+            font-size: var(--fs-sm);
+            padding: 6px 14px;
+            border: 1px solid var(--hair);
+            background: var(--bg-elev-2);
+            color: var(--ink-dim);
+            cursor: pointer;
+            transition: all 0.15s;
+            letter-spacing: 0.02em;
+        }
+
+        .btn:hover {
+            border-color: var(--amber);
+            color: var(--amber);
+        }
+
+        .btn-primary {
+            border-color: var(--amber);
+            color: var(--amber);
+            background: var(--bg-elev-2);
+        }
+
+        .btn-primary:hover {
+            background: var(--bg-elev-3);
+            border-color: var(--amber-bright);
+        }
+
+        .btn-export {
+            width: 100%;
+            padding: 10px;
+            background: var(--bg-elev-2);
+            border: 1px solid var(--hair);
+            color: #d49a00;
+            cursor: pointer;
+            font-weight: 700;
+            margin-top: 10px;
+            transition: all 0.2s;
+            font-size: var(--fs-sm);
+        }
+
+        .btn-export:hover {
+            background: var(--bg-elev-3);
+            border-color: #d49a00;
+        }
+
+        /* LAYOUT */
+        .layout {
+            display: grid;
+            grid-template-columns: 240px 1fr 240px;
+            gap: 1px;
+            background: var(--hair);
+            flex: 1;
+            height: 0;
+            min-height: 0;
+            overflow: hidden;
+        }
+
+        /* SIDEBAR */
+        .sidebar {
+            background: var(--bg-elev-1);
+            overflow-y: auto;
+            height: 100%;
+        }
+
+        .sidebar-section {
+            border-bottom: 1px solid var(--hair);
+        }
+
+        .sidebar-heading {
+            padding: var(--space-3) var(--space-4);
+            font-size: var(--fs-xs);
+            color: var(--ink-mute);
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+        }
+
+        .nav-epic {
+            padding: var(--space-2) var(--space-4);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: var(--space-2);
+        }
+
+        .nav-epic:hover {
+            background: var(--bg-elev-2);
+        }
+
+        .nav-epic-title {
+            font-size: var(--fs-sm);
+            color: var(--ink-dim);
+            font-weight: 500;
+        }
+
+        .nav-epic-id {
+            font-family: var(--font-mono);
+            font-size: var(--fs-xs);
+            color: var(--amber);
+            min-width: 28px;
+        }
+
+        .nav-story {
+            padding: var(--space-1) var(--space-4);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: var(--space-2);
+            border-left: 2px solid transparent;
+            transition: all 0.2s;
+        }
+
+        .nav-story:hover {
+            background: var(--bg-elev-2);
+            color: var(--ink-dim);
+        }
+
+        .nav-story.active {
+            background: var(--amber-soft);
+            color: var(--amber);
+        }
+
+        .nav-story-dot {
+            width: 5px;
+            height: 5px;
+            border-radius: 50%;
+            background: var(--ink-whisper);
+            flex-shrink: 0;
+        }
+
+        .nav-story.active .nav-story-dot {
+            background: var(--amber);
+            box-shadow: 0 0 6px var(--amber);
+        }
+
+        .status-badge-xs {
+            font-family: var(--font-mono);
+            font-size: 10px;
+            padding: 1px 4px;
+            border-radius: 2px;
+            flex-shrink: 0;
+            text-transform: uppercase;
+        }
+
+        .badge-ok {
+            background: rgba(138, 181, 115, 0.15);
+            color: var(--status-strong);
+        }
+
+        .badge-no {
+            background: rgba(200, 90, 74, 0.15);
+            color: var(--status-weak);
+        }
+
+        .badge-q {
+            background: rgba(201, 147, 57, 0.15);
+            color: var(--status-neutral);
+        }
+
+        .badge-pending {
+            background: rgba(107, 140, 168, 0.15);
+            color: var(--status-cold);
+        }
+
+        /* MAIN */
+        .main {
+            background: var(--bg);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .main-inner {
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            flex: 1;
+            overflow: hidden;
+        }
+
+        /* TABS */
+        .tabs {
+            display: flex;
+            border-bottom: 1px solid var(--hair);
+            background: var(--bg-elev-1);
+        }
+
+        .tab {
+            padding: 10px var(--space-6);
+            font-size: var(--fs-base);
+            color: var(--ink-mute);
+            cursor: pointer;
+            position: relative;
+            letter-spacing: 0.04em;
+            transition: all 0.2s;
+        }
+
+        .tab:hover {
+            color: var(--ink);
+        }
+
+        .tab.active {
+            color: #d49a00;
+            font-weight: 600;
+        }
+
+        .tab::after {
+            content: '';
+            position: absolute;
+            bottom: -1px;
+            left: var(--space-6);
+            right: var(--space-6);
+            height: 3px;
+            background: #d49a00;
+            transform: scaleX(0);
+            transition: transform 0.2s;
+        }
+
+        .tab.active::after {
+            transform: scaleX(1);
+        }
+
+        .tab-panel {
+            display: none;
+        }
+
+        .tab-panel.active {
+            display: block;
+        }
+
+        /* section headers */
+        .section-label {
+            font-size: var(--fs-xs);
+            color: var(--ink-mute);
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            margin: var(--space-6) var(--space-6) var(--space-2);
+        }
+
+        .info-block {
+            background: var(--bg-elev-1);
+            border: 1px solid var(--hair);
+            padding: var(--space-4);
+            margin: 0 var(--space-6) var(--space-4);
+            font-size: var(--fs-base);
+            color: var(--ink-dim);
+            line-height: 1.7;
+        }
+
+        /* STORY CARD */
+        .view-panel {
+            display: none;
+            flex-direction: column;
+            height: 100%;
+            overflow: hidden;
+        }
+
+        .view-panel.active {
+            display: flex;
+        }
+
+        .story-detail-header {
+            padding: var(--space-3) var(--space-6);
+            background: var(--bg-elev-2);
+            border-bottom: 1px solid var(--hair);
+            display: flex;
+            align-items: center;
+            gap: var(--space-4);
+        }
+
+        .story-id {
+            font-family: var(--font-mono);
+            font-size: var(--fs-xs);
+            color: var(--amber);
+        }
+
+        .story-title {
+            font-size: var(--fs-md);
+            font-weight: 700;
+            color: var(--ink);
+        }
+
+        .story-body {
+            background: var(--bg-elev-1);
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .story-tabs {
+            display: flex;
+            background: var(--bg-elev-2);
+            border-bottom: 1px solid var(--hair);
+            padding: 0 var(--space-4);
+            height: 32px;
+            align-items: center;
+            flex-shrink: 0;
+        }
+
+        .story-tab {
+            padding: 0 var(--space-3);
+            font-size: var(--fs-xs);
+            color: var(--ink-mute);
+            cursor: pointer;
+            border-bottom: 2px solid transparent;
+            height: 100%;
+            display: flex;
+            align-items: center;
+        }
+
+        .story-tab.active {
+            color: var(--amber);
+            border-bottom-color: var(--amber);
+        }
+
+        .story-tab-content {
+            display: none;
+            flex: 1;
+            overflow-y: auto;
+            overflow-x: hidden;
+            padding: var(--space-4);
+        }
+
+        .story-tab-content.active {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .content-well {
+            margin: var(--space-4) var(--space-6);
+            background: var(--bg-elev-1);
+            border: 1px solid var(--hair-bright);
+            border-radius: 8px;
+            overflow: hidden;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            min-height: 0;
+        }
+
+        .extra-section {
+            margin-top: var(--space-4);
+            padding-top: var(--space-4);
+            border-top: 1px dashed var(--hair);
+        }
+
+        .extra-section strong {
+            display: block;
+            margin-bottom: var(--space-2);
+            color: var(--amber);
+            font-size: var(--fs-xs);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .info-block {
+            padding: var(--space-4) var(--space-6);
+            color: var(--ink-dim);
+            font-size: var(--fs-base);
+            white-space: pre-wrap;
+            word-break: break-all;
+        }
+
+        /* AC & TASKS */
+        .subsection-title {
+            font-size: var(--fs-xs);
+            color: var(--ink-mute);
+            letter-spacing: 0.07em;
+            text-transform: uppercase;
+            margin-bottom: var(--space-3);
+            display: flex;
+            align-items: center;
+            gap: var(--space-2);
+        }
+
+        .subsection-title::after {
+            content: '';
+            flex: 1;
+            height: 1px;
+            background: var(--hair);
+        }
+
+        .task-item {
+            display: flex;
+            align-items: flex-start; /* 改为 flex-start 以适应多行内容 */
+            padding: var(--space-4) var(--space-6);
+            border-bottom: 1px solid var(--hair);
+            gap: var(--space-4);
+            transition: background 0.15s;
+        }
+
+        .task-item.deleted .task-text {
+            text-decoration: line-through;
+            color: var(--ink);
+        }
+
+        .task-id {
+            font-family: var(--font-mono);
+            font-size: var(--fs-xs);
+            color: var(--ink-mute);
+            min-width: 80px;
+        }
+
+        .task-text {
+            flex: 1;
+            font-size: var(--fs-base);
+            color: var(--ink-dim);
+            /* white-space: pre-wrap; REMOVED as it breaks block elements inside */
+            word-break: break-word;
+        }
+
+        .code-wrapper {
+            position: relative;
+            background: #0b0b0b;
+            border: 1px solid var(--hair);
+            border-radius: 6px;
+            margin: var(--space-4) 0;
+            overflow: hidden;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.4);
+        }
+
+        .code-wrapper::before {
+            content: attr(data-lang);
+            position: absolute;
+            top: 0;
+            right: 0;
+            padding: 2px 8px;
+            font-size: 10px;
+            font-family: var(--font-mono);
+            color: var(--amber);
+            background: rgba(212, 162, 62, 0.1);
+            border-bottom: 1px solid var(--hair);
+            border-left: 1px solid var(--hair);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            pointer-events: none;
+        }
+
+        .code-wrapper pre {
+            margin: 0;
+            padding: var(--space-4);
+            overflow-x: auto;
+            max-height: 400px;
+        }
+
+        .code-wrapper code {
+            font-family: var(--font-mono);
+            font-size: 13px;
+            line-height: 1.6;
+            color: #ffca28;
+            white-space: pre;
+        }
+
+        .inline-code {
+            font-family: var(--font-mono);
+            font-size: 0.9em;
+            background: rgba(212, 162, 62, 0.12);
+            color: var(--amber-bright);
+            padding: 2px 5px;
+            border-radius: 4px;
+            border: 1px solid rgba(212, 162, 62, 0.2);
+        }
+
+        .copy-btn {
+            position: absolute;
+            bottom: 8px;
+            right: 8px;
+            padding: 4px 10px;
+            font-size: 11px;
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.1);
+            color: var(--ink-whisper);
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.2s;
+            opacity: 0;
+        }
+
+        .code-wrapper:hover .copy-btn {
+            opacity: 1;
+        }
+
+        .copy-btn:hover {
+            background: var(--amber);
+            color: var(--bg);
+            border-color: var(--amber);
+        }
+
+        .task-del {
+            font-size: var(--fs-sm);
+            color: #888;
+            font-weight: 500;
+            cursor: pointer;
+            padding: 3px 12px;
+            border: 1px solid rgba(136, 136, 136, 0.2);
+            border-radius: 4px;
+            transition: all 0.2s;
+            background: rgba(0, 0, 0, 0.2);
+        }
+
+        .task-del:hover {
+            color: #ff4d4d;
+            background: rgba(200, 90, 74, 0.15);
+            border-color: var(--status-weak);
+        }
+
+        .task-add-row {
+            display: flex;
+            align-items: center;
+            gap: var(--space-2);
+            margin-top: var(--space-2);
+            padding: 4px 0;
+        }
+
+        .task-add-input {
+            flex: 1;
+            background: transparent;
+            border: none;
+            border-bottom: 1px dashed var(--hair);
+            color: var(--ink-dim);
+            font-size: var(--fs-sm);
+            outline: none;
+            padding: 4px 0;
+        }
+
+        .task-add-input:focus {
+            border-bottom-color: var(--amber);
+            color: var(--ink);
+        }
+
+        .task-add-btn {
+            color: var(--amber);
+            cursor: pointer;
+            font-size: var(--fs-xs);
+            font-weight: 700;
+            padding: 2px 8px;
+            border: 1px solid var(--amber-soft);
+            border-radius: 4px;
+        }
+
+        .ac-item {
+            border: 1px solid var(--hair);
+            margin-bottom: var(--space-3);
+            background: var(--bg-elev-2);
+        }
+
+        .ac-header {
+            display: flex;
+            align-items: center;
+            gap: var(--space-3);
+            padding: var(--space-3) var(--space-4);
+            border-bottom: 1px solid var(--hair);
+        }
+
+        .ac-id {
+            font-family: var(--font-mono);
+            font-size: var(--fs-xs);
+            color: var(--ink-mute);
+            min-width: 32px;
+        }
+
+        .ac-name {
+            flex: 1;
+            font-size: var(--fs-base);
+            font-weight: 500;
+        }
+
+        .ac-actions {
+            display: flex;
+            gap: var(--space-1);
+        }
+
+        .ac-btn {
+            font-size: var(--fs-xs);
+            font-weight: 700;
+            padding: 3px 10px;
+            border: 1px solid var(--hair);
+            background: var(--bg-elev-2);
+            color: var(--ink-mute);
+            cursor: pointer;
+            transition: all 0.15s;
+        }
+
+        .ac-btn-ok-hint {
+            color: var(--status-strong);
+            border-color: rgba(138, 181, 115, 0.2);
+        }
+
+        .ac-btn-q-hint {
+            color: var(--status-neutral);
+            border-color: rgba(201, 147, 57, 0.2);
+        }
+
+        .ac-btn.ac-ok {
+            background: var(--status-strong);
+            color: var(--bg);
+            border-color: var(--status-strong);
+        }
+
+        .ac-btn.ac-q {
+            background: var(--status-neutral);
+            color: var(--bg);
+            border-color: var(--status-neutral);
+        }
+
+        .ac-body {
+            padding: var(--space-4) 40px;
+            font-size: 14px;
+        }
+
+        .gwt-row {
+            display: grid;
+            grid-template-columns: 80px 1fr;
+            gap: var(--space-4);
+            margin-bottom: 8px;
+            color: var(--ink-dim);
+            line-height: 1.6;
+        }
+
+        .gwt-label {
+            font-family: var(--font-mono);
+            font-size: 11px;
+            color: var(--ink-whisper);
+            padding-top: 3px;
+            text-transform: uppercase;
+            letter-spacing: 0.12em;
+        }
+
+        /* RIGHT PANEL */
+        .rightpanel {
+            background: var(--bg-elev-1);
+            overflow-y: auto;
+            height: 100%;
+        }
+
+        .rp-section {
+            padding: var(--space-4);
+            border-bottom: 1px solid var(--hair);
+        }
+
+        .rp-title {
+            padding: var(--space-3) 0;
+            font-size: var(--fs-xs);
+            color: var(--ink-mute);
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+        }
+
+        .stat-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: var(--space-2);
+        }
+
+        .stat-label {
+            font-size: var(--fs-sm);
+            color: var(--ink-dim);
+        }
+
+        .stat-val {
+            font-family: var(--font-mono);
+            font-weight: 700;
+        }
+
+        .stat-ok {
+            color: var(--status-strong);
+        }
+
+        .stat-no {
+            color: var(--status-weak);
+        }
+
+        .stat-q {
+            color: var(--status-neutral);
+        }
+
+        .stat-cold {
+            color: var(--status-cold);
+        }
+
+        .risk-table,
+        .milestone-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: var(--fs-xs);
+            margin-bottom: var(--space-4);
+        }
+
+        .risk-table th,
+        .milestone-table th {
+            text-align: left;
+            padding: 8px;
+            color: var(--ink-mute);
+            border-bottom: 1px solid var(--hair);
+        }
+
+        .risk-table td,
+        .milestone-table td {
+            padding: 8px;
+            color: var(--ink-dim);
+            border-bottom: 1px solid var(--hair);
+        }
+
+        .ac-question {
+            margin-top: var(--space-4);
+            display: none;
+        }
+
+        .ac-question.visible {
+            display: block;
+        }
+
+        .ac-question-input {
+            width: 100%;
+            height: 80px;
+            background: var(--bg-elev-3);
+            border: 1px solid var(--hair);
+            color: var(--ink);
+            padding: var(--space-3);
+            font-family: var(--font-sans);
+            font-size: var(--fs-sm);
+            resize: none;
+            outline: none;
+            border-radius: 4px;
+        }
+
+        .ac-question-input:focus {
+            border-color: var(--amber);
+            background: var(--bg-elev-2);
+        }
+
+        .export-output {
+            margin-top: 10px;
+            background: #000;
+            padding: 10px;
+            font-family: var(--font-mono);
+            font-size: 10px;
+            color: #0f0;
+            white-space: pre-wrap;
+            display: none;
+        }
+
+        .export-output.visible {
+            display: block;
+        }
+
+        ::-webkit-scrollbar {
+            width: 4px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: var(--hair);
+        }
+    </style>
+</head>
+
+<body>
+    <svg style="position:fixed;width:0;height:0;pointer-events:none;">
+        <filter id="noise">
+            <feTurbulence type="fractalNoise" baseFrequency="0.85" numOctaves="2" />
+            <feColorMatrix values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 0.04 0" />
+        </filter>
+    </svg>
+
+    <div class="topbar">
+        <div class="topbar-left">
+            <div class="topbar-brand">◆ 评审台</div>
+            <div class="topbar-sep"></div>
+            <div class="topbar-doc" id="topbar-docname">...</div>
+            <div class="topbar-meta">
+                <span>版本 <span class="topbar-meta-val" id="topbar-version">v0.1</span></span>
+                <span>日期 <span class="topbar-meta-val" id="topbar-date">2026-05-14</span></span>
+            </div>
+        </div>
+        <div class="topbar-right">
+            <div class="progress-wrap">
+                <div class="progress-bar">
+                    <div class="progress-fill" id="progress-fill" style="width:0%"></div>
+                </div>
+                <div class="progress-text" id="progress-text">0 / 0 AC</div>
+            </div>
+            <button class="btn" onclick="location.reload()">重置</button>
+        </div>
+    </div>
+
+    <div class="layout">
+        <div class="sidebar">
+            <div class="sidebar-section">
+                <div class="sidebar-heading">文档结构</div>
+            </div>
+            <div id="nav-tree"></div>
+        </div>
+
+        <div class="main">
+            <div class="main-inner" id="main-content">
+                <!-- Views will be rendered here -->
+            </div>
+        </div>
+
+        <div class="rightpanel">
+            <div class="rp-section">
+                <div class="rp-title">审核统计</div>
+                <div class="stat-row"><span class="stat-label">AC 通过</span><span class="stat-val stat-ok"
+                        id="stat-ok">0</span></div>
+                <div class="stat-row"><span class="stat-label">AC 疑问</span><span class="stat-val stat-q"
+                        id="stat-q">0</span></div>
+                <div class="stat-row"><span class="stat-label">待审核</span><span class="stat-val stat-cold"
+                        id="stat-pending">0</span></div>
+            </div>
+            <div class="rp-section">
+                <div class="rp-title">操作</div>
+                <button class="btn-export" onclick="exportJSON()">▶ 导出审核 JSON</button>
+                <div class="export-output" id="export-output"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const DOC_DATA = {"epic_id": "E8", "title": "[Epic E8] 复权因子存储与计算方案重设计", "sections": [{"title": "背景", "content": "当前 <code class=\"inline-code\">stock_adjust_factor</code> 存在两个问题：\n\n1. <strong>字段语义错误</strong>：<code class=\"inline-code\">fore_adjust_factor</code> 和 <code class=\"inline-code\">back_adjust_factor</code> 被设计为独立字段，但前复权因子本质上是动态值（依赖当前最新因子），不能静态存储；SCF 仅填充 <code class=\"inline-code\">adjust_factor</code> 导致 <code class=\"inline-code\">fore_adjust_factor</code> 为 NULL，下游复权失效。\n2. <strong>存储冗余</strong>：SCF 每日全量写入约 5000+ 条，而多数股票的复权因子并未发生变化，记录无意义。\n\n本次重设计的核心判断：<strong>累积后复权因子（Tushare <code class=\"inline-code\">adj_factor</code>）是唯一适合持久化的基础量</strong>，前复权价格应在查询时实时计算，不存储前复权因子。", "stories": []}, {"title": "目标", "content": "- <code class=\"inline-code\">stock_adjust_factor</code> 仅存储&quot;变动事件&quot;，记录数从当前量级压缩 90%+ （待实测）\n- 字段语义清晰，废弃 <code class=\"inline-code\">fore_adjust_factor</code>，<code class=\"inline-code\">back_adjust_factor</code> 与 <code class=\"inline-code\">adjust_factor</code> 保持一致\n- 下游可通过统一公式派生前复权、后复权、不复权三种价格，且结果与 Tushare 官方误差 &lt; $10^{-3}$", "stories": []}, {"title": "范围", "content": "- <code class=\"inline-code\">scf-collector</code>：<code class=\"inline-code\">dao.py</code> 中 <code class=\"inline-code\">save_adj_factor</code> 方法\n- <code class=\"inline-code\">stock_adjust_factor</code> 表结构（字段废弃标记）\n- 历史数据一次性修复脚本\n- 单元测试 &amp; 审计脚本", "stories": []}, {"title": "非目标", "content": "- <strong>不改动 <code class=\"inline-code\">KlineService</code> 及任何下游服务</strong>（本次方案聚焦存储侧正确性，下游读取逻辑作为独立 Story 后续处理）\n- 不引入新的中间件或缓存层\n- 不处理港股、美股复权逻辑\n\n---", "stories": []}, {"title": "核心算法约定", "content": "Tushare <code class=\"inline-code\">adj_factor</code> 接口返回的是<strong>累积后复权因子</strong> $F$，各复权价格的计算公式如下：\n\n$$P_{\\text{back}} = P_{\\text{raw}} \\times F_{\\text{date}}$$\n\n$$P_{\\text{fore}} = P_{\\text{raw}} \\times \\frac{F_{\\text{date}}}{F_{\\text{latest}}}$$\n\n其中 $F_{\\text{latest}}$ 为该股票<strong>当前最新交易日</strong>对应的因子值，需在查询时动态获取。\n\n<strong>推论</strong>：\n\n- <code class=\"inline-code\">back_adjust_factor</code> = <code class=\"inline-code\">adjust_factor</code> = Tushare 的 $F$，可静态存储，历史值不变\n- <code class=\"inline-code\">fore_adjust_factor</code> 无法静态存储——每次除权事件后，所有历史记录的前复权因子都会变，存储无意义\n\n---", "stories": []}, {"title": "3. 用户故事 (User Stories)", "content": "采集侧从&quot;每日全量写入&quot;改为&quot;仅写入变动事件&quot;，字段统一为累积后复权因子。", "stories": [{"id": "E8-S1", "title": "变动检测写入", "desc": "**作为** `scf-collector`，**我希望** 在写入复权因子前先比对最新库存值，仅当因子发生变化时才执行 INSERT，**以便** 消除冗余记录，使表中每行都代表一个真实的除权除息事件。\n<div class='extra-section'><strong>核心代码示意</strong>\n<div class=\"code-wrapper\" data-lang=\"python\"><pre><code class=\"language-python\">def save_adj_factor(self, ts_code: str, adjust_date: str, adj_factor: float) -&gt; bool:\n    &quot;&quot;&quot;\n    仅在因子发生变化时写入，实现变动点存储。\n    返回 True 表示实际写入，False 表示跳过（无变化）。\n    &quot;&quot;&quot;\n    sql_latest = &quot;&quot;&quot;\n        SELECT adjust_factor FROM stock_adjust_factor\n        WHERE ts_code = %s\n        ORDER BY adjust_date DESC\n        LIMIT 1\n    &quot;&quot;&quot;\n    with self.conn.cursor() as cur:\n        cur.execute(sql_latest, (ts_code,))\n        row = cur.fetchone()\n        if row and abs(row[0] - adj_factor) &lt; 1e-8:\n            return False  # 未变化，跳过\n\n        sql_insert = &quot;&quot;&quot;\n            INSERT INTO stock_adjust_factor\n                (ts_code, adjust_date, fore_adjust_factor, back_adjust_factor, adjust_factor)\n            VALUES (%s, %s, NULL, %s, %s)\n        &quot;&quot;&quot;\n        cur.execute(sql_insert, (ts_code, adjust_date, adj_factor, adj_factor))\n        self.conn.commit()\n        return True</code></pre><button class=\"copy-btn\" onclick=\"copyCode(this)\">Copy</button></div>\n\n&gt; <code class=\"inline-code\">fore_adjust_factor</code> 显式写入 <code class=\"inline-code\">NULL</code>，标记为废弃字段。</div>", "tasks": [{"id": "E8-S1-T1", "text": "<strong>E8-S1-T1</strong> 修改 <code class=\"inline-code\">dao.py</code> <code class=\"inline-code\">save_adj_factor</code>：写入前执行 <code class=\"inline-code\">SELECT adjust_factor FROM stock_adjust_factor WHERE ts_code = %s ORDER BY adjust_date DESC LIMIT 1</code>，对比新旧值"}, {"id": "E8-S1-T2", "text": "<strong>E8-S1-T2</strong> 仅当 <code class=\"inline-code\">new_factor != latest_factor</code>（或该股票无历史记录）时执行 INSERT"}, {"id": "E8-S1-T3", "text": "<strong>E8-S1-T3</strong> 浮点比对使用 <code class=\"inline-code\">abs(new - old) &gt; 1e-8</code> 判断，避免浮点精度误判"}], "acs": [{"id": "AC1", "title": "AC 1: 幂等性——无除权变化时不产生新记录", "given": "数据库中 <code class=\"inline-code\">600519.SH</code> 最新 <code class=\"inline-code\">adjust_factor</code> = <code class=\"inline-code\">1.234</code>", "when": "SCF 采集到今日 <code class=\"inline-code\">adj_factor</code> = <code class=\"inline-code\">1.234</code> 并调用 <code class=\"inline-code\">save_adj_factor</code>", "then": "<code class=\"inline-code\">stock_adjust_factor</code> 中该股票记录数不增加，返回值为 <code class=\"inline-code\">False</code>"}, {"id": "AC2", "title": "AC 2: 变动点捕获——除权后正常入库", "given": "数据库中 <code class=\"inline-code\">600519.SH</code> 最新 <code class=\"inline-code\">adjust_factor</code> = <code class=\"inline-code\">1.234</code>", "when": "SCF 采集到今日 <code class=\"inline-code\">adj_factor</code> = <code class=\"inline-code\">1.356</code>（发生分红）并调用 <code class=\"inline-code\">save_adj_factor</code>", "then": "插入一条新记录，<code class=\"inline-code\">back_adjust_factor</code> = <code class=\"inline-code\">adjust_factor</code> = <code class=\"inline-code\">1.356</code>，<code class=\"inline-code\">fore_adjust_factor</code> = <code class=\"inline-code\">NULL</code>，返回值为 <code class=\"inline-code\">True</code>"}]}, {"id": "E8-S2", "title": "字段废弃标记", "desc": "**作为** DB Auditor，**我希望** 在表结构上明确标记 `fore_adjust_factor` 为废弃字段，**以便** 防止后续新代码误读该列。", "tasks": [{"id": "E8-S2-T1", "text": "<strong>E8-S2-T1</strong> 执行以下 DDL，为列添加注释\n\n<div class=\"code-wrapper\" data-lang=\"sql\"><pre><code class=\"language-sql\">ALTER TABLE stock_adjust_factor\n    MODIFY COLUMN fore_adjust_factor DECIMAL(20, 6) NULL\n        COMMENT &#x27;已废弃。前复权因子不可静态存储，请用 adjust_factor / latest_adjust_factor 实时计算&#x27;,\n    MODIFY COLUMN back_adjust_factor DECIMAL(20, 6) NULL\n        COMMENT &#x27;累积后复权因子，与 adjust_factor 同值，保留用于 legacy 兼容&#x27;;</code></pre><button class=\"copy-btn\" onclick=\"copyCode(this)\">Copy</button></div>"}, {"id": "E8-S2-T2", "text": "<strong>E8-S2-T2</strong> 在 <code class=\"inline-code\">TABLES_INDEX.md</code> 中更新字段说明，注明废弃原因和替代方案"}], "acs": [{"id": "AC1", "title": "AC 1: 数据库元数据审计", "given": "执行上述 DDL", "when": "<code class=\"inline-code\">SHOW FULL COLUMNS FROM stock_adjust_factor</code>", "then": "<code class=\"inline-code\">fore_adjust_factor</code> 的 Comment 包含&quot;已废弃&quot;字样"}]}]}, {"title": "E8-Stage2: 历史数据修复", "content": "一次性脚本，修复存量数据的字段缺失和冗余记录。<strong>按顺序执行，不可跳步。</strong>", "stories": [{"id": "E8-S3", "title": "字段回填", "desc": "**作为** Data Quality Steward，**我希望** 将历史记录中 `fore_adjust_factor IS NULL` 的行的 `back_adjust_factor` 对齐为 `adjust_factor` 值，**以便** 消除字段空值对下游 legacy 查询的影响。", "tasks": [{"id": "E8-S3-T1", "text": "<strong>E8-S3-T1</strong> 执行回填 SQL（可分批，每次 10000 行）\n\n<div class=\"code-wrapper\" data-lang=\"sql\"><pre><code class=\"language-sql\">-- 回填 back_adjust_factor（fore 保持 NULL，不回填）\nUPDATE stock_adjust_factor\nSET back_adjust_factor = adjust_factor\nWHERE back_adjust_factor IS NULL\n  AND adjust_factor IS NOT NULL\nLIMIT 10000;\n-- 循环执行直到 affected rows = 0</code></pre><button class=\"copy-btn\" onclick=\"copyCode(this)\">Copy</button></div>"}, {"id": "E8-S3-T2", "text": "<strong>E8-S3-T2</strong> 验证回填结果\n\n<div class=\"code-wrapper\" data-lang=\"sql\"><pre><code class=\"language-sql\">SELECT COUNT(*) AS remaining_nulls\nFROM stock_adjust_factor\nWHERE back_adjust_factor IS NULL AND adjust_factor IS NOT NULL;\n-- 预期结果：0</code></pre><button class=\"copy-btn\" onclick=\"copyCode(this)\">Copy</button></div>"}], "acs": [{"id": "AC1", "title": "AC 1: 存量数据空值审计", "given": "执行回填脚本完毕", "when": "执行上述验证 SQL", "then": "<code class=\"inline-code\">remaining_nulls</code> = 0"}]}, {"id": "E8-S4", "title": "冗余记录压缩", "desc": "**作为** Data Quality Steward，**我希望** 删除 `adjust_factor` 与前一条记录相同的冗余行，仅保留变动点，**以便** 使历史数据符合\"变动事件\"存储规范。", "tasks": [{"id": "E8-S4-T1", "text": "<strong>E8-S4-T1</strong> <strong>执行前备份</strong>\n\n<div class=\"code-wrapper\" data-lang=\"bash\"><pre><code class=\"language-bash\"># 在数据库服务器执行\nmysqldump -u root -p your_db stock_adjust_factor \\\n  &gt; /backup/stock_adjust_factor_$(date +%Y%m%d).sql</code></pre><button class=\"copy-btn\" onclick=\"copyCode(this)\">Copy</button></div>"}, {"id": "E8-S4-T2", "text": "<strong>E8-S4-T2</strong> 通过 Python 脚本逐股票处理（避免大事务锁表）\n\n<div class=\"code-wrapper\" data-lang=\"python\"><pre><code class=\"language-python\">import pymysql\n\ndef compress_adj_factors(conn, ts_code: str) -&gt; int:\n    &quot;&quot;&quot;\n    删除 ts_code 中与前一条记录 adjust_factor 相同的冗余行。\n    返回删除的行数。\n    &quot;&quot;&quot;\n    sql_select = &quot;&quot;&quot;\n        SELECT id, adjust_date, adjust_factor\n        FROM stock_adjust_factor\n        WHERE ts_code = %s\n        ORDER BY adjust_date ASC\n    &quot;&quot;&quot;\n    with conn.cursor() as cur:\n        cur.execute(sql_select, (ts_code,))\n        rows = cur.fetchall()\n\n    ids_to_delete = []\n    prev_factor = None\n    for row_id, adjust_date, factor in rows:\n        if prev_factor is not None and abs(factor - prev_factor) &lt; 1e-8:\n            ids_to_delete.append(row_id)\n        else:\n            prev_factor = factor\n\n    if ids_to_delete:\n        sql_delete = &quot;DELETE FROM stock_adjust_factor WHERE id IN ({})&quot;.format(\n            &#x27;,&#x27;.join([&#x27;%s&#x27;] * len(ids_to_delete))\n        )\n        with conn.cursor() as cur:\n            cur.execute(sql_delete, ids_to_delete)\n        conn.commit()\n\n    return len(ids_to_delete)</code></pre><button class=\"copy-btn\" onclick=\"copyCode(this)\">Copy</button></div>"}, {"id": "E8-S4-T3", "text": "<strong>E8-S4-T3</strong> 获取全量 <code class=\"inline-code\">ts_code</code> 列表，循环调用上述函数，记录日志"}], "acs": [{"id": "AC1", "title": "AC 1: 压缩后无相邻重复审计", "given": "冗余压缩脚本执行完毕", "when": "对任意 <code class=\"inline-code\">ts_code</code> 查询相邻两行 <code class=\"inline-code\">adjust_factor</code> 相同的记录数", "then": "结果为 0"}, {"id": "AC2", "title": "AC 2: 变动点完整性审计", "given": "压缩完成后", "when": "查询 <code class=\"inline-code\">600519.SH</code> 在已知除权日（如 <code class=\"inline-code\">2023-07-03</code>）前后的记录", "then": "该除权日对应的记录存在，且因子值与 Tushare 原始数据一致"}]}]}, {"title": "E8-Stage3: 深度审计", "content": "", "stories": [{"id": "E8-S5", "title": "抽样对齐与前复权校验", "desc": "**作为** Data Quality Steward，**我希望** 对修复后的数据库进行抽样对齐验证，**以便** 确认本地数据与 Tushare 权威数据的一致性。", "tasks": [{"id": "E8-S5-T1", "text": "<strong>E8-S5-T1</strong> 随机抽取 100 只活跃股票（含 <code class=\"inline-code\">600519.SH</code>、<code class=\"inline-code\">000001.SZ</code> 等权重股），调用 Tushare <code class=\"inline-code\">adj_factor</code> 接口拉取全量历史，与本地变动点逐行对比"}, {"id": "E8-S5-T2", "text": "<strong>E8-S5-T2</strong> 对 500 个随机历史价格点执行前复权公式校验\n\n<div class=\"code-wrapper\" data-lang=\"python\"><pre><code class=\"language-python\">def validate_fore_adj(conn, tushare_api, sample_size: int = 500):\n    &quot;&quot;&quot;\n    随机抽取样本点，校验前复权计算误差。\n    &quot;&quot;&quot;\n    errors = []\n    samples = fetch_random_samples(conn, sample_size)  # 随机取 (ts_code, trade_date, raw_close)\n\n    for ts_code, trade_date, raw_close in samples:\n        # 本地：取 trade_date 当日因子\n        f_date = get_factor(conn, ts_code, trade_date)\n        # 本地：取最新因子\n        f_latest = get_latest_factor(conn, ts_code)\n        local_adj = raw_close * (f_date / f_latest)\n\n        # Tushare 官方前复权收盘价\n        tushare_adj = tushare_api.get_adj_close(ts_code, trade_date)\n\n        error = abs(local_adj - tushare_adj) / tushare_adj\n        if error &gt; 1e-3:\n            errors.append({\n                &#x27;ts_code&#x27;: ts_code,\n                &#x27;trade_date&#x27;: trade_date,\n                &#x27;local&#x27;: local_adj,\n                &#x27;tushare&#x27;: tushare_adj,\n                &#x27;error&#x27;: error\n            })\n\n    return errors</code></pre><button class=\"copy-btn\" onclick=\"copyCode(this)\">Copy</button></div>"}, {"id": "E8-S5-T3", "text": "<strong>E8-S5-T3</strong> 输出审计报告（CSV），记录异常点供人工复核"}], "acs": [{"id": "AC1", "title": "AC 1: 算法实现一致性验证", "given": "500 个样本点校验完毕", "when": "统计误差 &gt; $10^{-3}$ 的样本数", "then": "异常率 &lt; 0.2%（即 500 个样本中异常点 ≤ 1 个）"}]}]}, {"title": "技术依赖", "content": "- Tushare Token 有效，<code class=\"inline-code\">adj_factor</code> 接口可正常调用\n- <code class=\"inline-code\">stock_adjust_factor</code> 表存在 <code class=\"inline-code\">id</code>（主键）、<code class=\"inline-code\">ts_code</code>、<code class=\"inline-code\">adjust_date</code>、<code class=\"inline-code\">adjust_factor</code>、<code class=\"inline-code\">fore_adjust_factor</code>、<code class=\"inline-code\">back_adjust_factor</code> 字段\n- MySQL 5.7+，支持窗口函数（<code class=\"inline-code\">LAG</code>）", "stories": []}, {"title": "风险与缓解", "content": "| 风险 | 影响 | 概率 | 缓解措施 |\n|---|---|---|---|\n| 压缩脚本误删变动点 | 高 | 低 | E8-S4-T1 执行前强制备份；压缩前后对比变动点总数 |\n| Tushare 接口限流导致审计超时 | 中 | 中 | 审计脚本加 sleep(0.5) 控制频率，分批执行 |\n| 下游 legacy 代码仍读 <code class=\"inline-code\">fore_adjust_factor</code> | 高 | 高 | 本 Epic 不改下游；字段 comment 标记废弃，待独立 Story 修复 |\n| 浮点比对阈值 <code class=\"inline-code\">1e-8</code> 误判 | 低 | 低 | 人工抽查几只高价股（茅台等）确认因子精度 |", "stories": []}, {"title": "里程碑", "content": "| 里程碑 | 计划日期 | 交付物 |\n|---|---|---|\n| M1 | TBD | E8-S1 完成：SCF 变动检测上线 |\n| M2 | TBD | E8-S3/S4 完成：历史数据修复 &amp; 压缩 |\n| M3 | TBD | E8-S5 完成：审计报告输出，异常率达标 |", "stories": []}, {"title": "度量指标", "content": "- <code class=\"inline-code\">stock_adjust_factor</code> 表总行数（预期压缩后下降 ≥ 90%）\n- 每日新增记录数（预期 ≤ 当日实际发生除权股票数，正常市场约 0~50 只）\n- 前复权校验异常率 &lt; 0.2%", "stories": []}, {"title": "变更记录", "content": "| 日期 | 版本 | 变更 | 作者 |\n|---|---|---|---|\n| 2026-05-13 | v0.1 | 初稿，基于累积后复权因子重设计方案 | — |\n\n---", "stories": []}, {"title": "待确认事项", "content": "- [ ] <strong>TBD-1</strong>：<code class=\"inline-code\">stock_adjust_factor</code> 是否有 <code class=\"inline-code\">id</code> 主键字段（E8-S4 删除逻辑依赖主键）；若无则改用 <code class=\"inline-code\">(ts_code, adjust_date)</code> 联合删除\n- [ ] <strong>TBD-2</strong>：备份存储路径和保留时长与 DBA 确认\n- [ ] <strong>TBD-3</strong>：M1~M3 实际上线时间窗口", "stories": []}], "tbds": [{"id": "TBD-1", "text": "- [ ] **TBD-1**：`stock_adjust_factor` 是否有 `id` 主键字段（E8-S4 删除逻辑依赖主键）；若无则改用 `(ts_code, adjust_date)` 联合删除"}, {"id": "TBD-2", "text": "- [ ] **TBD-2**：备份存储路径和保留时长与 DBA 确认"}, {"id": "TBD-3", "text": "- [ ] **TBD-3**：M1~M3 实际上线时间窗口"}]};
+
+        const state = {
+            acStatus: {},
+            acQuestions: {},
+            taskDeleted: {},
+            storySubTabState: {},
+            addedTasks: {},
+            activeViewId: 'sec-0',
+            tbdResolved: {},
+            tbdResponses: {}
+        };
+
+        function init() {
+            document.getElementById('topbar-docname').textContent = DOC_DATA.title;
+            document.getElementById('topbar-version').textContent = DOC_DATA.version;
+            document.getElementById('topbar-date').textContent = DOC_DATA.date;
+
+            renderNavTree();
+            renderMainContent();
+            updateStats();
+        }
+
+        function renderNavTree() {
+            const tree = document.getElementById('nav-tree');
+            let html = '';
+
+            DOC_DATA.sections.forEach((section, sIdx) => {
+                if (section.title === '待确认事项') return;
+                const isActive = state.activeViewId === `sec-${sIdx}`;
+                html += `<div class="sidebar-section">
+                    <div class="nav-story ${isActive ? 'active' : ''}" onclick="selectView('sec-${sIdx}')">
+                        <div class="nav-story-dot"></div>
+                        <span style="font-weight:600;font-size:var(--fs-xs)">${section.title}</span>
+                    </div>`;
+
+                section.stories.forEach(story => {
+                    const st = getStoryStatus(story.id);
+                    const bc = st === 'ok' ? 'badge-ok' : st === 'no' ? 'badge-no' : st === 'q' ? 'badge-q' : 'badge-pending';
+                    const isActiveStory = state.activeViewId === story.id;
+                    html += `<div class="nav-story ${isActiveStory ? 'active' : ''}" style="padding-left:32px" onclick="selectView('${story.id}')">
+                        <div class="nav-story-dot" style="opacity:0.5"></div>
+                        <span style="flex:1;font-size:var(--fs-xs)">${story.id}</span>
+                        <span class="status-badge-xs ${bc}">${st}</span>
+                    </div>`;
+                });
+
+                html += `</div>`;
+            });
+
+            if (DOC_DATA.tbds && DOC_DATA.tbds.length > 0) {
+                const isActiveTbd = state.activeViewId === 'tbd';
+                html += `<div class="sidebar-section">
+                    <div class="nav-story ${isActiveTbd ? 'active' : ''}" onclick="selectView('tbd')">
+                        <div class="nav-story-dot"></div>
+                        <span style="font-weight:600;font-size:var(--fs-xs)">待确认事项</span>
+                    </div>
+                </div>`;
+            }
+
+            tree.innerHTML = html;
+        }
+
+        function renderRiskTable() {
+            const tbody = document.querySelector('#risk-table tbody');
+            tbody.innerHTML = DOC_DATA.risks.map(r => `<tr><td>${r.risk}</td><td>${r.impact}</td><td>${r.prob}</td><td>${r.mitigation}</td></tr>`).join('');
+        }
+
+        function renderMilestoneTable() {
+            const tbody = document.querySelector('#milestone-table tbody');
+            tbody.innerHTML = DOC_DATA.milestones.map(m => `<tr><td>${m.name}</td><td>${m.date}</td><td>${m.deliverable}</td></tr>`).join('');
+        }
+
+        function renderMainContent() {
+            const container = document.getElementById('main-content');
+            let html = '';
+
+            DOC_DATA.sections.forEach((section, sIdx) => {
+                if (section.title === '待确认事项') return;
+                // Section Panel
+                html += `<div class="view-panel ${state.activeViewId === `sec-${sIdx}` ? 'active' : ''}" id="view-sec-${sIdx}">
+                    <div class="story-detail-header"><span class="story-title">${section.title}</span></div>
+                    <div class="content-well">
+                        <div class="story-tab-content active"><div class="info-block">${section.content}</div></div>
+                    </div>
+                </div>`;
+
+                // Story Panels within this section
+                section.stories.forEach(story => {
+                    html += renderStoryView(story);
+                });
+            });
+
+            if (DOC_DATA.tbds && DOC_DATA.tbds.length > 0) {
+                html += `<div class="view-panel ${state.activeViewId === 'tbd' ? 'active' : ''}" id="view-tbd">
+                    <div class="story-detail-header"><span class="story-title">待确认事项</span></div>
+                    <div class="content-well">
+                        <div class="story-tab-content active" style="padding: var(--space-6)">
+                            ${DOC_DATA.tbds.map(t => `
+                                <div class="tbd-item-wrap" style="margin-bottom:24px">
+                                    <div class="task-item" style="border:none;padding:8px 0">
+                                        <input type="checkbox" style="width:16px;height:16px" ${state.tbdResolved[t.id] ? 'checked' : ''} onchange="state.tbdResolved['${t.id}']=this.checked;updateStats()">
+                                        <span style="font-family:var(--font-mono);font-size:var(--fs-xs);color:var(--amber);margin:0 12px">${t.id}</span>
+                                        <span style="flex:1;font-size:var(--fs-base);color:var(--ink);font-weight:600">${t.text}</span>
+                                    </div>
+                                    <div style="padding-left:40px;margin-top:8px">
+                                        <textarea class="ac-question-input" style="height:60px" placeholder="在此输入确认结论/回复..." onchange="state.tbdResponses['${t.id}']=this.value;updateStats()">${state.tbdResponses[t.id] || ''}</textarea>
+                                    </div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                </div>`;
+            }
+
+            container.innerHTML = html;
+        }
+
+        function renderStoryView(story) {
+            const isActive = state.activeViewId === story.id;
+            const activeSubTab = state.storySubTabState[story.id] || 'tasks';
+
+            return `<div class="view-panel ${isActive ? 'active' : ''}" id="view-${story.id}">
+                <div class="story-detail-header">
+                    <span class="story-id">${story.id}</span>
+                    <span class="story-title">${story.title}</span>
+                </div>
+                <div class="story-body">
+                    <div class="story-tabs">
+                        <div class="story-tab ${activeSubTab === 'tasks' ? 'active' : ''}" onclick="switchSubTab('${story.id}', 'tasks')">任务清单</div>
+                        ${story.acs.map((ac, idx) => `
+                            <div class="story-tab ${activeSubTab === 'ac-' + ac.id ? 'active' : ''}" onclick="switchSubTab('${story.id}', 'ac-${ac.id}')">
+                                AC ${idx + 1}
+                            </div>
+                        `).join('')}
+                    </div>
+                    
+                    <div class="content-well">
+                        <div class="story-tab-content ${activeSubTab === 'tasks' ? 'active' : ''}" id="stc-${story.id}-tasks">
+                            ${story.desc ? `<div class="info-block" style="margin:0 0 var(--space-4); border:none; border-bottom:1px solid var(--hair)">${story.desc}</div>` : ''}
+                            <div id="tasks-${story.id}">
+                                ${story.tasks.map(t => `<div class="task-item ${state.taskDeleted[t.id] ? 'deleted' : ''}" id="task-${t.id}"><div class="task-id">${t.id}</div><div class="task-text">${t.text}</div><div class="task-del" onclick="toggleTask('${t.id}')">${state.taskDeleted[t.id] ? '恢复' : '移除'}</div></div>`).join('')}
+                            </div>
+                            <div class="task-add-row">
+                                <input type="text" class="task-add-input" id="add-input-${story.id}" placeholder="添加新任务..." onkeyup="if(event.key==='Enter') addTask('${story.id}')">
+                                <div class="task-add-btn" onclick="addTask('${story.id}')">+ 添加</div>
+                            </div>
+                        </div>
+
+                        ${story.acs.map(ac => `
+                            <div class="story-tab-content ${activeSubTab === 'ac-' + ac.id ? 'active' : ''}" id="stc-${story.id}-ac-${ac.id}">
+                                ${renderAC(story.id, ac)}
+                            </div>`).join('')}
+                    </div>
+                </div>
+            </div>`;
+        }
+
+        function renderAC(storyId, ac) {
+            const key = `${storyId}-${ac.id}`, status = state.acStatus[key] || null;
+            return `<div class="ac-item" id="ac-${key}">
+                <div class="ac-header">
+                    <span class="ac-id">${ac.id}</span>
+                    <span class="ac-name">${ac.title}</span>
+                    <div class="ac-actions">
+                        <button class="ac-btn ac-btn-ok-hint ${status === 'ok' ? 'ac-ok' : ''}" onclick="setAC('${key}','ok')">✓ 通过</button>
+                        <button class="ac-btn ac-btn-q-hint ${status === 'q' ? 'ac-q' : ''}" onclick="setAC('${key}','q')">⚠ 疑问</button>
+                    </div>
+                </div>
+                <div class="ac-body">
+                    <div class="gwt-row"><div class="gwt-label">Given</div><div>${ac.given}</div></div>
+                    <div class="gwt-row"><div class="gwt-label">When</div><div>${ac.when}</div></div>
+                    <div class="gwt-row"><div class="gwt-label">Then</div><div>${ac.then}</div></div>
+                    <div class="ac-question ${status === 'q' ? 'visible' : ''}" id="acq-${key}">
+                        <textarea class="ac-question-input" placeholder="疑问内容..." onchange="state.acQuestions['${key}']=this.value;updateStats()">${state.acQuestions[key] || ''}</textarea>
+                    </div>
+                </div>
+            </div>`;
+        }
+
+        function getStoryStatus(storyId) {
+            const story = findStory(storyId);
+            if (!story) return 'pending';
+            const acs = story.acs.map(ac => state.acStatus[`${storyId}-${ac.id}`]);
+            if (acs.includes('no')) return 'no';
+            if (acs.includes('q')) return 'q';
+            if (acs.every(s => s === 'ok')) return 'ok';
+            return 'pending';
+        }
+
+        function setAC(key, status) {
+            const prev = state.acStatus[key];
+            state.acStatus[key] = prev === status ? null : status;
+            const qArea = document.getElementById(`acq-${key}`);
+            if (qArea) {
+                if (state.acStatus[key] === 'q') qArea.classList.add('visible');
+                else qArea.classList.remove('visible');
+            }
+            updateStats();
+        }
+
+        function toggleTask(taskId) {
+            state.taskDeleted[taskId] = !state.taskDeleted[taskId];
+            renderNavTree();
+            updateStats();
+        }
+
+        function selectView(viewId) {
+            state.activeViewId = viewId;
+            document.querySelectorAll('.view-panel').forEach(c => c.classList.remove('active'));
+            const card = document.getElementById(`view-${viewId}`);
+            if (card) card.classList.add('active');
+            renderNavTree();
+        }
+
+        function switchSubTab(storyId, tabId) {
+            state.storySubTabState[storyId] = tabId;
+            renderMainContent();
+        }
+
+        function addTask(storyId) {
+            const input = document.getElementById(`add-input-${storyId}`);
+            const text = input.value.trim();
+            if (!text) return;
+            if (!state.addedTasks[storyId]) state.addedTasks[storyId] = [];
+            state.addedTasks[storyId].push(text);
+            input.value = '';
+            renderTasks(storyId);
+        }
+
+        function removeAddedTask(storyId, idx) {
+            state.addedTasks[storyId].splice(idx, 1);
+            renderTasks(storyId);
+        }
+
+        function renderTasks(storyId) {
+            const story = findStory(storyId);
+            const container = document.getElementById(`tasks-${storyId}`);
+            let html = story.tasks.map(t => `<div class="task-item ${state.taskDeleted[t.id] ? 'deleted' : ''}" id="task-${t.id}"><span class="task-id">${t.id}</span><span class="task-text">${t.text}</span><span class="task-del" onclick="toggleTask('${t.id}')">${state.taskDeleted[t.id] ? '恢复' : '移除'}</span></div>`).join('');
+            html += (state.addedTasks[storyId] || []).map((t, idx) => `<div class="task-item" id="added-${storyId}-${idx}"><span class="task-id">NEW</span><span class="task-text">${t}</span><span class="task-del" onclick="removeAddedTask('${storyId}', ${idx})">删除</span></div>`).join('');
+            container.innerHTML = html;
+        }
+
+        function findStory(storyId) {
+            for (let section of DOC_DATA.sections) {
+                const s = section.stories.find(s => s.id === storyId);
+                if (s) return s;
+            }
+            return null;
+        }
+
+        function switchTab(el, panelId) {
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+            el.classList.add('active'); document.getElementById(panelId).classList.add('active');
+        }
+
+        function updateStats() {
+            let ok = 0, q = 0, totalAC = 0;
+            DOC_DATA.sections.forEach(section => {
+                section.stories.forEach(s => {
+                    s.acs.forEach(ac => {
+                        totalAC++;
+                        const st = state.acStatus[`${s.id}-${ac.id}`];
+                        if (st === 'ok') ok++;
+                        else if (st === 'q') q++;
+                    });
+                });
+            });
+            document.getElementById('progress-fill').style.width = (totalAC ? (ok / totalAC * 100) : 0) + '%';
+            document.getElementById('progress-text').textContent = `${ok} / ${totalAC} AC`;
+            document.getElementById('stat-ok').textContent = ok;
+            document.getElementById('stat-q').textContent = q;
+            document.getElementById('stat-pending').textContent = totalAC - ok - q;
+            renderNavTree();
+        }
+
+        function exportJSON() {
+            try {
+                const output = {
+                    doc: DOC_DATA.doc_id || "Unknown",
+                    audit_date: new Date().toISOString(),
+                    results: Object.keys(state.acStatus || {}).map(key => {
+                        const parts = key.split('-');
+                        return {
+                            story: parts[0],
+                            ac: parts[1],
+                            status: state.acStatus[key]
+                        };
+                    }),
+                    questions: state.acQuestions || {},
+                    deleted_tasks: state.taskDeleted || {},
+                    added_tasks: state.addedTasks || {},
+                    tbd_resolved: state.tbdResolved || {},
+                    tbd_responses: state.tbdResponses || {},
+                    agent_instruction: "请根据上述评审结果更新文档。1. 对于标记为 'q' 的条目，参考 questions 修改；2. 对于 deleted_tasks 为 true 的任务，从文档中移除；3. 对于 added_tasks 中的内容，作为新任务插入到对应 Story 的任务清单中；4. 对于 tbd_resolved 为 true 的 TBD 项，将其标记为 [x]，并在其下方以引用块形式插入对应的 tbd_responses。"
+                };
+
+                const json = JSON.stringify(output, null, 2);
+                console.log("Exporting JSON:", json);
+
+                const outEl = document.getElementById('export-output');
+                if (outEl) {
+                    outEl.textContent = json;
+                    outEl.classList.add('visible');
+                    outEl.scrollIntoView({ behavior: 'smooth' });
+                }
+
+                // 尝试复制到剪贴板，带 fallback
+                if (navigator.clipboard && navigator.clipboard.writeText) {
+                    navigator.clipboard.writeText(json).then(() => {
+                        const btn = document.querySelector('.btn-export');
+                        const originalText = btn.textContent;
+                        btn.textContent = '✓ 已复制到剪贴板';
+                        btn.style.color = 'var(--status-strong)';
+                        btn.style.borderColor = 'var(--status-strong)';
+                        setTimeout(() => {
+                            btn.textContent = originalText;
+                            btn.style.color = '';
+                            btn.style.borderColor = '';
+                        }, 2000);
+                    }).catch(err => {
+                        console.error('Clipboard error:', err);
+                        alert('JSON 已在右侧面板下方生成，请手动复制。');
+                    });
+                } else {
+                    alert('JSON 已在右侧面板下方生成，请手动复制。');
+                }
+            } catch (e) {
+                console.error("Export Error:", e);
+                alert("导出失败: " + e.message);
+            }
+        }
+
+        function copyCode(btn) {
+            const code = btn.parentElement.querySelector('code').innerText;
+            navigator.clipboard.writeText(code).then(() => {
+                const originalText = btn.textContent;
+                btn.textContent = 'Copied!';
+                btn.style.color = 'var(--status-strong)';
+                setTimeout(() => {
+                    btn.textContent = originalText;
+                    btn.style.color = '';
+                }, 2000);
+            });
+        }
+
+        init();
+    </script>
+</body>
+
+</html>
