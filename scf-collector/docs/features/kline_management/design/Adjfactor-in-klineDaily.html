@@ -1,0 +1,655 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>日线表内嵌复权因子设计方案</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Noto+Serif+SC:wght@400;700;900&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    
+    <!-- Libraries -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/github-markdown-css/github-markdown-dark.css">
+    <script src="https://cdn.jsdelivr.net/npm/shiki"></script>
+    
+    <style>
+        :root {
+            --bg: #0a0a0a;
+            --surface: #121212;
+            --surface-hover: #1a1a1a;
+            --border: #222222;
+            --accent: #eab308;
+            --accent-glow: rgba(234, 179, 8, 0.2);
+            --text-primary: #f8fafc;
+            --text-secondary: #94a3b8;
+            --text-muted: #64748b;
+            --font-sans: 'Outfit', 'Inter', -apple-system, sans-serif;
+            --font-serif: 'Noto Serif SC', serif;
+            --font-mono: 'JetBrains Mono', monospace;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background-color: var(--bg);
+            color: var(--text-primary);
+            font-family: var(--font-sans);
+            line-height: 1.6;
+            -webkit-font-smoothing: antialiased;
+            overflow-x: hidden;
+        }
+
+        /* Subtle background glow */
+        body::after {
+            content: '';
+            position: fixed;
+            top: 0;
+            right: 0;
+            width: 40vw;
+            height: 40vh;
+            background: radial-gradient(circle, var(--accent-glow) 0%, transparent 70%);
+            z-index: -1;
+            filter: blur(100px);
+            pointer-events: none;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 4rem 2rem;
+            animation: fadeIn 0.8s ease-out;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        header {
+            margin-bottom: 4rem;
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 2rem;
+        }
+
+        .meta {
+            font-family: var(--font-mono);
+            font-size: 0.8rem;
+            color: var(--accent);
+            text-transform: uppercase;
+            letter-spacing: 0.15em;
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .meta::before {
+            content: '';
+            width: 24px;
+            height: 1px;
+            background-color: var(--accent);
+        }
+
+        h1 {
+            font-family: var(--font-serif);
+            font-size: 3rem;
+            font-weight: 900;
+            line-height: 1.1;
+            margin-bottom: 1.5rem;
+            background: linear-gradient(135deg, #fff 0%, #a5a5a5 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .markdown-body {
+            background: transparent !important;
+            color: var(--text-primary) !important;
+            font-family: var(--font-sans) !important;
+            font-size: 1.1rem !important;
+        }
+
+        .markdown-body h2, .markdown-body h3, .markdown-body h4 {
+            font-family: var(--font-serif);
+            border-bottom: none !important;
+            color: var(--text-primary);
+            margin-top: 2.5rem !important;
+        }
+
+        .markdown-body h2 { font-size: 2rem; color: var(--accent); }
+        
+        .markdown-body pre {
+            background-color: var(--surface) !important;
+            border: 1px solid var(--border);
+            border-radius: 12px !important;
+            padding: 1.5rem !important;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+        }
+
+        .markdown-body code {
+            background-color: var(--surface-hover) !important;
+            color: var(--accent) !important;
+            font-family: var(--font-mono) !important;
+            border-radius: 4px;
+            padding: 0.2rem 0.4rem;
+        }
+
+        .markdown-body pre code {
+            background-color: transparent !important;
+            padding: 0 !important;
+        }
+
+        .markdown-body blockquote {
+            border-left: 4px solid var(--accent) !important;
+            background: var(--surface);
+            padding: 1rem 1.5rem;
+            border-radius: 0 8px 8px 0;
+            color: var(--text-secondary);
+        }
+
+        .markdown-body table {
+            background: var(--surface);
+            border-collapse: collapse;
+            border-radius: 8px;
+            overflow: hidden;
+            width: 100%;
+        }
+
+        .markdown-body table th, .markdown-body table td {
+            border: 1px solid var(--border) !important;
+            padding: 1rem !important;
+        }
+
+        .markdown-body table tr {
+            background: transparent !important;
+        }
+
+        .markdown-body table tr:nth-child(2n) {
+            background: rgba(255,255,255,0.02) !important;
+        }
+
+        footer {
+            margin-top: 6rem;
+            padding-top: 2rem;
+            border-top: 1px solid var(--border);
+            color: var(--text-muted);
+            font-size: 0.9rem;
+            text-align: center;
+        }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: var(--bg); }
+        ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
+
+        /* TOC - Floating on larger screens */
+        @media (min-width: 1400px) {
+            .toc {
+                position: fixed;
+                left: 2rem;
+                top: 10rem;
+                width: 200px;
+                font-size: 0.8rem;
+                color: var(--text-muted);
+            }
+            .toc ul { list-style: none; }
+            .toc li { margin-bottom: 0.5rem; }
+            .toc a { color: inherit; text-decoration: none; transition: color 0.2s; }
+            .toc a:hover { color: var(--accent); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div class="meta">SCF-COLLECTOR | 2026-05-15 20:33</div>
+            <h1>日线表内嵌复权因子设计方案</h1>
+        </header>
+
+        <article id="content" class="markdown-body">
+            <!-- Loading indicator -->
+            <p style="color: var(--text-muted)">正在解析文档内容...</p>
+        </article>
+
+        <footer>
+            &copy; 2026 MicroStock Project Docs | Generated by Antigravity
+        </footer>
+    </div>
+
+    <script id="markdown-raw" type="text/markdown"># 日线表内嵌复权因子设计方案
+
+## 背景
+
+当前复权因子存储于独立的 `stock_adjust_factor` 表（变动点模式），日线表 `stock_kline_daily` 不含因子字段。
+全市场选股和快速回测场景下，每次计算复权价需要额外 JOIN，查询链路长、性能差。
+
+本方案将累积后复权因子直接内嵌至日线表，消除 JOIN，同时保留 `stock_adjust_factor` 作为审计源。
+
+## 目标
+
+- `stock_kline_daily` 新增 `adj_factor` 字段，存储每日对应的累积后复权因子
+- 历史数据一次性回填完毕，覆盖率 100%（无 NULL 行）
+- 后续日线采集自动携带当日因子写入，无需人工干预
+- 全市场选股查询不再依赖 `stock_adjust_factor` 表
+
+## 范围
+
+- `stock_kline_daily` 表结构变更（加字段）
+- 历史数据回填脚本（一次性）
+- `scf-collector` 日线采集流程（写入逻辑变更）
+- 单元测试 & 回填验证脚本
+
+## 非目标
+
+- 不修改 `stock_adjust_factor` 表，保留其作为变动点审计源
+- 不改动 `KlineService` 及下游服务的读取逻辑（独立 Story 处理）
+- 不处理港股、美股
+- 不存储前复权因子（原因见下方算法约定）
+
+---
+
+## 核心算法约定
+
+Tushare `adj_factor` 返回的是**累积后复权因子** $F$，是历史稳定量，适合随日线持久化存储。
+
+各复权价格计算公式：
+
+$$P_{\text{back}} = P_{\text{raw}} \times F_{\text{date}}$$
+
+$$P_{\text{fore}} = P_{\text{raw}} \times \frac{F_{\text{date}}}{F_{\text{latest}}}$$
+
+$F_{\text{latest}}$ 为该股票当前最新交易日的因子值，查询时动态获取，**不存储**。
+
+**为什么不存前复权因子**：每次新除权事件发生，$F_{\text{latest}}$ 改变，该股所有历史行的前复权因子都需全量 UPDATE，不可接受。累积后复权因子历史值永远不变，是唯一适合内嵌存储的基础量。
+
+---
+
+## E1 表结构变更
+
+### E1-S1 日线表新增 adj_factor 字段
+
+**作为** 回测引擎和选股服务，**我希望** 从 `stock_kline_daily` 单表即可获取价格和复权因子，**以便** 消除 JOIN 开销，支持全市场快速扫描。
+
+#### 任务
+
+- E1-S1-T1 执行 DDL，新增字段（初始允许 NULL，回填完成验证后再收紧约束）
+
+```sql
+-- Step 1：加字段，允许 NULL
+ALTER TABLE stock_kline_daily
+    ADD COLUMN adj_factor DECIMAL(20, 6) NULL
+        COMMENT '累积后复权因子（Tushare adj_factor 原始值）。前复权价 = close * adj_factor / latest_adj_factor；后复权价 = close * adj_factor'
+    AFTER vol;
+
+-- Step 2：回填完成、E4 审计通过后，收紧为 NOT NULL（可选）
+ALTER TABLE stock_kline_daily
+    MODIFY COLUMN adj_factor DECIMAL(20, 6) NOT NULL DEFAULT 1.000000
+        COMMENT '累积后复权因子（Tushare adj_factor 原始值）。前复权价 = close * adj_factor / latest_adj_factor；后复权价 = close * adj_factor';
+```
+
+- E1-S1-T2 在 `TABLES_INDEX.md` 中更新 `stock_kline_daily` 字段说明，注明计算公式和来源
+
+#### 验收标准（AC）
+
+- **AC1**：
+  - **Given** 执行 DDL
+  - **When** `SHOW COLUMNS FROM stock_kline_daily LIKE 'adj_factor'`
+  - **Then** 字段存在，类型为 `DECIMAL(20,6)`，Comment 包含"累积后复权因子"
+
+---
+
+## E2 历史数据回填
+
+### E2-S1 因子 Forward-Fill 回填
+
+**作为** Data Quality Steward，**我希望** 将 `stock_adjust_factor` 中的变动点因子"展开"并写入 `stock_kline_daily` 每一行，**以便** 每个交易日都有对应的因子值。
+
+#### 设计说明
+
+`stock_adjust_factor` 是变动点存储（只有除权日才有记录），`stock_kline_daily` 是每日一行。
+回填逻辑是：对每只股票，按交易日升序遍历，**向后填充最近一个变动点的因子值**（forward-fill）。
+
+若某只股票在 IPO 后从未发生过除权，则全部历史行填入 `1.0`（初始因子）。
+
+#### 任务
+
+- E2-S1-T1 **执行前备份**
+
+```bash
+# 在数据库服务器执行
+mysqldump -u root -p your_db stock_kline_daily \
+  > /backup/stock_kline_daily_before_adj_$(date +%Y%m%d).sql
+```
+
+- E2-S1-T2 确认索引存在（回填 SQL 性能关键）
+
+```sql
+-- 确认 stock_adjust_factor 在 (ts_code, adjust_date) 上有索引
+-- 没有则先创建，否则相关子查询会全表扫描
+SHOW INDEX FROM stock_adjust_factor WHERE Key_name != 'PRIMARY';
+
+-- 若无索引，执行：
+CREATE INDEX idx_adj_ts_date ON stock_adjust_factor(ts_code, adjust_date);
+```
+
+- E2-S1-T3 执行回填 SQL（兼容 MySQL 5.7，无窗口函数）
+
+```sql
+-- 第一步：forward-fill，取每行 trade_date 当日或之前最近的变动点因子
+-- WHERE adj_factor IS NULL 保证幂等：已有值的行不覆盖，K 线补录后重跑同样有效
+UPDATE stock_kline_daily k
+SET k.adj_factor = (
+    SELECT af.adjust_factor
+    FROM stock_adjust_factor af
+    WHERE af.ts_code = k.ts_code
+      AND af.adjust_date <= k.trade_date
+    ORDER BY af.adjust_date DESC
+    LIMIT 1
+)
+WHERE k.adj_factor IS NULL;
+
+-- 第二步：填充早于第一个变动点的历史行（IPO 初期从未除权，因子为 1.0）
+UPDATE stock_kline_daily
+SET adj_factor = 1.000000
+WHERE adj_factor IS NULL;
+```
+
+> **幂等说明**：两条语句均以 `WHERE adj_factor IS NULL` 为条件。后期若补录了缺失的 K 线行，对新行重跑同样的 SQL 即可，已有值的行不受影响，无需修改语句。
+
+- E2-S1-T4 回填完成后执行验证
+
+```sql
+-- 检查是否存在仍为 NULL 的行
+SELECT COUNT(*) AS null_count
+FROM stock_kline_daily
+WHERE adj_factor IS NULL;
+-- 预期：0
+
+-- 抽查茅台因子变动点是否正确展开
+SELECT trade_date, close, adj_factor
+FROM stock_kline_daily
+WHERE ts_code = '600519.SH'
+  AND trade_date BETWEEN '2023-06-28' AND '2023-07-06'
+ORDER BY trade_date;
+-- 预期：2023-07-03（除权日）前后 adj_factor 发生跳变
+
+-- 验证无相邻同值冗余（可选，用于抽查数据质量）
+SELECT k.ts_code, k.trade_date, k.adj_factor, af.adjust_factor AS source_factor
+FROM stock_kline_daily k
+JOIN stock_adjust_factor af
+  ON af.ts_code = k.ts_code
+ AND af.adjust_date = (
+     SELECT MAX(adjust_date) FROM stock_adjust_factor
+     WHERE ts_code = k.ts_code AND adjust_date <= k.trade_date
+ )
+WHERE k.ts_code = '600519.SH'
+  AND ABS(k.adj_factor - af.adjust_factor) > 1e-6
+LIMIT 10;
+-- 预期：0 行（本地值与源表完全一致）
+```
+
+#### 验收标准（AC）
+
+- **AC1**：无 NULL 行
+  - **Given** 回填脚本执行完毕
+  - **When** 执行 `SELECT COUNT(*) FROM stock_kline_daily WHERE adj_factor IS NULL`
+  - **Then** 结果为 0
+
+- **AC2**：变动点正确展开
+  - **Given** 回填完成
+  - **When** 查询 `600519.SH` 已知除权日（`2023-07-03`）前后各 3 个交易日的 `adj_factor`
+  - **Then** 除权日当日及之后的因子值与除权日之前不同，且与 `stock_adjust_factor` 中对应记录一致
+
+- **AC3**：从未除权股票因子为 1.0
+  - **Given** 回填完成
+  - **When** 查询一只已知从未分红的新上市股票的所有 `adj_factor`
+  - **Then** 全部为 `1.000000`
+
+---
+
+## E3 采集流程改造
+
+### E3-S1 日线采集同步写入因子
+
+**作为** `scf-collector`，**我希望** 在每日采集日线数据时，同步获取并写入当日的累积后复权因子，**以便** `stock_kline_daily` 新增行始终携带因子，无需事后补填。
+
+#### 写入时序约定
+
+```
+每日采集流程：
+  1. 调用 Tushare daily 接口 → 获取当日行情
+  2. 调用 Tushare adj_factor 接口 → 获取当日因子（同一批次）
+  3. 合并写入 stock_kline_daily（含 adj_factor 字段）
+  4. 写入 stock_adjust_factor（变动检测，仅因子变化时写入）
+```
+
+步骤 2 必须在步骤 3 之前完成。若 Tushare 当日因子尚未更新（收盘后延迟），则 `adj_factor` 写入前一日因子值，并记录 `warn` 日志，次日盘后修正。
+
+#### 任务
+
+- E3-S1-T1 修改日线采集入口，在构造 INSERT 语句时加入 `adj_factor` 字段
+
+```python
+def fetch_and_save_daily(ts_code: str, trade_date: str, tushare_api, dao):
+    # 1. 获取日线行情
+    kline = tushare_api.daily(ts_code=ts_code, trade_date=trade_date)
+
+    # 2. 获取当日因子
+    factor_df = tushare_api.adj_factor(ts_code=ts_code, trade_date=trade_date)
+    if factor_df.empty:
+        # 因子未更新，取最新历史因子
+        adj_factor = dao.get_latest_adj_factor(ts_code)
+        logging.warning(f"{ts_code} {trade_date} 因子未更新，使用历史最新值 {adj_factor}")
+    else:
+        adj_factor = float(factor_df['adj_factor'].iloc[0])
+
+    # 3. 写入日线（含因子）
+    dao.save_kline_daily(ts_code, trade_date, kline, adj_factor)
+
+    # 4. 写入因子变动点（变动检测）
+    dao.save_adj_factor(ts_code, trade_date, adj_factor)
+```
+
+- E3-S1-T2 修改 `dao.save_kline_daily` 的 INSERT SQL，加入 `adj_factor` 字段
+
+```python
+def save_kline_daily(self, ts_code, trade_date, kline, adj_factor: float):
+    sql = """
+        INSERT INTO stock_kline_daily
+            (ts_code, trade_date, open, high, low, close, vol, amount, adj_factor)
+        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+        ON DUPLICATE KEY UPDATE
+            open = VALUES(open),
+            high = VALUES(high),
+            low  = VALUES(low),
+            close = VALUES(close),
+            vol  = VALUES(vol),
+            amount = VALUES(amount),
+            adj_factor = VALUES(adj_factor)
+    """
+    with self.conn.cursor() as cur:
+        cur.execute(sql, (
+            ts_code, trade_date,
+            kline['open'], kline['high'], kline['low'], kline['close'],
+            kline['vol'], kline['amount'],
+            adj_factor
+        ))
+    self.conn.commit()
+```
+
+#### 验收标准（AC）
+
+- **AC1**：新采集行自动携带因子
+  - **Given** E3-S1 上线后，次个交易日采集正常运行
+  - **When** 查询当日新写入的任意一行 `stock_kline_daily`
+  - **Then** `adj_factor` 不为 NULL，值与 `stock_adjust_factor` 中该股最新因子一致
+
+- **AC2**：因子未更新时 fallback 生效
+  - **Given** 模拟 Tushare `adj_factor` 接口返回空数据
+  - **When** 触发日线采集
+  - **Then** `adj_factor` 写入历史最新因子值，日志中出现 `WARNING` 级别记录
+
+---
+
+## E4 验证与审计
+
+### E4-S1 前复权一致性校验
+
+**作为** Data Quality Steward，**我希望** 对内嵌因子计算出的前复权价格与 Tushare 官方数据进行比对，**以便** 确认存储和公式的正确性。
+
+#### 任务
+
+- E4-S1-T1 编写抽样校验脚本
+
+```python
+import random
+import pymysql
+
+def validate_fore_adj_price(conn, tushare_api, sample_size: int = 500) -> list[dict]:
+    """
+    随机抽取样本点，用内嵌因子计算前复权价，与 Tushare 官方前复权收盘价比对。
+    返回误差超标的样本列表。
+    """
+    # 1. 随机抽取样本 (ts_code, trade_date, close)
+    sql = """
+        SELECT ts_code, trade_date, close, adj_factor
+        FROM stock_kline_daily
+        WHERE adj_factor IS NOT NULL AND close > 0
+        ORDER BY RAND()
+        LIMIT %s
+    """
+    with conn.cursor() as cur:
+        cur.execute(sql, (sample_size,))
+        samples = cur.fetchall()
+
+    errors = []
+    for ts_code, trade_date, raw_close, f_date in samples:
+        # 2. 取该股最新因子
+        f_latest = get_latest_adj_factor(conn, ts_code)
+        local_fore = raw_close * (f_date / f_latest)
+
+        # 3. 取 Tushare 官方前复权收盘价
+        df = tushare_api.daily(
+            ts_code=ts_code,
+            trade_date=trade_date,
+            adj='qfq'  # 前复权
+        )
+        if df.empty:
+            continue
+        tushare_fore = float(df['close'].iloc[0])
+
+        # 4. 计算相对误差
+        relative_error = abs(local_fore - tushare_fore) / tushare_fore
+        if relative_error > 1e-3:
+            errors.append({
+                'ts_code': ts_code,
+                'trade_date': str(trade_date),
+                'local_fore': round(local_fore, 4),
+                'tushare_fore': round(tushare_fore, 4),
+                'relative_error': round(relative_error, 6)
+            })
+
+    return errors
+
+
+def get_latest_adj_factor(conn, ts_code: str) -> float:
+    sql = """
+        SELECT adj_factor FROM stock_kline_daily
+        WHERE ts_code = %s AND adj_factor IS NOT NULL
+        ORDER BY trade_date DESC LIMIT 1
+    """
+    with conn.cursor() as cur:
+        cur.execute(sql, (ts_code,))
+        row = cur.fetchone()
+    return float(row[0]) if row else 1.0
+```
+
+- E4-S1-T2 将异常样本输出为 CSV，供人工复核
+
+#### 验收标准（AC）
+
+- **AC1**：
+  - **Given** 随机抽取 500 个样本点执行校验
+  - **When** 统计相对误差 > $10^{-3}$ 的样本数
+  - **Then** 异常点 ≤ 1 个（异常率 < 0.2%）
+
+---
+
+## 技术依赖
+
+- MySQL 5.7+
+- Tushare Token 有效，`daily`（支持 `adj='qfq'`）及 `adj_factor` 接口正常
+- `stock_adjust_factor` 表变动点数据已完整（E2 回填依赖此表）
+- `stock_kline_daily` 存在 `(ts_code, trade_date)` 唯一索引或主键
+
+## 风险与缓解
+
+| 风险 | 影响 | 概率 | 缓解措施 |
+|---|---|---|---|
+| 回填脚本对大表执行大量 UPDATE，锁表影响读取 | 高 | 中 | 低峰期执行；按 ts_code 逐只处理，每次小事务；执行前备份 |
+| Tushare 当日因子比行情更新慢（收盘后延迟）| 中 | 中 | Fallback 取最新历史因子；次日盘后校正任务修复 |
+| 早于第一个变动点的历史行因子误填为 1.0 | 低 | 低 | 对于 2000 年前上市的老股，IPO 时因子本身即为 1.0，不影响正确性；可通过审计脚本抽查 |
+| `adj_factor` 字段为 NULL 时下游除以 0 | 高 | 低 | E2 回填后 NULL 应为 0；E3 上线后新行必有因子；可加 NOT NULL DEFAULT 1.0 约束兜底 |
+
+## 里程碑
+
+| 里程碑 | 计划日期 | 交付物 |
+|---|---|---|
+| M1 | TBD | E1 完成：DDL 上线，字段就绪 |
+| M2 | TBD | E2 完成：历史数据回填，NULL = 0 验证通过 |
+| M3 | TBD | E3 完成：采集流程上线，新行自动携带因子 |
+| M4 | TBD | E4 完成：审计校验通过，异常率 < 0.2% |
+
+## 度量指标
+
+- `stock_kline_daily` 中 `adj_factor IS NULL` 行数（目标：0）
+- 每日新增行的 `adj_factor` 非空率（目标：100%）
+- 前复权校验抽样异常率（目标：< 0.2%）
+
+## 变更记录
+
+| 日期 | 版本 | 变更 | 作者 |
+|---|---|---|---|
+| 2026-05-15 | v0.1 | 初稿，日线表内嵌复权因子方案 | — |
+| 2026-05-15 | v0.2 | E2 回填改为纯 SQL 实现；E1 DDL 补充强约束版本；新增幂等说明 | — |
+
+---
+
+## 待确认事项
+
+- [ ] **TBD-1**：`stock_kline_daily` 是否有 `(ts_code, trade_date)` 唯一约束（影响 ON DUPLICATE KEY UPDATE 写法）
+- [ ] **TBD-2**：回填执行时间窗口（建议非交易时段低峰期，避免锁表）
+- [ ] **TBD-3**：回填完成后是否将 `adj_factor` 改为 `NOT NULL DEFAULT 1.0`（强约束兜底）
+- [ ] **TBD-4**：Tushare 因子更新时间点（相对于收盘行情的延迟），确认 Fallback 策略是否够用
+</script>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', async () => {
+            const rawMd = document.getElementById('markdown-raw').textContent;
+            const contentEl = document.getElementById('content');
+            
+            // Set options for marked
+            marked.setOptions({
+                gfm: true,
+                breaks: true,
+                headerIds: true,
+                mangle: false
+            });
+
+            // Parse Markdown
+            contentEl.innerHTML = marked.parse(rawMd);
+            
+            // Re-render math if needed (not implemented here)
+            
+            // Optional: Highlight code blocks with Shiki
+            // Since Shiki is async and requires WASM, we'll keep it simple for now
+            // or just use marked's default highlighting
+        });
+    </script>
+</body>
+</html>
