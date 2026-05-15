@@ -1,0 +1,708 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI 辅助开发工作流使用指南</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;500;700;900&family=Noto+Sans+SC:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0e0d0b;--bg1:#15130f;--bg2:#1c1915;--bg3:#2a2520;
+  --ink:#ede3cc;--dim:#ccc;--mute:#aaa;--whisper:#888;
+  --amber:#d4a23e;--ab:#f0c968;--as:rgba(212,162,62,.18);
+  --ok:#8ab573;--warn:#c99339;--no:#c85a4a;--cold:#6b8ca8;
+  --hair:#2a2520;
+  --serif:'Noto Serif SC',serif;
+  --sans:'Noto Sans SC',-apple-system,sans-serif;
+  --mono:'JetBrains Mono','SF Mono',Consolas,monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+html{scroll-behavior:smooth;}
+body{background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:13px;line-height:1.7;min-height:100vh;display:flex;}
+/* noise overlay removed */
+::-webkit-scrollbar{width:4px;}::-webkit-scrollbar-track{background:transparent;}::-webkit-scrollbar-thumb{background:var(--hair);}
+
+/* SIDEBAR NAV */
+.sidenav{width:220px;flex-shrink:0;position:sticky;top:0;height:100vh;overflow-y:auto;border-right:1px solid var(--hair);background:var(--bg1);padding:24px 0;}
+.sidenav-brand{padding:0 20px 20px;border-bottom:1px solid var(--hair);margin-bottom:16px;}
+.sidenav-brand-icon{font-size:18px;color:var(--amber);font-family:var(--serif);letter-spacing:.05em;}
+.sidenav-brand-sub{font-size:10px;color:var(--dim);margin-top:4px;letter-spacing:.04em;}
+.nav-section{padding:4px 20px;font-size:10px;color:var(--dim);letter-spacing:.08em;text-transform:uppercase;margin-top:12px;}
+.nav-link{display:flex;align-items:center;gap:8px;padding:6px 20px;font-size:12px;color:var(--dim);cursor:pointer;transition:all .15s;border-left:2px solid transparent;text-decoration:none;}
+.nav-link:hover{color:var(--ink);background:var(--bg2);}
+.nav-link.active{color:var(--amber);border-left-color:var(--amber);background:var(--as);}
+.nav-link-dot{width:4px;height:4px;border-radius:50%;background:currentColor;flex-shrink:0;}
+
+/* MAIN */
+.main{flex:1;max-width:820px;padding:48px 56px;overflow-x:hidden;}
+
+/* HEADER */
+.doc-header{margin-bottom:48px;padding-bottom:24px;border-bottom:1px solid var(--hair);}
+.doc-tag{font-family:var(--mono);font-size:10px;color:var(--amber);letter-spacing:.1em;text-transform:uppercase;margin-bottom:12px;}
+.doc-title{font-family:var(--serif);font-size:32px;color:var(--ink);line-height:1.3;margin-bottom:12px;}
+.doc-desc{font-size:14px;color:var(--dim);line-height:1.8;max-width:600px;}
+.doc-meta{display:flex;gap:24px;margin-top:20px;}
+.doc-meta-item{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--dim);}
+.doc-meta-item strong{color:var(--dim);}
+
+/* OVERVIEW FLOW */
+.flow-wrap{margin:32px 0;}
+.flow-steps{display:grid;grid-template-columns:repeat(5,1fr);gap:1px;background:var(--hair);border:1px solid var(--hair);}
+.flow-step{background:var(--bg1);padding:16px 12px;text-align:center;position:relative;}
+.flow-step-num{font-family:var(--mono);font-size:10px;color:var(--amber);margin-bottom:6px;}
+.flow-step-icon{font-size:20px;margin-bottom:8px;}
+.flow-step-label{font-size:11px;color:var(--ink);font-weight:500;margin-bottom:4px;}
+.flow-step-sub{font-size:10px;color:var(--dim);line-height:1.5;}
+.flow-arrow{position:absolute;right:-8px;top:50%;transform:translateY(-50%);color:var(--amber);font-size:12px;z-index:1;}
+
+/* SECTIONS */
+.section{margin-bottom:56px;}
+.section-anchor{display:block;margin-top:-80px;padding-top:80px;visibility:hidden;}
+.section-tag{font-family:var(--mono);font-size:10px;color:var(--amber);letter-spacing:.1em;text-transform:uppercase;margin-bottom:8px;}
+.section-title{font-family:var(--serif);font-size:22px;color:var(--ink);margin-bottom:16px;}
+.section-desc{font-size:13px;color:var(--dim);line-height:1.8;margin-bottom:20px;}
+
+/* SKILL CARDS */
+.skill-cards{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--hair);border:1px solid var(--hair);margin:20px 0;}
+.skill-card{background:var(--bg1);padding:20px;}
+.skill-card-header{display:flex;align-items:center;gap:8px;margin-bottom:12px;}
+.skill-card-icon{width:28px;height:28px;background:var(--as);border:1px solid rgba(212,162,62,.3);display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0;}
+.skill-card-name{font-family:var(--mono);font-size:11px;color:var(--amber);}
+.skill-card-role{font-size:10px;color:var(--dim);margin-top:2px;}
+.skill-card-desc{font-size:13px;color:var(--dim);line-height:1.6;margin-bottom:12px;}
+.skill-card-triggers{font-size:10px;color:var(--dim);margin-bottom:6px;text-transform:uppercase;letter-spacing:.06em;}
+.trigger-list{display:flex;flex-wrap:wrap;gap:4px;}
+.trigger-tag{font-family:var(--mono);font-size:10px;background:var(--bg3);color:var(--dim);padding:2px 6px;border-radius:2px;}
+
+/* STEPS */
+.steps{margin:20px 0;}
+.step{display:flex;gap:16px;padding:16px 0;border-bottom:1px solid var(--hair);}
+.step:last-child{border-bottom:none;}
+.step-num{font-family:var(--mono);font-size:11px;color:var(--amber);background:var(--as);width:24px;height:24px;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:2px;}
+.step-body{}
+.step-title{font-size:13px;font-weight:600;color:var(--ink);margin-bottom:6px;}
+.step-desc{font-size:13px;color:var(--dim);line-height:1.7;}
+.step-cmd{font-family:var(--mono);font-size:11px;background:var(--bg3);color:var(--ab);padding:6px 10px;margin-top:8px;display:inline-block;border-left:2px solid var(--amber);}
+.step-note{font-size:11px;color:var(--mute);margin-top:8px;padding-left:0;}
+
+/* CODE BLOCK */
+.code-block{background:#0b0b0b;border:1px solid var(--hair);margin:12px 0;position:relative;}
+.code-block-lang{position:absolute;top:0;right:0;font-family:var(--mono);font-size:10px;color:var(--amber);background:rgba(212,162,62,.1);padding:2px 8px;border-bottom:1px solid var(--hair);border-left:1px solid var(--hair);text-transform:uppercase;letter-spacing:.05em;}
+.code-block pre{padding:14px;overflow-x:auto;}
+.code-block code{font-family:var(--mono);font-size:12px;color:#ffca28;line-height:1.6;white-space:pre;}
+.copy-btn{position:absolute;bottom:8px;right:8px;padding:3px 10px;font-size:11px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);color:var(--mute);border-radius:3px;cursor:pointer;opacity:0;transition:opacity .2s,background .2s,color .2s;font-family:var(--sans);}
+.code-block:hover .copy-btn{opacity:1;}
+.copy-btn:hover{background:var(--amber);color:var(--bg);border-color:var(--amber);}
+
+/* INFO BOXES */
+.info-box{border:1px solid;padding:14px 16px;margin:16px 0;font-size:12px;line-height:1.7;}
+.info-box-title{font-size:10px;letter-spacing:.06em;text-transform:uppercase;margin-bottom:6px;font-weight:600;}
+.info-ok{border-color:rgba(138,181,115,.3);background:rgba(138,181,115,.06);}
+.info-ok .info-box-title{color:var(--ok);}
+.info-ok .info-box-body{color:var(--dim);}
+.info-warn{border-color:rgba(201,147,57,.3);background:rgba(201,147,57,.06);}
+.info-warn .info-box-title{color:var(--warn);}
+.info-warn .info-box-body{color:var(--dim);}
+.info-tip{border-color:var(--hair);background:var(--bg1);}
+.info-tip .info-box-title{color:var(--amber);}
+.info-tip .info-box-body{color:var(--dim);}
+
+/* TABLE */
+.table-wrap{overflow-x:auto;margin:16px 0;border:1px solid rgba(255,255,255,.06);}
+table{width:100%;border-collapse:collapse;font-size:12px;}
+th{background:var(--bg1);color:var(--amber);padding:8px 12px;text-align:left;border:1px solid rgba(255,255,255,.06);font-weight:500;font-size:11px;letter-spacing:.04em;}
+td{padding:8px 12px;border:1px solid rgba(255,255,255,.06);color:var(--dim);vertical-align:top;font-size:13px;}
+tr:hover td{}
+.td-mono{font-family:var(--mono);font-size:11px;color:var(--amber);}
+.td-ok{color:var(--ok);}
+.td-warn{color:var(--warn);}
+
+/* WORKFLOW DIAGRAM */
+.wf-diagram{margin:24px 0;border:1px solid var(--hair);background:var(--bg1);}
+.wf-title{padding:10px 16px;border-bottom:1px solid var(--hair);font-size:10px;color:var(--dim);letter-spacing:.07em;text-transform:uppercase;}
+.wf-body{padding:20px;}
+.wf-row{display:flex;align-items:center;gap:0;margin-bottom:1px;}
+.wf-node{padding:10px 14px;font-size:11px;flex-shrink:0;}
+.wf-node-design{background:var(--as);border:1px solid rgba(212,162,62,.3);color:var(--amber);}
+.wf-node-impl{background:rgba(107,140,168,.1);border:1px solid rgba(107,140,168,.3);color:var(--cold);}
+.wf-node-file{background:var(--bg3);border:1px solid var(--hair);color:var(--dim);font-family:var(--mono);font-size:10px;}
+.wf-node-action{background:var(--bg2);border:1px solid var(--hair);color:var(--dim);font-size:10px;}
+.wf-arr{color:var(--dim);padding:0 6px;font-size:12px;flex-shrink:0;}
+.wf-label{font-size:10px;color:var(--dim);padding-left:8px;}
+.wf-sep{height:1px;background:var(--hair);margin:12px 0;}
+.wf-legend{display:flex;gap:16px;padding-top:12px;border-top:1px solid var(--hair);}
+.wf-legend-item{display:flex;align-items:center;gap:6px;font-size:10px;color:var(--dim);}
+.wf-legend-dot{width:10px;height:10px;border:1px solid;}
+
+/* DIVIDER */
+.divider{height:1px;background:linear-gradient(to right,transparent,var(--amber) 20%,var(--amber) 80%,transparent);margin:40px 0;}
+
+/* FILE TREE */
+.file-tree{font-family:var(--mono);font-size:11px;background:var(--bg1);border:1px solid var(--hair);padding:14px 16px;line-height:1.8;}
+.ft-dir{color:var(--amber);}
+.ft-file{color:var(--dim);}
+.ft-note{color:var(--dim);font-size:10px;}
+
+/* BADGE */
+.badge{display:inline-block;font-family:var(--mono);font-size:10px;padding:1px 6px;border-radius:2px;}
+.badge-design{background:var(--as);color:var(--amber);}
+.badge-impl{background:rgba(107,140,168,.1);color:var(--cold);}
+.badge-file{background:var(--bg3);color:var(--dim);}
+</style>
+</head>
+<body>
+<svg style="position:fixed;width:0;height:0;pointer-events:none;">
+  <filter id="noise"><feTurbulence type="fractalNoise" baseFrequency="0.85" numOctaves="2"/>
+  <feColorMatrix values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 0.04 0"/></filter>
+</svg>
+
+<!-- SIDEBAR -->
+<nav class="sidenav">
+  <div class="sidenav-brand">
+    <div class="sidenav-brand-icon">◆ AI 辅助开发</div>
+    <div class="sidenav-brand-sub">工作流使用指南 v1.0</div>
+  </div>
+  <div class="nav-section">概览</div>
+  <a class="nav-link active" href="#overview"><div class="nav-link-dot"></div>整体流程</a>
+  <a class="nav-link" href="#skills"><div class="nav-link-dot"></div>两个 Skill 的分工</a>
+  <div class="nav-section">设计侧</div>
+  <a class="nav-link" href="#design-create"><div class="nav-link-dot"></div>生成设计文档</a>
+  <a class="nav-link" href="#design-review"><div class="nav-link-dot"></div>评审流程</a>
+  <a class="nav-link" href="#design-regen"><div class="nav-link-dot"></div>重生成文档</a>
+  <div class="nav-section">实施侧</div>
+  <a class="nav-link" href="#impl-start"><div class="nav-link-dot"></div>开始实施</a>
+  <a class="nav-link" href="#impl-ac"><div class="nav-link-dot"></div>AC → 测试用例</a>
+  <a class="nav-link" href="#impl-commit"><div class="nav-link-dot"></div>Task → Commit</a>
+  <a class="nav-link" href="#impl-done"><div class="nav-link-dot"></div>Story 完成条件</a>
+  <div class="nav-section">参考</div>
+  <a class="nav-link" href="#files"><div class="nav-link-dot"></div>文件目录约定</a>
+  <a class="nav-link" href="#faq"><div class="nav-link-dot"></div>常见问题</div>
+</nav>
+
+<!-- MAIN -->
+<div class="main">
+
+  <!-- HEADER -->
+  <div class="doc-header">
+    <div class="doc-tag">使用指南 · v1.0</div>
+    <div class="doc-title">AI 辅助开发工作流</div>
+    <div class="doc-desc">基于 <code style="font-family:var(--mono);font-size:12px;background:var(--bg2);padding:1px 5px;color:var(--amber)">epic-story-doc</code> 和 <code style="font-family:var(--mono);font-size:12px;background:var(--bg2);padding:1px 5px;color:var(--cold)">parse-epic-story</code> 两个 Skill 的完整协作规范。设计侧负责产出结构化文档，实施侧负责按文档写代码，两者通过 MD 文件交接。</div>
+    <div class="doc-meta">
+      <div class="doc-meta-item"><strong>设计侧</strong> Claude (epic-story-doc)</div>
+      <div class="doc-meta-item"><strong>实施侧</strong> Claude Code (parse-epic-story)</div>
+      <div class="doc-meta-item"><strong>交接格式</strong> draft_{EpicId}.md</div>
+    </div>
+  </div>
+
+  <!-- OVERVIEW -->
+  <span class="section-anchor" id="overview"></span>
+  <div class="section">
+    <div class="section-tag">Section 01</div>
+    <div class="section-title">整体流程</div>
+    <div class="section-desc">从需求到代码，完整链路分为五个阶段。设计侧和实施侧通过 MD 文件交接，评审环节通过 JSON 文件闭环。</div>
+
+    <div class="flow-wrap">
+      <div class="flow-steps">
+        <div class="flow-step"><div class="flow-step-num">01</div><div class="flow-step-icon">✍️</div><div class="flow-step-label">生成文档</div><div class="flow-step-sub">epic-story-doc skill 输出 draft.md + draft.json</div><div class="flow-arrow">›</div></div>
+        <div class="flow-step"><div class="flow-step-num">02</div><div class="flow-step-icon">🔧</div><div class="flow-step-label">生成评审页</div><div class="flow-step-sub">inject.py 将 JSON 注入模板，输出自包含 HTML</div><div class="flow-arrow">›</div></div>
+        <div class="flow-step"><div class="flow-step-num">03</div><div class="flow-step-icon">🔍</div><div class="flow-step-label">人工评审</div><div class="flow-step-sub">浏览器打开 HTML，逐 AC 审核，导出 review_result.json</div><div class="flow-arrow">›</div></div>
+        <div class="flow-step"><div class="flow-step-num">04</div><div class="flow-step-icon">♻️</div><div class="flow-step-label">重生成文档</div><div class="flow-step-sub">将 JSON 粘贴给 Claude，输出 final.md，版本递增</div><div class="flow-arrow">›</div></div>
+        <div class="flow-step"><div class="flow-step-num">05</div><div class="flow-step-icon">⚙️</div><div class="flow-step-label">实施代码</div><div class="flow-step-sub">parse-epic-story skill 读 final.md，按 Story 顺序写代码</div></div>
+      </div>
+    </div>
+
+    <div class="wf-diagram">
+      <div class="wf-title">数据流向图</div>
+      <div class="wf-body">
+        <div class="wf-row"><div class="wf-node wf-node-design">epic-story-doc skill</div><div class="wf-arr">→</div><div class="wf-node wf-node-file">draft_E8.md</div><div class="wf-arr">+</div><div class="wf-node wf-node-file">draft_E8.json</div><div class="wf-label">← 同时输出，MD 存 git，JSON 用于评审</div></div>
+        <div class="wf-sep"></div>
+        <div class="wf-row"><div class="wf-node wf-node-action">inject.py</div><div class="wf-arr">→</div><div class="wf-node wf-node-file">review_E8_YYYYMMDD.html</div><div class="wf-label">← 自包含，双击打开即评审</div></div>
+        <div class="wf-sep"></div>
+        <div class="wf-row"><div class="wf-node wf-node-action">人工评审</div><div class="wf-arr">→</div><div class="wf-node wf-node-file">review_result.json</div><div class="wf-label">← 导出后直接复制给 Claude</div></div>
+        <div class="wf-sep"></div>
+        <div class="wf-row"><div class="wf-node wf-node-design">epic-story-doc skill（重生成）</div><div class="wf-arr">→</div><div class="wf-node wf-node-file">final_E8_v0.2.md</div><div class="wf-label">← 存入 git，作为实施侧真源</div></div>
+        <div class="wf-sep"></div>
+        <div class="wf-row"><div class="wf-node wf-node-impl">parse-epic-story skill</div><div class="wf-arr">→</div><div class="wf-node wf-node-file">实施代码 + 测试 + walkthrough</div><div class="wf-label">← 每 Task 一个 commit</div></div>
+        <div class="wf-legend">
+          <div class="wf-legend-item"><div class="wf-legend-dot" style="border-color:var(--amber);background:var(--as)"></div>设计侧</div>
+          <div class="wf-legend-item"><div class="wf-legend-dot" style="border-color:var(--cold);background:rgba(107,140,168,.1)"></div>实施侧</div>
+          <div class="wf-legend-item"><div class="wf-legend-dot" style="border-color:var(--hair);background:var(--bg3)"></div>文件</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="divider"></div>
+
+  <!-- SKILL OVERVIEW -->
+  <span class="section-anchor" id="skills"></span>
+  <div class="section">
+    <div class="section-tag">Section 02</div>
+    <div class="section-title">两个 Skill 的分工</div>
+
+    <div class="skill-cards">
+      <div class="skill-card">
+        <div class="skill-card-header">
+          <div class="skill-card-icon">✍️</div>
+          <div><div class="skill-card-name">epic-story-doc</div><div class="skill-card-role">设计侧 · 文档生成</div></div>
+        </div>
+        <div class="skill-card-desc">将需求描述转换为 Epic→Story→Task→AC 结构化文档，同时输出 MD（存档）和 JSON（评审台）两种格式。收到评审结果后执行全量重生成。</div>
+        <div class="skill-card-triggers">触发词</div>
+        <div class="trigger-list">
+          <span class="trigger-tag">写个方案</span>
+          <span class="trigger-tag">拆这个 Epic</span>
+          <span class="trigger-tag">帮我设计</span>
+          <span class="trigger-tag">重生成文档</span>
+          <span class="trigger-tag">写用户故事</span>
+          <span class="trigger-tag">Given-When-Then</span>
+        </div>
+      </div>
+      <div class="skill-card">
+        <div class="skill-card-header">
+          <div class="skill-card-icon">⚙️</div>
+          <div><div class="skill-card-name" style="color:var(--cold)">parse-epic-story</div><div class="skill-card-role">实施侧 · 代码生成</div></div>
+        </div>
+        <div class="skill-card-desc">读取 final_{EpicId}.md，将 AC 转为测试用例，将 Task 转为 commit 粒度的工作单元，按 Story 顺序实施，全部 AC 通过后产出 walkthrough。</div>
+        <div class="skill-card-triggers">触发词 / 自动识别</div>
+        <div class="trigger-list">
+          <span class="trigger-tag">实施 E8-S1</span>
+          <span class="trigger-tag">按这份设计实现</span>
+          <span class="trigger-tag">写这个 Story 的代码</span>
+          <span class="trigger-tag">文档含 E\d+-S\d+</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>维度</th><th>epic-story-doc</th><th>parse-epic-story</th></tr></thead>
+        <tbody>
+          <tr><td>输入</td><td class="td-mono">需求描述 / review_result.json</td><td class="td-mono">final_{EpicId}.md</td></tr>
+          <tr><td>输出</td><td class="td-mono">draft.md + draft.json</td><td class="td-mono">代码 + 测试 + walkthrough</td></tr>
+          <tr><td>提示词</td><td>评审台「复制 Agent 提示词」按钮，包含完整 Schema，无需补充</td><td>自动触发，无需手动提示词</td></tr>
+          <tr><td>交接物</td><td colspan="2" style="text-align:center;color:var(--amber)">final_{EpicId}.md（唯一交接文件）</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="divider"></div>
+
+  <!-- DESIGN: CREATE -->
+  <span class="section-anchor" id="design-create"></span>
+  <div class="section">
+    <div class="section-tag">Section 03 · 设计侧</div>
+    <div class="section-title">生成设计文档</div>
+
+    <div class="steps">
+      <div class="step">
+        <div class="step-num">1</div>
+        <div class="step-body">
+          <div class="step-title">打开评审台，复制 Agent 提示词</div>
+          <div class="step-desc">双击 <code style="font-family:var(--mono);font-size:11px">epic-story-reviewer.html</code>，点击「复制 Agent 提示词」按钮。提示词已包含完整 JSON Schema 和所有输出规则，<strong>无需任何补充</strong>。</div>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">2</div>
+        <div class="step-body">
+          <div class="step-title">粘贴给 Claude，附上需求描述</div>
+          <div class="step-desc">在提示词末尾直接追加需求描述或现有文档内容。Claude 触发 epic-story-doc skill，同时输出两个文件：</div>
+          <div class="step-cmd">draft_{EpicId}.md &nbsp;&nbsp;&nbsp; ← 存入 docs/ 目录，提交 git<br>draft_{EpicId}.json &nbsp; ← 用于生成评审页</div>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">3</div>
+        <div class="step-body">
+          <div class="step-title">运行 inject.py 生成评审页</div>
+          <div class="step-desc">在项目根目录执行，inject.py 将数据注入评审台模板，生成自包含 HTML：</div>
+          <div class="step-cmd">python inject.py docs/draft_E8.json</div>
+          <div class="step-note">输出文件：<code style="font-family:var(--mono);font-size:10px">review_E8_YYYYMMDD.html</code>，与 draft.json 同目录</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="info-box info-tip">
+      <div class="info-box-title">💡 Claude Code 自动化</div>
+      <div class="info-box-body">如果使用 Claude Code，可以在对话结束时直接说「运行 inject.py 生成评审页」，Claude Code 会自动执行第 3 步。</div>
+    </div>
+  </div>
+
+  <!-- DESIGN: REVIEW -->
+  <span class="section-anchor" id="design-review"></span>
+  <div class="section">
+    <div class="section-tag">Section 04 · 设计侧</div>
+    <div class="section-title">评审流程</div>
+
+    <div class="steps">
+      <div class="step">
+        <div class="step-num">1</div>
+        <div class="step-body">
+          <div class="step-title">打开评审页，阅读各章节内容</div>
+          <div class="step-desc">双击 <code style="font-family:var(--mono);font-size:11px">review_E8_YYYYMMDD.html</code>，左侧导航显示所有章节（背景、目标、算法约定等）和 Story，点击跳转。章节内容支持公式（KaTeX）、流程图（Mermaid）、表格渲染。</div>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">2</div>
+        <div class="step-body">
+          <div class="step-title">逐 Story 审核</div>
+          <div class="step-desc">点击左侧 Story 节点进入评审视图。顶部三个投票按钮标记整体状态，任务清单支持移除/新增/内联编辑，每条 AC 独立标记通过/疑问/拒绝。</div>
+          <div class="step-note">标记「疑问」或「拒绝」后，右侧面板自动汇聚待处理清单。未填写意见的 AC 默认视为通过。</div>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">3</div>
+        <div class="step-body">
+          <div class="step-title">对章节内容添加批注</div>
+          <div class="step-desc">点击左侧「背景」「核心算法约定」等章节节点，在页面底部批注框填写审核意见，批注会随导出 JSON 一并输出。</div>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">4</div>
+        <div class="step-body">
+          <div class="step-title">导出审核 JSON</div>
+          <div class="step-desc">右下角点击「导出审核 JSON」，<strong>同时触发文件下载和复制到剪贴板</strong>。可直接粘贴给 Claude 触发重生成，也可保存文件备查。</div>
+          <div class="step-note">进度自动保存在浏览器本地，刷新不丢失。</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>评审操作</th><th>说明</th><th>导出字段</th></tr></thead>
+        <tbody>
+          <tr><td>AC ✓ 通过</td><td>保持原内容不变</td><td class="td-mono">status: "ok"</td></tr>
+          <tr><td>AC ⚠ 疑问</td><td>填写疑问内容，重生成时修改该 AC</td><td class="td-mono">status: "q", question: "..."</td></tr>
+          <tr><td>AC ✕ 拒绝</td><td>填写拒绝原因，重生成时重写该 AC</td><td class="td-mono">status: "no", question: "..."</td></tr>
+          <tr><td>未标记 AC</td><td>默认通过，不影响重生成</td><td class="td-mono">status: "ok"</td></tr>
+          <tr><td>任务移除</td><td>该任务从文档中删除</td><td class="td-mono">removed: true</td></tr>
+          <tr><td>任务编辑</td><td>使用修改后文本</td><td class="td-mono">modified_text: "..."</td></tr>
+          <tr><td>新增任务</td><td>插入对应 Story 末尾</td><td class="td-mono">added: "..."</td></tr>
+          <tr><td>章节批注</td><td>追加到对应章节末尾</td><td class="td-mono">section_comments[].comment</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- DESIGN: REGEN -->
+  <span class="section-anchor" id="design-regen"></span>
+  <div class="section">
+    <div class="section-tag">Section 05 · 设计侧</div>
+    <div class="section-title">重生成文档</div>
+
+    <div class="steps">
+      <div class="step">
+        <div class="step-num">1</div>
+        <div class="step-body">
+          <div class="step-title">将 review_result.json 粘贴给 Claude</div>
+          <div class="step-desc">导出时已自动复制到剪贴板，直接粘贴即可。JSON 末尾的 <code style="font-family:var(--mono);font-size:11px">agent_instruction</code> 字段已包含完整指令，Claude 读到后自动触发 epic-story-doc skill 的重生成模式。</div>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">2</div>
+        <div class="step-body">
+          <div class="step-title">Claude 输出最终文档</div>
+          <div class="step-desc">重生成规则自动应用：被拒绝/有疑问的 AC 按意见修改，被移除的任务删除，新增任务插入，章节批注追加，版本号自动递增。</div>
+          <div class="step-cmd">final_E8_v0.2.md &nbsp;&nbsp;&nbsp; ← 提交 git，作为实施侧真源<br>final_E8_v0.2.json &nbsp; ← 可选，存档用</div>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">3</div>
+        <div class="step-body">
+          <div class="step-title">提交 git，进入实施阶段</div>
+          <div class="step-desc">将 <code style="font-family:var(--mono);font-size:11px">final_E8_v0.2.md</code> 提交到 <code style="font-family:var(--mono);font-size:11px">docs/</code> 目录，这是唯一的设计-实施交接文件。</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="info-box info-warn">
+      <div class="info-box-title">⚠ 注意</div>
+      <div class="info-box-body">实施侧以 final_{EpicId}.md 为唯一真源，不读 JSON 文件。确保 MD 文件提交到 git 后再通知实施侧开始。</div>
+    </div>
+  </div>
+
+  <div class="divider"></div>
+
+  <!-- IMPL: START -->
+  <span class="section-anchor" id="impl-start"></span>
+  <div class="section">
+    <div class="section-tag">Section 06 · 实施侧</div>
+    <div class="section-title">开始实施</div>
+
+    <div class="steps">
+      <div class="step">
+        <div class="step-num">1</div>
+        <div class="step-body">
+          <div class="step-title">读完所有 sections 上下文再开始</div>
+          <div class="step-desc">文档中「背景」「核心算法约定」等章节包含公式、架构图、约束条件，是实施的硬性前提。<strong>不允许只看 Story 标题就开干。</strong></div>
+          <div class="step-note">sections 中的公式用 $...$ 或 $$...$$ 标注，架构图用 mermaid 代码块。这些是实施约束，不是装饰。</div>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">2</div>
+        <div class="step-body">
+          <div class="step-title">确认 Story 顺序，按序执行</div>
+          <div class="step-desc">Story 之间有依赖关系，按文档顺序执行。当前 Story 所有 AC 通过前，不进入下一个 Story。</div>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">3</div>
+        <div class="step-body">
+          <div class="step-title">创建实施记录目录</div>
+          <div class="step-desc">进入每个 Story 前，在设计文档同级目录创建：</div>
+          <div class="step-cmd">implementation_logs/E8/S1/<br>  ├── implementation_plan.md<br>  ├── task.md<br>  └── walkthrough.md</div>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">4</div>
+        <div class="step-body">
+          <div class="step-title">识别并处理 TBD</div>
+          <div class="step-desc">文档中 TBD 标记的字段/阈值/接口名，<strong>不允许编造</strong>，必须停下来 surface 给设计侧。唯一例外：用户在当前对话明确指示假设值，此时 commit 必须注明假设内容和影响范围。</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- IMPL: AC -->
+  <span class="section-anchor" id="impl-ac"></span>
+  <div class="section">
+    <div class="section-tag">Section 07 · 实施侧</div>
+    <div class="section-title">AC → 测试用例</div>
+    <div class="section-desc">每条 AC 必须对应一个独立测试函数，不允许合并，不允许漏写。</div>
+
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>AC 部分</th><th>测试代码</th></tr></thead>
+        <tbody>
+          <tr><td><strong>Given</strong> 前提条件</td><td>fixture / setup / mock 数据准备</td></tr>
+          <tr><td><strong>When</strong> 触发动作</td><td>被测函数 / 接口的实际调用</td></tr>
+          <tr><td><strong>Then</strong> 预期结果</td><td>assert 语句（含具体数值）</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="code-block">
+      <div class="code-block-lang">python</div>
+      <pre><code># AC1: 幂等性校验
+# Given: 数据库中已存在相同因子记录
+# When: 执行 save_adj_factor
+# Then: 记录数不增加，返回 False
+
+def test_e8_s1_idempotent_when_factor_unchanged(db_session, seed_adj_factor):
+    # Given
+    existing_count = db_session.query(StockAdjFactor).count()
+    # When
+    result = save_adj_factor(ts_code="000001.SZ",
+                             adj_factor=seed_adj_factor.adj_factor)
+    # Then
+    assert result is False
+    assert db_session.query(StockAdjFactor).count() == existing_count</code></pre>
+      <button class="copy-btn" onclick="copyBlock(this)">复制</button>
+    </div>
+
+    <div class="info-box info-ok">
+      <div class="info-box-title">✓ 命名规则</div>
+      <div class="info-box-body"><code style="font-family:var(--mono);font-size:11px">test_e{N}_s{M}_{语义描述}</code>，例如：<code style="font-family:var(--mono);font-size:11px">test_e8_s1_idempotent_when_factor_unchanged</code></div>
+    </div>
+  </div>
+
+  <!-- IMPL: COMMIT -->
+  <span class="section-anchor" id="impl-commit"></span>
+  <div class="section">
+    <div class="section-tag">Section 08 · 实施侧</div>
+    <div class="section-title">Task → Commit</div>
+    <div class="section-desc">每个 Task 对应一个 commit，不拆不合。commit 完成后在设计文档中将该 Task 标记为 <code style="font-family:var(--mono);font-size:11px">- [x]</code>。</div>
+
+    <div class="code-block">
+      <div class="code-block-lang">commit</div>
+      <pre><code>feat(collector): [E8-S1-T2] 实现仅在因子变动时执行 INSERT 的判断逻辑
+
+比对最新库存值与采集值，差值绝对值 < 1e-8 时跳过写入，返回 False。
+影响 save_adj_factor 方法，幂等性由 AC1 测试覆盖。</code></pre>
+      <button class="copy-btn" onclick="copyBlock(this)">复制</button>
+    </div>
+
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>type</th><th>适用场景</th></tr></thead>
+        <tbody>
+          <tr><td class="td-mono">feat</td><td>新功能实现</td></tr>
+          <tr><td class="td-mono">fix</td><td>Bug 修复</td></tr>
+          <tr><td class="td-mono">test</td><td>测试用例新增/修改</td></tr>
+          <tr><td class="td-mono">refactor</td><td>重构，不改变行为</td></tr>
+          <tr><td class="td-mono">chore</td><td>配置、脚本、TBD 假设记录</td></tr>
+          <tr><td class="td-mono">docs</td><td>文档更新、任务勾选回填</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- IMPL: DONE -->
+  <span class="section-anchor" id="impl-done"></span>
+  <div class="section">
+    <div class="section-tag">Section 09 · 实施侧</div>
+    <div class="section-title">Story 完成条件</div>
+
+    <div class="steps">
+      <div class="step">
+        <div class="step-num">✓</div>
+        <div class="step-body">
+          <div class="step-title">全部 AC 测试通过</div>
+          <div class="step-desc">每条 AC 对应的测试函数均通过，无跳过，无空 assert。</div>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">✓</div>
+        <div class="step-body">
+          <div class="step-title">设计文档全部 Task 勾选</div>
+          <div class="step-desc">final_{EpicId}.md 中本 Story 的所有 <code style="font-family:var(--mono);font-size:11px">- [ ]</code> 均已更新为 <code style="font-family:var(--mono);font-size:11px">- [x]</code>。</div>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">✓</div>
+        <div class="step-body">
+          <div class="step-title">产出 walkthrough.md</div>
+          <div class="step-desc">保存到 <code style="font-family:var(--mono);font-size:11px">implementation_logs/E8/S1/walkthrough.md</code>，必须包含物理真源证据（SQL 结果 / 日志片段），100% 覆盖设计文档中的 AC。</div>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">✓</div>
+        <div class="step-body">
+          <div class="step-title">更新 IMPLEMENTATION_FEEDBACK.md</div>
+          <div class="step-desc">在 <code style="font-family:var(--mono);font-size:11px">docs/IMPLEMENTATION_FEEDBACK.md</code> 将本 Story 状态更新为 DONE。</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="info-box info-warn">
+      <div class="info-box-title">⚠ 强制规则</div>
+      <div class="info-box-body">任何一条 AC 测试未通过，本 Story 不算完成，不能进入下一个 Story。walkthrough 必须含物理证据，纯文字描述无效。</div>
+    </div>
+  </div>
+
+  <div class="divider"></div>
+
+  <!-- FILES -->
+  <span class="section-anchor" id="files"></span>
+  <div class="section">
+    <div class="section-tag">Section 10</div>
+    <div class="section-title">文件目录约定</div>
+
+    <div class="file-tree">
+      <div>docs/</div>
+      <div>&nbsp;&nbsp;├── <span class="ft-file">draft_E8.md</span> &nbsp;<span class="ft-note">← 设计侧初稿（提交 git）</span></div>
+      <div>&nbsp;&nbsp;├── <span class="ft-file">draft_E8.json</span> &nbsp;<span class="ft-note">← 评审台加载用（提交 git，可选）</span></div>
+      <div>&nbsp;&nbsp;├── <span class="ft-file">final_E8_v0.2.md</span> &nbsp;<span class="ft-note">← 评审后重生成（提交 git，实施侧真源）</span></div>
+      <div>&nbsp;&nbsp;├── <span class="ft-file">IMPLEMENTATION_FEEDBACK.md</span> &nbsp;<span class="ft-note">← Story 全局状态索引</span></div>
+      <div>&nbsp;&nbsp;├── <span class="ft-file">TABLES_INDEX.md</span> &nbsp;<span class="ft-note">← 字段/表结构索引</span></div>
+      <div>&nbsp;&nbsp;└── <span class="ft-dir">implementation_logs/</span></div>
+      <div>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;└── <span class="ft-dir">E8/</span></div>
+      <div>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;├── <span class="ft-dir">S1/</span></div>
+      <div>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;│&nbsp;&nbsp;&nbsp;├── <span class="ft-file">implementation_plan.md</span></div>
+      <div>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;│&nbsp;&nbsp;&nbsp;├── <span class="ft-file">task.md</span></div>
+      <div>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;│&nbsp;&nbsp;&nbsp;└── <span class="ft-file">walkthrough.md</span></div>
+      <div>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;└── <span class="ft-dir">S2/ ...</span></div>
+      <br>
+      <div>tools/ &nbsp;<span class="ft-note">← 评审工具，不进业务代码目录</span></div>
+      <div>&nbsp;&nbsp;├── <span class="ft-file">epic-story-reviewer.html</span> &nbsp;<span class="ft-note">← 评审台模板</span></div>
+      <div>&nbsp;&nbsp;└── <span class="ft-file">inject.py</span> &nbsp;<span class="ft-note">← 注入脚本</span></div>
+      <br>
+      <div>review/ &nbsp;<span class="ft-note">← 评审产物，不进 git</span></div>
+      <div>&nbsp;&nbsp;├── <span class="ft-file">review_E8_20260514.html</span> &nbsp;<span class="ft-note">← inject.py 输出</span></div>
+      <div>&nbsp;&nbsp;└── <span class="ft-file">review_result_E8.json</span> &nbsp;<span class="ft-note">← 评审台导出（可选存档）</span></div>
+    </div>
+
+    <div class="info-box info-tip">
+      <div class="info-box-title">💡 .gitignore 建议</div>
+      <div class="info-box-body">将 <code style="font-family:var(--mono);font-size:11px">review/</code> 目录加入 .gitignore，评审产物不进版本库。<code style="font-family:var(--mono);font-size:11px">docs/draft_*.json</code> 视团队协作需求决定是否提交。</div>
+    </div>
+  </div>
+
+  <!-- FAQ -->
+  <span class="section-anchor" id="faq"></span>
+  <div class="section">
+    <div class="section-tag">Section 11</div>
+    <div class="section-title">常见问题</div>
+
+    <div class="steps">
+      <div class="step">
+        <div class="step-num">Q</div>
+        <div class="step-body">
+          <div class="step-title">评审台导出的 JSON 存到哪里？</div>
+          <div class="step-desc">导出时同时触发浏览器下载（默认落到 ~/Downloads）和复制到剪贴板。推荐流程：直接粘贴给 Claude 触发重生成，不需要手动移动文件。如需存档，建议保存到 <code style="font-family:var(--mono);font-size:11px">review/</code> 目录，不提交 git。</div>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">Q</div>
+        <div class="step-body">
+          <div class="step-title">文档里有 TBD，实施侧要怎么处理？</div>
+          <div class="step-desc">停止该 Task，在 task.md 标注卡点，在 IMPLEMENTATION_FEEDBACK.md 标记「暂停」，surface 给设计侧。禁止编造默认值继续。唯一例外：用户明确指示假设值，此时 commit 必须注明假设内容和影响范围。</div>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">Q</div>
+        <div class="step-body">
+          <div class="step-title">Story 没有 AC 怎么办？</div>
+          <div class="step-desc">默认拒绝实施，要求设计侧补 AC。如果能从 Task 描述推出明确的 Given-When-Then，可以主动补全 AC 并提交给设计侧 review。紧急任务且设计侧已批准时，标注「无 AC」实施并在事后补一份 AC。</div>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">Q</div>
+        <div class="step-body">
+          <div class="step-title">评审进度关闭浏览器后还在吗？</div>
+          <div class="step-desc">评审台使用 localStorage 自动保存，关闭后重新打开同名 HTML 文件可恢复进度。不同浏览器或设备之间不共享，建议在同一台机器上完成评审。</div>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">Q</div>
+        <div class="step-body">
+          <div class="step-title">inject.py 找不到模板怎么办？</div>
+          <div class="step-desc">inject.py 默认在自身所在目录查找 <code style="font-family:var(--mono);font-size:11px">epic-story-reviewer.html</code>。确保两个文件在同一目录（推荐都放 <code style="font-family:var(--mono);font-size:11px">tools/</code> 目录）。也可以手动指定模板路径：</div>
+          <div class="step-cmd">python inject.py draft_E8.json tools/epic-story-reviewer.html</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+// Active nav on scroll
+const links = document.querySelectorAll('.nav-link');
+const anchors = document.querySelectorAll('.section-anchor');
+const observer = new IntersectionObserver(entries=>{
+  entries.forEach(e=>{
+    if(e.isIntersecting){
+      const id = e.target.id;
+      links.forEach(l=>{ l.classList.toggle('active', l.getAttribute('href')==='#'+id); });
+    }
+  });
+},{threshold:0.2,rootMargin:'-80px 0px -60% 0px'});
+anchors.forEach(a=>observer.observe(a));
+links.forEach(l=>l.addEventListener('click',e=>{
+  e.preventDefault();
+  const target = document.querySelector(l.getAttribute('href'));
+  if(target) target.scrollIntoView({behavior:'smooth'});
+}));
+
+function copyBlock(btn){
+  const code = btn.closest('.code-block').querySelector('code');
+  if(!code) return;
+  navigator.clipboard.writeText(code.innerText).then(()=>{
+    const orig = btn.textContent;
+    btn.textContent = '✓ 已复制';
+    btn.style.background = 'var(--ok)';
+    btn.style.color = '#0e0d0b';
+    btn.style.borderColor = 'var(--ok)';
+    btn.style.opacity = '1';
+    setTimeout(()=>{
+      btn.textContent = orig;
+      btn.style.background = '';
+      btn.style.color = '';
+      btn.style.borderColor = '';
+      btn.style.opacity = '';
+    }, 2000);
+  });
+}
+</script>
+</body>
+</html>
