@@ -18,12 +18,12 @@
 **协作分工**:
 - 设计在 Claude(Anthropic), 交付为 Markdown 文档 (Epic-Story-Task-AC 结构)。
 - **文档归口原则**: 
-  - 全局架构类设计存放于根目录 `docs/`。
-  - **微服务专属设计与实施文档** (含 Epic/Story/Plan/Task) **必须** 存放于该服务目录下的 `docs/` 中。
+  - 全局架构类设计存放于根目录 `docs/` 下的 `domains/{domain_name}/` 目录。
+  - **微服务专属设计与实施文档** (含 Epic/Story/Plan/Task) **必须** 物理存放于该服务目录下的 `docs/features/{feature_name}/` 文件夹中。
+  - `{feature_name}/` 内部强制划分为 `design/` (设计稿), `reviews/` (评审记录), `implementation_logs/` (实施日志) 三个子目录。
 - **实施日志路径**: 必须按照设计文档同目录下的 `implementation_logs/E{N}/S{M}/` 文件夹进行物理存证。
 
-> [!IMPORTANT]
-> **文档归口原则**: 严禁在根目录 `docs/` 存放微服务专属的开发设计文档。针对 `scf-collector`, `tushare-api` 等微服务的所有 Epic/Story 设计及实施日志，**必须** 物理存放于该微服务根目录下的 `docs/` 文件夹中。
+> **文档归口原则**: 严禁在根目录 `docs/` 随意堆放微服务专属文档。针对 `scf-collector`, `tushare-api` 等微服务的所有 Epic/Story 设计及实施日志，**必须** 物理存放于该微服务 `docs/features/{feature_name}/` 文件夹下的对应子目录中。
 
 ---
 
@@ -78,6 +78,7 @@
 ### 5.1 实施前准入 (Readiness Check)
 在正式开始任何 Story 的开发前，必须在 `implementation_plan.md` 中完成认证：
 - [ ] **需求解析**: 3句话描述核心逻辑。
+- [ ] **结构化设计**: 必须使用 `epic-story-doc` 生成 `draft_E{N}.{md,json}` 并存放于微服务 `docs/` 下。
 - [ ] **依赖认证**: 查实 `TABLES_INDEX.md` 及环境连通性。
 - [ ] **角色激活**: 显式声明激活的角色（参考 `docs/architecture/agent-skill-rules/ROLES.md`）。
 
@@ -86,17 +87,30 @@
 2. **Task ID 进 Commit**: 每个 Task 对应一个 Commit，前缀 `[E1-S1-T1]`。
 3. **验收前必跑 AC**: 所有验收标准 (AC) 必须转为可执行测试。
 4. **采集清单同步**: 每一项云函数采集开发完成后，必须同步更新该微服务下的 `docs/done-list-tables.md`，记录已落地的表名、采集频率及关键 AC 达成情况。
+5. **HTML 文档导航 (Portal)**: 
+   - 所有的需求设计、技术文档、完成报告必须额外产出 **HTML 格式** 副本。
+   - 完成任何 HTML 交付物后，必须运行 `python scripts/update_docs_portal.py` 更新全局与局部门户。
+   - 全局门户: [docs/index.html](file:///e:/gitee/microservice-stock/docs/index.html)；局部门户: `{service}/index.html`。
 
 ### 5.3 验证“真源”准则
 - **物理查验**: 必须通过 `docker exec` 或 SQL 直连数据库确认真实记录，严禁盲目信任 API 返回值。
 - **存证要求**: `walkthrough.md` 必须包含真实的 SQL 结果块或日志片段。
-- **交付物闭环**: 每一项 Story (S) 开发完成后，必须在对应的 `implementation_logs/E{N}/S{M}/` 目录下生成 `REPORT.md` (技术报告) 及 `API.md` (如有接口变更)。
+- **交付物闭环**: 每一项 Story (S) 开发完成后，必须在对应的 `implementation_logs/E{N}/S{M}/` 目录下生成 `REPORT.html` (技术报告/HTML版) 及 `API.md` (如有接口变更)。
 
 ### 5.4 数据质量闭环 (QC Feedback Loop)
 
 1. **映射双检**: 所有 `ods_` 层接入必须输出“字段对齐矩阵”脚本及结果。
 2. **灰度先行**: 历史同步必须遵循 `10只股票样本 -> 校验 -> 全量回填` 的三段式流程。
 3. **空值红线**: 核心字段（Fact）在回填结束后必须执行 `COUNT(*) WHERE IS NULL` 审计。
+
+### 5.5 结构化评审循环 (Epic Audit Loop)
+
+1. **设计生成**: 使用 `epic-story-doc` 生成 `draft_E{N}.json`。
+2. **评审开启**: 运行 `python .agents/skills/epic-story-doc/inject.py {path_to_json}` 生成评审 HTML。
+3. **反馈闭环**: 
+   - 用户在评审页标注修改意见并导出 `review_result.json`。
+   - Agent 读取该 JSON 并调用 `epic-story-doc` 的重生成逻辑更新设计。
+4. **通过准则**: 只有在评审页所有 Story 状态为 `ok` 且 `draft_E{N}.md` 同步更新后，方可进入 Story 实施。
 
 ---
 
@@ -127,3 +141,5 @@
 | 2026-05-10 | v1.5 | **交付对齐**: 强化 5.3 节，要求每个 Story 必须产出 REPORT.md 和 API.md 存证。 |
 | 2026-05-12 | v1.6 | **文档归口**: 明确微服务专属设计与实施文档需存放在服务内部的 `docs/` 目录下。 |
 | 2026-05-12 | v1.7 | **交付标准化**: 强化 5.2 节，要求云函数开发完成后必须同步更新 `done-list-tables.md`。 |
+| 2026-05-15 | v1.8 | 文档门户化: 引入 HTML 文档导航系统，要求所有报告产出 HTML 版并同步至 Portal。 |
+| 2026-05-15 | v1.9 | **SOP 闭环化**: 强制要求 Epic-Story 设计评审循环，实现全局+局部双级门户自动化。 |
