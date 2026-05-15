@@ -112,6 +112,13 @@
    - Agent 读取该 JSON 并调用 `epic-story-doc` 的重生成逻辑更新设计。
 4. **通过准则**: 只有在评审页所有 Story 状态为 `ok` 且 `draft_E{N}.md` 同步更新后，方可进入 Story 实施。
 
+### 5.6 SCF 兼容性强约束 (Binary Integrity)
+
+1.  **禁止 Windows 原生打包**: 严禁在 Windows 环境下直接通过 `pip install -t .` 打包依赖并上传。
+2.  **强制平台审计**: 所有上传至 SCF 的依赖包必须通过 `scripts/scf_build_tool.py` 进行构建。
+3.  **零容忍红线**: 构建过程中如果审计发现任何 `.pyd` 文件，必须立即停止构建并报错，严禁跳过审计上传。
+4.  **环境一致性**: 强制指定 `--platform manylinux2014_x86_64` 和 `--only-binary=:all:`。
+
 ---
 
 ## 6. 反模式清单 (自检)
