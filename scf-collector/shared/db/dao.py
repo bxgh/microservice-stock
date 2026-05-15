@@ -356,9 +356,9 @@ class StockDAO:
     @staticmethod
     async def is_trading_day(biz_date: str) -> bool:
         """
-        [E7-S5-T1] 校验指定日期是否为 A 股交易日 (默认上交所 SSE)
+        [E7-S5-T1] 校验指定日期是否为 A 股交易日 (兼容 SSE 和 SH 编码)
         """
-        sql = "SELECT is_open FROM trade_cal WHERE cal_date = %s AND exchange = 'SSE'"
+        sql = "SELECT is_open FROM trade_cal WHERE cal_date = %s AND exchange IN ('SSE', 'SH')"
         rows = await execute_query(sql, (biz_date,), is_select=True)
         if rows:
             return bool(rows[0]['is_open'])

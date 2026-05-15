@@ -32,22 +32,27 @@ description: 指导 Agent 如何通过腾讯云 SDK 直接完成 SCF 的全流�
 
 **注意**: 更新 Layer 配置后，云端已有容器可能不会立刻挂载新层。**最佳实践是在绑定新 Layer 之后，立刻执行一次 `UpdateFunctionCode` 强制刷新容器实例 (Cold Start)。**
 
-## 3. Layer (层) 打包实战：彻底解决跨平台编译循环
+## 3. Layer (层) 打包实战：解决跨平台编译与二进制兼容
 
-在 Windows 环境下打包包含 C 扩展（如 Pandas, Cryptography）的库供云端 Linux 使用时，极易陷入 `pip` 解析死循环。
+在 Windows 环境下打包包含 C 扩展（如 Pandas, Cryptography）的库供云端 Linux 使用时，严禁直接使用本地生成的二进制文件。
 
-### 策略 A：增量纯 Python 补丁层 (Patch Layer) - 首选！
-如果云端已经存在一个包含庞大底层库（Pandas/Numpy）的底层 Layer，并且你只需新增轻量级包（如 EasyQuotation），**绝对不要尝试重新打全量包**。
-- **做法**: 仅针对缺失包打增量 Layer。
-- **关键指令**: 必须加上 `--no-deps` 防止它递归下载本地系统不兼容的底层 C 库：
-  `pip install easyquotation mootdx -t layers/python --no-cache-dir --no-deps`
+### 策略 A：强约束跨平台构建 (无 Docker 环境首选)
+必须使用项目提供的 `scripts/scf_build_tool.py` 进行构建。该工具实现了以下**强约束**：
+1.  **参数强制化**: 自动附加 `--platform manylinux2014_x86_64` 和 `--only-binary=:all:`。
+2.  **二进制审计 (Critical)**: 构建脚本会自动递归扫描输出目录，**一旦发现 `.pyd` 文件立即中断并报错**。这能 100% 防止 Windows 二进制文件混入 Linux 环境。
+3.  **标准化流程**: 自动清理 `dist-info` 和 `__pycache__` 减小包体积。
 
-### 策略 B：Docker Linux 环境原生构建
-若必须打包全量 C 扩展库，严禁在 Windows 主机直接使用 `--platform manylinux2014_x86_64`。必须启动临时 Docker 容器构建：
+**执行指令**:
+```bash
+python scripts/scf_build_tool.py
+```
+
+### 策略 B：Docker Linux 环境原生构建 (如有 Docker)
+若本地有 Docker，可直接在 Linux 容器内编译，确保 100% 运行环境一致：
 ```python
 docker_cmd = [
     'docker', 'run', '--rm',
-    '-v', f"{mount_path}:/app", # 注意：Windows 挂载目录应为 /e/xxx/ 格式防止 invalid mode
+    '-v', f"{mount_path}:/app",
     '-w', '/app',
     'python:3.10-slim',
     'pip', 'install', '-r', 'requirements.txt', '-t', 'layers/python'
