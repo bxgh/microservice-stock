@@ -1,0 +1,119 @@
+{
+  "title": "E10 开发者体验增强：双级文档门户与 SOP 自动化闭环",
+  "version": "v1.0",
+  "date": "2026-05-15",
+  "sections": [
+    {
+      "id": "background",
+      "title": "背景",
+      "blocks": [
+        { "type": "text", "content": "随着微服务数量的增加，全局文档门户（docs/index.html）逐渐变得拥挤，难以快速定位特定服务的实施细节。同时，Epic -> Story -> Task -> AC 的开发流程虽然已经明确，但缺乏自动化的工具链支撑，导致文档更新滞后或格式不统一。本 Epic 旨在通过建立“全局+局部”的双级门户体系，并将 SOP 流程自动化，提升开发与审计效率。" }
+      ]
+    },
+    {
+      "id": "architecture",
+      "title": "架构方案",
+      "blocks": [
+        { "type": "text", "content": "建立双级索引结构，实现文档的“垂直深挖”与“水平发现”：" },
+        { "type": "table", "content": [
+          ["层级", "路径", "职责"],
+          ["全局门户", "docs/index.html", "展示全项目子系统导航及全局最新动态"],
+          ["局部门户", "{service}/index.html", "展示特定服务的 Epic 设计、评审记录及实施报告"]
+        ]},
+        { "type": "mermaid", "content": "graph TD\n  Root[项目根目录] --> Docs[docs/index.html 全局]\n  Root --> S1[scf-collector/index.html 局部]\n  Root --> S2[tushare-api/index.html 局部]\n  S1 --> S1_Docs[docs/ & implementation_logs/]\n  S2 --> S2_Docs[docs/ & implementation_logs/]" }
+      ]
+    }
+  ],
+  "risks": [
+    { "risk": "相对路径陷阱", "impact": "中", "prob": "中", "mitigation": "在脚本中使用统一的相对路径计算逻辑，确保 HTML 静态跳转不失效。" },
+    { "risk": "脚本执行权限", "impact": "低", "prob": "低", "mitigation": "确保脚本在 Docker 和本地环境下均可执行。" }
+  ],
+  "milestones": [
+    { "name": "M1: 核心脚本就绪", "date": "2026-05-15", "deliverable": "update_docs_portal.py 支持双级扫描" },
+    { "name": "M2: 门户全量覆盖", "date": "2026-05-15", "deliverable": "各微服务根目录 index.html 生成" },
+    { "name": "M3: SOP 准则固化", "date": "2026-05-15", "deliverable": "AGENTS.md 更新完成" }
+  ],
+  "epics": [
+    {
+      "id": "E10",
+      "title": "双级文档门户与 SOP 自动化",
+      "desc": "建立自动化文档导航体系，固化 Epic-Story 开发闭环",
+      "stories": [
+        {
+          "id": "E10-S1",
+          "title": "门户脚本重构与双级扫描实现",
+          "role": {
+            "as": "DevOps Engineer",
+            "want": "一个能够自动扫描全项目 HTML 并生成全局/局部索引的脚本",
+            "value": "消除手动维护文档索引的成本，确保文档 100% 可发现"
+          },
+          "tasks": [
+            { "id": "E10-S1-T1", "text": "编写/更新 scripts/update_docs_portal.py，支持递归扫描各微服务 docs 目录" },
+            { "id": "E10-S1-T2", "text": "实现局部 index.html 生成逻辑，根据所在服务目录动态过滤内容" },
+            { "id": "E10-S1-T3", "text": "集成相对路径计算模块，解决不同层级间的跳转问题" }
+          ],
+          "acs": [
+            {
+              "id": "AC1",
+              "name": "全局扫描能力",
+              "given": "存在多个包含 docs/ 的微服务目录",
+              "when": "执行 python scripts/update_docs_portal.py",
+              "then": "docs/index.html 能正确列出所有服务的最新 5 条 HTML 记录"
+            },
+            {
+              "id": "AC2",
+              "name": "局部索引生成",
+              "given": "scf-collector 目录下有多个实施报告",
+              "when": "脚本运行结束",
+              "then": "scf-collector/index.html 被创建，且仅包含该服务的文档"
+            }
+          ]
+        },
+        {
+          "id": "E10-S2",
+          "title": "门户模板标准化与视觉一致性",
+          "role": {
+            "as": "Frontend Designer",
+            "want": "一套统一的 HTML 模板，支持全局和局部索引的渲染",
+            "value": "提升项目专业感，确保导航体验一致"
+          },
+          "tasks": [
+            { "id": "E10-S2-T1", "text": "抽取现有的 docs/index.html 样式为独立 CSS 或 Jinja2 模板片段" },
+            { "id": "E10-S2-T2", "text": "设计局部门户专用布局（突出该服务的 Epic 列表）" }
+          ],
+          "acs": [
+            {
+              "id": "AC1",
+              "name": "视觉一致性",
+              "given": "生成了全局和局部门户",
+              "when": "浏览器打开",
+              "then": "两者配色、字体、卡片风格完全一致"
+            }
+          ]
+        },
+        {
+          "id": "E10-S3",
+          "title": "SOP 流程准则入规",
+          "role": {
+            "as": "Requirement Architect",
+            "want": "更新 AGENTS.md 和技能文档，将双级门户和 Epic 评审循环固化为硬约束",
+            "value": "确保后续所有开发活动都遵循标准流程，维持项目长期可维护性"
+          },
+          "tasks": [
+            { "id": "E10-S3-T1", "text": "更新 AGENTS.md 增加 5.5 节 Epic Audit Loop" },
+            { "id": "E10-S3-T2", "text": "更新 epic-story-doc/SKILL.md，明确 MD/JSON 双轨制与门户集成的要求" }
+          ],
+          "acs": [
+            {
+              "id": "AC1",
+              "name": "规则覆盖",
+              "given": "查看 AGENTS.md",
+              "when": "搜索 Portal 或 Audit",
+              "then": "必须能看到明确的自动化执行指令（如脚本运行命令）"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

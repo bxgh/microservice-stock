@@ -1,0 +1,91 @@
+{
+  "title": "E11 文档体系标准化：基于功能领域的层级重构",
+  "version": "v1.1",
+  "date": "2026-05-15",
+  "change_log": [
+    { "date": "2026-05-15", "version": "v1.0", "event": "初始设计产出" },
+    { "date": "2026-05-15", "version": "v1.1", "event": "人工评审通过，新增 scf-collector 目录整理任务" }
+  ],
+  "sections": [
+    {
+      "id": "background",
+      "title": "背景",
+      "blocks": [
+        { "type": "text", "content": "随着项目功能的快速迭代，现有的文档存放方式（按文件类型散落在 docs/ 或 implementation_logs/ 下）导致功能相关的资产碎片化。开发者难以在同一目录下获取某个功能的完整上下文（设计、评审、日志）。本 Epic 旨在推行“以功能为核心”的目录重构，建立职责分明的业务领域映射体系。" }
+      ]
+    },
+    {
+      "id": "design_spec",
+      "title": "设计规范",
+      "blocks": [
+        { "type": "text", "content": "重构后的文档树将遵循业务模块化原则：" },
+        { "type": "code", "lang": "text", "content": "{service}/docs/features/\n└── {feature_name}/          # 如: kline_sync\n    ├── design/              # 存放 draft_E{N}.md/.json\n    ├── reviews/             # 存放 review_E{N}.html\n    └── implementation_logs/ # 存放 S{M} 的存证报告" },
+        { "type": "text", "content": "全局 docs/ 将演进为业务领域视图：" },
+        { "type": "code", "lang": "text", "content": "docs/\n├── domains/                 # 业务领域\n│   ├── data_hub/            # 数据采集与存储\n│   └── quant_engine/        # 量化计算\n└── standards/               # 技术标准规约" }
+      ]
+    }
+  ],
+  "risks": [
+    { "risk": "存量文档迁移风险", "impact": "中", "prob": "高", "mitigation": "采用分步迁移策略，优先对 scf-collector 等核心微服务进行结构重编，其他服务逐步跟进。" },
+    { "risk": "脚本路径兼容性", "impact": "高", "prob": "中", "mitigation": "在更新 update_docs_portal.py 时增加对新旧路径的兼容，确保迁移期间门户不挂掉。" }
+  ],
+  "milestones": [
+    { "name": "M1: 结构规范入规", "date": "2026-05-15", "deliverable": "AGENTS.md 更新完成" },
+    { "name": "M2: 脚本能力升级", "date": "2026-05-15", "deliverable": "支持功能目录自动识别的更新脚本" },
+    { "name": "M3: 核心服务迁移", "date": "2026-05-15", "deliverable": "scf-collector 文档重构完成" }
+  ],
+  "epics": [
+    {
+      "id": "E11",
+      "title": "基于功能领域的文档体系重构",
+      "desc": "将文档组织形式从物理文件类型转向业务功能逻辑",
+      "stories": [
+        {
+          "id": "E11-S1",
+          "title": "SOP 规约与 Agent 硬约束更新",
+          "role": {
+            "as": "Requirement Architect",
+            "want": "在 AGENTS.md 中定义全新的功能目录强制约束",
+            "value": "确保后续所有开发活动从创建目录开始就符合功能隔离原则"
+          },
+          "tasks": [
+            { "id": "E11-S1-T1", "text": "更新 AGENTS.md 第 5 节，明确 {feature_name} 目录层级要求" },
+            { "id": "E11-S1-T2", "text": "更新 epic-story-doc SKILL，支持自动识别功能路径" }
+          ],
+          "acs": [
+            {
+              "id": "AC1",
+              "name": "规约覆盖",
+              "given": "AGENTS.md 已更新",
+              "when": "查看文档归口原则",
+              "then": "必须明确提及 docs/features/{feature_name}/ 这一层级结构"
+            }
+          ]
+        },
+        {
+          "id": "E11-S2",
+          "title": "门户自动化脚本深度扫描适配",
+          "role": {
+            "as": "DevOps Engineer",
+            "want": "升级 update_docs_portal.py 使其能识别功能目录并自动打标",
+            "value": "在门户页自动按功能模块分组展示文档，提升搜索效率"
+          },
+          "tasks": [
+            { "id": "E11-S2-T1", "text": "修改扫描算法，识别 features/ 下的二级目录名作为 Feature Tag" },
+            { "id": "E11-S2-T2", "text": "更新 HTML 模板，增加按功能分组渲染的逻辑" },
+            { "id": "E11-S2-T3", "text": "根据最新要求整理 scf-collector/docs 目录" }
+          ],
+          "acs": [
+            {
+              "id": "AC1",
+              "name": "功能打标验证",
+              "given": "存在 features/kline_sync/ 目录",
+              "when": "运行门户更新脚本",
+              "then": "HTML 页面中的文档标签应显示为 [KLINE_SYNC] 而非通用的 [SCF-COLLECTOR]"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
