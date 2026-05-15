@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>实施日志: [E2-S1] 因子 Forward-Fill 回填</title>
+    <title>task</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Noto+Serif+SC:wght@400;700;900&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
@@ -207,8 +207,8 @@
 <body>
     <div class="container">
         <header>
-            <div class="meta">SCF-COLLECTOR | 2026-05-15 22:07</div>
-            <h1>实施日志: [E2-S1] 因子 Forward-Fill 回填</h1>
+            <div class="meta">SCF-COLLECTOR | 2026-05-15 22:09</div>
+            <h1>task</h1>
         </header>
 
         <article id="content" class="markdown-body">
@@ -221,45 +221,21 @@
         </footer>
     </div>
 
-    <script id="markdown-raw" type="text/markdown"># 实施日志: [E2-S1] 因子 Forward-Fill 回填
+    <script id="markdown-raw" type="text/markdown">- [ ] **E1 预备环境 (Env Readiness)**
+    - [x] 确认 MySQL 5.7 连通性与权限
+    - [x] 确认 `stock_kline_daily` 字段结构 (已包含 `adj_factor`)
+    - [x] 确认宿主机磁盘空间 (7.6GB Avail vs 1.37GB Table)
 
-## 1. 任务背景
-针对 `stock_kline_daily` 存量数据（1922万行）进行 `adj_factor` 字段的物理回填，旨在消除全市场选股时的 JOIN 开销。
+- [x] **E2 历史数据回填 (Backfill Execution)**
+    - [x] **E2-S1-T1**: 物理备份 `stock_kline_daily_bak_20260515` (已在 DB 内完成备份)
+    - [x] **E2-S1-T2**: 确认 `stock_adjust_factor` 联合索引
+    - [x] **E2-S1-T3**: 编写并部署 `backfill_adj_factor.py` (已部署至 `stock-manager` 容器)
+    - [/] **E2-S1-T4**: 启动容器化批量回填并监控日志 (进行中，ETA ~4h)
 
-## 2. 实施细节
-
-### 2.1 物理备份 (E2-S1-T1)
-由于生产环境开启了 GTID 且数据量较大，采用在库内创建快照表的方式进行备份。
-- **备份表名**: `stock_kline_daily_bak_20260515`
-- **数据量**: 19,226,760 行
-- **备份耗时**: 约 4 分钟
-
-```sql
--- 验证备份表
-SELECT COUNT(*) FROM stock_kline_daily_bak_20260515;
--- 结果: 19226760
-```
-
-### 2.2 脚本部署与执行 (E2-S1-T3)
-脚本 `scripts/backfill/backfill_adj_factor.py` 已部署至 `stock-manager` 容器。
-- **执行环境**: Docker 容器 (Tencent Cloud)
-- **核心逻辑**: 采用股票维度 (ts_code) 的分批更新，每 50 只股票输出一次进度，每只股票事务独立提交。
-
-### 2.3 进度监控 (E2-S1-T4)
-实时监控日志输出：
-```text
-2026-05-15 21:42:49 [INFO] Progress: 50/7437 (0.67%) | Speed: 0.53 stocks/s | ETA: 231.25 min
-...
-2026-05-15 22:02:35 [INFO] Progress: 3300/7437 (44.37%) | Speed: 2.58 stocks/s | ETA: 26.74 min
-```
-
-## 3. 验证方案 (Pending)
-- [ ] **AC1**: 执行空值审计，预期 `adj_factor IS NULL` 数量为 0。
-- [ ] **AC2**: 抽样 10 只个股（含茅台）的前复权价格一致性对账。
-
-## 4. 交付物
-- **设计文档**: [Adjfactor-in-klineDaily.md](../../design/Adjfactor-in-klineDaily.md)
-- **技术报告**: [REPORT.html](REPORT.html) (自动生成)
+- [ ] **E3 验证与审计 (Verification & Audit)**
+    - [ ] **E3-S1-T1**: 执行空值审计 (Target: 0)
+    - [ ] **E3-S1-T2**: 10只个股前复权对账验证
+    - [ ] **E3-S1-T3**: 产出回填完成报告 (REPORT.html)
 </script>
 
     <script>
