@@ -1,0 +1,125 @@
+{
+  "title": "E12: stock_kline_daily 历史数据校验与自动修复体系",
+  "version": "v1.0",
+  "date": "2026-05-15",
+  "sections": [
+    {
+      "id": "background",
+      "title": "背景",
+      "blocks": [
+        { "type": "text", "content": "当前 A 股日线数据采集已具备基础能力，但缺乏系统性的事后质量审计与自动化修复机制。随着 adj_factor 内嵌方案的实施，数据的一致性要求从「单表完整」提升到了「跨表/跨源一致」。本 Epic 旨在构建一套能够自动发现空洞、自动对账因子、并自动触发修复的数据管线。" },
+        { "type": "text", "content": "> **评审批注**: 针对日线数据全量巡检的高开销问题，方案调整为「一次基准校验 + 每周增量校验」模式，并根据算力需求实现环境隔离（Docker/SCF）。" }
+      ]
+    }
+  ],
+  "risks": [
+    { "risk": "API 限流导致封禁", "impact": "高", "prob": "中", "mitigation": "修复队列实施令牌桶限流（1 QPS）" },
+    { "risk": "修复任务死循环", "impact": "中", "prob": "低", "mitigation": "任务设置 max_retries=3，失败转人工审计" },
+    { "risk": "基准校验对数据库压力", "impact": "中", "prob": "中", "mitigation": "基准校验在低峰期于腾讯云 Docker 环境执行，不占用 SCF 资源" }
+  ],
+  "milestones": [
+    { "name": "M1: 巡检就绪", "date": "2026-05-20", "deliverable": "输出全市场基准空洞报告" },
+    { "name": "M2: 补数上线", "date": "2026-05-25", "deliverable": "实现「发现即补录」闭环" },
+    { "name": "M3: 体系自愈", "date": "2026-06-01", "deliverable": "因子一致性对账覆盖率 > 99%" }
+  ],
+  "epics": [
+    {
+      "id": "E12",
+      "title": "stock_kline_daily 历史数据校验与自动修复体系",
+      "desc": "构建全自动、可审计、自修复的数据校验与补录管线，预计周期 2-3 周。",
+      "stories": [
+        {
+          "id": "E12-S1",
+          "title": "[L2] 分层数据完整性巡检 (Multi-Tier Integrity Checker)",
+          "role": {
+            "as": "Data Integrity Steward",
+            "want": "区分基准全量巡检与每周增量巡检",
+            "value": "在兼顾性能与算力的前提下，确保全量数据的完整性"
+          },
+          "tasks": [
+            { "id": "E12-S1-T1", "text": "开发具备 --mode=[full|delta] 的巡检脚本" },
+            { "id": "E12-S1-T2", "text": "在 stock-manager Docker 容器中执行全量基准校验 (Mode: Full)" },
+            { "id": "E12-S1-T3", "text": "在 SCF 中部署每周定时运行的增量巡检 (Mode: Delta)" },
+            { "id": "E12-S1-T4", "text": "引入 meta_config 维护「上次校验成功日期」，支持增量逻辑" }
+          ],
+          "acs": [
+            {
+              "id": "AC1",
+              "name": "增量巡检触发",
+              "given": "基准校验已完成且 meta_config 记录日期为 2026-05-01",
+              "when": "在 SCF 执行 Delta 模式巡检",
+              "then": "脚本仅对比 2026-05-01 至今的交易日缺失情况"
+            },
+            {
+              "id": "AC2",
+              "name": "基准校验性能",
+              "given": "Docker 容器环境下连接数据库",
+              "when": "执行 Full 模式全量对比（2000 万行）",
+              "then": "通过分批查询（Chunking）确保内存消耗 < 512MB，且不产生长事务锁表"
+            }
+          ]
+        },
+        {
+          "id": "E12-S2",
+          "title": "[L3] 因子对账与计算一致性审计 (Factor Auditor)",
+          "role": {
+            "as": "DB Auditor",
+            "want": "随机抽样对账内嵌因子计算出的复权价",
+            "value": "确保回填逻辑无偏差，数据具备业务真实性"
+          },
+          "tasks": [
+            { "id": "E12-S2-T1", "text": "实现随机抽样对账逻辑（1000 采样点/次）" },
+            { "id": "E12-S2-T2", "text": "对接 Tushare qfq 官方价格作为 True Source" },
+            { "id": "E12-S2-T3", "text": "输出误差超过 0.1% 的详细审计报告" }
+          ],
+          "acs": [
+            {
+              "id": "AC1",
+              "name": "计算一致性",
+              "given": "抽取任意 1000 个采样点",
+              "when": "执行对账审计",
+              "then": "异常点（误差 > 0.5%）的比例必须低于 0.1%"
+            },
+            {
+              "id": "AC2",
+              "name": "因子跳变捕获",
+              "given": "某股票发生除权但日线表未回填最新因子",
+              "when": "审计脚本运行",
+              "then": "该股必须出现在审计异常清单中并标记理由"
+            }
+          ]
+        },
+        {
+          "id": "E12-S3",
+          "title": "[E6] 任务化自动补数逻辑 (Auto-Recovery Pipeline)",
+          "role": {
+            "as": "Cloud Collector",
+            "want": "自动消费任务队列中的缺失/错误记录并重采",
+            "value": "系统实现全自动自愈，无需人工修数据"
+          },
+          "tasks": [
+            { "id": "E12-S3-T1", "text": "开发 functions/auto_repair/index.py 云函数" },
+            { "id": "E12-S3-T2", "text": "对接任务队列，支持多源补偿机制" },
+            { "id": "E12-S3-T3", "text": "实现修复成功后的审计日志留痕" }
+          ],
+          "acs": [
+            {
+              "id": "AC1",
+              "name": "闭环修复验证",
+              "given": "meta_task_queue 存在缺失数据任务",
+              "when": "启动自动修复云函数",
+              "then": "缺失行被正确补录，且任务状态更新为 done"
+            },
+            {
+              "id": "AC2",
+              "name": "幂等与安全",
+              "given": "修复任务重复执行",
+              "when": "多次触发同一个修复 ID",
+              "then": "数据库无重复行，且历史日志仅记录首次成功标识"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
