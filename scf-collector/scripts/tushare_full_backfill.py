@@ -83,10 +83,14 @@ async def run_backfill():
         logger.error("TUSHARE_TOKEN 未配置，任务终止")
         return
 
-    # 1. 获取目标日期列表
+    # 1. 获取目标日期列表 (从 1990-12-19 到今天)
     all_days = await get_trading_days()
     total_days = len(all_days)
-    logger.info(f"待处理交易日总数: {total_days}")
+    if total_days == 0:
+        logger.error("未找到交易日历数据，请检查 trade_cal 表")
+        return
+        
+    logger.info(f"待处理交易日总数: {total_days} | 预计耗时: {total_days * (THROTTLE_SLEEP + 0.2) / 3600:.1f} 小时")
 
     # 2. 循环执行
     for idx, day in enumerate(all_days):
@@ -95,20 +99,28 @@ async def run_backfill():
         res = await execute_query(check_sql, (TASK_NAME, day))
         
         if res and res[0]['status'] == 'completed':
-            # logger.debug(f"日期 {day} 已完成，跳过")
             continue
 
         # 开始处理
         start_time = time.time()
         biz_date = f"{day[:4]}-{day[4:6]}-{day[6:]}"
         
+        # 打印进度条
+        progress = (idx + 1) / total_days
+        bar_length = 20
+        filled_length = int(round(bar_length * progress))
+        bar = '█' * filled_length + '-' * (bar_length - filled_length)
+        sys.stdout.write(f"\r进度: |{bar}| {progress*100:.1f}% [{idx+1}/{total_days}] 处理 {biz_date} ")
+        sys.stdout.flush()
+        
         try:
-            # 抓取数据
+            # 抓取数据 (Tushare daily 接口)
+            # 注意：trade_date 参数格式为 YYYYMMDD
             kline_models = await collector.fetch_batch_daily_kline(biz_date)
             
             if kline_models:
                 # 批量入库
-                affected = await save_batch_fast(kline_models)
+                await save_batch_fast(kline_models)
                 
                 # 更新进度 (同步记录)
                 upsert_sql = """
@@ -117,22 +129,25 @@ async def run_backfill():
                 ON DUPLICATE KEY UPDATE status='completed', last_index=%s, updated_at=CURRENT_TIMESTAMP
                 """
                 await execute_query(upsert_sql, (TASK_NAME, day, idx + 1, total_days, idx + 1))
-                
-                duration = time.time() - start_time
-                logger.info(f"[{idx+1}/{total_days}] {biz_date} 同步成功: {len(kline_models)} 行 (耗时: {duration:.2f}s)")
             else:
-                logger.warning(f"[{idx+1}/{total_days}] {biz_date} 无数据返回，可能非交易日或接口异常")
-                # 即使无数据也标记为完成，防止死循环
+                # 即使无数据也标记为完成（如周六被误标为交易日的情况）
+                upsert_sql = """
+                INSERT INTO sync_progress (task_name, current_code, status, last_index, total_count)
+                VALUES (%s, %s, 'completed', %s, %s)
+                ON DUPLICATE KEY UPDATE status='completed', last_index=%s, updated_at=CURRENT_TIMESTAMP
+                """
                 await execute_query(upsert_sql, (TASK_NAME, day, idx + 1, total_days, idx + 1))
 
             # [E13-S2-AC1] 强制限流
             await asyncio.sleep(THROTTLE_SLEEP)
 
         except Exception as e:
+            sys.stdout.write("\n")
             logger.error(f"[{idx+1}/{total_days}] {biz_date} 同步失败: {e}")
-            await asyncio.sleep(5) # 发生错误时多等一会儿
+            await asyncio.sleep(5) 
 
-    logger.info(">>> 全量回填任务圆满结束 <<<")
+    sys.stdout.write("\n")
+    logger.info(">>> 全量回填任务圆补结束 <<<")
 
 if __name__ == "__main__":
     try:
