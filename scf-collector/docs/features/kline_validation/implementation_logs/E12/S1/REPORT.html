@@ -1,188 +1,77 @@
 
-<!DOCTYPE html>
-<html lang="zh-CN">
-<head>
-    <meta charset="UTF-8">
-    <title>数据对账审计报告 - E12-S1</title>
-    <style>
-        :root {
-            --primary-color: #2563eb;
-            --danger-color: #dc2626;
-            --success-color: #16a34a;
-            --warning-color: #ca8a04;
-            --bg-color: #f8fafc;
-        }
-        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background: var(--bg-color); color: #1e293b; line-height: 1.5; padding: 2rem; }
-        .container { max-width: 1200px; margin: 0 auto; background: white; padding: 2rem; border-radius: 12px; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1); }
-        h1 { color: #0f172a; border-bottom: 2px solid #e2e8f0; padding-bottom: 0.5rem; }
-        .summary-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1.5rem; margin: 2rem 0; }
-        .card { padding: 1.5rem; border-radius: 8px; border: 1px solid #e2e8f0; }
-        .card .label { font-size: 0.875rem; color: #64748b; font-weight: 500; }
-        .card .value { font-size: 1.875rem; font-weight: 700; margin-top: 0.5rem; }
-        .card.error { border-left: 4px solid var(--danger-color); }
-        .card.success { border-left: 4px solid var(--success-color); }
-        table { width: 100%; border-collapse: collapse; margin-top: 2rem; }
-        th { background: #f1f5f9; text-align: left; padding: 0.75rem; font-size: 0.875rem; color: #475569; }
-        td { padding: 0.75rem; border-bottom: 1px solid #f1f5f9; font-size: 0.875rem; }
-        .status { padding: 0.25rem 0.5rem; border-radius: 4px; font-weight: 600; font-size: 0.75rem; }
-        .status-pending { background: #fef9c3; color: #854d0e; }
-        .status-fixed { background: #dcfce7; color: #166534; }
-        .error-tag { color: var(--danger-color); font-weight: 500; }
-    </style>
-</head>
-<body>
-    <div class="container">
-        <h1>📊 数据对账审计报告 (E12-S1)</h1>
-        <p>生成时间: 2026-05-16 12:13:55</p>
-        
-        <div class="summary-grid">
-            <div class="card error">
-                <div class="label">待修复异常 (K-line)</div>
-                <div class="value">0</div>
+    <!DOCTYPE html>
+    <html lang="zh-CN">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>K线数据质量综述报告</title>
+        <style>
+            body { font-family: 'Inter', sans-serif; background-color: #f8fafc; color: #1e293b; padding: 2rem; line-height: 1.6; }
+            .container { max-width: 1000px; margin: 0 auto; background: white; padding: 2rem; border-radius: 16px; box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1); }
+            .header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #f1f5f9; padding-bottom: 1rem; margin-bottom: 2rem; }
+            h1 { margin: 0; color: #0f172a; font-size: 1.8rem; }
+            .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1.5rem; margin-bottom: 2rem; }
+            .card { background: #f8fafc; padding: 1.5rem; border-radius: 12px; border: 1px solid #e2e8f0; }
+            .card-title { font-size: 0.875rem; color: #64748b; font-weight: 600; margin-bottom: 0.5rem; }
+            .card-value { font-size: 1.5rem; font-weight: 700; color: #2563eb; }
+            .status-success { color: #059669; }
+            .status-warning { color: #d97706; }
+            table { width: 100%; border-collapse: collapse; }
+            th, td { text-align: left; padding: 1rem; border-bottom: 1px solid #f1f5f9; }
+            th { background: #f8fafc; font-weight: 600; font-size: 0.875rem; color: #475569; }
+            .badge { padding: 0.25rem 0.5rem; border-radius: 9999px; font-size: 0.75rem; font-weight: 600; }
+            .badge-pending { background: #fef3c7; color: #92400e; }
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <div class="header">
+                <h1>💎 K线数据质量综述报告</h1>
+                <span style="color: #94a3b8; font-size: 0.875rem;">更新于: 2026-05-16 23:32:04</span>
             </div>
-            <div class="card warning">
-                <div class="label">待修复异常 (Factor)</div>
-                <div class="value">0</div>
+
+            <div class="grid">
+                <div class="card">
+                    <div class="card-title">影子对账一致性 (S2)</div>
+                    <div class="card-value status-success">100%</div>
+                </div>
+                <div class="card">
+                    <div class="card-title">物理红线合格率 (S2)</div>
+                    <div class="card-value status-success">100%</div>
+                </div>
+                <div class="card">
+                    <div class="card-title">已修复空洞 (S3)</div>
+                    <div class="card-value">1819</div>
+                </div>
+                <div class="card">
+                    <div class="card-title">待处理异常</div>
+                    <div class="card-value status-warning">0</div>
+                </div>
             </div>
-            <div class="card success">
-                <div class="label">当前巡检进度</div>
-                <div class="value">20240510</div>
+
+            <h2>📉 待处理空洞分布 (按月份)</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>统计月份</th>
+                        <th>待修复行数</th>
+                        <th>风险等级</th>
+                    </tr>
+                </thead>
+                <tbody>
+    
+                </tbody>
+            </table>
+
+            <div style="margin-top: 2rem; background: #eff6ff; padding: 1.5rem; border-radius: 12px;">
+                <h3 style="margin-top:0; color: #1e40af;">🔍 审计方法论 (Epic E12)</h3>
+                <ul style="margin-bottom:0; font-size: 0.9rem; color: #1e40af;">
+                    <li><b>S1 (审计)</b>: 基于交易日历与股票上市信息的笛卡尔积锁定缺失点。</li>
+                    <li><b>S2 (对账)</b>: AkShare (EM/Sina) 双源随机抽样交叉核验。</li>
+                    <li><b>S3 (修复)</b>: 三段式修复逻辑 (Tushare 批量 -> 停牌对冲 -> AkShare 补偿)。</li>
+                </ul>
             </div>
         </div>
-
-        <h2>🚩 待处理任务清单 (Top 50)</h2>
-        <table>
-            <thead>
-                <tr>
-                    <th>ID</th>
-                    <th>类型</th>
-                    <th>代码</th>
-                    <th>日期</th>
-                    <th>异常类型</th>
-                    <th>状态</th>
-                </tr>
-            </thead>
-            <tbody>
-                
-        <tr>
-            <td>3503</td>
-            <td>REPAIR_KLINE_BATCH</td>
-            <td><code>ALL</code></td>
-            <td>2024-05-10</td>
-            <td><span class="error-tag">SYSTEMIC_ERROR</span></td>
-            <td><span class="status status-success">SUCCESS</span></td>
-        </tr>
-        
-        <tr>
-            <td>1821</td>
-            <td>REPAIR_KLINE</td>
-            <td><code>000004.SZ</code></td>
-            <td>1991-01-31</td>
-            <td><span class="error-tag">PRICE_MISMATCH</span></td>
-            <td><span class="status status-success">SUCCESS</span></td>
-        </tr>
-        
-        <tr>
-            <td>1815</td>
-            <td>REPAIR_KLINE</td>
-            <td><code>000004.SZ</code></td>
-            <td>1991-01-30</td>
-            <td><span class="error-tag">PRICE_MISMATCH</span></td>
-            <td><span class="status status-success">SUCCESS</span></td>
-        </tr>
-        
-        <tr>
-            <td>1809</td>
-            <td>REPAIR_KLINE</td>
-            <td><code>000002.SZ</code></td>
-            <td>1991-01-30</td>
-            <td><span class="error-tag">PRICE_MISMATCH</span></td>
-            <td><span class="status status-success">SUCCESS</span></td>
-        </tr>
-        
-        <tr>
-            <td>1805</td>
-            <td>REPAIR_FACTOR</td>
-            <td><code>000004.SZ</code></td>
-            <td>1991-01-29</td>
-            <td><span class="error-tag">FACTOR_STALE</span></td>
-            <td><span class="status status-failed">FAILED</span></td>
-        </tr>
-        
-        <tr>
-            <td>1800</td>
-            <td>REPAIR_KLINE</td>
-            <td><code>000002.SZ</code></td>
-            <td>1991-01-29</td>
-            <td><span class="error-tag">PRICE_MISMATCH</span></td>
-            <td><span class="status status-success">SUCCESS</span></td>
-        </tr>
-        
-        <tr>
-            <td>1772</td>
-            <td>REPAIR_KLINE</td>
-            <td><code>000004.SZ</code></td>
-            <td>1991-01-23</td>
-            <td><span class="error-tag">PRICE_MISMATCH</span></td>
-            <td><span class="status status-success">SUCCESS</span></td>
-        </tr>
-        
-        <tr>
-            <td>1767</td>
-            <td>REPAIR_FACTOR</td>
-            <td><code>000004.SZ</code></td>
-            <td>1991-01-22</td>
-            <td><span class="error-tag">FACTOR_STALE</span></td>
-            <td><span class="status status-failed">FAILED</span></td>
-        </tr>
-        
-        <tr>
-            <td>1759</td>
-            <td>REPAIR_KLINE</td>
-            <td><code>000004.SZ</code></td>
-            <td>1991-01-22</td>
-            <td><span class="error-tag">PRICE_MISMATCH</span></td>
-            <td><span class="status status-success">SUCCESS</span></td>
-        </tr>
-        
-        <tr>
-            <td>1735</td>
-            <td>REPAIR_FACTOR</td>
-            <td><code>000004.SZ</code></td>
-            <td>1991-01-17</td>
-            <td><span class="error-tag">FACTOR_STALE</span></td>
-            <td><span class="status status-failed">FAILED</span></td>
-        </tr>
-        
-        <tr>
-            <td>1730</td>
-            <td>REPAIR_KLINE</td>
-            <td><code>000004.SZ</code></td>
-            <td>1991-01-17</td>
-            <td><span class="error-tag">PRICE_MISMATCH</span></td>
-            <td><span class="status status-success">SUCCESS</span></td>
-        </tr>
-        
-        <tr>
-            <td>1712</td>
-            <td>REPAIR_KLINE</td>
-            <td><code>000004.SZ</code></td>
-            <td>1991-01-15</td>
-            <td><span class="error-tag">PRICE_MISMATCH</span></td>
-            <td><span class="status status-success">SUCCESS</span></td>
-        </tr>
-        
-        <tr>
-            <td>1706</td>
-            <td>REPAIR_KLINE</td>
-            <td><code>000004.SZ</code></td>
-            <td>1991-01-14</td>
-            <td><span class="error-tag">PRICE_MISMATCH</span></td>
-            <td><span class="status status-success">SUCCESS</span></td>
-        </tr>
-        
-            </tbody>
-        </table>
-    </div>
-</body>
-</html>
+    </body>
+    </html>
+    
