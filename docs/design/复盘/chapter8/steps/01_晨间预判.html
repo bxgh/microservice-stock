@@ -1,0 +1,499 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>第 8 章 · 认知训练系统 (第一步：晨间预判)</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Noto+Serif+SC:wght@400;700;900&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    
+    <!-- Libraries -->
+    <script src="https://lib.baomitu.com/marked/11.1.1/marked.min.js"></script>
+    <link rel="stylesheet" href="https://lib.baomitu.com/github-markdown-css/5.5.0/github-markdown-dark.min.css">
+    <script src="https://lib.baomitu.com/mermaid/10.9.0/mermaid.min.js"></script>
+    
+    <!-- Syntax Highlighting -->
+    <link rel="stylesheet" href="https://lib.baomitu.com/highlight.js/11.9.0/styles/tokyo-night-dark.min.css">
+    <script src="https://lib.baomitu.com/highlight.js/11.9.0/highlight.min.js"></script>
+    
+    <style>
+        :root {
+            --bg: #0a0a0a;
+            --surface: #121212;
+            --surface-hover: #1a1a1a;
+            --border: #222222;
+            --accent: #eab308;
+            --accent-glow: rgba(234, 179, 8, 0.1);
+            --text-primary: #f1f5f9;
+            --text-secondary: #94a3b8;
+            --text-muted: #64748b;
+            --font-sans: 'Outfit', 'Noto Sans SC', -apple-system, sans-serif;
+            --font-serif: 'Noto Serif SC', serif;
+            --font-mono: 'JetBrains Mono', monospace;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background-color: var(--bg);
+            color: var(--text-primary);
+            font-family: var(--font-sans);
+            line-height: 1.7;
+            -webkit-font-smoothing: antialiased;
+            overflow-x: hidden;
+        }
+
+        /* Subtle background glow */
+        body::after {
+            content: '';
+            position: fixed;
+            top: 0;
+            right: 0;
+            width: 40vw;
+            height: 40vh;
+            background: radial-gradient(circle, var(--accent-glow) 0%, transparent 70%);
+            z-index: -1;
+            filter: blur(100px);
+            pointer-events: none;
+        }
+
+        .sidebar {
+            width: 260px;
+            height: 100vh;
+            position: fixed;
+            left: 0;
+            top: 0;
+            border-right: 1px solid var(--border);
+            background: var(--bg);
+            padding: 1.5rem;
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+            overflow-y: auto;
+            z-index: 100;
+        }
+
+        .nav-link {
+            color: var(--text-muted);
+            text-decoration: none;
+            font-size: 0.85rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            transition: color 0.2s;
+            padding: 0.5rem;
+            border-radius: 6px;
+        }
+        .nav-link:hover { color: var(--accent); background: var(--surface); }
+
+        .toc-title {
+            font-family: var(--font-serif);
+            font-size: 1rem;
+            color: var(--text-primary);
+            margin-bottom: 0.8rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding-left: 0.5rem;
+        }
+        .toc-title::before {
+            content: '';
+            width: 3px;
+            height: 1rem;
+            background: var(--accent);
+            border-radius: 2px;
+        }
+
+        .toc-list {
+            list-style: none;
+            display: flex;
+            flex-direction: column;
+            gap: 0.4rem;
+        }
+        .toc-item {
+            font-size: 0.8rem;
+            line-height: 1.3;
+        }
+        .toc-item a {
+            color: var(--text-muted);
+            text-decoration: none;
+            transition: all 0.2s;
+            display: block;
+            padding: 0.4rem 0.5rem;
+            border-radius: 4px;
+        }
+        .toc-item a:hover { color: var(--accent); background: var(--surface); }
+        .toc-item.level-3 { margin-left: 0.8rem; border-left: 1px solid var(--border); }
+
+        .container {
+            max-width: 860px;
+            margin: 0 auto 0 260px;
+            padding: 3rem 4rem;
+            animation: fadeIn 0.6s ease-out;
+        }
+
+        @media (max-width: 1024px) {
+            .sidebar { width: 220px; padding: 1rem; }
+            .container { margin-left: 220px; padding: 2rem; }
+        }
+
+        @media (max-width: 800px) {
+            .sidebar { position: static; width: 100%; height: auto; border-right: none; border-bottom: 1px solid var(--border); }
+            .container { margin-left: 0; padding: 1.5rem; }
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(5px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        header {
+            margin-bottom: 3rem;
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 1.5rem;
+        }
+
+        .meta {
+            font-family: var(--font-mono);
+            font-size: 0.75rem;
+            color: var(--accent);
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            margin-bottom: 0.8rem;
+            display: flex;
+            align-items: center;
+            gap: 0.8rem;
+        }
+
+        .meta::before {
+            content: '';
+            width: 20px;
+            height: 1px;
+            background-color: var(--accent);
+        }
+
+        h1 {
+            font-family: var(--font-serif);
+            font-size: 2.2rem;
+            font-weight: 900;
+            line-height: 1.2;
+            margin-bottom: 1rem;
+            color: var(--text-primary);
+        }
+
+        .markdown-body {
+            background: transparent !important;
+            color: var(--text-primary) !important;
+            font-family: var(--font-sans) !important;
+            font-size: 0.95rem !important;
+        }
+
+        .markdown-body h2 {
+            font-family: var(--font-serif);
+            font-size: 1.5rem !important;
+            color: var(--accent) !important;
+            border-bottom: 1px solid var(--border) !important;
+            padding-bottom: 0.5rem !important;
+            margin-top: 2.5rem !important;
+            scroll-margin-top: 1rem;
+        }
+
+        .markdown-body h3 {
+            font-family: var(--font-serif);
+            font-size: 1.25rem !important;
+            color: var(--text-primary) !important;
+            margin-top: 2rem !important;
+            scroll-margin-top: 1rem;
+        }
+
+        .markdown-body p, .markdown-body li {
+            font-size: 0.95rem !important;
+            color: var(--text-primary) !important;
+        }
+        
+        .markdown-body pre {
+            background-color: #1a1b26 !important; /* Match Tokyo Night Dark */
+            border: 1px solid var(--border);
+            border-radius: 8px !important;
+            padding: 0 !important; /* Code internal handles padding */
+            margin: 1.2rem 0 !important;
+            overflow: hidden;
+        }
+
+        .markdown-body pre code {
+            background-color: transparent !important;
+            padding: 1.2rem !important;
+            display: block;
+            font-family: var(--font-mono) !important;
+            font-size: 0.85rem !important;
+            line-height: 1.5;
+        }
+
+        .markdown-body blockquote {
+            border-left: 3px solid var(--accent) !important;
+            background: var(--surface);
+            padding: 0.8rem 1.2rem;
+            color: var(--text-secondary) !important;
+            margin: 1.2rem 0 !important;
+        }
+
+        .markdown-body table {
+            background: var(--surface);
+            font-size: 0.85rem !important;
+            margin: 1.2rem 0 !important;
+        }
+
+        footer {
+            margin-top: 4rem;
+            padding-top: 1.5rem;
+            border-top: 1px solid var(--border);
+            color: var(--text-muted);
+            font-size: 0.8rem;
+            text-align: center;
+        }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar { width: 5px; }
+        ::-webkit-scrollbar-track { background: var(--bg); }
+        ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+    </style>
+</head>
+<body>
+    <aside class="sidebar">
+        <a href="index.html" class="nav-link">
+            <span>←</span> 返回目录门户
+        </a>
+        
+        <div class="toc-container">
+            <h3 class="toc-title">文档导航</h3>
+            <ul class="toc-list" id="toc">
+                <!-- TOC items will be injected here -->
+            </ul>
+        </div>
+    </aside>
+
+    <div class="container">
+        <header>
+            <div class="meta">GLOBAL | 2026-05-16 19:06</div>
+            <h1>第 8 章 · 认知训练系统 (第一步：晨间预判)</h1>
+        </header>
+
+        <article id="content" class="markdown-body">
+            <!-- Loading indicator -->
+            <p style="color: var(--text-muted)">正在解析文档内容...</p>
+        </article>
+
+        <footer>
+            &copy; 2026 MicroStock Project Docs | Generated by Antigravity
+        </footer>
+    </div>
+
+    <script id="markdown-raw" type="text/markdown"># 第 8 章 · 认知训练系统 (第一步：晨间预判)
+
+## E1 · 晨间预判工具 (Morning Prediction)
+
+> 作为投资者,我希望开盘前 5 分钟内写下今日市场预判,以便建立可校验的先验假设。
+
+### E1-S1 数据表 `train_prediction_morning`
+
+```sql
+CREATE TABLE IF NOT EXISTS train_prediction_morning (
+    pred_id              VARCHAR(32)   NOT NULL                      COMMENT 'UUID',
+    user_id              VARCHAR(32)   NOT NULL,
+    trade_date           DATE          NOT NULL                      COMMENT '预判针对的交易日',
+    submit_time          DATETIME      NOT NULL                      COMMENT '提交时间(必须早于 09:25)',
+
+    -- 1. 整体方向预判(强制三选一)
+    direction            VARCHAR(16)   NOT NULL                      COMMENT 'up/flat/down',
+    direction_confidence TINYINT       NOT NULL                      COMMENT '1-5,1=很不确定 5=非常确定',
+
+    -- 2. 量能预判
+    volume_expect        VARCHAR(16)   NOT NULL                      COMMENT 'expand/flat/shrink',
+
+    -- 3. 主线预判(可选 0-3 个)
+    main_themes          JSON          DEFAULT NULL                  COMMENT '["人工智能","半导体"]',
+
+    -- 4. 风险点预判(自由文本,限 50 字)
+    risk_point           VARCHAR(100)  DEFAULT NULL,
+
+    -- 5. 一句话核心判断(必填,30-100 字)
+    core_judgement       VARCHAR(200)  NOT NULL                      COMMENT '强制输出最重要的一句话',
+
+    -- 6. 预期沪指点位区间(可选)
+    sh_low               DECIMAL(10,2) DEFAULT NULL,
+    sh_high              DECIMAL(10,2) DEFAULT NULL,
+
+    -- 7. 决策倾向(影响仓位的预判)
+    position_intent      VARCHAR(16)   DEFAULT NULL                  COMMENT 'add/keep/reduce/clear',
+
+    -- 8. 数据快照(提交时锁定的关键先验,用于事后回看用户当时看到了什么)
+    context_snapshot     JSON          DEFAULT NULL                  COMMENT '{prev_judgement_score:65, valuation:fair, ...}',
+
+    -- ==== 校验结果(收盘后回填,提交时为 NULL)====
+    actual_direction     VARCHAR(16)   DEFAULT NULL,
+    actual_volume        VARCHAR(16)   DEFAULT NULL,
+    direction_hit        TINYINT(1)    DEFAULT NULL                  COMMENT '1=命中 0=未命中',
+    volume_hit           TINYINT(1)    DEFAULT NULL,
+    theme_hit_count      TINYINT       DEFAULT NULL                  COMMENT '主线命中个数',
+    sh_range_hit         TINYINT(1)    DEFAULT NULL                  COMMENT '点位区间是否覆盖收盘',
+    overall_score        DECIMAL(5,2)  DEFAULT NULL                  COMMENT '0-100 综合得分',
+    verified_at          DATETIME      DEFAULT NULL,
+
+    update_time          TIMESTAMP     DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY (pred_id),
+    UNIQUE KEY uk_user_date (user_id, trade_date),
+    KEY idx_user_time (user_id, trade_date)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='晨间预判表';
+```
+
+### E1-S2 提交规则(关键)
+
+| 规则 | 实现 |
+|---|---|
+| **截止时间** | 09:25 集合竞价后禁止提交,前端按钮置灰 |
+| **唯一性** | `(user_id, trade_date)` 唯一,当日只能提交 1 次 |
+| **盲测模式** | 提交前页面默认折叠"昨日复盘",用户主动展开才显示 |
+| **必填项** | direction / direction_confidence / volume_expect / core_judgement |
+| **快照** | 提交瞬间快照昨日 `app_daily_brief` 写入 `context_snapshot`,作为先验依据 |
+| **不可编辑** | 提交后状态变 `submitted`,前端只读 |
+
+### E1-S3 校验 SQL(收盘后跑,15:30 触发)
+
+```sql
+-- 校验逻辑:对比预判与实际,落 hit 标记和综合分
+SET @td = '2023-10-27'; -- 示例日期
+
+UPDATE train_prediction_morning p
+INNER JOIN ads_l1_market_overview m ON p.trade_date = m.trade_date
+SET
+    -- 实际方向(沪指 ±0.3% 内算 flat)
+    p.actual_direction = CASE
+        WHEN m.sh_pct_chg >  0.003 THEN 'up'
+        WHEN m.sh_pct_chg < -0.003 THEN 'down'
+        ELSE 'flat'
+    END,
+
+    -- 实际量能(对比 5 日均量,±10% 内算 flat)
+    p.actual_volume = CASE
+        WHEN m.amount_total / m.amount_ma5 > 1.10 THEN 'expand'
+        WHEN m.amount_total / m.amount_ma5 < 0.90 THEN 'shrink'
+        ELSE 'flat'
+    END,
+
+    -- 命中判断
+    p.direction_hit = (
+        CASE
+            WHEN m.sh_pct_chg >  0.003 THEN 'up'
+            WHEN m.sh_pct_chg < -0.003 THEN 'down'
+            ELSE 'flat'
+        END
+    ) = p.direction,
+
+    p.volume_hit = (
+        CASE
+            WHEN m.amount_total / m.amount_ma5 > 1.10 THEN 'expand'
+            WHEN m.amount_total / m.amount_ma5 < 0.90 THEN 'shrink'
+            ELSE 'flat'
+        END
+    ) = p.volume_expect,
+
+    -- 点位区间命中
+    p.sh_range_hit = CASE
+        WHEN p.sh_low IS NULL OR p.sh_high IS NULL THEN NULL
+        WHEN m.sh_close BETWEEN p.sh_low AND p.sh_high THEN 1
+        ELSE 0
+    END,
+
+    p.verified_at = NOW()
+WHERE p.trade_date = @td
+  AND p.verified_at IS NULL;
+
+-- 主线命中数(JSON 比较,5.7 兼容)
+UPDATE train_prediction_morning p
+SET p.theme_hit_count = (
+    SELECT COUNT(*)
+    FROM ads_l2_industry_daily i
+    WHERE i.trade_date = p.trade_date
+      AND i.theme_label = 'main_theme'
+      AND JSON_CONTAINS(p.main_themes, JSON_QUOTE(i.industry_name))
+)
+WHERE p.trade_date = @td
+  AND p.main_themes IS NOT NULL;
+
+-- 综合得分(加权)
+UPDATE train_prediction_morning
+SET overall_score =
+    COALESCE(direction_hit, 0) * 40        -- 方向 40 分
+  + COALESCE(volume_hit, 0)    * 20         -- 量能 20 分
+  + LEAST(30, COALESCE(theme_hit_count,0) * 15)  -- 主线每个 15 分,封顶 30
+  + COALESCE(sh_range_hit, 0)  * 10         -- 点位 10 分
+WHERE trade_date = @td;
+```
+
+### E1-S4 验收标准
+
+- **Given** 用户在 09:30 提交预判,**When** 系统校验,**Then** 拒绝提交并提示"已超截止时间"
+- **Given** `direction='up' direction_confidence=5`,实际沪指 +0.5%,**When** 校验,**Then** `direction_hit=1` `overall_score >= 40`
+- **Given** 用户当日已提交,**When** 二次提交,**Then** 返回 `409 Conflict`
+- **Given** `main_themes=["半导体"]` 当日主线为 `["半导体","AI"]`,**When** 校验,**Then** `theme_hit_count=1`
+</script>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', async () => {
+            const rawMd = document.getElementById('markdown-raw').textContent;
+            const contentEl = document.getElementById('content');
+            const tocEl = document.getElementById('toc');
+            
+            // Set options for marked
+            marked.setOptions({
+                gfm: true,
+                breaks: true,
+                headerIds: true,
+                mangle: false,
+                highlight: function(code, lang) {
+                    const language = hljs.getLanguage(lang) ? lang : 'plaintext';
+                    return hljs.highlight(code, { language }).value;
+                }
+            });
+
+            // Parse Markdown
+            contentEl.innerHTML = marked.parse(rawMd);
+            
+            // Generate TOC
+            const headings = contentEl.querySelectorAll('h2, h3');
+            headings.forEach((h, index) => {
+                if (!h.id) h.id = 'heading-' + index;
+                
+                const li = document.createElement('li');
+                li.className = 'toc-item level-' + h.tagName.toLowerCase().charAt(1);
+                
+                const a = document.createElement('a');
+                a.href = '#' + h.id;
+                a.textContent = h.textContent;
+                
+                li.appendChild(a);
+                tocEl.appendChild(li);
+            });
+
+            // Handle Mermaid
+            if (window.mermaid) {
+                mermaid.initialize({ startOnLoad: false, theme: 'dark', useWorker: false });
+                document.querySelectorAll('pre code.language-mermaid').forEach(el => {
+                    const pre = el.parentElement;
+                    const div = document.createElement('div');
+                    div.className = 'mermaid';
+                    div.textContent = el.textContent;
+                    pre.parentElement.replaceChild(div, pre);
+                });
+                mermaid.run();
+            }
+        });
+    </script>
+</body>
+</html>

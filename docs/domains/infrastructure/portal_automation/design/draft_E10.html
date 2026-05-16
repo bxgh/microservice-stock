@@ -1,0 +1,453 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Epic E10: 开发者体验增强：双级文档门户与 SOP 自动化闭环</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Noto+Serif+SC:wght@400;700;900&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    
+    <!-- Libraries -->
+    <script src="https://lib.baomitu.com/marked/11.1.1/marked.min.js"></script>
+    <link rel="stylesheet" href="https://lib.baomitu.com/github-markdown-css/5.5.0/github-markdown-dark.min.css">
+    <script src="https://lib.baomitu.com/mermaid/10.9.0/mermaid.min.js"></script>
+    
+    <!-- Syntax Highlighting -->
+    <link rel="stylesheet" href="https://lib.baomitu.com/highlight.js/11.9.0/styles/tokyo-night-dark.min.css">
+    <script src="https://lib.baomitu.com/highlight.js/11.9.0/highlight.min.js"></script>
+    
+    <style>
+        :root {
+            --bg: #0a0a0a;
+            --surface: #121212;
+            --surface-hover: #1a1a1a;
+            --border: #222222;
+            --accent: #eab308;
+            --accent-glow: rgba(234, 179, 8, 0.1);
+            --text-primary: #f1f5f9;
+            --text-secondary: #94a3b8;
+            --text-muted: #64748b;
+            --font-sans: 'Outfit', 'Noto Sans SC', -apple-system, sans-serif;
+            --font-serif: 'Noto Serif SC', serif;
+            --font-mono: 'JetBrains Mono', monospace;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background-color: var(--bg);
+            color: var(--text-primary);
+            font-family: var(--font-sans);
+            line-height: 1.7;
+            -webkit-font-smoothing: antialiased;
+            overflow-x: hidden;
+        }
+
+        /* Subtle background glow */
+        body::after {
+            content: '';
+            position: fixed;
+            top: 0;
+            right: 0;
+            width: 40vw;
+            height: 40vh;
+            background: radial-gradient(circle, var(--accent-glow) 0%, transparent 70%);
+            z-index: -1;
+            filter: blur(100px);
+            pointer-events: none;
+        }
+
+        .sidebar {
+            width: 260px;
+            height: 100vh;
+            position: fixed;
+            left: 0;
+            top: 0;
+            border-right: 1px solid var(--border);
+            background: var(--bg);
+            padding: 1.5rem;
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+            overflow-y: auto;
+            z-index: 100;
+        }
+
+        .nav-link {
+            color: var(--text-muted);
+            text-decoration: none;
+            font-size: 0.85rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            transition: color 0.2s;
+            padding: 0.5rem;
+            border-radius: 6px;
+        }
+        .nav-link:hover { color: var(--accent); background: var(--surface); }
+
+        .toc-title {
+            font-family: var(--font-serif);
+            font-size: 1rem;
+            color: var(--text-primary);
+            margin-bottom: 0.8rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding-left: 0.5rem;
+        }
+        .toc-title::before {
+            content: '';
+            width: 3px;
+            height: 1rem;
+            background: var(--accent);
+            border-radius: 2px;
+        }
+
+        .toc-list {
+            list-style: none;
+            display: flex;
+            flex-direction: column;
+            gap: 0.4rem;
+        }
+        .toc-item {
+            font-size: 0.8rem;
+            line-height: 1.3;
+        }
+        .toc-item a {
+            color: var(--text-muted);
+            text-decoration: none;
+            transition: all 0.2s;
+            display: block;
+            padding: 0.4rem 0.5rem;
+            border-radius: 4px;
+        }
+        .toc-item a:hover { color: var(--accent); background: var(--surface); }
+        .toc-item.level-3 { margin-left: 0.8rem; border-left: 1px solid var(--border); }
+
+        .container {
+            max-width: 860px;
+            margin: 0 auto 0 260px;
+            padding: 3rem 4rem;
+            animation: fadeIn 0.6s ease-out;
+        }
+
+        @media (max-width: 1024px) {
+            .sidebar { width: 220px; padding: 1rem; }
+            .container { margin-left: 220px; padding: 2rem; }
+        }
+
+        @media (max-width: 800px) {
+            .sidebar { position: static; width: 100%; height: auto; border-right: none; border-bottom: 1px solid var(--border); }
+            .container { margin-left: 0; padding: 1.5rem; }
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(5px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        header {
+            margin-bottom: 3rem;
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 1.5rem;
+        }
+
+        .meta {
+            font-family: var(--font-mono);
+            font-size: 0.75rem;
+            color: var(--accent);
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            margin-bottom: 0.8rem;
+            display: flex;
+            align-items: center;
+            gap: 0.8rem;
+        }
+
+        .meta::before {
+            content: '';
+            width: 20px;
+            height: 1px;
+            background-color: var(--accent);
+        }
+
+        h1 {
+            font-family: var(--font-serif);
+            font-size: 2.2rem;
+            font-weight: 900;
+            line-height: 1.2;
+            margin-bottom: 1rem;
+            color: var(--text-primary);
+        }
+
+        .markdown-body {
+            background: transparent !important;
+            color: var(--text-primary) !important;
+            font-family: var(--font-sans) !important;
+            font-size: 0.95rem !important;
+        }
+
+        .markdown-body h2 {
+            font-family: var(--font-serif);
+            font-size: 1.5rem !important;
+            color: var(--accent) !important;
+            border-bottom: 1px solid var(--border) !important;
+            padding-bottom: 0.5rem !important;
+            margin-top: 2.5rem !important;
+            scroll-margin-top: 1rem;
+        }
+
+        .markdown-body h3 {
+            font-family: var(--font-serif);
+            font-size: 1.25rem !important;
+            color: var(--text-primary) !important;
+            margin-top: 2rem !important;
+            scroll-margin-top: 1rem;
+        }
+
+        .markdown-body p, .markdown-body li {
+            font-size: 0.95rem !important;
+            color: var(--text-primary) !important;
+        }
+        
+        .markdown-body pre {
+            background-color: #1a1b26 !important; /* Match Tokyo Night Dark */
+            border: 1px solid var(--border);
+            border-radius: 8px !important;
+            padding: 0 !important; /* Code internal handles padding */
+            margin: 1.2rem 0 !important;
+            overflow: hidden;
+        }
+
+        .markdown-body pre code {
+            background-color: transparent !important;
+            padding: 1.2rem !important;
+            display: block;
+            font-family: var(--font-mono) !important;
+            font-size: 0.85rem !important;
+            line-height: 1.5;
+        }
+
+        .markdown-body blockquote {
+            border-left: 3px solid var(--accent) !important;
+            background: var(--surface);
+            padding: 0.8rem 1.2rem;
+            color: var(--text-secondary) !important;
+            margin: 1.2rem 0 !important;
+        }
+
+        .markdown-body table {
+            background: var(--surface);
+            font-size: 0.85rem !important;
+            margin: 1.2rem 0 !important;
+        }
+
+        footer {
+            margin-top: 4rem;
+            padding-top: 1.5rem;
+            border-top: 1px solid var(--border);
+            color: var(--text-muted);
+            font-size: 0.8rem;
+            text-align: center;
+        }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar { width: 5px; }
+        ::-webkit-scrollbar-track { background: var(--bg); }
+        ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+    </style>
+</head>
+<body>
+    <aside class="sidebar">
+        <a href="index.html" class="nav-link">
+            <span>←</span> 返回目录门户
+        </a>
+        
+        <div class="toc-container">
+            <h3 class="toc-title">文档导航</h3>
+            <ul class="toc-list" id="toc">
+                <!-- TOC items will be injected here -->
+            </ul>
+        </div>
+    </aside>
+
+    <div class="container">
+        <header>
+            <div class="meta">GLOBAL | 2026-05-16 19:07</div>
+            <h1>Epic E10: 开发者体验增强：双级文档门户与 SOP 自动化闭环</h1>
+        </header>
+
+        <article id="content" class="markdown-body">
+            <!-- Loading indicator -->
+            <p style="color: var(--text-muted)">正在解析文档内容...</p>
+        </article>
+
+        <footer>
+            &copy; 2026 MicroStock Project Docs | Generated by Antigravity
+        </footer>
+    </div>
+
+    <script id="markdown-raw" type="text/markdown"># Epic E10: 开发者体验增强：双级文档门户与 SOP 自动化闭环
+
+> **Version**: v1.0  
+> **Date**: 2026-05-15  
+> **Status**: Draft
+
+## 1. 背景
+
+随着微服务数量的增加，全局文档门户（`docs/index.html`）逐渐变得拥挤，难以快速定位特定服务的实施细节。同时，Epic -> Story -> Task -> AC 的开发流程虽然已经明确，但缺乏自动化的工具链支撑，导致文档更新滞后或格式不统一。本 Epic 旨在通过建立“全局+局部”的双级门户体系，并将 SOP 流程自动化，提升开发与审计效率。
+
+## 2. 架构方案
+
+建立双级索引结构，实现文档的“垂直深挖”与“水平发现”：
+
+| 层级 | 路径 | 职责 |
+|---|---|---|
+| **全局门户** | `docs/index.html` | 展示全项目子系统导航及全局最新动态 |
+| **局部门户** | `{service}/index.html` | 展示特定服务的 Epic 设计、评审记录及实施报告 |
+
+### 2.1 目录结构示意
+
+```mermaid
+graph TD
+  Root[项目根目录] --> Docs[docs/index.html 全局]
+  Root --> S1[scf-collector/index.html 局部]
+  Root --> S2[tushare-api/index.html 局部]
+  S1 --> S1_Docs[docs/ & implementation_logs/]
+  S2 --> S2_Docs[docs/ & implementation_logs/]
+```
+
+---
+
+## 3. Epic 拆解
+
+### E10-S1: 门户脚本重构与双级扫描实现
+**角色**: DevOps Engineer  
+**需求**: 一个能够自动扫描全项目 HTML 并生成全局/局部索引的脚本。  
+**价值**: 消除手动维护文档索引的成本，确保文档 100% 可发现。
+
+#### 任务
+- [ ] **E10-S1-T1**: 编写/更新 `scripts/update_docs_portal.py`，支持递归扫描各微服务 `docs` 目录
+- [ ] **E10-S1-T2**: 实现局部 `index.html` 生成逻辑，根据所在服务目录动态过滤内容
+- [ ] **E10-S1-T3**: 集成相对路径计算模块，解决不同层级间的跳转问题
+
+#### 验收标准 (AC)
+- **AC1 (全局扫描能力)**: 
+  - **Given**: 存在多个包含 `docs/` 的微服务目录
+  - **When**: 执行 `python scripts/update_docs_portal.py`
+  - **Then**: `docs/index.html` 能正确列出所有服务的最新 5 条 HTML 记录
+- **AC2 (局部索引生成)**: 
+  - **Given**: `scf-collector` 目录下有多个实施报告
+  - **When**: 脚本运行结束
+  - **Then**: `scf-collector/index.html` 被创建，且仅包含该服务的文档
+
+---
+
+### E10-S2: 门户模板标准化与视觉一致性
+**角色**: Frontend Designer  
+**需求**: 一套统一的 HTML 模板，支持全局和局部索引的渲染。  
+**价值**: 提升项目专业感，确保导航体验一致。
+
+#### 任务
+- [ ] **E10-S2-T1**: 抽取现有的 `docs/index.html` 样式为独立 CSS 或 Jinja2 模板片段
+- [ ] **E10-S2-T2**: 设计局部门户专用布局（突出该服务的 Epic 列表）
+
+#### 验收标准 (AC)
+- **AC1 (视觉一致性)**: 
+  - **Given**: 生成了全局和局部门户
+  - **When**: 浏览器打开
+  - **Then**: 两者配色、字体、卡片风格完全一致
+
+---
+
+### E10-S3: SOP 流程准则入规
+**角色**: Requirement Architect  
+**需求**: 更新 `AGENTS.md` 和技能文档，将双级门户和 Epic 评审循环固化为硬约束。  
+**价值**: 确保后续所有开发活动都遵循标准流程，维持项目长期可维护性。
+
+#### 任务
+- [ ] **E10-S3-T1**: 更新 `AGENTS.md` 增加 5.5 节 Epic Audit Loop
+- [ ] **E10-S3-T2**: 更新 `epic-story-doc/SKILL.md`，明确 MD/JSON 双轨制与门户集成的要求
+
+#### 验收标准 (AC)
+- **AC1 (规则覆盖)**: 
+  - **Given**: 查看 `AGENTS.md`
+  - **When**: 搜索 `Portal` 或 `Audit`
+  - **Then**: 必须能看到明确的自动化执行指令（如脚本运行命令）
+
+---
+
+## 4. 风险管理
+
+| 风险描述 | 影响 | 概率 | 缓解措施 |
+|---|---|---|---|
+| 相对路径陷阱 | 中 | 中 | 在脚本中使用统一的相对路径计算逻辑，确保 HTML 静态跳转不失效。 |
+| 脚本执行权限 | 低 | 低 | 确保脚本在 Docker 和本地环境下均可执行。 |
+
+## 5. 里程碑 (Milestones)
+
+- **M1: 核心脚本就绪** (2026-05-15): `update_docs_portal.py` 支持双级扫描
+- **M2: 门户全量覆盖** (2026-05-15): 各微服务根目录 `index.html` 生成
+- **M3: SOP 准则固化** (2026-05-15): `AGENTS.md` 更新完成
+</script>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', async () => {
+            const rawMd = document.getElementById('markdown-raw').textContent;
+            const contentEl = document.getElementById('content');
+            const tocEl = document.getElementById('toc');
+            
+            // Set options for marked
+            marked.setOptions({
+                gfm: true,
+                breaks: true,
+                headerIds: true,
+                mangle: false,
+                highlight: function(code, lang) {
+                    const language = hljs.getLanguage(lang) ? lang : 'plaintext';
+                    return hljs.highlight(code, { language }).value;
+                }
+            });
+
+            // Parse Markdown
+            contentEl.innerHTML = marked.parse(rawMd);
+            
+            // Generate TOC
+            const headings = contentEl.querySelectorAll('h2, h3');
+            headings.forEach((h, index) => {
+                if (!h.id) h.id = 'heading-' + index;
+                
+                const li = document.createElement('li');
+                li.className = 'toc-item level-' + h.tagName.toLowerCase().charAt(1);
+                
+                const a = document.createElement('a');
+                a.href = '#' + h.id;
+                a.textContent = h.textContent;
+                
+                li.appendChild(a);
+                tocEl.appendChild(li);
+            });
+
+            // Handle Mermaid
+            if (window.mermaid) {
+                mermaid.initialize({ startOnLoad: false, theme: 'dark', useWorker: false });
+                document.querySelectorAll('pre code.language-mermaid').forEach(el => {
+                    const pre = el.parentElement;
+                    const div = document.createElement('div');
+                    div.className = 'mermaid';
+                    div.textContent = el.textContent;
+                    pre.parentElement.replaceChild(div, pre);
+                });
+                mermaid.run();
+            }
+        });
+    </script>
+</body>
+</html>

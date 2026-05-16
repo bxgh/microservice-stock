@@ -1,0 +1,444 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>五维度量化分析体系设计文档</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Noto+Serif+SC:wght@400;700;900&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    
+    <!-- Libraries -->
+    <script src="https://lib.baomitu.com/marked/11.1.1/marked.min.js"></script>
+    <link rel="stylesheet" href="https://lib.baomitu.com/github-markdown-css/5.5.0/github-markdown-dark.min.css">
+    <script src="https://lib.baomitu.com/mermaid/10.9.0/mermaid.min.js"></script>
+    
+    <!-- Syntax Highlighting -->
+    <link rel="stylesheet" href="https://lib.baomitu.com/highlight.js/11.9.0/styles/tokyo-night-dark.min.css">
+    <script src="https://lib.baomitu.com/highlight.js/11.9.0/highlight.min.js"></script>
+    
+    <style>
+        :root {
+            --bg: #0a0a0a;
+            --surface: #121212;
+            --surface-hover: #1a1a1a;
+            --border: #222222;
+            --accent: #eab308;
+            --accent-glow: rgba(234, 179, 8, 0.1);
+            --text-primary: #f1f5f9;
+            --text-secondary: #94a3b8;
+            --text-muted: #64748b;
+            --font-sans: 'Outfit', 'Noto Sans SC', -apple-system, sans-serif;
+            --font-serif: 'Noto Serif SC', serif;
+            --font-mono: 'JetBrains Mono', monospace;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background-color: var(--bg);
+            color: var(--text-primary);
+            font-family: var(--font-sans);
+            line-height: 1.7;
+            -webkit-font-smoothing: antialiased;
+            overflow-x: hidden;
+        }
+
+        /* Subtle background glow */
+        body::after {
+            content: '';
+            position: fixed;
+            top: 0;
+            right: 0;
+            width: 40vw;
+            height: 40vh;
+            background: radial-gradient(circle, var(--accent-glow) 0%, transparent 70%);
+            z-index: -1;
+            filter: blur(100px);
+            pointer-events: none;
+        }
+
+        .sidebar {
+            width: 260px;
+            height: 100vh;
+            position: fixed;
+            left: 0;
+            top: 0;
+            border-right: 1px solid var(--border);
+            background: var(--bg);
+            padding: 1.5rem;
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+            overflow-y: auto;
+            z-index: 100;
+        }
+
+        .nav-link {
+            color: var(--text-muted);
+            text-decoration: none;
+            font-size: 0.85rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            transition: color 0.2s;
+            padding: 0.5rem;
+            border-radius: 6px;
+        }
+        .nav-link:hover { color: var(--accent); background: var(--surface); }
+
+        .toc-title {
+            font-family: var(--font-serif);
+            font-size: 1rem;
+            color: var(--text-primary);
+            margin-bottom: 0.8rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding-left: 0.5rem;
+        }
+        .toc-title::before {
+            content: '';
+            width: 3px;
+            height: 1rem;
+            background: var(--accent);
+            border-radius: 2px;
+        }
+
+        .toc-list {
+            list-style: none;
+            display: flex;
+            flex-direction: column;
+            gap: 0.4rem;
+        }
+        .toc-item {
+            font-size: 0.8rem;
+            line-height: 1.3;
+        }
+        .toc-item a {
+            color: var(--text-muted);
+            text-decoration: none;
+            transition: all 0.2s;
+            display: block;
+            padding: 0.4rem 0.5rem;
+            border-radius: 4px;
+        }
+        .toc-item a:hover { color: var(--accent); background: var(--surface); }
+        .toc-item.level-3 { margin-left: 0.8rem; border-left: 1px solid var(--border); }
+
+        .container {
+            max-width: 860px;
+            margin: 0 auto 0 260px;
+            padding: 3rem 4rem;
+            animation: fadeIn 0.6s ease-out;
+        }
+
+        @media (max-width: 1024px) {
+            .sidebar { width: 220px; padding: 1rem; }
+            .container { margin-left: 220px; padding: 2rem; }
+        }
+
+        @media (max-width: 800px) {
+            .sidebar { position: static; width: 100%; height: auto; border-right: none; border-bottom: 1px solid var(--border); }
+            .container { margin-left: 0; padding: 1.5rem; }
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(5px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        header {
+            margin-bottom: 3rem;
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 1.5rem;
+        }
+
+        .meta {
+            font-family: var(--font-mono);
+            font-size: 0.75rem;
+            color: var(--accent);
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            margin-bottom: 0.8rem;
+            display: flex;
+            align-items: center;
+            gap: 0.8rem;
+        }
+
+        .meta::before {
+            content: '';
+            width: 20px;
+            height: 1px;
+            background-color: var(--accent);
+        }
+
+        h1 {
+            font-family: var(--font-serif);
+            font-size: 2.2rem;
+            font-weight: 900;
+            line-height: 1.2;
+            margin-bottom: 1rem;
+            color: var(--text-primary);
+        }
+
+        .markdown-body {
+            background: transparent !important;
+            color: var(--text-primary) !important;
+            font-family: var(--font-sans) !important;
+            font-size: 0.95rem !important;
+        }
+
+        .markdown-body h2 {
+            font-family: var(--font-serif);
+            font-size: 1.5rem !important;
+            color: var(--accent) !important;
+            border-bottom: 1px solid var(--border) !important;
+            padding-bottom: 0.5rem !important;
+            margin-top: 2.5rem !important;
+            scroll-margin-top: 1rem;
+        }
+
+        .markdown-body h3 {
+            font-family: var(--font-serif);
+            font-size: 1.25rem !important;
+            color: var(--text-primary) !important;
+            margin-top: 2rem !important;
+            scroll-margin-top: 1rem;
+        }
+
+        .markdown-body p, .markdown-body li {
+            font-size: 0.95rem !important;
+            color: var(--text-primary) !important;
+        }
+        
+        .markdown-body pre {
+            background-color: #1a1b26 !important; /* Match Tokyo Night Dark */
+            border: 1px solid var(--border);
+            border-radius: 8px !important;
+            padding: 0 !important; /* Code internal handles padding */
+            margin: 1.2rem 0 !important;
+            overflow: hidden;
+        }
+
+        .markdown-body pre code {
+            background-color: transparent !important;
+            padding: 1.2rem !important;
+            display: block;
+            font-family: var(--font-mono) !important;
+            font-size: 0.85rem !important;
+            line-height: 1.5;
+        }
+
+        .markdown-body blockquote {
+            border-left: 3px solid var(--accent) !important;
+            background: var(--surface);
+            padding: 0.8rem 1.2rem;
+            color: var(--text-secondary) !important;
+            margin: 1.2rem 0 !important;
+        }
+
+        .markdown-body table {
+            background: var(--surface);
+            font-size: 0.85rem !important;
+            margin: 1.2rem 0 !important;
+        }
+
+        footer {
+            margin-top: 4rem;
+            padding-top: 1.5rem;
+            border-top: 1px solid var(--border);
+            color: var(--text-muted);
+            font-size: 0.8rem;
+            text-align: center;
+        }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar { width: 5px; }
+        ::-webkit-scrollbar-track { background: var(--bg); }
+        ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+    </style>
+</head>
+<body>
+    <aside class="sidebar">
+        <a href="index.html" class="nav-link">
+            <span>←</span> 返回目录门户
+        </a>
+        
+        <div class="toc-container">
+            <h3 class="toc-title">文档导航</h3>
+            <ul class="toc-list" id="toc">
+                <!-- TOC items will be injected here -->
+            </ul>
+        </div>
+    </aside>
+
+    <div class="container">
+        <header>
+            <div class="meta">GLOBAL | 2026-05-16 19:06</div>
+            <h1>五维度量化分析体系设计文档</h1>
+        </header>
+
+        <article id="content" class="markdown-body">
+            <!-- Loading indicator -->
+            <p style="color: var(--text-muted)">正在解析文档内容...</p>
+        </article>
+
+        <footer>
+            &copy; 2026 MicroStock Project Docs | Generated by Antigravity
+        </footer>
+    </div>
+
+    <script id="markdown-raw" type="text/markdown"># 五维度量化分析体系设计文档
+
+## 1. 体系概述
+
+五维度量化分析体系（Five-Dimension Quantitative Analysis System）旨在通过多源异构数据，从五个独立且互补的维度对上市公司进行全方位画像。该体系不依赖单一指标，通过雷达图形式展示个股在**权利 (Power)**、**筹码 (Chips)**、**能量 (Energy)**、**信息 (Information)** 和 **博弈 (Game)** 五个方面的综合表现。
+
+## 2. 维度定义与核心指标
+
+### 2.1 权利维度 (Power)
+**定义**: 衡量公司背后的政策支持度、国资背景力度及管理层信心。
+**核心假设**: 政策红利和“国家队”持仓是A股长牛的核心驱动力。
+**量化指标**:
+- **P1 (政策支持度)**: 行业政策关键词命中率 (来源: 新闻/公告)。
+- **P2 (国资背景)**: 实控人属性及“国家队”持仓比例。
+- **P3 (管理层信心)**: 董监高近期增持金额净值。
+
+### 2.2 筹码维度 (Chips)
+**定义**: 衡量筹码的集中程度、锁定状态及持有成本。
+**核心假设**: 筹码越集中，主力控盘能力越强；解禁压力越小，抛压预期越低。
+**量化指标**:
+- **C1 (筹码集中度)**: 股东户数变化率 (负相关) 及前十大股东持股占比。
+- **C2 (解禁压力)**: 未来 30/60/90 天解禁市值占比 (负相关)。
+- **C3 (大宗交易)**: 近期大宗交易溢价率及成交量。
+
+### 3.3 能量维度 (Energy)
+**定义**: 衡量股价上涨的动能、资金活跃度及趋势强度。
+**核心假设**: 量价配合是上涨的基础，资金流入是上涨的燃料。
+**量化指标**:
+- **E1 (资金动能)**: 日均成交额、量比、换手率。
+- **E2 (趋势强度)**: 均线多头排列得分、RSI/MACD 技术指标状态。
+- **E3 (板块共振)**: 所属行业/概念板块的整体涨幅排名。
+
+### 2.4 信息维度 (Information)
+**定义**: 衡量市场对公司的关注度、预期差及情绪状态。
+**核心假设**: 关注度从低到高的过程伴随股价上涨，过热则见顶（舆情反指）。
+**量化指标**:
+- **I1 (舆情热度)**: 股吧/社区发帖量斜率、阅读量。
+- **I2 (分析师预期)**: 研报评级调升家数、业绩预告超预期幅度。
+- **I3 (情绪评分)**: 文本情感分析得分 (NLP)。
+
+### 2.5 博弈维度 (Game)
+**定义**: 衡量主力资金（游资、机构、外资）的博弈状态与流向。
+**核心假设**: 聪明钱（Smart Money）的流向具有先导性。
+**量化指标**:
+- **G1 (龙虎榜)**: 机构净买入额、知名游资上榜情况。
+- **G2 (北向资金)**: 沪深港通持股变动及净流入。
+- **G3 (杠杆情绪)**: 融资买入额占比 (两融余额变化)。
+
+## 3. 评分模型 (Scoring Model)
+
+每个维度总分 100 分，最终形成五维雷达图。
+
+### 3.1 归一化处理
+不同量纲的数据（如金额、百分比、次数）需通过 **Min-Max Normalization** 或 **Z-Score** 映射到 0-100 区间。
+
+### 3.2 评分算子示例 (筹码维度)
+```python
+def score_chips(holder_change_pct, top10_ratio, restricted_ratio):
+    # 股东户数减少是利好 (反向映射)
+    s1 = normalize(holder_change_pct, min=-30, max=30, inverse=True)
+    
+    # 十大股东占比高是利好
+    s2 = normalize(top10_ratio, min=0, max=90)
+    
+    # 解禁压力大是利空 (反向映射, 权重较高)
+    s3 = normalize(restricted_ratio, min=0, max=50, inverse=True)
+    
+    return 0.4 * s1 + 0.3 * s2 + 0.3 * s3
+```
+
+## 4. 数据库设计规划
+
+为支持上述指标，需要在 `stock_data` 数据库中扩展以下表结构：
+
+### 4.1 筹码相关
+- `stock_restricted_release`: 限售股解禁流水
+- `stock_block_trade`: 大宗交易记录
+
+### 4.2 博弈相关
+- `stock_lhb_detail`: 龙虎榜每日明细
+- `stock_margin_detail`: 融资融券每日交易
+- `stock_north_funds`: 北向资金每日持仓
+
+### 4.3 信息相关
+- `stock_sentiment_daily`: 每日舆情热度统计
+- `stock_analyst_rank`: 分析师评级记录
+
+## 5. 开发路线图
+
+1.  **筹码与博弈数据入库** (已完成)
+2.  **信息维度爬虫与 NLP 对接**
+3.  **权利维度规则引擎开发**
+4.  **评分算法实现与 API 封装**
+</script>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', async () => {
+            const rawMd = document.getElementById('markdown-raw').textContent;
+            const contentEl = document.getElementById('content');
+            const tocEl = document.getElementById('toc');
+            
+            // Set options for marked
+            marked.setOptions({
+                gfm: true,
+                breaks: true,
+                headerIds: true,
+                mangle: false,
+                highlight: function(code, lang) {
+                    const language = hljs.getLanguage(lang) ? lang : 'plaintext';
+                    return hljs.highlight(code, { language }).value;
+                }
+            });
+
+            // Parse Markdown
+            contentEl.innerHTML = marked.parse(rawMd);
+            
+            // Generate TOC
+            const headings = contentEl.querySelectorAll('h2, h3');
+            headings.forEach((h, index) => {
+                if (!h.id) h.id = 'heading-' + index;
+                
+                const li = document.createElement('li');
+                li.className = 'toc-item level-' + h.tagName.toLowerCase().charAt(1);
+                
+                const a = document.createElement('a');
+                a.href = '#' + h.id;
+                a.textContent = h.textContent;
+                
+                li.appendChild(a);
+                tocEl.appendChild(li);
+            });
+
+            // Handle Mermaid
+            if (window.mermaid) {
+                mermaid.initialize({ startOnLoad: false, theme: 'dark', useWorker: false });
+                document.querySelectorAll('pre code.language-mermaid').forEach(el => {
+                    const pre = el.parentElement;
+                    const div = document.createElement('div');
+                    div.className = 'mermaid';
+                    div.textContent = el.textContent;
+                    pre.parentElement.replaceChild(div, pre);
+                });
+                mermaid.run();
+            }
+        });
+    </script>
+</body>
+</html>

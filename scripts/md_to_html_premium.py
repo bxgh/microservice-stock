@@ -4,6 +4,7 @@
 import os
 import sys
 import argparse
+import datetime
 from pathlib import Path
 
 # Premium HTML Template with Modern Aesthetics
@@ -18,43 +19,47 @@ TEMPLATE = """<!DOCTYPE html>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Noto+Serif+SC:wght@400;700;900&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
     
     <!-- Libraries -->
-    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/github-markdown-css/github-markdown-dark.css">
-    <script src="https://cdn.jsdelivr.net/npm/shiki"></script>
+    <script src="https://lib.baomitu.com/marked/11.1.1/marked.min.js"></script>
+    <link rel="stylesheet" href="https://lib.baomitu.com/github-markdown-css/5.5.0/github-markdown-dark.min.css">
+    <script src="https://lib.baomitu.com/mermaid/10.9.0/mermaid.min.js"></script>
+    
+    <!-- Syntax Highlighting -->
+    <link rel="stylesheet" href="https://lib.baomitu.com/highlight.js/11.9.0/styles/tokyo-night-dark.min.css">
+    <script src="https://lib.baomitu.com/highlight.js/11.9.0/highlight.min.js"></script>
     
     <style>
-        :root {{
+        :root {
             --bg: #0a0a0a;
             --surface: #121212;
             --surface-hover: #1a1a1a;
             --border: #222222;
             --accent: #eab308;
-            --accent-glow: rgba(234, 179, 8, 0.2);
-            --text-primary: #f8fafc;
+            --accent-glow: rgba(234, 179, 8, 0.1);
+            --text-primary: #f1f5f9;
             --text-secondary: #94a3b8;
             --text-muted: #64748b;
-            --font-sans: 'Outfit', 'Inter', -apple-system, sans-serif;
+            --font-sans: 'Outfit', 'Noto Sans SC', -apple-system, sans-serif;
             --font-serif: 'Noto Serif SC', serif;
             --font-mono: 'JetBrains Mono', monospace;
-        }}
+        }
 
-        * {{
+        * {
             box-sizing: border-box;
             margin: 0;
             padding: 0;
-        }}
+        }
 
-        body {{
+        body {
             background-color: var(--bg);
             color: var(--text-primary);
             font-family: var(--font-sans);
-            line-height: 1.6;
+            line-height: 1.7;
             -webkit-font-smoothing: antialiased;
             overflow-x: hidden;
-        }}
+        }
 
         /* Subtle background glow */
-        body::after {{
+        body::after {
             content: '';
             position: fixed;
             top: 0;
@@ -65,155 +70,224 @@ TEMPLATE = """<!DOCTYPE html>
             z-index: -1;
             filter: blur(100px);
             pointer-events: none;
-        }}
+        }
 
-        .container {{
-            max-width: 900px;
-            margin: 0 auto;
-            padding: 4rem 2rem;
-            animation: fadeIn 0.8s ease-out;
-        }}
+        .sidebar {
+            width: 260px;
+            height: 100vh;
+            position: fixed;
+            left: 0;
+            top: 0;
+            border-right: 1px solid var(--border);
+            background: var(--bg);
+            padding: 1.5rem;
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+            overflow-y: auto;
+            z-index: 100;
+        }
 
-        @keyframes fadeIn {{
-            from {{ opacity: 0; transform: translateY(10px); }}
-            to {{ opacity: 1; transform: translateY(0); }}
-        }}
-
-        header {{
-            margin-bottom: 4rem;
-            border-bottom: 1px solid var(--border);
-            padding-bottom: 2rem;
-        }}
-
-        .meta {{
-            font-family: var(--font-mono);
-            font-size: 0.8rem;
-            color: var(--accent);
-            text-transform: uppercase;
-            letter-spacing: 0.15em;
-            margin-bottom: 1rem;
+        .nav-link {
+            color: var(--text-muted);
+            text-decoration: none;
+            font-size: 0.85rem;
             display: flex;
             align-items: center;
-            gap: 1rem;
-        }}
+            gap: 0.5rem;
+            transition: color 0.2s;
+            padding: 0.5rem;
+            border-radius: 6px;
+        }
+        .nav-link:hover { color: var(--accent); background: var(--surface); }
 
-        .meta::before {{
+        .toc-title {
+            font-family: var(--font-serif);
+            font-size: 1rem;
+            color: var(--text-primary);
+            margin-bottom: 0.8rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding-left: 0.5rem;
+        }
+        .toc-title::before {
             content: '';
-            width: 24px;
+            width: 3px;
+            height: 1rem;
+            background: var(--accent);
+            border-radius: 2px;
+        }
+
+        .toc-list {
+            list-style: none;
+            display: flex;
+            flex-direction: column;
+            gap: 0.4rem;
+        }
+        .toc-item {
+            font-size: 0.8rem;
+            line-height: 1.3;
+        }
+        .toc-item a {
+            color: var(--text-muted);
+            text-decoration: none;
+            transition: all 0.2s;
+            display: block;
+            padding: 0.4rem 0.5rem;
+            border-radius: 4px;
+        }
+        .toc-item a:hover { color: var(--accent); background: var(--surface); }
+        .toc-item.level-3 { margin-left: 0.8rem; border-left: 1px solid var(--border); }
+
+        .container {
+            max-width: 860px;
+            margin: 0 auto 0 260px;
+            padding: 3rem 4rem;
+            animation: fadeIn 0.6s ease-out;
+        }
+
+        @media (max-width: 1024px) {
+            .sidebar { width: 220px; padding: 1rem; }
+            .container { margin-left: 220px; padding: 2rem; }
+        }
+
+        @media (max-width: 800px) {
+            .sidebar { position: static; width: 100%; height: auto; border-right: none; border-bottom: 1px solid var(--border); }
+            .container { margin-left: 0; padding: 1.5rem; }
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(5px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        header {
+            margin-bottom: 3rem;
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 1.5rem;
+        }
+
+        .meta {
+            font-family: var(--font-mono);
+            font-size: 0.75rem;
+            color: var(--accent);
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            margin-bottom: 0.8rem;
+            display: flex;
+            align-items: center;
+            gap: 0.8rem;
+        }
+
+        .meta::before {
+            content: '';
+            width: 20px;
             height: 1px;
             background-color: var(--accent);
-        }}
+        }
 
-        h1 {{
+        h1 {
             font-family: var(--font-serif);
-            font-size: 3rem;
+            font-size: 2.2rem;
             font-weight: 900;
-            line-height: 1.1;
-            margin-bottom: 1.5rem;
-            background: linear-gradient(135deg, #fff 0%, #a5a5a5 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-        }}
+            line-height: 1.2;
+            margin-bottom: 1rem;
+            color: var(--text-primary);
+        }
 
-        .markdown-body {{
+        .markdown-body {
             background: transparent !important;
             color: var(--text-primary) !important;
             font-family: var(--font-sans) !important;
-            font-size: 1.1rem !important;
-        }}
+            font-size: 0.95rem !important;
+        }
 
-        .markdown-body h2, .markdown-body h3, .markdown-body h4 {{
+        .markdown-body h2 {
             font-family: var(--font-serif);
-            border-bottom: none !important;
-            color: var(--text-primary);
-            margin-top: 2.5rem !important;
-        }}
-
-        .markdown-body h2 {{ font-size: 2rem; color: var(--accent); }}
-        
-        .markdown-body pre {{
-            background-color: var(--surface) !important;
-            border: 1px solid var(--border);
-            border-radius: 12px !important;
-            padding: 1.5rem !important;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
-        }}
-
-        .markdown-body code {{
-            background-color: var(--surface-hover) !important;
+            font-size: 1.5rem !important;
             color: var(--accent) !important;
-            font-family: var(--font-mono) !important;
-            border-radius: 4px;
-            padding: 0.2rem 0.4rem;
-        }}
+            border-bottom: 1px solid var(--border) !important;
+            padding-bottom: 0.5rem !important;
+            margin-top: 2.5rem !important;
+            scroll-margin-top: 1rem;
+        }
 
-        .markdown-body pre code {{
-            background-color: transparent !important;
-            padding: 0 !important;
-        }}
+        .markdown-body h3 {
+            font-family: var(--font-serif);
+            font-size: 1.25rem !important;
+            color: var(--text-primary) !important;
+            margin-top: 2rem !important;
+            scroll-margin-top: 1rem;
+        }
 
-        .markdown-body blockquote {{
-            border-left: 4px solid var(--accent) !important;
-            background: var(--surface);
-            padding: 1rem 1.5rem;
-            border-radius: 0 8px 8px 0;
-            color: var(--text-secondary);
-        }}
-
-        .markdown-body table {{
-            background: var(--surface);
-            border-collapse: collapse;
-            border-radius: 8px;
+        .markdown-body p, .markdown-body li {
+            font-size: 0.95rem !important;
+            color: var(--text-primary) !important;
+        }
+        
+        .markdown-body pre {
+            background-color: #1a1b26 !important; /* Match Tokyo Night Dark */
+            border: 1px solid var(--border);
+            border-radius: 8px !important;
+            padding: 0 !important; /* Code internal handles padding */
+            margin: 1.2rem 0 !important;
             overflow: hidden;
-            width: 100%;
-        }}
+        }
 
-        .markdown-body table th, .markdown-body table td {{
-            border: 1px solid var(--border) !important;
-            padding: 1rem !important;
-        }}
+        .markdown-body pre code {
+            background-color: transparent !important;
+            padding: 1.2rem !important;
+            display: block;
+            font-family: var(--font-mono) !important;
+            font-size: 0.85rem !important;
+            line-height: 1.5;
+        }
 
-        .markdown-body table tr {{
-            background: transparent !important;
-        }}
+        .markdown-body blockquote {
+            border-left: 3px solid var(--accent) !important;
+            background: var(--surface);
+            padding: 0.8rem 1.2rem;
+            color: var(--text-secondary) !important;
+            margin: 1.2rem 0 !important;
+        }
 
-        .markdown-body table tr:nth-child(2n) {{
-            background: rgba(255,255,255,0.02) !important;
-        }}
+        .markdown-body table {
+            background: var(--surface);
+            font-size: 0.85rem !important;
+            margin: 1.2rem 0 !important;
+        }
 
-        footer {{
-            margin-top: 6rem;
-            padding-top: 2rem;
+        footer {
+            margin-top: 4rem;
+            padding-top: 1.5rem;
             border-top: 1px solid var(--border);
             color: var(--text-muted);
-            font-size: 0.9rem;
+            font-size: 0.8rem;
             text-align: center;
-        }}
+        }
 
         /* Scrollbar */
-        ::-webkit-scrollbar {{ width: 8px; }}
-        ::-webkit-scrollbar-track {{ background: var(--bg); }}
-        ::-webkit-scrollbar-thumb {{ background: var(--border); border-radius: 4px; }}
-        ::-webkit-scrollbar-thumb:hover {{ background: var(--text-muted); }}
+        ::-webkit-scrollbar { width: 5px; }
+        ::-webkit-scrollbar-track { background: var(--bg); }
+        ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
 
-        /* TOC - Floating on larger screens */
-        @media (min-width: 1400px) {{
-            .toc {{
-                position: fixed;
-                left: 2rem;
-                top: 10rem;
-                width: 200px;
-                font-size: 0.8rem;
-                color: var(--text-muted);
-            }}
-            .toc ul {{ list-style: none; }}
-            .toc li {{ margin-bottom: 0.5rem; }}
-            .toc a {{ color: inherit; text-decoration: none; transition: color 0.2s; }}
-            .toc a:hover {{ color: var(--accent); }}
-        }}
     </style>
 </head>
 <body>
+    <aside class="sidebar">
+        <a href="index.html" class="nav-link">
+            <span>←</span> 返回目录门户
+        </a>
+        
+        <div class="toc-container">
+            <h3 class="toc-title">文档导航</h3>
+            <ul class="toc-list" id="toc">
+                <!-- TOC items will be injected here -->
+            </ul>
+        </div>
+    </aside>
+
     <div class="container">
         <header>
             <div class="meta">{service} | {date}</div>
@@ -230,30 +304,58 @@ TEMPLATE = """<!DOCTYPE html>
         </footer>
     </div>
 
-    <script id="markdown-raw" type="text/markdown">{md_content}</script>
+    <script id="markdown-raw" type="text/markdown">__MD_CONTENT__</script>
 
     <script>
-        document.addEventListener('DOMContentLoaded', async () => {{
+        document.addEventListener('DOMContentLoaded', async () => {
             const rawMd = document.getElementById('markdown-raw').textContent;
             const contentEl = document.getElementById('content');
+            const tocEl = document.getElementById('toc');
             
             // Set options for marked
-            marked.setOptions({{
+            marked.setOptions({
                 gfm: true,
                 breaks: true,
                 headerIds: true,
-                mangle: false
-            }});
+                mangle: false,
+                highlight: function(code, lang) {
+                    const language = hljs.getLanguage(lang) ? lang : 'plaintext';
+                    return hljs.highlight(code, { language }).value;
+                }
+            });
 
             // Parse Markdown
             contentEl.innerHTML = marked.parse(rawMd);
             
-            // Re-render math if needed (not implemented here)
-            
-            // Optional: Highlight code blocks with Shiki
-            // Since Shiki is async and requires WASM, we'll keep it simple for now
-            // or just use marked's default highlighting
-        }});
+            // Generate TOC
+            const headings = contentEl.querySelectorAll('h2, h3');
+            headings.forEach((h, index) => {
+                if (!h.id) h.id = 'heading-' + index;
+                
+                const li = document.createElement('li');
+                li.className = 'toc-item level-' + h.tagName.toLowerCase().charAt(1);
+                
+                const a = document.createElement('a');
+                a.href = '#' + h.id;
+                a.textContent = h.textContent;
+                
+                li.appendChild(a);
+                tocEl.appendChild(li);
+            });
+
+            // Handle Mermaid
+            if (window.mermaid) {
+                mermaid.initialize({ startOnLoad: false, theme: 'dark', useWorker: false });
+                document.querySelectorAll('pre code.language-mermaid').forEach(el => {
+                    const pre = el.parentElement;
+                    const div = document.createElement('div');
+                    div.className = 'mermaid';
+                    div.textContent = el.textContent;
+                    pre.parentElement.replaceChild(div, pre);
+                });
+                mermaid.run();
+            }
+        });
     </script>
 </body>
 </html>
@@ -268,7 +370,7 @@ def main():
     
     input_path = Path(args.input).resolve()
     if not input_path.exists():
-        print(f"Error: File not found: {{input_path}}")
+        print(f"Error: File not found: {input_path}")
         sys.exit(1)
         
     output_path = Path(args.output) if args.output else input_path.with_suffix('.html')
@@ -288,27 +390,20 @@ def main():
     parts = input_path.parts
     if 'scf-collector' in parts: service_name = "SCF-COLLECTOR"
     elif 'tushare-api' in parts: service_name = "TUSHARE-API"
-    # ... add more as needed
     
-    date_str = os.popen('date "+%Y-%m-%d %H:%M"').read().strip()
+    date_str = datetime.datetime.now().strftime("%Y-%m-%d %H:%M")
     
-    # Escape some chars for JS
-    # md_content_escaped = md_content.replace('`', '\\`').replace('$', '\\$')
-    # Actually putting it in <script type="text/markdown"> is safer
-    
-    html_content = TEMPLATE.format(
-        title=display_title,
-        display_title=display_title,
-        service=service_name,
-        date=date_str,
-        md_content=md_content
-    )
+    html_content = TEMPLATE.replace('{title}', display_title)\
+                           .replace('{display_title}', display_title)\
+                           .replace('{service}', service_name)\
+                           .replace('{date}', date_str)\
+                           .replace('__MD_CONTENT__', md_content)
     
     with open(output_path, 'w', encoding='utf-8') as f:
         f.write(html_content)
         
-    print(f"Successfully converted {{input_path.name}} to {{output_path.name}}")
-    print(f"Path: {{output_path}}")
+    print(f"Successfully converted {input_path.name} to {output_path.name}")
+    print(f"Path: {output_path}")
 
 if __name__ == "__main__":
     main()

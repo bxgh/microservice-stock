@@ -1,0 +1,4507 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>A股四锚 · 知识框架</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&family=Noto+Sans+SC:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  /* 深色配色 */
+  --bg: #0a0e14;
+  --bg-elev: #11161e;
+  --bg-elev-2: #1a2029;
+  --bg-elev-3: #232a35;
+  --panel: #0d1218;
+  --border: #1f2733;
+  --border-soft: #171d25;
+  --border-bright: #2e3947;
+  --text: #e4e8ef;
+  --text-soft: #9aa5b5;
+  --text-dim: #5f6b7c;
+  --accent: #ffb547;         /* 金琥珀 - 主色 */
+  --accent-soft: #d99a3e;
+  --accent-bg: rgba(255,181,71,0.08);
+  --cyan: #5eead4;           /* 青绿 - 次色 */
+  --cyan-bg: rgba(94,234,212,0.08);
+  --red: #f87171;
+  --red-bg: rgba(248,113,113,0.08);
+  --blue: #60a5fa;
+  --blue-bg: rgba(96,165,250,0.08);
+  --purple: #c084fc;
+  --purple-bg: rgba(192,132,252,0.08);
+  --green: #4ade80;
+  --shadow: 0 8px 32px rgba(0,0,0,0.4);
+  --glow: 0 0 24px rgba(255,181,71,0.15);
+  --sans: 'Inter', 'Noto Sans SC', system-ui, sans-serif;
+  --mono: 'JetBrains Mono', monospace;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+html, body {
+  height: 100%;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--sans);
+  font-size: 14px;
+  line-height: 1.6;
+  overflow: hidden;
+  -webkit-font-smoothing: antialiased;
+  letter-spacing: 0.01em;
+}
+
+/* ============ 布局 ============ */
+.app {
+  display: grid;
+  grid-template-columns: 320px 1fr;
+  height: 100vh;
+}
+
+/* ============ 左侧导航 ============ */
+.sidebar {
+  background: var(--panel);
+  border-right: 1px solid var(--border);
+  overflow-y: auto;
+  overflow-x: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.sidebar::-webkit-scrollbar { width: 6px; }
+.sidebar::-webkit-scrollbar-track { background: transparent; }
+.sidebar::-webkit-scrollbar-thumb { background: var(--border-bright); border-radius: 3px; }
+.sidebar::-webkit-scrollbar-thumb:hover { background: var(--text-dim); }
+
+.brand {
+  padding: 24px 20px 20px;
+  border-bottom: 1px solid var(--border);
+  position: sticky;
+  top: 0;
+  background: var(--panel);
+  z-index: 10;
+  backdrop-filter: blur(12px);
+}
+
+.brand-tag {
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.2em;
+  color: var(--accent);
+  text-transform: uppercase;
+  margin-bottom: 6px;
+  font-weight: 500;
+}
+
+.brand-title {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--text);
+  letter-spacing: 0.02em;
+}
+
+.brand-sub {
+  font-size: 11px;
+  color: var(--text-dim);
+  margin-top: 4px;
+  font-family: var(--mono);
+}
+
+.search-box {
+  padding: 12px 20px;
+  border-bottom: 1px solid var(--border);
+}
+
+.search-input {
+  width: 100%;
+  background: var(--bg-elev);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 8px 12px;
+  color: var(--text);
+  font-family: var(--sans);
+  font-size: 13px;
+  outline: none;
+  transition: border-color 0.15s;
+}
+
+.search-input:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px var(--accent-bg);
+}
+
+.search-input::placeholder { color: var(--text-dim); }
+
+.nav {
+  padding: 12px 0 40px;
+  flex: 1;
+}
+
+.nav-section {
+  margin-bottom: 4px;
+}
+
+.nav-h {
+  padding: 16px 20px 8px;
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.2em;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  font-weight: 600;
+}
+
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 20px 8px 24px;
+  color: var(--text-soft);
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 500;
+  transition: all 0.15s;
+  position: relative;
+  border-left: 2px solid transparent;
+  user-select: none;
+}
+
+.nav-item:hover {
+  background: var(--bg-elev);
+  color: var(--text);
+}
+
+.nav-item.active {
+  color: var(--accent);
+  background: var(--accent-bg);
+  border-left-color: var(--accent);
+}
+
+.nav-num {
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--text-dim);
+  background: var(--bg-elev);
+  padding: 2px 6px;
+  border-radius: 3px;
+  min-width: 26px;
+  text-align: center;
+  font-weight: 600;
+}
+
+.nav-item.active .nav-num {
+  background: var(--accent);
+  color: var(--bg);
+}
+
+.nav-chapter {
+  margin-top: 2px;
+}
+
+.nav-sub {
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.25s ease-out;
+}
+
+.nav-chapter.open .nav-sub {
+  max-height: 600px;
+}
+
+.nav-sub-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 20px 6px 52px;
+  color: var(--text-dim);
+  cursor: pointer;
+  font-size: 12px;
+  transition: all 0.15s;
+  border-left: 2px solid transparent;
+}
+
+.nav-sub-item:hover {
+  color: var(--text-soft);
+  background: var(--bg-elev);
+}
+
+.nav-sub-item.active {
+  color: var(--cyan);
+  background: var(--cyan-bg);
+  border-left-color: var(--cyan);
+}
+
+.nav-sub-item::before {
+  content: '·';
+  color: var(--text-dim);
+  font-weight: 700;
+}
+
+.chevron {
+  margin-left: auto;
+  font-size: 10px;
+  color: var(--text-dim);
+  transition: transform 0.2s;
+}
+
+.nav-chapter.open .chevron {
+  transform: rotate(90deg);
+}
+
+/* ============ 主内容区 ============ */
+.main {
+  overflow-y: auto;
+  background: var(--bg);
+  position: relative;
+}
+
+.main::-webkit-scrollbar { width: 10px; }
+.main::-webkit-scrollbar-track { background: var(--panel); }
+.main::-webkit-scrollbar-thumb { background: var(--border-bright); border-radius: 5px; }
+.main::-webkit-scrollbar-thumb:hover { background: var(--text-dim); }
+
+.breadcrumb {
+  position: sticky;
+  top: 0;
+  background: rgba(10,14,20,0.8);
+  backdrop-filter: blur(16px);
+  border-bottom: 1px solid var(--border);
+  padding: 14px 48px;
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--text-dim);
+  letter-spacing: 0.08em;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.breadcrumb .sep { color: var(--border-bright); }
+.breadcrumb .current { color: var(--accent); }
+
+.content {
+  padding: 48px 48px 120px;
+  max-width: 920px;
+}
+
+.view { display: none; animation: fadeIn 0.3s ease-out; }
+.view.active { display: block; }
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* ============ 标题系统 ============ */
+.chapter-head {
+  margin-bottom: 40px;
+  padding-bottom: 24px;
+  border-bottom: 1px solid var(--border);
+  position: relative;
+}
+
+.chapter-head::after {
+  content: '';
+  position: absolute;
+  bottom: -1px;
+  left: 0;
+  width: 80px;
+  height: 1px;
+  background: var(--accent);
+}
+
+.chapter-label {
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.3em;
+  color: var(--accent);
+  text-transform: uppercase;
+  margin-bottom: 8px;
+  font-weight: 600;
+}
+
+.chapter-title {
+  font-size: 32px;
+  font-weight: 800;
+  color: var(--text);
+  line-height: 1.2;
+  margin-bottom: 8px;
+  letter-spacing: -0.01em;
+}
+
+.chapter-desc {
+  color: var(--text-soft);
+  font-size: 15px;
+}
+
+h2 {
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--text);
+  margin: 40px 0 16px;
+  letter-spacing: -0.01em;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+h2::before {
+  content: '';
+  width: 4px;
+  height: 20px;
+  background: var(--accent);
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+
+h3 {
+  font-size: 17px;
+  font-weight: 600;
+  color: var(--text);
+  margin: 28px 0 12px;
+  letter-spacing: 0;
+}
+
+h3::before {
+  content: '§';
+  color: var(--accent);
+  margin-right: 6px;
+  font-weight: 400;
+}
+
+h4 {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--accent);
+  margin: 20px 0 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  font-family: var(--mono);
+}
+
+p {
+  color: var(--text-soft);
+  margin: 12px 0;
+  line-height: 1.75;
+  font-size: 14.5px;
+}
+
+p strong, li strong {
+  color: var(--text);
+  font-weight: 600;
+}
+
+em {
+  color: var(--accent);
+  font-style: normal;
+  font-weight: 500;
+}
+
+/* ============ 列表 ============ */
+ul, ol {
+  margin: 12px 0 12px 20px;
+  color: var(--text-soft);
+}
+
+li {
+  margin: 8px 0;
+  line-height: 1.7;
+  font-size: 14px;
+}
+
+ul li::marker { color: var(--accent); }
+ol li::marker { color: var(--cyan); font-weight: 600; }
+
+/* ============ 引用 ============ */
+blockquote {
+  margin: 20px 0;
+  padding: 16px 20px;
+  background: var(--accent-bg);
+  border-left: 3px solid var(--accent);
+  border-radius: 0 6px 6px 0;
+  color: var(--text);
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 1.7;
+  position: relative;
+}
+
+blockquote::before {
+  content: '"';
+  position: absolute;
+  right: 14px;
+  top: 0;
+  font-size: 48px;
+  color: var(--accent);
+  opacity: 0.2;
+  line-height: 1;
+  font-family: Georgia, serif;
+}
+
+/* ============ 警示框 ============ */
+.warning {
+  margin: 16px 0;
+  padding: 14px 16px 14px 44px;
+  background: var(--red-bg);
+  border: 1px solid rgba(248,113,113,0.3);
+  border-radius: 6px;
+  color: var(--text);
+  font-size: 13.5px;
+  line-height: 1.65;
+  position: relative;
+}
+
+.warning::before {
+  content: '!';
+  position: absolute;
+  left: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 20px;
+  height: 20px;
+  background: var(--red);
+  color: var(--bg);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+  font-size: 13px;
+}
+
+.tip {
+  margin: 16px 0;
+  padding: 14px 16px 14px 44px;
+  background: var(--cyan-bg);
+  border: 1px solid rgba(94,234,212,0.3);
+  border-radius: 6px;
+  color: var(--text);
+  font-size: 13.5px;
+  line-height: 1.65;
+  position: relative;
+}
+
+.tip::before {
+  content: 'i';
+  position: absolute;
+  left: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 20px;
+  height: 20px;
+  background: var(--cyan);
+  color: var(--bg);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+  font-size: 12px;
+  font-style: italic;
+  font-family: Georgia, serif;
+}
+
+/* ============ 表格 ============ */
+.table-wrap {
+  margin: 16px 0;
+  overflow-x: auto;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg-elev);
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+thead {
+  background: var(--bg-elev-2);
+  border-bottom: 1px solid var(--border-bright);
+}
+
+thead th {
+  padding: 12px 16px;
+  text-align: left;
+  font-weight: 600;
+  color: var(--accent);
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+tbody td {
+  padding: 11px 16px;
+  border-top: 1px solid var(--border-soft);
+  color: var(--text-soft);
+  line-height: 1.6;
+  vertical-align: top;
+}
+
+tbody tr:hover td { background: var(--bg-elev-2); color: var(--text); }
+tbody td:first-child { color: var(--text); font-weight: 500; }
+
+/* ============ 卡片网格 ============ */
+.card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 12px;
+  margin: 16px 0;
+}
+
+.card {
+  padding: 16px;
+  background: var(--bg-elev);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  transition: all 0.2s;
+  position: relative;
+  overflow: hidden;
+}
+
+.card:hover {
+  border-color: var(--accent);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow);
+}
+
+.card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 3px;
+  height: 100%;
+  background: var(--accent);
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+
+.card:hover::before { opacity: 1; }
+
+.card-num {
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--accent);
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  margin-bottom: 6px;
+}
+
+.card-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text);
+  margin-bottom: 6px;
+}
+
+.card-desc {
+  font-size: 12.5px;
+  color: var(--text-soft);
+  line-height: 1.6;
+}
+
+/* ============ 流程链 ============ */
+.flow {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 20px 0;
+}
+
+.flow-node {
+  padding: 14px 20px;
+  background: linear-gradient(90deg, var(--bg-elev) 0%, var(--bg-elev-2) 100%);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--accent);
+  border-radius: 6px;
+  font-family: var(--mono);
+  font-size: 13px;
+  color: var(--text);
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  transition: all 0.2s;
+}
+
+.flow-node:hover {
+  border-left-color: var(--cyan);
+  transform: translateX(4px);
+}
+
+.flow-step {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--accent);
+  font-weight: 700;
+  background: var(--accent-bg);
+  padding: 3px 8px;
+  border-radius: 3px;
+  letter-spacing: 0.05em;
+}
+
+.flow-arrow {
+  text-align: center;
+  color: var(--border-bright);
+  font-size: 14px;
+  line-height: 1;
+  padding: 2px 0;
+}
+
+/* ============ 清单 ============ */
+.checklist {
+  margin: 16px 0;
+  padding: 20px 24px;
+  background: var(--bg-elev);
+  border: 1px dashed var(--border-bright);
+  border-radius: 8px;
+}
+
+.checklist li {
+  list-style: none;
+  padding-left: 28px;
+  position: relative;
+  margin: 10px 0;
+  color: var(--text-soft);
+  font-size: 13.5px;
+  cursor: pointer;
+}
+
+.checklist li::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 4px;
+  width: 16px;
+  height: 16px;
+  border: 1.5px solid var(--text-dim);
+  border-radius: 3px;
+  background: var(--bg);
+  transition: all 0.15s;
+}
+
+.checklist li:hover::before {
+  border-color: var(--accent);
+}
+
+.checklist li.checked {
+  color: var(--text-dim);
+  text-decoration: line-through;
+}
+
+.checklist li.checked::before {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+
+.checklist li.checked::after {
+  content: '✓';
+  position: absolute;
+  left: 3px;
+  top: 2px;
+  color: var(--bg);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+/* ============ 特殊视图 ============ */
+/* 骨架/地图视图 */
+.map-view {
+  padding: 32px 0;
+}
+
+.map-intro {
+  margin-bottom: 40px;
+  padding: 24px;
+  background: linear-gradient(135deg, var(--accent-bg), transparent);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  border-left: 4px solid var(--accent);
+}
+
+.map-intro h1 {
+  font-size: 28px;
+  font-weight: 800;
+  color: var(--text);
+  margin-bottom: 12px;
+  letter-spacing: -0.01em;
+}
+
+.map-intro .sub {
+  color: var(--text-soft);
+  font-size: 14px;
+  line-height: 1.7;
+}
+
+.map-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px;
+}
+
+.map-card {
+  padding: 20px;
+  background: var(--bg-elev);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.2s;
+  position: relative;
+  overflow: hidden;
+}
+
+.map-card:hover {
+  border-color: var(--accent);
+  transform: translateY(-3px);
+  box-shadow: var(--glow);
+}
+
+.map-card-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.map-card-num {
+  font-family: var(--mono);
+  font-size: 24px;
+  font-weight: 800;
+  color: var(--accent);
+  line-height: 1;
+}
+
+.map-card-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text);
+  flex: 1;
+}
+
+.map-card-desc {
+  font-size: 13px;
+  color: var(--text-soft);
+  line-height: 1.65;
+  margin-bottom: 12px;
+}
+
+.map-card-topics {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 12px;
+}
+
+.topic-tag {
+  font-family: var(--mono);
+  font-size: 10px;
+  padding: 3px 8px;
+  background: var(--bg-elev-2);
+  color: var(--text-dim);
+  border-radius: 3px;
+  letter-spacing: 0.05em;
+  transition: all 0.15s;
+}
+
+.map-card:hover .topic-tag {
+  background: var(--accent-bg);
+  color: var(--accent);
+}
+
+.map-arrow {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  color: var(--text-dim);
+  transition: all 0.2s;
+}
+
+.map-card:hover .map-arrow {
+  color: var(--accent);
+  transform: translate(2px, -2px);
+}
+
+/* ============ 四视图专用 ============ */
+.svg-card {
+  margin: 24px 0;
+  padding: 24px 20px;
+  background: var(--bg-elev);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  overflow-x: auto;
+}
+
+.svg-card svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  max-width: 820px;
+  margin: 0 auto;
+}
+
+.svg-caption {
+  margin-top: 16px;
+  padding: 12px 16px;
+  background: var(--bg-elev-2);
+  border-left: 3px solid var(--accent);
+  border-radius: 4px;
+  font-size: 13px;
+  color: var(--text-soft);
+  line-height: 1.7;
+}
+
+.svg-caption strong {
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.view-intro {
+  padding: 20px 24px;
+  background: linear-gradient(135deg, var(--accent-bg), transparent);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--accent);
+  border-radius: 8px;
+  margin-bottom: 24px;
+}
+
+.view-intro .label {
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.2em;
+  color: var(--accent);
+  text-transform: uppercase;
+  font-weight: 600;
+  margin-bottom: 6px;
+}
+
+.view-intro h3 {
+  margin: 0 0 8px;
+  font-size: 18px;
+}
+
+.view-intro h3::before { content: ''; margin: 0; }
+
+.view-intro p {
+  margin: 0;
+  color: var(--text-soft);
+  font-size: 13.5px;
+}
+
+.four-views-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px;
+  margin: 20px 0;
+}
+
+.four-views-grid .view-thumb {
+  padding: 16px;
+  background: var(--bg-elev);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.2s;
+  position: relative;
+}
+
+.four-views-grid .view-thumb:hover {
+  border-color: var(--accent);
+  transform: translateY(-2px);
+  box-shadow: var(--glow);
+}
+
+.view-thumb .thumb-num {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--accent);
+  font-weight: 700;
+  letter-spacing: 0.15em;
+  margin-bottom: 6px;
+}
+
+.view-thumb h4 {
+  font-size: 15px;
+  color: var(--text);
+  margin: 0 0 8px;
+  font-family: var(--sans);
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+.view-thumb p {
+  font-size: 12.5px;
+  color: var(--text-soft);
+  margin: 0;
+  line-height: 1.6;
+}
+
+.view-thumb .mini-svg {
+  margin: 10px 0;
+  background: var(--bg);
+  border-radius: 6px;
+  padding: 8px;
+  border: 1px solid var(--border-soft);
+}
+
+.view-thumb .mini-svg svg {
+  display: block;
+  width: 100%;
+  height: 110px;
+}
+
+@media (max-width: 700px) {
+  .four-views-grid { grid-template-columns: 1fr; }
+}
+
+/* 公式块 */
+.formula {
+  margin: 20px 0;
+  padding: 24px;
+  background: var(--bg-elev);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  text-align: center;
+  font-family: var(--mono);
+  font-size: 16px;
+  color: var(--accent);
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  position: relative;
+}
+
+.formula::before {
+  content: 'FORMULA';
+  position: absolute;
+  top: -8px;
+  left: 16px;
+  background: var(--bg);
+  color: var(--text-dim);
+  font-size: 9px;
+  letter-spacing: 0.2em;
+  padding: 0 8px;
+  font-weight: 600;
+}
+
+/* ============ 境界展示 ============ */
+.level-ladder {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 24px 0;
+}
+
+.level-step {
+  display: grid;
+  grid-template-columns: 80px 1fr;
+  gap: 20px;
+  padding: 18px 20px;
+  background: var(--bg-elev);
+  border-left: 3px solid var(--accent);
+  border-radius: 4px;
+  align-items: center;
+  transition: all 0.2s;
+}
+
+.level-step:hover {
+  background: var(--bg-elev-2);
+  transform: translateX(4px);
+}
+
+.level-step:nth-child(1) { border-left-color: #94a3b8; }
+.level-step:nth-child(2) { border-left-color: var(--cyan); }
+.level-step:nth-child(3) { border-left-color: var(--accent); }
+.level-step:nth-child(4) { border-left-color: var(--purple); }
+
+.level-rank {
+  font-family: var(--mono);
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-dim);
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+}
+
+.level-content h5 {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text);
+  margin-bottom: 4px;
+}
+
+.level-content p {
+  font-size: 13px;
+  color: var(--text-soft);
+  margin: 0;
+}
+
+/* ============ Key Stats ============ */
+.stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 10px;
+  margin: 20px 0;
+}
+
+.stat {
+  padding: 16px;
+  background: var(--bg-elev);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  text-align: center;
+}
+
+.stat-val {
+  font-family: var(--mono);
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--accent);
+  line-height: 1;
+  margin-bottom: 6px;
+}
+
+.stat-label {
+  font-size: 11px;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+
+/* ============ 底部声明 ============ */
+.disclaimer {
+  margin-top: 60px;
+  padding: 16px 20px;
+  background: var(--bg-elev);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--red);
+  border-radius: 6px;
+  font-size: 12px;
+  color: var(--text-dim);
+  line-height: 1.6;
+}
+
+/* ============ 响应式 ============ */
+@media (max-width: 900px) {
+  .app {
+    grid-template-columns: 1fr;
+  }
+  .sidebar {
+    position: fixed;
+    left: 0; top: 0; bottom: 0;
+    width: 280px;
+    z-index: 100;
+    transform: translateX(-100%);
+    transition: transform 0.25s;
+  }
+  .sidebar.open { transform: translateX(0); }
+  .content { padding: 24px 20px 80px; }
+  .breadcrumb { padding: 14px 20px; }
+  .map-grid { grid-template-columns: 1fr; }
+  .menu-toggle { display: flex !important; }
+}
+
+.menu-toggle {
+  display: none;
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  width: 48px;
+  height: 48px;
+  background: var(--accent);
+  color: var(--bg);
+  border: none;
+  border-radius: 50%;
+  cursor: pointer;
+  font-size: 20px;
+  z-index: 101;
+  box-shadow: var(--shadow);
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+}
+
+/* 术语高亮效果 */
+.term {
+  color: var(--cyan);
+  font-weight: 500;
+  border-bottom: 1px dashed var(--cyan);
+  cursor: help;
+}
+
+/* 锚定高亮 */
+.highlight-flash {
+  animation: flash 1s ease-out;
+}
+
+@keyframes flash {
+  0% { background: var(--accent-bg); }
+  100% { background: transparent; }
+}
+</style>
+</head>
+<body>
+
+<div class="app">
+  <!-- ============ 左侧导航 ============ -->
+  <aside class="sidebar" id="sidebar">
+    <div class="brand">
+      <div class="brand-tag">A-Share Framework</div>
+      <div class="brand-title">A股四锚 · 知识框架</div>
+      <div class="brand-sub">Four Anchors · v2.0</div>
+    </div>
+
+    <div class="search-box">
+      <input class="search-input" id="search" placeholder="搜索章节或主题…" type="text">
+    </div>
+
+    <nav class="nav" id="nav">
+      <div class="nav-h">立体认知地图</div>
+
+      <div class="nav-chapter open">
+        <div class="nav-item" data-view="views">
+          <span class="nav-num">▲</span>
+          <span>四视图总览</span>
+          <span class="chevron">▸</span>
+        </div>
+        <div class="nav-sub">
+          <div class="nav-sub-item" data-view="view-front">正视图 · 四锚结构</div>
+          <div class="nav-sub-item" data-view="view-side">侧视图 · 时间演化</div>
+          <div class="nav-sub-item" data-view="view-top">俯视图 · 博弈结构</div>
+          <div class="nav-sub-item" data-view="view-3d">立体总图 · 决策流程</div>
+        </div>
+      </div>
+
+      <div class="nav-h">Overview</div>
+      <div class="nav-item" data-view="map">
+        <span class="nav-num">00</span>
+        <span>知识地图</span>
+      </div>
+      <div class="nav-item" data-view="preface">
+        <span class="nav-num">01</span>
+        <span>前言</span>
+      </div>
+
+      <div class="nav-h">① 盈利锚 · Profit</div>
+
+      <div class="nav-chapter">
+        <div class="nav-item" data-view="ch1">
+          <span class="nav-num">02</span>
+          <span>盈利锚的本质</span>
+          <span class="chevron">▸</span>
+        </div>
+        <div class="nav-sub">
+          <div class="nav-sub-item" data-view="ch1-1">核心定义</div>
+          <div class="nav-sub-item" data-view="ch1-2">A股四大特殊性</div>
+          <div class="nav-sub-item" data-view="ch1-3">实战运用原则</div>
+        </div>
+      </div>
+
+      <div class="nav-chapter">
+        <div class="nav-item" data-view="ch2">
+          <span class="nav-num">03</span>
+          <span>研究的能力体系</span>
+          <span class="chevron">▸</span>
+        </div>
+        <div class="nav-sub">
+          <div class="nav-sub-item" data-view="ch2-1">第1层：财报解读</div>
+          <div class="nav-sub-item" data-view="ch2-2">第2层：商业模式</div>
+          <div class="nav-sub-item" data-view="ch2-3">第3层：行业产业</div>
+          <div class="nav-sub-item" data-view="ch2-4">第4层：宏观周期</div>
+          <div class="nav-sub-item" data-view="ch2-5">第5层：估值交易</div>
+        </div>
+      </div>
+
+      <div class="nav-chapter">
+        <div class="nav-item" data-view="ch3">
+          <span class="nav-num">04</span>
+          <span>AI与人的分工</span>
+          <span class="chevron">▸</span>
+        </div>
+        <div class="nav-sub">
+          <div class="nav-sub-item" data-view="ch3-1">AI能高效完成的</div>
+          <div class="nav-sub-item" data-view="ch3-2">AI能辅助但需警惕的</div>
+          <div class="nav-sub-item" data-view="ch3-3">人必备的三类能力</div>
+          <div class="nav-sub-item" data-view="ch3-4">分工对照表</div>
+        </div>
+      </div>
+
+      <div class="nav-chapter">
+        <div class="nav-item" data-view="ch4">
+          <span class="nav-num">05</span>
+          <span>六层漏斗模型</span>
+          <span class="chevron">▸</span>
+        </div>
+        <div class="nav-sub">
+          <div class="nav-sub-item" data-view="ch4-1">宏观时代背景</div>
+          <div class="nav-sub-item" data-view="ch4-2">行业研究</div>
+          <div class="nav-sub-item" data-view="ch4-3">商业模式</div>
+          <div class="nav-sub-item" data-view="ch4-4">财务分析</div>
+          <div class="nav-sub-item" data-view="ch4-5">管理层与治理</div>
+          <div class="nav-sub-item" data-view="ch4-6">估值分析</div>
+        </div>
+      </div>
+
+      <div class="nav-h">Appendix</div>
+
+      <div class="nav-chapter">
+        <div class="nav-item" data-view="ch5">
+          <span class="nav-num">06</span>
+          <span>边际定价者与预期差</span>
+          <span class="chevron">▸</span>
+        </div>
+        <div class="nav-sub">
+          <div class="nav-sub-item" data-view="ch5-1">边际定价原理</div>
+          <div class="nav-sub-item" data-view="ch5-2">不同阶段定价者</div>
+          <div class="nav-sub-item" data-view="ch5-3">预期差理论</div>
+          <div class="nav-sub-item" data-view="ch5-4">四条路径</div>
+        </div>
+      </div>
+
+      <div class="nav-chapter">
+        <div class="nav-item" data-view="ch6">
+          <span class="nav-num">07</span>
+          <span>逻辑的有效性困境</span>
+          <span class="chevron">▸</span>
+        </div>
+        <div class="nav-sub">
+          <div class="nav-sub-item" data-view="ch6-1">根本问题</div>
+          <div class="nav-sub-item" data-view="ch6-2">四个原因</div>
+          <div class="nav-sub-item" data-view="ch6-3">六个应对方法</div>
+        </div>
+      </div>
+
+      <div class="nav-chapter">
+        <div class="nav-item" data-view="ch7">
+          <span class="nav-num">08</span>
+          <span>七个进阶维度</span>
+          <span class="chevron">▸</span>
+        </div>
+        <div class="nav-sub">
+          <div class="nav-sub-item" data-view="ch7-1">盈利的五级质量</div>
+          <div class="nav-sub-item" data-view="ch7-2">时间维度演化</div>
+          <div class="nav-sub-item" data-view="ch7-3">A股独有结构因素</div>
+          <div class="nav-sub-item" data-view="ch7-4">反身性原理</div>
+          <div class="nav-sub-item" data-view="ch7-5">心理账户鸿沟</div>
+          <div class="nav-sub-item" data-view="ch7-6">组合视角</div>
+          <div class="nav-sub-item" data-view="ch7-7">十个致命陷阱</div>
+        </div>
+      </div>
+
+      <div class="nav-item" data-view="ch8">
+        <span class="nav-num">09</span>
+        <span>完整心智模型</span>
+      </div>
+
+      <div class="nav-h">② 资金锚 · Liquidity</div>
+
+      <div class="nav-item" data-view="cap-overview">
+        <span class="nav-num">L0</span>
+        <span>资金锚总览</span>
+      </div>
+
+      <div class="nav-chapter">
+        <div class="nav-item" data-view="cap-structure">
+          <span class="nav-num">L1</span>
+          <span>四层结构</span>
+          <span class="chevron">▸</span>
+        </div>
+        <div class="nav-sub">
+          <div class="nav-sub-item" data-view="cap-s1">宏观流动性</div>
+          <div class="nav-sub-item" data-view="cap-s2">入市资金</div>
+          <div class="nav-sub-item" data-view="cap-s3">板块轮动</div>
+          <div class="nav-sub-item" data-view="cap-s4">个股资金</div>
+        </div>
+      </div>
+
+      <div class="nav-item" data-view="cap-features">
+        <span class="nav-num">L2</span>
+        <span>A股四大特征</span>
+      </div>
+
+      <div class="nav-item" data-view="cap-practice">
+        <span class="nav-num">L3</span>
+        <span>实战应用</span>
+      </div>
+
+      <div class="nav-item" data-view="cap-advanced">
+        <span class="nav-num">L4</span>
+        <span>高阶认知</span>
+      </div>
+
+      <div class="nav-item" data-view="cap-toolkit">
+        <span class="nav-num">L5</span>
+        <span>工具箱</span>
+      </div>
+
+      <div class="nav-h">③ 情绪锚 · Sentiment</div>
+
+      <div class="nav-item" data-view="sent-overview">
+        <span class="nav-num">S0</span>
+        <span>情绪锚总览</span>
+      </div>
+
+      <div class="nav-chapter">
+        <div class="nav-item" data-view="sent-structure">
+          <span class="nav-num">S1</span>
+          <span>四层结构</span>
+          <span class="chevron">▸</span>
+        </div>
+        <div class="nav-sub">
+          <div class="nav-sub-item" data-view="sent-s1">预期差</div>
+          <div class="nav-sub-item" data-view="sent-s2">叙事</div>
+          <div class="nav-sub-item" data-view="sent-s3">共识演化</div>
+          <div class="nav-sub-item" data-view="sent-s4">情绪周期</div>
+        </div>
+      </div>
+
+      <div class="nav-item" data-view="sent-features">
+        <span class="nav-num">S2</span>
+        <span>A股四大特征</span>
+      </div>
+
+      <div class="nav-item" data-view="sent-practice">
+        <span class="nav-num">S3</span>
+        <span>实战应用</span>
+      </div>
+
+      <div class="nav-item" data-view="sent-advanced">
+        <span class="nav-num">S4</span>
+        <span>高阶认知</span>
+      </div>
+
+      <div class="nav-item" data-view="sent-traps">
+        <span class="nav-num">S5</span>
+        <span>十大陷阱</span>
+      </div>
+
+      <div class="nav-h">④ 筹码锚 · Chips</div>
+
+      <div class="nav-item" data-view="chip-overview">
+        <span class="nav-num">C0</span>
+        <span>筹码锚总览</span>
+      </div>
+
+      <div class="nav-chapter">
+        <div class="nav-item" data-view="chip-structure">
+          <span class="nav-num">C1</span>
+          <span>四层结构</span>
+          <span class="chevron">▸</span>
+        </div>
+        <div class="nav-sub">
+          <div class="nav-sub-item" data-view="chip-s1">存量结构</div>
+          <div class="nav-sub-item" data-view="chip-s2">流动结构</div>
+          <div class="nav-sub-item" data-view="chip-s3">成本结构</div>
+          <div class="nav-sub-item" data-view="chip-s4">意图博弈</div>
+        </div>
+      </div>
+
+      <div class="nav-item" data-view="chip-features">
+        <span class="nav-num">C2</span>
+        <span>A股四大特征</span>
+      </div>
+
+      <div class="nav-item" data-view="chip-practice">
+        <span class="nav-num">C3</span>
+        <span>实战应用</span>
+      </div>
+
+      <div class="nav-item" data-view="chip-advanced">
+        <span class="nav-num">C4</span>
+        <span>高阶认知</span>
+      </div>
+
+      <div class="nav-item" data-view="chip-traps">
+        <span class="nav-num">C5</span>
+        <span>十大陷阱</span>
+      </div>
+
+      <div class="nav-h">⑤ 四锚整合</div>
+
+      <div class="nav-item" data-view="synthesis">
+        <span class="nav-num">★</span>
+        <span>四锚关系终极图景</span>
+      </div>
+
+      <div class="nav-h">Appendix</div>
+      <div class="nav-item" data-view="appA">
+        <span class="nav-num">A</span>
+        <span>核心清单</span>
+      </div>
+      <div class="nav-item" data-view="appB">
+        <span class="nav-num">B</span>
+        <span>术语速查</span>
+      </div>
+    </nav>
+  </aside>
+
+  <!-- ============ 主内容区 ============ -->
+  <main class="main" id="main">
+    <div class="breadcrumb" id="breadcrumb">
+      <span>盈利锚</span>
+      <span class="sep">/</span>
+      <span class="current" id="crumb-current">立体认知地图 · 四视图总览</span>
+    </div>
+
+    <div class="content" id="content">
+
+      <!-- ============ 四视图总览 ============ -->
+      <div class="view active" data-view="views">
+        <div class="chapter-head">
+          <div class="chapter-label">COGNITIVE MAP · 立体认知地图</div>
+          <div class="chapter-title">A股认知的四视图框架</div>
+          <div class="chapter-desc">用"三视图+立体总图"的方式，从四个侧面建立A股投资的系统认知。</div>
+        </div>
+
+        <div class="view-intro">
+          <div class="label">为什么是四视图</div>
+          <h3>A股认知是一个四维立体结构</h3>
+          <p>单一视角无法捕捉全貌。就像三视图描述立体结构一样，A股认知也需要从多个侧面理解：<strong style="color:var(--accent)">股价是什么（机制）</strong>、<strong style="color:var(--accent)">现在是什么时候（周期）</strong>、<strong style="color:var(--accent)">谁在定价（博弈）</strong>、<strong style="color:var(--accent)">该怎么做（决策）</strong>。</p>
+        </div>
+
+        <h2>四个视图</h2>
+        <div class="four-views-grid">
+          <div class="view-thumb" data-jump="view-front">
+            <div class="thumb-num">VIEW 01 · 正视图</div>
+            <h4>四锚驱动结构</h4>
+            <div class="mini-svg">
+              <svg viewBox="0 0 200 100" xmlns="http://www.w3.org/2000/svg">
+                <rect x="75" y="10" width="50" height="18" rx="3" fill="#5F5E5A" stroke="#888780" stroke-width="0.5"/>
+                <text x="100" y="22" font-size="8" text-anchor="middle" fill="#D3D1C7">股价</text>
+                <line x1="85" y1="28" x2="25" y2="50" stroke="#888780" stroke-width="0.5"/>
+                <line x1="95" y1="28" x2="75" y2="50" stroke="#888780" stroke-width="0.5"/>
+                <line x1="105" y1="28" x2="125" y2="50" stroke="#888780" stroke-width="0.5"/>
+                <line x1="115" y1="28" x2="175" y2="50" stroke="#888780" stroke-width="0.5"/>
+                <rect x="5" y="50" width="40" height="18" rx="3" fill="#0F6E56" stroke="#1D9E75" stroke-width="0.5"/>
+                <text x="25" y="62" font-size="7" text-anchor="middle" fill="#9FE1CB">盈利锚</text>
+                <rect x="55" y="50" width="40" height="18" rx="3" fill="#854F0B" stroke="#BA7517" stroke-width="0.5"/>
+                <text x="75" y="62" font-size="7" text-anchor="middle" fill="#FAC775">资金锚</text>
+                <rect x="105" y="50" width="40" height="18" rx="3" fill="#993C1D" stroke="#D85A30" stroke-width="0.5"/>
+                <text x="125" y="62" font-size="7" text-anchor="middle" fill="#F5C4B3">情绪锚</text>
+                <rect x="155" y="50" width="40" height="18" rx="3" fill="#3C3489" stroke="#7F77DD" stroke-width="0.5"/>
+                <text x="175" y="62" font-size="7" text-anchor="middle" fill="#CECBF6">筹码锚</text>
+                <rect x="5" y="74" width="40" height="18" rx="3" fill="#0F6E56" fill-opacity="0.5" stroke="#1D9E75" stroke-width="0.3"/>
+                <rect x="55" y="74" width="40" height="18" rx="3" fill="#854F0B" fill-opacity="0.5" stroke="#BA7517" stroke-width="0.3"/>
+                <rect x="105" y="74" width="40" height="18" rx="3" fill="#993C1D" fill-opacity="0.5" stroke="#D85A30" stroke-width="0.3"/>
+                <rect x="155" y="74" width="40" height="18" rx="3" fill="#3C3489" fill-opacity="0.5" stroke="#7F77DD" stroke-width="0.3"/>
+              </svg>
+            </div>
+            <p>股价由四个锚共同决定。盈利锚是地基，资金锚是放大器，情绪锚是扳机，筹码锚是博弈层。</p>
+          </div>
+
+          <div class="view-thumb" data-jump="view-side">
+            <div class="thumb-num">VIEW 02 · 侧视图</div>
+            <h4>时间周期演化</h4>
+            <div class="mini-svg">
+              <svg viewBox="0 0 200 100" xmlns="http://www.w3.org/2000/svg">
+                <line x1="15" y1="90" x2="195" y2="90" stroke="#5F5E5A" stroke-width="0.3"/>
+                <line x1="15" y1="10" x2="15" y2="90" stroke="#5F5E5A" stroke-width="0.3"/>
+                <polyline points="30,20 75,30 120,45 170,75" fill="none" stroke="#1D9E75" stroke-width="1.5"/>
+                <polyline points="30,55 75,25 120,28 170,50" fill="none" stroke="#BA7517" stroke-width="1.5"/>
+                <polyline points="30,75 75,60 120,35 170,18" fill="none" stroke="#D85A30" stroke-width="1.5"/>
+                <polyline points="30,85 75,80 120,65 170,28" fill="none" stroke="#7F77DD" stroke-width="1.5"/>
+                <text x="30" y="99" font-size="5" text-anchor="middle" fill="#888780">底部</text>
+                <text x="75" y="99" font-size="5" text-anchor="middle" fill="#888780">初期</text>
+                <text x="120" y="99" font-size="5" text-anchor="middle" fill="#888780">主升</text>
+                <text x="170" y="99" font-size="5" text-anchor="middle" fill="#888780">末期</text>
+              </svg>
+            </div>
+            <p>四锚权重随市场周期动态变化。熊市底部盈利锚主导，牛市末期情绪与筹码锚主导。</p>
+          </div>
+
+          <div class="view-thumb" data-jump="view-top">
+            <div class="thumb-num">VIEW 03 · 俯视图</div>
+            <h4>资金博弈结构</h4>
+            <div class="mini-svg">
+              <svg viewBox="0 0 200 100" xmlns="http://www.w3.org/2000/svg">
+                <circle cx="100" cy="50" r="14" fill="none" stroke="#888780" stroke-dasharray="2 2" stroke-width="0.5"/>
+                <text x="100" y="52" font-size="6" text-anchor="middle" fill="#D3D1C7">股价</text>
+                <rect x="10" y="10" width="45" height="16" rx="3" fill="#0F6E56" stroke="#1D9E75" stroke-width="0.4"/>
+                <text x="32" y="20" font-size="5.5" text-anchor="middle" fill="#9FE1CB">外资</text>
+                <rect x="145" y="10" width="45" height="16" rx="3" fill="#0F6E56" stroke="#1D9E75" stroke-width="0.4"/>
+                <text x="167" y="20" font-size="5.5" text-anchor="middle" fill="#9FE1CB">险资</text>
+                <rect x="10" y="42" width="45" height="16" rx="3" fill="#854F0B" stroke="#BA7517" stroke-width="0.4"/>
+                <text x="32" y="52" font-size="5.5" text-anchor="middle" fill="#FAC775">公募</text>
+                <rect x="145" y="42" width="45" height="16" rx="3" fill="#854F0B" stroke="#BA7517" stroke-width="0.4"/>
+                <text x="167" y="52" font-size="5.5" text-anchor="middle" fill="#FAC775">产业</text>
+                <rect x="10" y="74" width="45" height="16" rx="3" fill="#993C1D" stroke="#D85A30" stroke-width="0.4"/>
+                <text x="32" y="84" font-size="5.5" text-anchor="middle" fill="#F5C4B3">游资</text>
+                <rect x="145" y="74" width="45" height="16" rx="3" fill="#993C1D" stroke="#D85A30" stroke-width="0.4"/>
+                <text x="167" y="84" font-size="5.5" text-anchor="middle" fill="#F5C4B3">散户</text>
+                <line x1="55" y1="18" x2="88" y2="42" stroke="#5F5E5A" stroke-dasharray="1 1" stroke-width="0.3"/>
+                <line x1="145" y1="18" x2="112" y2="42" stroke="#5F5E5A" stroke-dasharray="1 1" stroke-width="0.3"/>
+                <line x1="55" y1="50" x2="85" y2="50" stroke="#5F5E5A" stroke-dasharray="1 1" stroke-width="0.3"/>
+                <line x1="145" y1="50" x2="115" y2="50" stroke="#5F5E5A" stroke-dasharray="1 1" stroke-width="0.3"/>
+                <line x1="55" y1="82" x2="88" y2="58" stroke="#5F5E5A" stroke-dasharray="1 1" stroke-width="0.3"/>
+                <line x1="145" y1="82" x2="112" y2="58" stroke="#5F5E5A" stroke-dasharray="1 1" stroke-width="0.3"/>
+              </svg>
+            </div>
+            <p>六类资金环绕定价区。长线资金看盈利，中线资金看流动性，短线资金看情绪和筹码。</p>
+          </div>
+
+          <div class="view-thumb" data-jump="view-3d">
+            <div class="thumb-num">VIEW 04 · 立体总图</div>
+            <h4>完整决策流程</h4>
+            <div class="mini-svg">
+              <svg viewBox="0 0 200 100" xmlns="http://www.w3.org/2000/svg">
+                <rect x="50" y="6" width="100" height="15" rx="3" fill="#0F6E56" stroke="#1D9E75" stroke-width="0.4"/>
+                <text x="100" y="16" font-size="6" text-anchor="middle" fill="#9FE1CB">第一步 · 盈利锚筛选</text>
+                <line x1="100" y1="21" x2="100" y2="25" stroke="#888780" stroke-width="0.5"/>
+                <polygon points="98,25 102,25 100,28" fill="#888780"/>
+                <rect x="50" y="28" width="100" height="15" rx="3" fill="#854F0B" stroke="#BA7517" stroke-width="0.4"/>
+                <text x="100" y="38" font-size="6" text-anchor="middle" fill="#FAC775">第二步 · 资金锚判断</text>
+                <line x1="100" y1="43" x2="100" y2="47" stroke="#888780" stroke-width="0.5"/>
+                <polygon points="98,47 102,47 100,50" fill="#888780"/>
+                <rect x="50" y="50" width="100" height="15" rx="3" fill="#993C1D" stroke="#D85A30" stroke-width="0.4"/>
+                <text x="100" y="60" font-size="6" text-anchor="middle" fill="#F5C4B3">第三步 · 情绪锚检查</text>
+                <line x1="100" y1="65" x2="100" y2="69" stroke="#888780" stroke-width="0.5"/>
+                <polygon points="98,69 102,69 100,72" fill="#888780"/>
+                <rect x="50" y="72" width="100" height="15" rx="3" fill="#3C3489" stroke="#7F77DD" stroke-width="0.4"/>
+                <text x="100" y="82" font-size="6" text-anchor="middle" fill="#CECBF6">第四步 · 筹码锚确认</text>
+              </svg>
+            </div>
+            <p>从认知到决策的完整流程。四锚依次作为筛选漏斗，最终落实到仓位和时机。</p>
+          </div>
+        </div>
+
+        <h2>四视图组合使用指南</h2>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>视图</th><th>回答的核心问题</th><th>使用场景</th></tr></thead>
+            <tbody>
+              <tr><td>正视图 · 四锚结构</td><td>股价是什么？由什么决定？</td><td>建立基础认知</td></tr>
+              <tr><td>侧视图 · 时间演化</td><td>现在处于什么阶段？</td><td>判断主导锚 · 调整研究重点</td></tr>
+              <tr><td>俯视图 · 博弈结构</td><td>谁在定价？我跟谁同向？</td><td>选择投资风格 · 跟踪对应资金</td></tr>
+              <tr><td>立体总图 · 决策流程</td><td>认知如何转化为行动？</td><td>具体决策 · 仓位管理</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="tip"><strong>学习建议</strong>：初学者先反复看<strong>正视图</strong>直到牢记四锚；再看<strong>立体总图</strong>建立决策习惯；最后用<strong>侧视图和俯视图</strong>做高级判断。</div>
+
+        <blockquote>正视图告诉你"股价是什么"，侧视图告诉你"现在是什么时候"，俯视图告诉你"谁在定价"，立体总图告诉你"该怎么做"。四视合一，就是A股认知的完整立体结构。</blockquote>
+      </div>
+
+      <!-- ============ 正视图 ============ -->
+      <div class="view" data-view="view-front">
+        <div class="chapter-head">
+          <div class="chapter-label">VIEW 01 · 正视图</div>
+          <div class="chapter-title">四锚驱动结构</div>
+          <div class="chapter-desc">从"机制"的侧面回答：股价究竟是什么？由什么决定？</div>
+        </div>
+
+        <div class="view-intro">
+          <div class="label">核心公式</div>
+          <h3>股价 = 盈利锚 × 资金锚 × 情绪锚 × 筹码锚</h3>
+          <p>股价不是单一因素决定的，而是四个锚共振或背离的结果。四锚同向时暴涨，背离时震荡或反转。</p>
+        </div>
+
+        <div class="svg-card">
+          <svg width="100%" viewBox="0 0 680 520" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+              <marker id="arr1" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M2 1L8 5L2 9" fill="none" stroke="context-stroke" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></marker>
+            </defs>
+
+            <text x="340" y="32" text-anchor="middle" fill="#e4e8ef" font-size="15" font-weight="500" font-family="Inter,sans-serif">股价 = 盈利锚 × 资金锚 × 情绪锚 × 筹码锚</text>
+            <text x="340" y="52" text-anchor="middle" fill="#9aa5b5" font-size="12" font-family="Inter,sans-serif">四锚同向共振则暴涨，背离则震荡或反转</text>
+
+            <rect x="220" y="78" width="240" height="44" rx="8" fill="#5F5E5A" stroke="#888780" stroke-width="0.5"/>
+            <text x="340" y="100" text-anchor="middle" fill="#D3D1C7" font-size="14" font-weight="500" font-family="Inter,sans-serif" dominant-baseline="central">股价</text>
+            <text x="340" y="116" text-anchor="middle" fill="#B4B2A9" font-size="11" font-family="Inter,sans-serif" dominant-baseline="central">最后一笔成交决定</text>
+
+            <line x1="310" y1="122" x2="165" y2="170" stroke="#9aa5b5" stroke-width="1" marker-end="url(#arr1)"/>
+            <line x1="330" y1="122" x2="280" y2="170" stroke="#9aa5b5" stroke-width="1" marker-end="url(#arr1)"/>
+            <line x1="350" y1="122" x2="400" y2="170" stroke="#9aa5b5" stroke-width="1" marker-end="url(#arr1)"/>
+            <line x1="370" y1="122" x2="515" y2="170" stroke="#9aa5b5" stroke-width="1" marker-end="url(#arr1)"/>
+
+            <rect x="60" y="170" width="210" height="76" rx="8" fill="#0F6E56" stroke="#1D9E75" stroke-width="0.5"/>
+            <text x="165" y="192" text-anchor="middle" fill="#E1F5EE" font-size="14" font-weight="500" font-family="Inter,sans-serif" dominant-baseline="central">盈利锚</text>
+            <text x="165" y="212" text-anchor="middle" fill="#9FE1CB" font-size="11" font-family="JetBrains Mono,monospace" dominant-baseline="central">EPS × PE</text>
+            <text x="165" y="230" text-anchor="middle" fill="#9FE1CB" font-size="11" font-family="Inter,sans-serif" dominant-baseline="central">最硬 · 最长期</text>
+
+            <rect x="280" y="170" width="120" height="76" rx="8" fill="#854F0B" stroke="#BA7517" stroke-width="0.5"/>
+            <text x="340" y="192" text-anchor="middle" fill="#FAEEDA" font-size="14" font-weight="500" font-family="Inter,sans-serif" dominant-baseline="central">资金锚</text>
+            <text x="340" y="212" text-anchor="middle" fill="#FAC775" font-size="11" font-family="Inter,sans-serif" dominant-baseline="central">流动性</text>
+            <text x="340" y="230" text-anchor="middle" fill="#FAC775" font-size="11" font-family="Inter,sans-serif" dominant-baseline="central">放大器</text>
+
+            <rect x="410" y="170" width="120" height="76" rx="8" fill="#993C1D" stroke="#D85A30" stroke-width="0.5"/>
+            <text x="470" y="192" text-anchor="middle" fill="#FAECE7" font-size="14" font-weight="500" font-family="Inter,sans-serif" dominant-baseline="central">情绪锚</text>
+            <text x="470" y="212" text-anchor="middle" fill="#F5C4B3" font-size="11" font-family="Inter,sans-serif" dominant-baseline="central">预期 · 叙事</text>
+            <text x="470" y="230" text-anchor="middle" fill="#F5C4B3" font-size="11" font-family="Inter,sans-serif" dominant-baseline="central">短期扳机</text>
+
+            <rect x="540" y="170" width="120" height="76" rx="8" fill="#3C3489" stroke="#7F77DD" stroke-width="0.5"/>
+            <text x="600" y="192" text-anchor="middle" fill="#EEEDFE" font-size="14" font-weight="500" font-family="Inter,sans-serif" dominant-baseline="central">筹码锚</text>
+            <text x="600" y="212" text-anchor="middle" fill="#CECBF6" font-size="11" font-family="Inter,sans-serif" dominant-baseline="central">博弈结构</text>
+            <text x="600" y="230" text-anchor="middle" fill="#CECBF6" font-size="11" font-family="Inter,sans-serif" dominant-baseline="central">零和游戏</text>
+
+            <rect x="60" y="278" width="210" height="200" rx="8" fill="#0F6E56" fill-opacity="0.6" stroke="#1D9E75" stroke-width="0.5"/>
+            <text x="165" y="300" text-anchor="middle" fill="#E1F5EE" font-size="13" font-weight="500" font-family="Inter,sans-serif" dominant-baseline="central">驱动力</text>
+            <text x="165" y="322" text-anchor="middle" fill="#9FE1CB" font-size="11" font-family="Inter,sans-serif" dominant-baseline="central">公司创造价值的能力</text>
+            <text x="75" y="348" fill="#9FE1CB" font-size="11" font-family="Inter,sans-serif" dominant-baseline="central">• 商业模式 / 护城河</text>
+            <text x="75" y="368" fill="#9FE1CB" font-size="11" font-family="Inter,sans-serif" dominant-baseline="central">• 盈利质量 / 现金流</text>
+            <text x="75" y="388" fill="#9FE1CB" font-size="11" font-family="Inter,sans-serif" dominant-baseline="central">• 行业地位 / 成长性</text>
+            <text x="75" y="408" fill="#9FE1CB" font-size="11" font-family="Inter,sans-serif" dominant-baseline="central">• 管理层 / 治理</text>
+            <text x="75" y="438" fill="#5DCAA5" font-size="11" font-family="Inter,sans-serif" dominant-baseline="central">时效：3年以上才兑现</text>
+            <text x="75" y="458" fill="#5DCAA5" font-size="11" font-family="Inter,sans-serif" dominant-baseline="central">失效：熊市 · 风格切换</text>
+
+            <rect x="280" y="278" width="120" height="200" rx="8" fill="#854F0B" fill-opacity="0.6" stroke="#BA7517" stroke-width="0.5"/>
+            <text x="340" y="300" text-anchor="middle" fill="#FAEEDA" font-size="13" font-weight="500" font-family="Inter,sans-serif" dominant-baseline="central">驱动力</text>
+            <text x="340" y="322" text-anchor="middle" fill="#FAC775" font-size="11" font-family="Inter,sans-serif" dominant-baseline="central">增量资金入市</text>
+            <text x="290" y="348" fill="#FAC775" font-size="11" font-family="Inter,sans-serif" dominant-baseline="central">• 宏观流动性</text>
+            <text x="290" y="368" fill="#FAC775" font-size="11" font-family="Inter,sans-serif" dominant-baseline="central">• 机构 / 外资</text>
+            <text x="290" y="388" fill="#FAC775" font-size="11" font-family="Inter,sans-serif" dominant-baseline="central">• 散户 / 两融</text>
+            <text x="290" y="408" fill="#FAC775" font-size="11" font-family="Inter,sans-serif" dominant-baseline="central">• 政策导向</text>
+            <text x="290" y="438" fill="#EF9F27" font-size="11" font-family="Inter,sans-serif" dominant-baseline="central">时效：周至月</text>
+            <text x="290" y="458" fill="#EF9F27" font-size="11" font-family="Inter,sans-serif" dominant-baseline="central">最具爆发力</text>
+
+            <rect x="410" y="278" width="120" height="200" rx="8" fill="#993C1D" fill-opacity="0.6" stroke="#D85A30" stroke-width="0.5"/>
+            <text x="470" y="300" text-anchor="middle" fill="#FAECE7" font-size="13" font-weight="500" font-family="Inter,sans-serif" dominant-baseline="central">驱动力</text>
+            <text x="470" y="322" text-anchor="middle" fill="#F5C4B3" font-size="11" font-family="Inter,sans-serif" dominant-baseline="central">市场预期的差异</text>
+            <text x="420" y="348" fill="#F5C4B3" font-size="11" font-family="Inter,sans-serif" dominant-baseline="central">• 产业叙事</text>
+            <text x="420" y="368" fill="#F5C4B3" font-size="11" font-family="Inter,sans-serif" dominant-baseline="central">• 政策预期</text>
+            <text x="420" y="388" fill="#F5C4B3" font-size="11" font-family="Inter,sans-serif" dominant-baseline="central">• 事件催化</text>
+            <text x="420" y="408" fill="#F5C4B3" font-size="11" font-family="Inter,sans-serif" dominant-baseline="central">• 热度与共识</text>
+            <text x="420" y="438" fill="#F0997B" font-size="11" font-family="Inter,sans-serif" dominant-baseline="central">时效：日至周</text>
+            <text x="420" y="458" fill="#F0997B" font-size="11" font-family="Inter,sans-serif" dominant-baseline="central">反转最快</text>
+
+            <rect x="540" y="278" width="120" height="200" rx="8" fill="#3C3489" fill-opacity="0.6" stroke="#7F77DD" stroke-width="0.5"/>
+            <text x="600" y="300" text-anchor="middle" fill="#EEEDFE" font-size="13" font-weight="500" font-family="Inter,sans-serif" dominant-baseline="central">驱动力</text>
+            <text x="600" y="322" text-anchor="middle" fill="#CECBF6" font-size="11" font-family="Inter,sans-serif" dominant-baseline="central">筹码分布与换手</text>
+            <text x="550" y="348" fill="#CECBF6" font-size="11" font-family="Inter,sans-serif" dominant-baseline="central">• 流通盘大小</text>
+            <text x="550" y="368" fill="#CECBF6" font-size="11" font-family="Inter,sans-serif" dominant-baseline="central">• 主力 / 控盘</text>
+            <text x="550" y="388" fill="#CECBF6" font-size="11" font-family="Inter,sans-serif" dominant-baseline="central">• 套牢盘位置</text>
+            <text x="550" y="408" fill="#CECBF6" font-size="11" font-family="Inter,sans-serif" dominant-baseline="central">• 换手率水平</text>
+            <text x="550" y="438" fill="#AFA9EC" font-size="11" font-family="Inter,sans-serif" dominant-baseline="central">时效：分钟至日</text>
+            <text x="550" y="458" fill="#AFA9EC" font-size="11" font-family="Inter,sans-serif" dominant-baseline="central">风险最高</text>
+          </svg>
+        </div>
+
+        <div class="svg-caption"><strong>核心洞察 · </strong>四锚中<strong>盈利锚</strong>是唯一能独立创造长期价值的锚；<strong>资金锚</strong>是放大器，决定涨跌斜率；<strong>情绪锚</strong>是短期催化剂，决定何时启动；<strong>筹码锚</strong>是零和博弈，决定短期波动。只靠后三个锚赚到的钱，最终都会以更大的回撤还回去。</div>
+
+        <h3>四锚的时效与地位</h3>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>锚</th><th>时效</th><th>地位</th><th>最大风险</th></tr></thead>
+            <tbody>
+              <tr><td>盈利锚</td><td>3年以上</td><td>最硬 · 唯一长期有效</td><td>短期常被噪音掩盖</td></tr>
+              <tr><td>资金锚</td><td>周至月</td><td>最具爆发力</td><td>反身性自我毁灭</td></tr>
+              <tr><td>情绪锚</td><td>日至周</td><td>短期扳机</td><td>反转最快</td></tr>
+              <tr><td>筹码锚</td><td>分钟至日</td><td>零和博弈</td><td>接最后一棒</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ============ 侧视图 ============ -->
+      <div class="view" data-view="view-side">
+        <div class="chapter-head">
+          <div class="chapter-label">VIEW 02 · 侧视图</div>
+          <div class="chapter-title">四锚权重的时间演化</div>
+          <div class="chapter-desc">从"时间"的侧面回答：现在处于什么阶段？哪个锚主导？</div>
+        </div>
+
+        <div class="view-intro">
+          <div class="label">核心认知</div>
+          <h3>同一只股票，在不同阶段由不同的锚主导</h3>
+          <p>很多人用同一套方法应对所有市场环境，结果总在某些阶段莫名亏钱。真相是：市场在不同周期阶段，主导股价的锚完全不同。识别当前阶段比研究股票本身更重要。</p>
+        </div>
+
+        <div class="svg-card">
+          <svg width="100%" viewBox="0 0 680 460" xmlns="http://www.w3.org/2000/svg">
+            <text x="340" y="32" text-anchor="middle" fill="#e4e8ef" font-size="15" font-weight="500" font-family="Inter,sans-serif">四锚权重随市场周期的变化</text>
+            <text x="340" y="52" text-anchor="middle" fill="#9aa5b5" font-size="12" font-family="Inter,sans-serif">同一只股票，不同阶段由不同的锚主导</text>
+
+            <line x1="60" y1="380" x2="640" y2="380" stroke="#5f6b7c" stroke-width="0.5"/>
+            <line x1="60" y1="90" x2="60" y2="380" stroke="#5f6b7c" stroke-width="0.5"/>
+            <line x1="205" y1="90" x2="205" y2="380" stroke="#2e3947" stroke-width="0.5" stroke-dasharray="3 3"/>
+            <line x1="350" y1="90" x2="350" y2="380" stroke="#2e3947" stroke-width="0.5" stroke-dasharray="3 3"/>
+            <line x1="495" y1="90" x2="495" y2="380" stroke="#2e3947" stroke-width="0.5" stroke-dasharray="3 3"/>
+
+            <text x="50" y="100" text-anchor="end" fill="#9aa5b5" font-size="12" font-family="Inter,sans-serif" dominant-baseline="central">高</text>
+            <text x="50" y="235" text-anchor="end" fill="#9aa5b5" font-size="12" font-family="Inter,sans-serif" dominant-baseline="central">中</text>
+            <text x="50" y="370" text-anchor="end" fill="#9aa5b5" font-size="12" font-family="Inter,sans-serif" dominant-baseline="central">低</text>
+
+            <path d="M 130 130 L 275 160 L 420 210 L 565 310" fill="none" stroke="#5DCAA5" stroke-width="2.5"/>
+            <circle cx="130" cy="130" r="5" fill="#5DCAA5"/>
+            <circle cx="275" cy="160" r="5" fill="#5DCAA5"/>
+            <circle cx="420" cy="210" r="5" fill="#5DCAA5"/>
+            <circle cx="565" cy="310" r="5" fill="#5DCAA5"/>
+
+            <path d="M 130 250 L 275 140 L 420 150 L 565 220" fill="none" stroke="#EF9F27" stroke-width="2.5"/>
+            <circle cx="130" cy="250" r="5" fill="#EF9F27"/>
+            <circle cx="275" cy="140" r="5" fill="#EF9F27"/>
+            <circle cx="420" cy="150" r="5" fill="#EF9F27"/>
+            <circle cx="565" cy="220" r="5" fill="#EF9F27"/>
+
+            <path d="M 130 320 L 275 260 L 420 190 L 565 120" fill="none" stroke="#F0997B" stroke-width="2.5"/>
+            <circle cx="130" cy="320" r="5" fill="#F0997B"/>
+            <circle cx="275" cy="260" r="5" fill="#F0997B"/>
+            <circle cx="420" cy="190" r="5" fill="#F0997B"/>
+            <circle cx="565" cy="120" r="5" fill="#F0997B"/>
+
+            <path d="M 130 355 L 275 340 L 420 280 L 565 170" fill="none" stroke="#AFA9EC" stroke-width="2.5"/>
+            <circle cx="130" cy="355" r="5" fill="#AFA9EC"/>
+            <circle cx="275" cy="340" r="5" fill="#AFA9EC"/>
+            <circle cx="420" cy="280" r="5" fill="#AFA9EC"/>
+            <circle cx="565" cy="170" r="5" fill="#AFA9EC"/>
+
+            <text x="130" y="398" text-anchor="middle" fill="#e4e8ef" font-size="12" font-weight="500" font-family="Inter,sans-serif">熊市底部</text>
+            <text x="130" y="414" text-anchor="middle" fill="#5f6b7c" font-size="11" font-family="Inter,sans-serif">估值低位</text>
+            <text x="275" y="398" text-anchor="middle" fill="#e4e8ef" font-size="12" font-weight="500" font-family="Inter,sans-serif">牛市初期</text>
+            <text x="275" y="414" text-anchor="middle" fill="#5f6b7c" font-size="11" font-family="Inter,sans-serif">机构建仓</text>
+            <text x="420" y="398" text-anchor="middle" fill="#e4e8ef" font-size="12" font-weight="500" font-family="Inter,sans-serif">主升浪</text>
+            <text x="420" y="414" text-anchor="middle" fill="#5f6b7c" font-size="11" font-family="Inter,sans-serif">全民参与</text>
+            <text x="565" y="398" text-anchor="middle" fill="#e4e8ef" font-size="12" font-weight="500" font-family="Inter,sans-serif">牛市末期</text>
+            <text x="565" y="414" text-anchor="middle" fill="#5f6b7c" font-size="11" font-family="Inter,sans-serif">题材疯炒</text>
+
+            <rect x="60" y="438" width="12" height="12" rx="2" fill="#5DCAA5"/>
+            <text x="78" y="445" fill="#9aa5b5" font-size="12" font-family="Inter,sans-serif" dominant-baseline="central">盈利锚</text>
+            <rect x="160" y="438" width="12" height="12" rx="2" fill="#EF9F27"/>
+            <text x="178" y="445" fill="#9aa5b5" font-size="12" font-family="Inter,sans-serif" dominant-baseline="central">资金锚</text>
+            <rect x="260" y="438" width="12" height="12" rx="2" fill="#F0997B"/>
+            <text x="278" y="445" fill="#9aa5b5" font-size="12" font-family="Inter,sans-serif" dominant-baseline="central">情绪锚</text>
+            <rect x="360" y="438" width="12" height="12" rx="2" fill="#AFA9EC"/>
+            <text x="378" y="445" fill="#9aa5b5" font-size="12" font-family="Inter,sans-serif" dominant-baseline="central">筹码锚</text>
+          </svg>
+        </div>
+
+        <div class="svg-caption"><strong>核心洞察 · </strong>熊市底部盈利锚权重最高（估值便宜），但资金极少；牛市末期情绪和筹码权重最高（赚钱效应），但盈利已严重透支。<strong>高手在阶段切换前布局，新手在阶段顶点入场</strong>。</div>
+
+        <h3>四个阶段的特征与策略</h3>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>阶段</th><th>主导锚</th><th>特征</th><th>策略</th></tr></thead>
+            <tbody>
+              <tr><td>熊市底部</td><td>盈利锚</td><td>估值极低，聪明钱建仓</td><td>逆向埋伏优质标的</td></tr>
+              <tr><td>牛市初期</td><td>资金锚 + 盈利锚</td><td>流动性宽松，机构主导</td><td>加仓大盘龙头</td></tr>
+              <tr><td>主升浪</td><td>四锚共振</td><td>全民参与，赚钱效应</td><td>持有 · 警惕过热</td></tr>
+              <tr><td>牛市末期</td><td>情绪锚 + 筹码锚</td><td>题材疯炒，估值脱节</td><td>减仓 · 退出杠杆</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="warning">最危险的操作：在熊市底部追情绪锚（被套），在牛市末期信盈利锚（被埋）。每个阶段都有对应的有效策略，用错了就是灾难。</div>
+      </div>
+
+      <!-- ============ 俯视图 ============ -->
+      <div class="view" data-view="view-top">
+        <div class="chapter-head">
+          <div class="chapter-label">VIEW 03 · 俯视图</div>
+          <div class="chapter-title">边际定价与资金博弈</div>
+          <div class="chapter-desc">从"博弈"的侧面回答：谁在定价？我应该跟谁同向？</div>
+        </div>
+
+        <div class="view-intro">
+          <div class="label">核心原理</div>
+          <h3>股价由"边际交易者"决定，不是由持股最多的人决定</h3>
+          <p>一只股票9000万股被机构长期持有不动，真正决定股价的是每天交易的1000万股对应的买卖双方。你想赚谁的钱，决定了你需要理解哪些锚。</p>
+        </div>
+
+        <div class="svg-card">
+          <svg width="100%" viewBox="0 0 680 500" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+              <marker id="arr3" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M2 1L8 5L2 9" fill="none" stroke="context-stroke" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></marker>
+            </defs>
+
+            <text x="340" y="32" text-anchor="middle" fill="#e4e8ef" font-size="15" font-weight="500" font-family="Inter,sans-serif">股价由"边际交易者"决定，不是由持股最多的人决定</text>
+            <text x="340" y="52" text-anchor="middle" fill="#9aa5b5" font-size="12" font-family="Inter,sans-serif">不同资金类型在不同阶段轮流掌握定价权</text>
+
+            <circle cx="340" cy="265" r="55" fill="#232a35" stroke="#ffb547" stroke-width="1" stroke-dasharray="4 4"/>
+            <text x="340" y="258" text-anchor="middle" fill="#ffb547" font-size="14" font-weight="500" font-family="Inter,sans-serif" dominant-baseline="central">股价</text>
+            <text x="340" y="278" text-anchor="middle" fill="#FAC775" font-size="11" font-family="Inter,sans-serif" dominant-baseline="central">边际定价区</text>
+
+            <rect x="60" y="100" width="150" height="70" rx="8" fill="#0F6E56" stroke="#1D9E75" stroke-width="0.5"/>
+            <text x="135" y="125" text-anchor="middle" fill="#E1F5EE" font-size="14" font-weight="500" font-family="Inter,sans-serif" dominant-baseline="central">外资 · 北向</text>
+            <text x="135" y="145" text-anchor="middle" fill="#9FE1CB" font-size="11" font-family="Inter,sans-serif" dominant-baseline="central">价值 · 龙头</text>
+            <text x="135" y="160" text-anchor="middle" fill="#9FE1CB" font-size="11" font-family="Inter,sans-serif" dominant-baseline="central">长期视角</text>
+
+            <rect x="470" y="100" width="150" height="70" rx="8" fill="#0F6E56" stroke="#1D9E75" stroke-width="0.5"/>
+            <text x="545" y="125" text-anchor="middle" fill="#E1F5EE" font-size="14" font-weight="500" font-family="Inter,sans-serif" dominant-baseline="central">险资 · 社保</text>
+            <text x="545" y="145" text-anchor="middle" fill="#9FE1CB" font-size="11" font-family="Inter,sans-serif" dominant-baseline="central">高股息 · 稳健</text>
+            <text x="545" y="160" text-anchor="middle" fill="#9FE1CB" font-size="11" font-family="Inter,sans-serif" dominant-baseline="central">底部加仓</text>
+
+            <rect x="60" y="230" width="150" height="70" rx="8" fill="#854F0B" stroke="#BA7517" stroke-width="0.5"/>
+            <text x="135" y="255" text-anchor="middle" fill="#FAEEDA" font-size="14" font-weight="500" font-family="Inter,sans-serif" dominant-baseline="central">公募基金</text>
+            <text x="135" y="275" text-anchor="middle" fill="#FAC775" font-size="11" font-family="Inter,sans-serif" dominant-baseline="central">抱团龙头</text>
+            <text x="135" y="290" text-anchor="middle" fill="#FAC775" font-size="11" font-family="Inter,sans-serif" dominant-baseline="central">相对排名</text>
+
+            <rect x="470" y="230" width="150" height="70" rx="8" fill="#854F0B" stroke="#BA7517" stroke-width="0.5"/>
+            <text x="545" y="255" text-anchor="middle" fill="#FAEEDA" font-size="14" font-weight="500" font-family="Inter,sans-serif" dominant-baseline="central">产业资本</text>
+            <text x="545" y="275" text-anchor="middle" fill="#FAC775" font-size="11" font-family="Inter,sans-serif" dominant-baseline="central">大股东增减持</text>
+            <text x="545" y="290" text-anchor="middle" fill="#FAC775" font-size="11" font-family="Inter,sans-serif" dominant-baseline="central">最了解公司</text>
+
+            <rect x="60" y="360" width="150" height="70" rx="8" fill="#993C1D" stroke="#D85A30" stroke-width="0.5"/>
+            <text x="135" y="385" text-anchor="middle" fill="#FAECE7" font-size="14" font-weight="500" font-family="Inter,sans-serif" dominant-baseline="central">游资 · 私募</text>
+            <text x="135" y="405" text-anchor="middle" fill="#F5C4B3" font-size="11" font-family="Inter,sans-serif" dominant-baseline="central">题材 · 热点</text>
+            <text x="135" y="420" text-anchor="middle" fill="#F5C4B3" font-size="11" font-family="Inter,sans-serif" dominant-baseline="central">高频博弈</text>
+
+            <rect x="470" y="360" width="150" height="70" rx="8" fill="#993C1D" stroke="#D85A30" stroke-width="0.5"/>
+            <text x="545" y="385" text-anchor="middle" fill="#FAECE7" font-size="14" font-weight="500" font-family="Inter,sans-serif" dominant-baseline="central">散户 · 两融</text>
+            <text x="545" y="405" text-anchor="middle" fill="#F5C4B3" font-size="11" font-family="Inter,sans-serif" dominant-baseline="central">追涨杀跌</text>
+            <text x="545" y="420" text-anchor="middle" fill="#F5C4B3" font-size="11" font-family="Inter,sans-serif" dominant-baseline="central">情绪放大器</text>
+
+            <path d="M 210 135 L 285 225" fill="none" stroke="#9aa5b5" stroke-width="1" stroke-dasharray="3 3" marker-end="url(#arr3)" opacity="0.6"/>
+            <path d="M 470 135 L 395 225" fill="none" stroke="#9aa5b5" stroke-width="1" stroke-dasharray="3 3" marker-end="url(#arr3)" opacity="0.6"/>
+            <path d="M 210 265 L 285 265" fill="none" stroke="#9aa5b5" stroke-width="1" stroke-dasharray="3 3" marker-end="url(#arr3)" opacity="0.6"/>
+            <path d="M 470 265 L 395 265" fill="none" stroke="#9aa5b5" stroke-width="1" stroke-dasharray="3 3" marker-end="url(#arr3)" opacity="0.6"/>
+            <path d="M 210 395 L 285 305" fill="none" stroke="#9aa5b5" stroke-width="1" stroke-dasharray="3 3" marker-end="url(#arr3)" opacity="0.6"/>
+            <path d="M 470 395 L 395 305" fill="none" stroke="#9aa5b5" stroke-width="1" stroke-dasharray="3 3" marker-end="url(#arr3)" opacity="0.6"/>
+
+            <text x="340" y="90" text-anchor="middle" fill="#5DCAA5" font-size="12" font-weight="500" font-family="Inter,sans-serif">长线资金 · 盈利锚主导</text>
+            <text x="340" y="215" text-anchor="middle" fill="#EF9F27" font-size="12" font-weight="500" font-family="Inter,sans-serif">中线资金 · 资金锚主导</text>
+            <text x="340" y="445" text-anchor="middle" fill="#F0997B" font-size="12" font-weight="500" font-family="Inter,sans-serif">短线资金 · 情绪+筹码主导</text>
+
+            <text x="340" y="475" text-anchor="middle" fill="#9aa5b5" font-size="12" font-family="Inter,sans-serif">你站在哪一方，决定了你需要理解哪些锚</text>
+          </svg>
+        </div>
+
+        <div class="svg-caption"><strong>核心洞察 · </strong>散户最容易犯的错：用短线资金的方法研究长线股票（错失耐心），或用长线资金的方法参与短线博弈（死扛到底）。<strong>明确自己的资金属性，才能选对研究框架</strong>。</div>
+
+        <h3>三类资金的研究重点</h3>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>资金属性</th><th>代表群体</th><th>研究重点</th><th>持股周期</th></tr></thead>
+            <tbody>
+              <tr><td>长线资金</td><td>外资 · 险资 · 社保</td><td>盈利锚为主（70%）</td><td>3年以上</td></tr>
+              <tr><td>中线资金</td><td>公募 · 产业资本</td><td>盈利+资金锚（各40%）</td><td>6–12个月</td></tr>
+              <tr><td>短线资金</td><td>游资 · 两融 · 散户</td><td>情绪+筹码锚（70%）</td><td>几天至几周</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ============ 立体总图 ============ -->
+      <div class="view" data-view="view-3d">
+        <div class="chapter-head">
+          <div class="chapter-label">VIEW 04 · 立体总图</div>
+          <div class="chapter-title">完整决策流程</div>
+          <div class="chapter-desc">从"决策"的侧面回答：认知如何转化为行动？</div>
+        </div>
+
+        <div class="view-intro">
+          <div class="label">核心逻辑</div>
+          <h3>四锚各司其职，依次作为决策漏斗</h3>
+          <p>盈利锚选"买什么"，资金锚判断"何时买"，情绪锚检查"预期差"，筹码锚确认"什么价位买"。最后落实到仓位管理和纪律执行。</p>
+        </div>
+
+        <div class="svg-card">
+          <svg width="100%" viewBox="0 0 680 620" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+              <marker id="arr4" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M2 1L8 5L2 9" fill="none" stroke="context-stroke" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></marker>
+            </defs>
+
+            <text x="340" y="32" text-anchor="middle" fill="#e4e8ef" font-size="15" font-weight="500" font-family="Inter,sans-serif">从"认知框架"到"投资决策"的完整流程</text>
+            <text x="340" y="52" text-anchor="middle" fill="#9aa5b5" font-size="12" font-family="Inter,sans-serif">四锚各司其职，共同决定仓位和时机</text>
+
+            <rect x="180" y="80" width="320" height="76" rx="8" fill="#0F6E56" stroke="#1D9E75" stroke-width="0.5"/>
+            <text x="340" y="102" text-anchor="middle" fill="#E1F5EE" font-size="14" font-weight="500" font-family="Inter,sans-serif" dominant-baseline="central">第一步 · 盈利锚筛选（选什么）</text>
+            <text x="340" y="124" text-anchor="middle" fill="#9FE1CB" font-size="11" font-family="Inter,sans-serif" dominant-baseline="central">六层漏斗：宏观 → 行业 → 商业 → 财务 → 管理层 → 估值</text>
+            <text x="340" y="142" text-anchor="middle" fill="#9FE1CB" font-size="11" font-family="Inter,sans-serif" dominant-baseline="central">输出：20–50 只基本面过硬的标的池</text>
+
+            <line x1="340" y1="156" x2="340" y2="180" stroke="#9aa5b5" stroke-width="1" marker-end="url(#arr4)"/>
+
+            <rect x="180" y="186" width="320" height="76" rx="8" fill="#854F0B" stroke="#BA7517" stroke-width="0.5"/>
+            <text x="340" y="208" text-anchor="middle" fill="#FAEEDA" font-size="14" font-weight="500" font-family="Inter,sans-serif" dominant-baseline="central">第二步 · 资金锚判断（何时买）</text>
+            <text x="340" y="230" text-anchor="middle" fill="#FAC775" font-size="11" font-family="Inter,sans-serif" dominant-baseline="central">看水位：流动性 · 成交量 · 北向 · 两融</text>
+            <text x="340" y="248" text-anchor="middle" fill="#FAC775" font-size="11" font-family="Inter,sans-serif" dominant-baseline="central">输出：当前是增量市还是存量市</text>
+
+            <line x1="340" y1="262" x2="340" y2="286" stroke="#9aa5b5" stroke-width="1" marker-end="url(#arr4)"/>
+
+            <rect x="180" y="292" width="320" height="76" rx="8" fill="#993C1D" stroke="#D85A30" stroke-width="0.5"/>
+            <text x="340" y="314" text-anchor="middle" fill="#FAECE7" font-size="14" font-weight="500" font-family="Inter,sans-serif" dominant-baseline="central">第三步 · 情绪锚检查（预期差）</text>
+            <text x="340" y="336" text-anchor="middle" fill="#F5C4B3" font-size="11" font-family="Inter,sans-serif" dominant-baseline="central">看共识：估值分位 · 研报一致预期 · 热度</text>
+            <text x="340" y="354" text-anchor="middle" fill="#F5C4B3" font-size="11" font-family="Inter,sans-serif" dominant-baseline="central">输出：分歧方向与预期差大小</text>
+
+            <line x1="340" y1="368" x2="340" y2="392" stroke="#9aa5b5" stroke-width="1" marker-end="url(#arr4)"/>
+
+            <rect x="180" y="398" width="320" height="76" rx="8" fill="#3C3489" stroke="#7F77DD" stroke-width="0.5"/>
+            <text x="340" y="420" text-anchor="middle" fill="#EEEDFE" font-size="14" font-weight="500" font-family="Inter,sans-serif" dominant-baseline="central">第四步 · 筹码锚确认（买什么价）</text>
+            <text x="340" y="442" text-anchor="middle" fill="#CECBF6" font-size="11" font-family="Inter,sans-serif" dominant-baseline="central">看博弈：流通盘 · 集中度 · 催化剂</text>
+            <text x="340" y="460" text-anchor="middle" fill="#CECBF6" font-size="11" font-family="Inter,sans-serif" dominant-baseline="central">输出：买入时点与节奏</text>
+
+            <line x1="340" y1="474" x2="340" y2="498" stroke="#9aa5b5" stroke-width="1" marker-end="url(#arr4)"/>
+
+            <rect x="180" y="504" width="320" height="76" rx="8" fill="#444441" stroke="#888780" stroke-width="0.5"/>
+            <text x="340" y="526" text-anchor="middle" fill="#F1EFE8" font-size="14" font-weight="500" font-family="Inter,sans-serif" dominant-baseline="central">执行 · 仓位与风控</text>
+            <text x="340" y="548" text-anchor="middle" fill="#D3D1C7" font-size="11" font-family="Inter,sans-serif" dominant-baseline="central">单股&lt;20% · 单行业&lt;30% · 止损规则 · 定期复盘</text>
+            <text x="340" y="566" text-anchor="middle" fill="#D3D1C7" font-size="11" font-family="Inter,sans-serif" dominant-baseline="central">对抗人性弱点是最终胜负手</text>
+
+            <rect x="30" y="86" width="130" height="64" rx="8" fill="#0F6E56" fill-opacity="0.4" stroke="#1D9E75" stroke-width="0.5"/>
+            <text x="95" y="104" text-anchor="middle" fill="#9FE1CB" font-size="11" font-family="Inter,sans-serif" dominant-baseline="central">回答"值不值"</text>
+            <text x="95" y="124" text-anchor="middle" fill="#5DCAA5" font-size="12" font-weight="500" font-family="Inter,sans-serif" dominant-baseline="central">方向</text>
+            <text x="95" y="140" text-anchor="middle" fill="#9FE1CB" font-size="11" font-family="Inter,sans-serif" dominant-baseline="central">3年以上周期</text>
+
+            <rect x="30" y="192" width="130" height="64" rx="8" fill="#854F0B" fill-opacity="0.4" stroke="#BA7517" stroke-width="0.5"/>
+            <text x="95" y="210" text-anchor="middle" fill="#FAC775" font-size="11" font-family="Inter,sans-serif" dominant-baseline="central">回答"能涨吗"</text>
+            <text x="95" y="230" text-anchor="middle" fill="#EF9F27" font-size="12" font-weight="500" font-family="Inter,sans-serif" dominant-baseline="central">动力</text>
+            <text x="95" y="246" text-anchor="middle" fill="#FAC775" font-size="11" font-family="Inter,sans-serif" dominant-baseline="central">周到月周期</text>
+
+            <rect x="30" y="298" width="130" height="64" rx="8" fill="#993C1D" fill-opacity="0.4" stroke="#D85A30" stroke-width="0.5"/>
+            <text x="95" y="316" text-anchor="middle" fill="#F5C4B3" font-size="11" font-family="Inter,sans-serif" dominant-baseline="central">回答"谁会跟"</text>
+            <text x="95" y="336" text-anchor="middle" fill="#F0997B" font-size="12" font-weight="500" font-family="Inter,sans-serif" dominant-baseline="central">催化</text>
+            <text x="95" y="352" text-anchor="middle" fill="#F5C4B3" font-size="11" font-family="Inter,sans-serif" dominant-baseline="central">日到周周期</text>
+
+            <rect x="30" y="404" width="130" height="64" rx="8" fill="#3C3489" fill-opacity="0.4" stroke="#7F77DD" stroke-width="0.5"/>
+            <text x="95" y="422" text-anchor="middle" fill="#CECBF6" font-size="11" font-family="Inter,sans-serif" dominant-baseline="central">回答"怎么买"</text>
+            <text x="95" y="442" text-anchor="middle" fill="#AFA9EC" font-size="12" font-weight="500" font-family="Inter,sans-serif" dominant-baseline="central">节奏</text>
+            <text x="95" y="458" text-anchor="middle" fill="#CECBF6" font-size="11" font-family="Inter,sans-serif" dominant-baseline="central">分钟到日</text>
+
+            <rect x="520" y="86" width="130" height="64" rx="8" fill="#0F6E56" fill-opacity="0.4" stroke="#1D9E75" stroke-width="0.5"/>
+            <text x="585" y="104" text-anchor="middle" fill="#9FE1CB" font-size="11" font-family="Inter,sans-serif" dominant-baseline="central">AI胜任度</text>
+            <text x="585" y="124" text-anchor="middle" fill="#5DCAA5" font-size="12" font-weight="500" font-family="Inter,sans-serif" dominant-baseline="central">高</text>
+            <text x="585" y="140" text-anchor="middle" fill="#9FE1CB" font-size="11" font-family="Inter,sans-serif" dominant-baseline="central">人需判断意义</text>
+
+            <rect x="520" y="192" width="130" height="64" rx="8" fill="#854F0B" fill-opacity="0.4" stroke="#BA7517" stroke-width="0.5"/>
+            <text x="585" y="210" text-anchor="middle" fill="#FAC775" font-size="11" font-family="Inter,sans-serif" dominant-baseline="central">AI胜任度</text>
+            <text x="585" y="230" text-anchor="middle" fill="#EF9F27" font-size="12" font-weight="500" font-family="Inter,sans-serif" dominant-baseline="central">中高</text>
+            <text x="585" y="246" text-anchor="middle" fill="#FAC775" font-size="11" font-family="Inter,sans-serif" dominant-baseline="central">数据密集型</text>
+
+            <rect x="520" y="298" width="130" height="64" rx="8" fill="#993C1D" fill-opacity="0.4" stroke="#D85A30" stroke-width="0.5"/>
+            <text x="585" y="316" text-anchor="middle" fill="#F5C4B3" font-size="11" font-family="Inter,sans-serif" dominant-baseline="central">AI胜任度</text>
+            <text x="585" y="336" text-anchor="middle" fill="#F0997B" font-size="12" font-weight="500" font-family="Inter,sans-serif" dominant-baseline="central">中低</text>
+            <text x="585" y="352" text-anchor="middle" fill="#F5C4B3" font-size="11" font-family="Inter,sans-serif" dominant-baseline="central">人感知共识</text>
+
+            <rect x="520" y="404" width="130" height="64" rx="8" fill="#3C3489" fill-opacity="0.4" stroke="#7F77DD" stroke-width="0.5"/>
+            <text x="585" y="422" text-anchor="middle" fill="#CECBF6" font-size="11" font-family="Inter,sans-serif" dominant-baseline="central">AI胜任度</text>
+            <text x="585" y="442" text-anchor="middle" fill="#AFA9EC" font-size="12" font-weight="500" font-family="Inter,sans-serif" dominant-baseline="central">低</text>
+            <text x="585" y="458" text-anchor="middle" fill="#CECBF6" font-size="11" font-family="Inter,sans-serif" dominant-baseline="central">盘感经验</text>
+          </svg>
+        </div>
+
+        <div class="svg-caption"><strong>核心洞察 · </strong>左栏是"每锚回答什么问题"，右栏是"AI能帮多少忙"。<strong>越往下走AI越无力</strong>——数据处理AI能干，但最终的时点判断、情绪感知、仓位决定、纪律执行，都得靠人自己。</div>
+
+        <h3>从认知到行动的闭环</h3>
+        <div class="card-grid">
+          <div class="card"><div class="card-num">CORE</div><div class="card-title">研究</div><div class="card-desc">盈利锚筛出候选池（20-50只），这是你的能力圈</div></div>
+          <div class="card"><div class="card-num">TIMING</div><div class="card-title">时机</div><div class="card-desc">资金锚+情绪锚判断是否到了下单时点</div></div>
+          <div class="card"><div class="card-num">ACTION</div><div class="card-title">执行</div><div class="card-desc">筹码锚确认买入节奏，仓位纪律落地</div></div>
+          <div class="card"><div class="card-num">REVIEW</div><div class="card-title">复盘</div><div class="card-desc">每季度回顾持有逻辑，剔除逻辑已破的标的</div></div>
+        </div>
+
+        <blockquote>研究的是盈利锚，交易的是资金锚，赚的是情绪锚，博弈的是筹码锚——四者缺一不可。</blockquote>
+      </div>
+
+      <!-- ============ 知识地图 ============ -->
+      <div class="view" data-view="map">
+        <div class="map-intro">
+          <h1>A股四锚知识框架</h1>
+          <p class="sub">
+            本框架系统阐述A股投资的"四锚认知体系"——盈利锚、资金锚、情绪锚、筹码锚。
+            四锚分别回答股价的"值多少、涨多少、何时涨、短期波动"四个问题。
+            点击左侧导航或下方卡片进入具体内容。
+          </p>
+        </div>
+
+        <div class="stats">
+          <div class="stat"><div class="stat-val">4</div><div class="stat-label">核心锚点</div></div>
+          <div class="stat"><div class="stat-val">4</div><div class="stat-label">立体视图</div></div>
+          <div class="stat"><div class="stat-val">40+</div><div class="stat-label">知识章节</div></div>
+          <div class="stat"><div class="stat-val">4</div><div class="stat-label">时间尺度</div></div>
+          <div class="stat"><div class="stat-val">★</div><div class="stat-label">终极整合</div></div>
+        </div>
+
+        <h2>四锚总览</h2>
+        <div class="map-grid">
+          <div class="map-card" data-jump="ch1" style="border-left:3px solid #5DCAA5">
+            <div class="map-arrow">→</div>
+            <div class="map-card-head"><div class="map-card-num" style="color:#5DCAA5">①</div><div class="map-card-title">盈利锚 · Profit</div></div>
+            <div class="map-card-desc">值多少 · 3年以上 · 最硬最长期 · 价值创造</div>
+            <div class="map-card-topics">
+              <span class="topic-tag">六层漏斗</span>
+              <span class="topic-tag">五级质量</span>
+              <span class="topic-tag">反身性</span>
+            </div>
+          </div>
+          <div class="map-card" data-jump="cap-overview" style="border-left:3px solid #EF9F27">
+            <div class="map-arrow">→</div>
+            <div class="map-card-head"><div class="map-card-num" style="color:#EF9F27">②</div><div class="map-card-title">资金锚 · Liquidity</div></div>
+            <div class="map-card-desc">涨多少 · 月到季 · 最具爆发力 · 流动性放大</div>
+            <div class="map-card-topics">
+              <span class="topic-tag">四层结构</span>
+              <span class="topic-tag">板块轮动</span>
+              <span class="topic-tag">工具箱</span>
+            </div>
+          </div>
+          <div class="map-card" data-jump="sent-overview" style="border-left:3px solid #F0997B">
+            <div class="map-arrow">→</div>
+            <div class="map-card-head"><div class="map-card-num" style="color:#F0997B">③</div><div class="map-card-title">情绪锚 · Sentiment</div></div>
+            <div class="map-card-desc">何时涨 · 日到月 · 反身性最强 · 预期差翻译器</div>
+            <div class="map-card-topics">
+              <span class="topic-tag">预期差</span>
+              <span class="topic-tag">共识演化</span>
+              <span class="topic-tag">二阶思维</span>
+            </div>
+          </div>
+          <div class="map-card" data-jump="chip-overview" style="border-left:3px solid #AFA9EC">
+            <div class="map-arrow">→</div>
+            <div class="map-card-head"><div class="map-card-num" style="color:#AFA9EC">④</div><div class="map-card-title">筹码锚 · Chips</div></div>
+            <div class="map-card-desc">短期波动 · 分钟到日 · 零和博弈 · 结构决定</div>
+            <div class="map-card-topics">
+              <span class="topic-tag">股东户数</span>
+              <span class="topic-tag">龙虎榜</span>
+              <span class="topic-tag">控盘识别</span>
+            </div>
+          </div>
+        </div>
+
+        <h2>立体认知视图</h2>
+        <div class="map-grid">
+          <div class="map-card" data-jump="view-front">
+            <div class="map-arrow">→</div>
+            <div class="map-card-head"><div class="map-card-num">▲ 01</div><div class="map-card-title">正视图 · 四锚结构</div></div>
+            <div class="map-card-desc">股价由什么决定？建立基础认知</div>
+          </div>
+          <div class="map-card" data-jump="view-side">
+            <div class="map-arrow">→</div>
+            <div class="map-card-head"><div class="map-card-num">▲ 02</div><div class="map-card-title">侧视图 · 时间演化</div></div>
+            <div class="map-card-desc">现在处于什么阶段？判断主导锚</div>
+          </div>
+          <div class="map-card" data-jump="view-top">
+            <div class="map-arrow">→</div>
+            <div class="map-card-head"><div class="map-card-num">▲ 03</div><div class="map-card-title">俯视图 · 博弈结构</div></div>
+            <div class="map-card-desc">谁在定价？选择投资风格</div>
+          </div>
+          <div class="map-card" data-jump="view-3d">
+            <div class="map-arrow">→</div>
+            <div class="map-card-head"><div class="map-card-num">▲ 04</div><div class="map-card-title">立体总图 · 决策流程</div></div>
+            <div class="map-card-desc">认知如何转化为行动？完整决策</div>
+          </div>
+        </div>
+
+        <h2>终极整合与附录</h2>
+        <div class="map-grid">
+          <div class="map-card" data-jump="synthesis" style="border-left:3px solid #ffb547">
+            <div class="map-arrow">→</div>
+            <div class="map-card-head"><div class="map-card-num" style="color:#ffb547">★</div><div class="map-card-title">四锚关系的终极图景</div></div>
+            <div class="map-card-desc">四锚不是并列的，而是互相交织层层放大的系统</div>
+          </div>
+          <div class="map-card" data-jump="appA">
+            <div class="map-arrow">→</div>
+            <div class="map-card-head"><div class="map-card-num">A</div><div class="map-card-title">核心清单</div></div>
+            <div class="map-card-desc">可勾选的实战清单</div>
+          </div>
+          <div class="map-card" data-jump="appB">
+            <div class="map-arrow">→</div>
+            <div class="map-card-head"><div class="map-card-num">B</div><div class="map-card-title">术语速查</div></div>
+            <div class="map-card-desc">核心概念的简明定义</div>
+          </div>
+        </div>
+
+        <div class="disclaimer">
+          免责声明：本文档为框架性讨论，不构成任何具体投资建议。市场有风险，决策需谨慎。
+        </div>
+      </div>
+
+      <!-- ============ 前言 ============ -->
+      <div class="view" data-view="preface">
+        <div class="chapter-head">
+          <div class="chapter-label">PROLOGUE</div>
+          <div class="chapter-title">前言：为什么需要"盈利锚"这个概念</div>
+        </div>
+
+        <p>在A股赚钱，表面逻辑是"找到愿意用更高价格接盘的人"。但这个接盘者为什么愿意出更高价？本质上取决于四个"锚"：<strong>盈利锚、资金锚、情绪锚、筹码锚</strong>。</p>
+
+        <blockquote>盈利锚是最硬、最长期、最具决定性的锚。它回答的是一个根本问题：这家公司究竟能为股东创造多少价值？</blockquote>
+
+        <p>本文档系统阐述盈利锚的全貌，包括：</p>
+        <ul>
+          <li>本质定义与A股特色</li>
+          <li>五层研究方法</li>
+          <li>人机分工模式</li>
+          <li>边际定价与预期差</li>
+          <li>逻辑有效性困境</li>
+          <li>七个进阶认知维度</li>
+          <li>完整心智模型</li>
+        </ul>
+      </div>
+
+      <!-- ============ 第一章 ============ -->
+      <div class="view" data-view="ch1">
+        <div class="chapter-head">
+          <div class="chapter-label">CHAPTER 01</div>
+          <div class="chapter-title">盈利锚的本质</div>
+          <div class="chapter-desc">从定义到A股特色，理解盈利锚的底层逻辑。</div>
+        </div>
+
+        <div class="map-grid">
+          <div class="map-card" data-jump="ch1-1">
+            <div class="map-arrow">→</div>
+            <div class="map-card-head"><div class="map-card-num">1.1</div><div class="map-card-title">核心定义</div></div>
+            <div class="map-card-desc">EPS × PE 的底层逻辑，以及戴维斯双击/双杀</div>
+          </div>
+          <div class="map-card" data-jump="ch1-2">
+            <div class="map-arrow">→</div>
+            <div class="map-card-head"><div class="map-card-num">1.2</div><div class="map-card-title">A股四大特殊性</div></div>
+            <div class="map-card-desc">滞后性、周期性、伪盈利、行业分化</div>
+          </div>
+          <div class="map-card" data-jump="ch1-3">
+            <div class="map-arrow">→</div>
+            <div class="map-card-head"><div class="map-card-num">1.3</div><div class="map-card-title">实战运用原则</div></div>
+            <div class="map-card-desc">在场标准 + 四个失效时刻</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="view" data-view="ch1-1">
+        <div class="chapter-head">
+          <div class="chapter-label">1.1 · 本章第一节</div>
+          <div class="chapter-title">核心定义</div>
+        </div>
+        <p>盈利锚指的是：<strong>股价最终由上市公司创造利润的能力和成长性决定</strong>。即便抛开分红，公司盈利的增长仍然会通过"净资产增厚"和"市场给予更高估值"两条路径，推动股价中枢上行。</p>
+
+        <h4>核心公式</h4>
+        <div class="formula">股价 ≈ 每股盈利(EPS) × 市盈率(PE)</div>
+
+        <h3>股价上涨的两种方式</h3>
+        <ul>
+          <li><strong>EPS增长</strong>（业绩驱动）</li>
+          <li><strong>PE扩张</strong>（估值驱动）</li>
+        </ul>
+
+        <div class="tip">二者共振 = <strong>戴维斯双击</strong>（股价暴涨）；二者同杀 = <strong>戴维斯双杀</strong>（股价暴跌）。盈利锚管EPS这一端，但它同时深刻影响PE——市场愿意给"能持续增长的公司"更高的估值倍数。</div>
+      </div>
+
+      <div class="view" data-view="ch1-2">
+        <div class="chapter-head">
+          <div class="chapter-label">1.2 · 本章第二节</div>
+          <div class="chapter-title">盈利锚在A股的四大特殊性</div>
+        </div>
+
+        <h3>特殊性 1 · 滞后性特别明显</h3>
+        <p>成熟市场（如美股）对盈利反应相对及时，财报出来后股价快速反映。A股常出现"业绩好股价不涨，业绩差股价反而涨"的反常现象——原因是A股情绪锚和资金锚的短期权重过大。</p>
+        <div class="tip">但时间拉长到3年以上，盈利锚的决定性就会显现。</div>
+
+        <h3>特殊性 2 · 周期性极强</h3>
+        <p>A股上市公司结构里，周期行业（金融、地产、有色、化工、钢铁、煤炭）占比偏高，盈利不是线性增长，而是剧烈波动。</p>
+        <div class="warning">A股特有现象：盈利高点往往是股价高点的反向信号——周期股在盈利最差时（PE极高甚至亏损）反而是买点，在盈利最好时（PE很低）反而是卖点。</div>
+
+        <h3>特殊性 3 · "伪盈利"问题突出</h3>
+        <p>A股有相当一部分公司的"盈利"水分很大，常见有：</p>
+        <div class="card-grid">
+          <div class="card"><div class="card-num">01</div><div class="card-title">非经常性损益</div><div class="card-desc">卖房、卖子公司、政府补贴撑起的利润</div></div>
+          <div class="card"><div class="card-num">02</div><div class="card-title">商誉暴雷</div><div class="card-desc">并购形成的商誉，某年突然大额减值</div></div>
+          <div class="card"><div class="card-num">03</div><div class="card-title">应收账款虚胖</div><div class="card-desc">利润在报表上，现金没进来</div></div>
+          <div class="card"><div class="card-num">04</div><div class="card-title">存货陷阱</div><div class="card-desc">库存堆积却不计减值</div></div>
+        </div>
+        <blockquote>经验法则：连续5年ROE大于15%的公司是盈利锚最扎实的群体。</blockquote>
+
+        <h3>特殊性 4 · 行业分化比个股分化更关键</h3>
+        <p>A股有个现象叫 <em>贝塔大于阿尔法</em>——选对行业比选对个股更重要。</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>行业类型</th><th>盈利锚强度</th><th>典型特征</th></tr></thead>
+            <tbody>
+              <tr><td>消费（白酒、调味品、医药）</td><td>极强</td><td>盈利稳定，可预测性高</td></tr>
+              <tr><td>科技成长（半导体、新能源）</td><td>强但波动大</td><td>高增长期有效，产能过剩期失灵</td></tr>
+              <tr><td>制造业龙头</td><td>中等</td><td>受原材料和需求周期影响</td></tr>
+              <tr><td>周期股（有色、钢铁、航运）</td><td>弱且反向</td><td>需要反着看</td></tr>
+              <tr><td>金融（银行、保险）</td><td>被政策干扰</td><td>盈利稳定但估值长期被压制</td></tr>
+              <tr><td>题材概念股</td><td>几乎无</td><td>盈利锚基本失效</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="view" data-view="ch1-3">
+        <div class="chapter-head">
+          <div class="chapter-label">1.3 · 本章第三节</div>
+          <div class="chapter-title">实战运用原则</div>
+        </div>
+
+        <h3>判断"盈利锚是否在场"的标准</h3>
+        <ul class="checklist">
+          <li>近3年营收和扣非利润增速稳定为正</li>
+          <li>ROE长期在12%以上</li>
+          <li>经营性现金流/净利润 接近或大于1</li>
+          <li>属于盈利模式清晰、商业壁垒明确的行业</li>
+        </ul>
+
+        <h3>盈利锚的四个失效时刻</h3>
+        <div class="card-grid">
+          <div class="card"><div class="card-num">01</div><div class="card-title">系统性熊市</div><div class="card-desc">覆巢之下无完卵，再好的业绩也跌</div></div>
+          <div class="card"><div class="card-num">02</div><div class="card-title">流动性极度收紧</div><div class="card-desc">外部资金撤离压倒业绩增长</div></div>
+          <div class="card"><div class="card-num">03</div><div class="card-title">风格切换期</div><div class="card-desc">原先盈利锚标的被资金抛弃</div></div>
+          <div class="card"><div class="card-num">04</div><div class="card-title">产业趋势反转</div><div class="card-desc">市场提前定价衰退</div></div>
+        </div>
+      </div>
+
+      <!-- ============ 第二章 ============ -->
+      <div class="view" data-view="ch2">
+        <div class="chapter-head">
+          <div class="chapter-label">CHAPTER 02</div>
+          <div class="chapter-title">盈利锚研究的能力体系</div>
+          <div class="chapter-desc">财报解读只是"地基"，在此之上还有四层能力。</div>
+        </div>
+
+        <div class="level-ladder">
+          <div class="level-step"><div class="level-rank">L1 · BASE</div><div class="level-content"><h5>财报解读能力</h5><p>三张报表、异常科目、指标交叉验证</p></div></div>
+          <div class="level-step"><div class="level-rank">L2 · CORE</div><div class="level-content"><h5>商业模式理解</h5><p>赚钱方式、壁垒、产业链位置</p></div></div>
+          <div class="level-step"><div class="level-rank">L3 · ADV</div><div class="level-content"><h5>行业产业判断</h5><p>生命周期、天花板、竞争格局</p></div></div>
+          <div class="level-step"><div class="level-rank">L4 · HIGH</div><div class="level-content"><h5>宏观周期判断</h5><p>经济周期、货币政策、政策风向</p></div></div>
+          <div class="level-step"><div class="level-rank">L5 · APP</div><div class="level-content"><h5>估值与交易</h5><p>估值方法、分位判断、预期差把握</p></div></div>
+        </div>
+      </div>
+
+      <div class="view" data-view="ch2-1">
+        <div class="chapter-head">
+          <div class="chapter-label">2.1 · 第1层 · 基础</div>
+          <div class="chapter-title">财报解读能力</div>
+          <div class="chapter-desc">投资的入场券。可标准化，是AI最能帮上忙的层次。</div>
+        </div>
+        <h3>核心能力</h3>
+        <ul>
+          <li>三张报表的勾稽关系</li>
+          <li>识别会计科目异常（商誉、存货、应收账款、资本化费用）</li>
+          <li>扣非净利润、ROE、现金流质量的交叉验证</li>
+          <li>同行业横向对比、公司纵向对比</li>
+        </ul>
+        <blockquote>这是"术"，可被标准化，是AI最能帮上忙的层次。</blockquote>
+      </div>
+
+      <div class="view" data-view="ch2-2">
+        <div class="chapter-head">
+          <div class="chapter-label">2.2 · 第2层 · 核心</div>
+          <div class="chapter-title">商业模式理解能力</div>
+          <div class="chapter-desc">财报是结果，商业模式是原因。</div>
+        </div>
+        <h3>五个核心问题</h3>
+        <ol>
+          <li><strong>它卖什么</strong>？（产品、服务、收费模式）</li>
+          <li><strong>谁是它的客户</strong>？客户为什么选它？</li>
+          <li><strong>成本结构是什么</strong>？规模扩大后边际成本会降低吗？</li>
+          <li><strong>竞争壁垒在哪</strong>？（品牌、技术、渠道、网络效应、牌照）</li>
+          <li><strong>产业链位置如何</strong>？上下游议价权谁更强？</li>
+        </ol>
+        <div class="tip">同样是"卖酒"，茅台是品牌+稀缺性壁垒，普通白酒是渠道竞争；同样是"做芯片"，设计、制造、封测三个环节的商业模式完全不同。</div>
+      </div>
+
+      <div class="view" data-view="ch2-3">
+        <div class="chapter-head">
+          <div class="chapter-label">2.3 · 第3层 · 进阶</div>
+          <div class="chapter-title">行业与产业判断能力</div>
+          <div class="chapter-desc">区分业余和专业的分水岭。</div>
+        </div>
+        <h3>关键判断维度</h3>
+        <ul>
+          <li>行业生命周期阶段（萌芽、成长、成熟、衰退）</li>
+          <li>行业天花板多高？渗透率当前在哪？</li>
+          <li>产业趋势在向哪个方向演变？</li>
+          <li>行业内竞争格局与集中度变化</li>
+          <li>上下游变化对行业的影响</li>
+        </ul>
+        <div class="tip">2018年看懂新能源渗透率曲线、2023年看懂AI算力需求爆发——都属于这层能力。</div>
+      </div>
+
+      <div class="view" data-view="ch2-4">
+        <div class="chapter-head">
+          <div class="chapter-label">2.4 · 第4层 · 高阶</div>
+          <div class="chapter-title">宏观与周期判断能力</div>
+          <div class="chapter-desc">再好的公司也拗不过大势。</div>
+        </div>
+        <h3>需要判断的维度</h3>
+        <ul>
+          <li>经济周期阶段（复苏、过热、滞胀、衰退）</li>
+          <li>货币政策环境与利率走向</li>
+          <li>政策风向对哪些行业构成系统性利好或利空</li>
+          <li>外部环境（地缘政治、汇率、大宗商品）影响</li>
+        </ul>
+        <div class="warning">A股尤其特殊，政策对行业盈利的影响有时大于商业逻辑本身（教培、地产、互联网平台、医药集采都是例子）。</div>
+      </div>
+
+      <div class="view" data-view="ch2-5">
+        <div class="chapter-head">
+          <div class="chapter-label">2.5 · 第5层 · 应用</div>
+          <div class="chapter-title">估值与交易判断能力</div>
+          <div class="chapter-desc">知道公司好，还要知道什么价格值得买、什么价格该卖。</div>
+        </div>
+        <h3>核心能力</h3>
+        <ul>
+          <li>如何给不同类型的公司估值（PE、PB、PS、DCF、分部估值）</li>
+          <li>如何判断当前估值在历史分位的位置</li>
+          <li>如何识别戴维斯双击和价值陷阱</li>
+          <li>盈利预期差的把握——市场预期是什么，实际可能是什么</li>
+        </ul>
+      </div>
+
+      <!-- ============ 第三章 ============ -->
+      <div class="view" data-view="ch3">
+        <div class="chapter-head">
+          <div class="chapter-label">CHAPTER 03</div>
+          <div class="chapter-title">AI与人的分工</div>
+          <div class="chapter-desc">AI降低信息门槛但不降低认知门槛，人的心理素质才是最终胜负手。</div>
+        </div>
+
+        <div class="map-grid">
+          <div class="map-card" data-jump="ch3-1">
+            <div class="map-arrow">→</div>
+            <div class="map-card-head"><div class="map-card-num">3.1</div><div class="map-card-title">AI能高效完成的工作</div></div>
+            <div class="map-card-desc">财报处理、数据对比、信息追踪、估值测算等六大类</div>
+          </div>
+          <div class="map-card" data-jump="ch3-2">
+            <div class="map-arrow">→</div>
+            <div class="map-card-head"><div class="map-card-num">3.2</div><div class="map-card-title">AI能辅助但需警惕的</div></div>
+            <div class="map-card-desc">判断类工作、预测类工作的限制</div>
+          </div>
+          <div class="map-card" data-jump="ch3-3">
+            <div class="map-arrow">→</div>
+            <div class="map-card-head"><div class="map-card-num">3.3</div><div class="map-card-title">人必备的三类能力</div></div>
+            <div class="map-card-desc">认知、心理、执行三个层面</div>
+          </div>
+          <div class="map-card" data-jump="ch3-4">
+            <div class="map-arrow">→</div>
+            <div class="map-card-head"><div class="map-card-num">3.4</div><div class="map-card-title">分工对照表</div></div>
+            <div class="map-card-desc">9个环节的AI与人角色划分</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="view" data-view="ch3-1">
+        <div class="chapter-head">
+          <div class="chapter-label">3.1</div>
+          <div class="chapter-title">AI能高效完成的工作</div>
+        </div>
+        <div class="card-grid">
+          <div class="card"><div class="card-num">01</div><div class="card-title">财报结构化处理</div><div class="card-desc">提取关键数据、多年度对比、指标计算、识别异常、浓缩摘要</div></div>
+          <div class="card"><div class="card-num">02</div><div class="card-title">横向与纵向对比</div><div class="card-desc">同行业指标对比、多年趋势分析、识别龙头</div></div>
+          <div class="card"><div class="card-num">03</div><div class="card-title">公告与信息追踪</div><div class="card-desc">解读晦涩公告、梳理重大事件、跟踪政策新闻</div></div>
+          <div class="card"><div class="card-num">04</div><div class="card-title">研报与观点整合</div><div class="card-desc">汇总盈利预测、提炼核心观点、对比不同假设</div></div>
+          <div class="card"><div class="card-num">05</div><div class="card-title">商业模式学习</div><div class="card-desc">了解陌生行业产业链、解释术语、比较模式</div></div>
+          <div class="card"><div class="card-num">06</div><div class="card-title">估值模型搭建</div><div class="card-desc">构建DCF/PE、敏感性分析、情景测算</div></div>
+        </div>
+      </div>
+
+      <div class="view" data-view="ch3-2">
+        <div class="chapter-head">
+          <div class="chapter-label">3.2</div>
+          <div class="chapter-title">AI能辅助但需警惕的</div>
+        </div>
+        <div class="warning"><strong>判断类工作</strong>：AI可能信息陈旧（训练数据截止）、逻辑过于线性、对A股特殊规则理解不够、被诱导给出"符合用户期待"的答案（确认偏误）。</div>
+        <div class="warning"><strong>预测类工作</strong>：AI给出的盈利预测、股价预测不要直接相信，它更多是提供可能性而非答案。</div>
+      </div>
+
+      <div class="view" data-view="ch3-3">
+        <div class="chapter-head">
+          <div class="chapter-label">3.3</div>
+          <div class="chapter-title">投资者必须具备的三类能力</div>
+        </div>
+
+        <h3>第一类 · 认知能力（智力层面）</h3>
+        <div class="card-grid">
+          <div class="card"><div class="card-title">独立思考</div><div class="card-desc">A股里共识往往是错的，当所有研报AI都看好时，反而要警惕</div></div>
+          <div class="card"><div class="card-title">常识判断</div><div class="card-desc">用生活经验验证报表和故事</div></div>
+          <div class="card"><div class="card-title">概率思维</div><div class="card-desc">投资是赔率与概率的权衡，不是对错判断</div></div>
+          <div class="card"><div class="card-title">跨领域迁移</div><div class="card-desc">最好的洞察来自对现实世界的理解</div></div>
+        </div>
+
+        <h3>第二类 · 心理素质（情绪层面）</h3>
+        <p>投资中最被低估、最难训练、AI完全无法替代的能力：</p>
+        <div class="card-grid">
+          <div class="card"><div class="card-title">情绪稳定性</div><div class="card-desc">大跌不恐慌、大涨不贪婪、暴雷能冷静</div></div>
+          <div class="card"><div class="card-title">耐心</div><div class="card-desc">盈利锚兑现往往需要数年，A股80%散户输在这里</div></div>
+          <div class="card"><div class="card-title">承认错误</div><div class="card-desc">能否客观承认"我的逻辑错了"</div></div>
+          <div class="card"><div class="card-title">不跟风</div><div class="card-desc">别人贪婪时恐惧，别人恐惧时贪婪</div></div>
+        </div>
+
+        <h3>第三类 · 执行体系（方法层面）</h3>
+        <div class="card-grid">
+          <div class="card"><div class="card-title">建立能力圈</div><div class="card-desc">不懂就不碰，深耕比撒网好</div></div>
+          <div class="card"><div class="card-title">决策纪律</div><div class="card-desc">买入理由清单、卖出条件、仓位规则</div></div>
+          <div class="card"><div class="card-title">反馈闭环</div><div class="card-desc">记录逻辑、事后复盘</div></div>
+          <div class="card"><div class="card-title">真实投入</div><div class="card-desc">AI省70%数据处理，30%深度思考仍需自己</div></div>
+        </div>
+      </div>
+
+      <div class="view" data-view="ch3-4">
+        <div class="chapter-head">
+          <div class="chapter-label">3.4</div>
+          <div class="chapter-title">人机分工对照表</div>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>环节</th><th>AI的角色</th><th>人的角色</th></tr></thead>
+            <tbody>
+              <tr><td>信息收集</td><td>主力（效率提升10倍）</td><td>指定方向</td></tr>
+              <tr><td>数据处理</td><td>主力</td><td>校验结果</td></tr>
+              <tr><td>财报分析</td><td>主力（结构化解读）</td><td>识别异常点的意义</td></tr>
+              <tr><td>行业研究</td><td>辅助（提供框架）</td><td>形成独立判断</td></tr>
+              <tr><td>商业模式理解</td><td>辅助</td><td><strong>主力（靠经验和洞察）</strong></td></tr>
+              <tr><td>估值测算</td><td>主力（模型搭建）</td><td>设定假设和判断合理性</td></tr>
+              <tr><td>买卖决策</td><td>仅供参考</td><td><strong>完全由人决定</strong></td></tr>
+              <tr><td>情绪管理</td><td>无法替代</td><td><strong>完全由人负责</strong></td></tr>
+              <tr><td>复盘反思</td><td>辅助整理</td><td>核心由人完成</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <blockquote>AI让盈利锚的研究门槛大幅降低，但它降低的是"信息门槛"，不是"认知门槛"；它解放了你的手，但解放不了你的脑和心。</blockquote>
+      </div>
+
+      <!-- ============ 第四章 ============ -->
+      <div class="view" data-view="ch4">
+        <div class="chapter-head">
+          <div class="chapter-label">CHAPTER 04</div>
+          <div class="chapter-title">基本面研究的六层漏斗</div>
+          <div class="chapter-desc">由宏到微、由外到内、由定性到定量的系统性研究模板。</div>
+        </div>
+
+        <div class="flow">
+          <div class="flow-node" data-jump="ch4-1"><span class="flow-step">STEP 1</span>宏观时代背景 — 顺势而为</div>
+          <div class="flow-arrow">↓</div>
+          <div class="flow-node" data-jump="ch4-2"><span class="flow-step">STEP 2</span>行业赛道选择 — 选对赛道</div>
+          <div class="flow-arrow">↓</div>
+          <div class="flow-node" data-jump="ch4-3"><span class="flow-step">STEP 3</span>商业模式验证 — 理解生意</div>
+          <div class="flow-arrow">↓</div>
+          <div class="flow-node" data-jump="ch4-4"><span class="flow-step">STEP 4</span>财务质量检验 — 排除风险</div>
+          <div class="flow-arrow">↓</div>
+          <div class="flow-node" data-jump="ch4-5"><span class="flow-step">STEP 5</span>管理层判断 — 识对的人</div>
+          <div class="flow-arrow">↓</div>
+          <div class="flow-node" data-jump="ch4-6"><span class="flow-step">STEP 6</span>估值决策 — 买在合理价</div>
+        </div>
+
+        <blockquote>每一层都在做筛选。能通过全部六层的公司，才是基本面意义上的"好标的"。</blockquote>
+      </div>
+
+      <div class="view" data-view="ch4-1">
+        <div class="chapter-head">
+          <div class="chapter-label">4.1 · 漏斗第1层</div>
+          <div class="chapter-title">宏观与时代背景</div>
+          <div class="chapter-desc">最顶层滤网：判断当前处于什么样的经济、政策、技术大周期。</div>
+        </div>
+
+        <h3>核心问题</h3>
+        <ul>
+          <li>经济周期处于哪个阶段？</li>
+          <li>货币政策宽松还是紧缩？</li>
+          <li>国家战略方向在哪里？</li>
+          <li>人口结构、消费结构的变化？</li>
+          <li>有无重大技术范式转变？</li>
+        </ul>
+
+        <h3>A股历史主线参考</h3>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>时期</th><th>主线</th><th>驱动因素</th></tr></thead>
+            <tbody>
+              <tr><td>2005–2007</td><td>周期股大牛市</td><td>城镇化 + 外贸</td></tr>
+              <tr><td>2013–2015</td><td>成长股牛市</td><td>移动互联网 + 流动性</td></tr>
+              <tr><td>2017–2020</td><td>核心资产牛市</td><td>消费升级 + 外资流入</td></tr>
+              <tr><td>2019–2021</td><td>新能源产业链</td><td>碳中和</td></tr>
+              <tr><td>2023以后</td><td>科技主线</td><td>AI算力 + 国产替代</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="view" data-view="ch4-2">
+        <div class="chapter-head">
+          <div class="chapter-label">4.2 · 漏斗第2层</div>
+          <div class="chapter-title">行业研究（赛道选择）</div>
+        </div>
+        <h3>核心问题</h3>
+        <ul>
+          <li>行业生命周期阶段</li>
+          <li>天花板和渗透率</li>
+          <li>行业驱动力的可持续性</li>
+          <li>竞争格局与集中度</li>
+          <li>上下游议价权结构</li>
+          <li>行业ROE中枢和盈利稳定性</li>
+        </ul>
+
+        <h3>分析框架</h3>
+        <div class="card-grid">
+          <div class="card"><div class="card-title">波特五力模型</div><div class="card-desc">供应商议价力、买方议价力、新进入者威胁、替代品威胁、行业内竞争</div></div>
+          <div class="card"><div class="card-title">行业生命周期</div><div class="card-desc">萌芽、成长、成熟、衰退 — 不同阶段投资逻辑完全不同</div></div>
+          <div class="card"><div class="card-title">S曲线理论</div><div class="card-desc">渗透率10–50%是黄金成长期</div></div>
+        </div>
+      </div>
+
+      <div class="view" data-view="ch4-3">
+        <div class="chapter-head">
+          <div class="chapter-label">4.3 · 漏斗第3层</div>
+          <div class="chapter-title">商业模式研究</div>
+        </div>
+        <h3>六个基本问题</h3>
+        <ol>
+          <li>它卖什么？（产品/服务）</li>
+          <li>卖给谁？（客户画像）</li>
+          <li>怎么卖？（渠道、收费模式）</li>
+          <li>成本结构如何？</li>
+          <li>壁垒在哪？</li>
+          <li>产业链位置？</li>
+        </ol>
+
+        <h3>护城河的七种典型形态（Pat Dorsey）</h3>
+        <div class="card-grid">
+          <div class="card"><div class="card-num">01</div><div class="card-title">无形资产</div><div class="card-desc">品牌、专利、政府授权</div></div>
+          <div class="card"><div class="card-num">02</div><div class="card-title">转换成本</div><div class="card-desc">客户更换供应商的代价</div></div>
+          <div class="card"><div class="card-num">03</div><div class="card-title">网络效应</div><div class="card-desc">用户越多越值钱</div></div>
+          <div class="card"><div class="card-num">04</div><div class="card-title">成本优势</div><div class="card-desc">规模、区位、工艺</div></div>
+          <div class="card"><div class="card-num">05</div><div class="card-title">高效规模</div><div class="card-desc">小市场容不下第二家</div></div>
+          <div class="card"><div class="card-num">06</div><div class="card-title">反向网络效应</div><div class="card-desc">越大越难被攻击</div></div>
+          <div class="card"><div class="card-num">07</div><div class="card-title">数据壁垒</div><div class="card-desc">数据越多模型越好</div></div>
+        </div>
+      </div>
+
+      <div class="view" data-view="ch4-4">
+        <div class="chapter-head">
+          <div class="chapter-label">4.4 · 漏斗第4层</div>
+          <div class="chapter-title">财务分析（盈利质量与风险）</div>
+        </div>
+
+        <h3>核心指标体系（杜邦分析法扩展）</h3>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>维度</th><th>关键指标</th><th>意义</th></tr></thead>
+            <tbody>
+              <tr><td>盈利能力</td><td>毛利率、净利率、ROE、ROIC</td><td>赚钱效率</td></tr>
+              <tr><td>成长性</td><td>营收增速、扣非利润增速</td><td>增长速度</td></tr>
+              <tr><td>质量</td><td>经营现金流/净利润、扣非占比</td><td>利润含金量</td></tr>
+              <tr><td>效率</td><td>总资产、存货、应收周转率</td><td>运营效率</td></tr>
+              <tr><td>杠杆</td><td>资产负债率、有息负债率</td><td>财务稳健性</td></tr>
+              <tr><td>回报</td><td>分红率、股息率、回购</td><td>股东回报</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h3>五大"排雷"信号</h3>
+        <div class="card-grid">
+          <div class="card"><div class="card-num">01</div><div class="card-title">利润与现金流背离</div><div class="card-desc">利润可能是账面游戏</div></div>
+          <div class="card"><div class="card-num">02</div><div class="card-title">应收账款暴增</div><div class="card-desc">压货或财务造假</div></div>
+          <div class="card"><div class="card-num">03</div><div class="card-title">高商誉</div><div class="card-desc">未来减值风险</div></div>
+          <div class="card"><div class="card-num">04</div><div class="card-title">非经常性损益撑业绩</div><div class="card-desc">主业可能不行</div></div>
+          <div class="card"><div class="card-num">05</div><div class="card-title">大股东质押+减持</div><div class="card-desc">信任危机</div></div>
+        </div>
+      </div>
+
+      <div class="view" data-view="ch4-5">
+        <div class="chapter-head">
+          <div class="chapter-label">4.5 · 漏斗第5层</div>
+          <div class="chapter-title">管理层与治理研究</div>
+          <div class="chapter-desc">被严重低估的维度。</div>
+        </div>
+        <h3>核心问题</h3>
+        <ul>
+          <li>实控人的能力、品格、历史</li>
+          <li>管理层战略一致性</li>
+          <li>股权结构健康度</li>
+          <li>激励机制合理性</li>
+          <li>信息披露透明度</li>
+          <li>历史污点</li>
+        </ul>
+
+        <h3>巴菲特的三条标准</h3>
+        <div class="card-grid">
+          <div class="card"><div class="card-title">理性</div><div class="card-desc">资本配置能力</div></div>
+          <div class="card"><div class="card-title">坦诚</div><div class="card-desc">对股东说实话</div></div>
+          <div class="card"><div class="card-title">拒绝从众</div><div class="card-desc">抗拒短期压力</div></div>
+        </div>
+      </div>
+
+      <div class="view" data-view="ch4-6">
+        <div class="chapter-head">
+          <div class="chapter-label">4.6 · 漏斗第6层</div>
+          <div class="chapter-title">估值分析（价格vs价值）</div>
+        </div>
+
+        <h3>主要估值方法</h3>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>方法</th><th>适用场景</th><th>优缺点</th></tr></thead>
+            <tbody>
+              <tr><td>PE（市盈率）</td><td>稳定盈利公司</td><td>简单直观/不适合亏损</td></tr>
+              <tr><td>PB（市净率）</td><td>重资产、周期股</td><td>稳定/不反映盈利</td></tr>
+              <tr><td>PS（市销率）</td><td>成长期、亏损公司</td><td>不受利润操纵/忽略质量</td></tr>
+              <tr><td>PEG</td><td>成长股</td><td>考虑增速/依赖预测</td></tr>
+              <tr><td>DCF</td><td>现金流稳定</td><td>理论最严谨/假设敏感</td></tr>
+              <tr><td>分部估值</td><td>多业务公司</td><td>精细化/复杂</td></tr>
+              <tr><td>重置成本</td><td>重资产行业</td><td>底线思维/不反映成长</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h3>估值的三个层次</h3>
+        <ul>
+          <li><strong>绝对估值</strong>：DCF等模型，给出理论合理价</li>
+          <li><strong>相对估值</strong>：和同行业、和自己历史比，看分位数</li>
+          <li><strong>情境估值</strong>：乐观/中性/悲观三种假设下的估值区间</li>
+        </ul>
+      </div>
+
+      <!-- ============ 第五章 ============ -->
+      <div class="view" data-view="ch5">
+        <div class="chapter-head">
+          <div class="chapter-label">CHAPTER 05</div>
+          <div class="chapter-title">边际定价者与预期差</div>
+          <div class="chapter-desc">股价由边际交易者决定，赚钱的本质是站在预期差兑现的方向。</div>
+        </div>
+
+        <div class="map-grid">
+          <div class="map-card" data-jump="ch5-1">
+            <div class="map-arrow">→</div>
+            <div class="map-card-head"><div class="map-card-num">5.1</div><div class="map-card-title">边际定价原理</div></div>
+            <div class="map-card-desc">股价由"最后一笔成交"决定</div>
+          </div>
+          <div class="map-card" data-jump="ch5-2">
+            <div class="map-arrow">→</div>
+            <div class="map-card-head"><div class="map-card-num">5.2</div><div class="map-card-title">不同阶段定价者</div></div>
+            <div class="map-card-desc">熊市/牛市/题材期的边际群体</div>
+          </div>
+          <div class="map-card" data-jump="ch5-3">
+            <div class="map-arrow">→</div>
+            <div class="map-card-head"><div class="map-card-num">5.3</div><div class="map-card-title">预期差理论</div></div>
+            <div class="map-card-desc">股价的真正驱动</div>
+          </div>
+          <div class="map-card" data-jump="ch5-4">
+            <div class="map-arrow">→</div>
+            <div class="map-card-head"><div class="map-card-num">5.4</div><div class="map-card-title">四条路径</div></div>
+            <div class="map-card-desc">站在正确一方的方法</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="view" data-view="ch5-1">
+        <div class="chapter-head">
+          <div class="chapter-label">5.1</div>
+          <div class="chapter-title">边际定价原理</div>
+        </div>
+        <p>股票价格不是由"谁持有最多"决定的，而是由<strong>最后一笔成交</strong>决定的。</p>
+        <blockquote>股价由当下最愿意出价的买家和最愿意卖出的卖家共同决定，而不是由所有持有者的平均观点决定。</blockquote>
+        <div class="tip">某只股票有1亿股流通，其中9000万股被长期机构持有（不动），真正每天交易的只有1000万股。决定股价的就是这1000万股对应的买卖双方——哪怕他们只占总盘子的10%。</div>
+      </div>
+
+      <div class="view" data-view="ch5-2">
+        <div class="chapter-head">
+          <div class="chapter-label">5.2</div>
+          <div class="chapter-title">A股不同阶段的边际定价者</div>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>市场阶段</th><th>边际定价者</th><th>主导的锚</th></tr></thead>
+            <tbody>
+              <tr><td>熊市底部 / 震荡市</td><td>产业资本、保险、社保、外资</td><td>盈利锚主导</td></tr>
+              <tr><td>主升浪 / 牛市中期</td><td>公募基金、游资、大户</td><td>四个锚共振</td></tr>
+              <tr><td>牛市末期 / 题材疯炒期</td><td>散户、游资接力</td><td>情绪锚 + 筹码锚</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="warning">关键洞察：同一只股票，在不同阶段，定价权在不同群体手里。你看对了基本面，但如果当前是情绪主导的阶段，基本面解读就暂时无法转化为股价。</div>
+      </div>
+
+      <div class="view" data-view="ch5-3">
+        <div class="chapter-head">
+          <div class="chapter-label">5.3</div>
+          <div class="chapter-title">预期差理论</div>
+        </div>
+        <p>股价反映的不是"公司现在怎么样"，而是<strong>市场对公司未来的预期，与实际发生的情况之间的差距</strong>。</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>市场预期</th><th>实际情况</th><th>股价结果</th></tr></thead>
+            <tbody>
+              <tr><td>很高</td><td>达到预期</td><td>不涨（利好出尽）</td></tr>
+              <tr><td>很低</td><td>超预期</td><td><strong>暴涨（戴维斯双击）</strong></td></tr>
+              <tr><td>很高</td><td>不达预期</td><td>暴跌（杀估值）</td></tr>
+              <tr><td>很低</td><td>不达预期</td><td>横盘（反正没人信）</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="formula">赚钱 = 站在预期差兑现的方向</div>
+      </div>
+
+      <div class="view" data-view="ch5-4">
+        <div class="chapter-head">
+          <div class="chapter-label">5.4</div>
+          <div class="chapter-title">站在正确一方的四条路径</div>
+        </div>
+        <div class="card-grid">
+          <div class="card"><div class="card-num">PATH 1</div><div class="card-title">成为边际定价者</div><div class="card-desc">对大多数散户不现实；小盘股里散户合力可成为边际定价者</div></div>
+          <div class="card"><div class="card-num">PATH 2</div><div class="card-title">识别并跟随</div><div class="card-desc">跟踪资金流向（北向、机构调研、龙虎榜）、判断风格切换</div></div>
+          <div class="card"><div class="card-num">PATH 3</div><div class="card-title">能力圈埋伏</div><div class="card-desc">巴菲特式路径：选好公司，低估买入，耐心等待</div></div>
+          <div class="card"><div class="card-num">PATH 4</div><div class="card-title">系统化应对</div><div class="card-desc">分散持仓 + 逆向布局 + 定期平衡 + 仓位控制</div></div>
+        </div>
+      </div>
+
+      <!-- ============ 第六章 ============ -->
+      <div class="view" data-view="ch6">
+        <div class="chapter-head">
+          <div class="chapter-label">CHAPTER 06</div>
+          <div class="chapter-title">逻辑的有效性困境</div>
+          <div class="chapter-desc">成功逻辑都是事后正确的产物，如何走出"归纳法陷阱"。</div>
+        </div>
+
+        <div class="map-grid">
+          <div class="map-card" data-jump="ch6-1">
+            <div class="map-arrow">→</div>
+            <div class="map-card-head"><div class="map-card-num">6.1</div><div class="map-card-title">根本问题</div></div>
+            <div class="map-card-desc">幸存者偏差 + 事后归因</div>
+          </div>
+          <div class="map-card" data-jump="ch6-2">
+            <div class="map-arrow">→</div>
+            <div class="map-card-head"><div class="map-card-num">6.2</div><div class="map-card-title">四个原因</div></div>
+            <div class="map-card-desc">前提、环境、预期、时代</div>
+          </div>
+          <div class="map-card" data-jump="ch6-3">
+            <div class="map-arrow">→</div>
+            <div class="map-card-head"><div class="map-card-num">6.3</div><div class="map-card-title">六个应对方法</div></div>
+            <div class="map-card-desc">机制、不变量、概率、反证、赔率、新变量</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="view" data-view="ch6-1">
+        <div class="chapter-head">
+          <div class="chapter-label">6.1</div>
+          <div class="chapter-title">一个根本问题</div>
+        </div>
+        <blockquote>成功的K线形态和基本面叙事，都是"事后正确"的产物；用同样的逻辑再做判断，不一定会得到同样的结果。</blockquote>
+        <p>这个困境的本质是：<strong>幸存者偏差 + 事后归因</strong>。</p>
+        <h3>幸存者偏差</h3>
+        <p>你看到的所有"成功案例"都是<strong>已经成功的样本</strong>。那些用同样逻辑但失败了的案例，要么被遗忘，要么从未被写进书里。</p>
+        <h3>事后归因（叙事谬误）</h3>
+        <p>人脑天生倾向于<strong>把随机结果解释成有因果的故事</strong>。股价涨了再去找"为什么涨"的理由，这些理由很多是事后编的。</p>
+      </div>
+
+      <div class="view" data-view="ch6-2">
+        <div class="chapter-head">
+          <div class="chapter-label">6.2</div>
+          <div class="chapter-title">同样逻辑在不同时候结果不同的四个原因</div>
+        </div>
+        <div class="card-grid">
+          <div class="card"><div class="card-num">原因1</div><div class="card-title">前提条件不同</div><div class="card-desc">白酒"品牌+渠道"逻辑在2010–2020有效，2021年后消费降级、年轻人不喝白酒、政策变化，同样逻辑威力大降</div></div>
+          <div class="card"><div class="card-num">原因2</div><div class="card-title">竞争环境不同</div><div class="card-desc">同一套逻辑，在"蓝海"里是王牌，在"红海"里是毒药</div></div>
+          <div class="card"><div class="card-num">原因3</div><div class="card-title">市场预期不同</div><div class="card-desc">逻辑的价值 = 逻辑的正确性 × 市场预期差；成为共识那一刻就失去赚钱能力</div></div>
+          <div class="card"><div class="card-num">原因4</div><div class="card-title">时代背景不同</div><div class="card-desc">低利率下"高成长+远期现金流"叙事值钱；高利率下同样叙事大幅打折</div></div>
+        </div>
+      </div>
+
+      <div class="view" data-view="ch6-3">
+        <div class="chapter-head">
+          <div class="chapter-label">6.3</div>
+          <div class="chapter-title">应对归纳法困境的六个方法</div>
+        </div>
+        <div class="card-grid">
+          <div class="card"><div class="card-num">01</div><div class="card-title">理解机制而非寻找规律</div><div class="card-desc">机制是穿越时间的，规律是时代的产物</div></div>
+          <div class="card"><div class="card-num">02</div><div class="card-title">关注不变量而非变量</div><div class="card-desc">巴菲特：未来10年什么不会变比什么会变更重要</div></div>
+          <div class="card"><div class="card-num">03</div><div class="card-title">接受概率思维</div><div class="card-desc">世界级投资者胜率也只有60%</div></div>
+          <div class="card"><div class="card-num">04</div><div class="card-title">建立反证检验习惯</div><div class="card-desc">每个逻辑都问：什么时候会失效？</div></div>
+          <div class="card"><div class="card-num">05</div><div class="card-title">区分赔率/胜率机会</div><div class="card-desc">不要用同一套逻辑判断所有机会</div></div>
+          <div class="card"><div class="card-num">06</div><div class="card-title">保持对新变量的敏感度</div><div class="card-desc">老框架不是错了，是它适用的世界变了</div></div>
+        </div>
+      </div>
+
+      <!-- ============ 第七章 ============ -->
+      <div class="view" data-view="ch7">
+        <div class="chapter-head">
+          <div class="chapter-label">CHAPTER 07</div>
+          <div class="chapter-title">七个进阶维度</div>
+          <div class="chapter-desc">容易被忽略的盈利锚高阶认知。</div>
+        </div>
+        <div class="map-grid">
+          <div class="map-card" data-jump="ch7-1"><div class="map-arrow">→</div><div class="map-card-head"><div class="map-card-num">7.1</div><div class="map-card-title">盈利的五级质量</div></div><div class="map-card-desc">S/A/B/C/D 分层与对应策略</div></div>
+          <div class="map-card" data-jump="ch7-2"><div class="map-arrow">→</div><div class="map-card-head"><div class="map-card-num">7.2</div><div class="map-card-title">时间维度演化</div></div><div class="map-card-desc">生命周期与估值框架切换</div></div>
+          <div class="map-card" data-jump="ch7-3"><div class="map-arrow">→</div><div class="map-card-head"><div class="map-card-num">7.3</div><div class="map-card-title">A股独有结构因素</div></div><div class="map-card-desc">政策、国资、天花板、审计</div></div>
+          <div class="map-card" data-jump="ch7-4"><div class="map-arrow">→</div><div class="map-card-head"><div class="map-card-num">7.4</div><div class="map-card-title">反身性原理</div></div><div class="map-card-desc">索罗斯：股价与基本面互相影响</div></div>
+          <div class="map-card" data-jump="ch7-5"><div class="map-arrow">→</div><div class="map-card-head"><div class="map-card-num">7.5</div><div class="map-card-title">心理账户鸿沟</div></div><div class="map-card-desc">研究与持有需要不同的能力</div></div>
+          <div class="map-card" data-jump="ch7-6"><div class="map-arrow">→</div><div class="map-card-head"><div class="map-card-num">7.6</div><div class="map-card-title">组合视角</div></div><div class="map-card-desc">单点 vs 组合构建</div></div>
+          <div class="map-card" data-jump="ch7-7"><div class="map-arrow">→</div><div class="map-card-head"><div class="map-card-num">7.7</div><div class="map-card-title">十个致命陷阱</div></div><div class="map-card-desc">常见的思维陷阱汇总</div></div>
+        </div>
+      </div>
+
+      <div class="view" data-view="ch7-1">
+        <div class="chapter-head">
+          <div class="chapter-label">7.1</div>
+          <div class="chapter-title">盈利的五级质量分层</div>
+          <div class="chapter-desc">即便是真实盈利，也分三六九等。</div>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>等级</th><th>特征</th><th>典型代表</th><th>策略</th></tr></thead>
+            <tbody>
+              <tr><td>S级：印钞机式</td><td>高ROIC(20%+)、低资本开支、强现金流</td><td>贵州茅台、苹果</td><td>长期持有</td></tr>
+              <tr><td>A级：高成长兑现式</td><td>高增速(30%+)、规模效应</td><td>成长期的宁德时代</td><td>警惕增速放缓</td></tr>
+              <tr><td>B级：稳健型</td><td>ROE稳定12–18%、增速10–20%</td><td>大部分白马股</td><td>注重买入价</td></tr>
+              <tr><td>C级：周期性</td><td>盈利随商品价格波动</td><td>有色、化工、航运</td><td>反向投资</td></tr>
+              <tr><td>D级：账面盈利</td><td>现金流差、依赖非经常损益</td><td>部分建筑、工程</td><td>尽量回避</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="warning">最大教训：大多数散户的亏损，来自用S级的估值去买D级的公司——看着便宜就冲，结果越买越跌。</div>
+      </div>
+
+      <div class="view" data-view="ch7-2">
+        <div class="chapter-head">
+          <div class="chapter-label">7.2</div>
+          <div class="chapter-title">盈利锚的时间维度</div>
+          <div class="chapter-desc">盈利锚不是静态的，它是一个动态演化的过程。</div>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>生命周期</th><th>盈利锚特征</th><th>估值方法</th></tr></thead>
+            <tbody>
+              <tr><td>初创期（亏损→盈亏平衡）</td><td>尚未形成</td><td>PS、市梦率</td></tr>
+              <tr><td>成长期（盈利快速爆发）</td><td>开始主导</td><td>PEG 1以内合理</td></tr>
+              <tr><td>成熟期（盈利稳定）</td><td>最扎实</td><td>PE 15–25倍</td></tr>
+              <tr><td>衰退期（盈利下滑）</td><td>开始失效</td><td>警惕"低PE陷阱"</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="warning">最致命的陷阱：用错阶段的框架。用成熟期框架看成长期，错过最大涨幅；用成长期框架看成熟期，被杀估值。</div>
+      </div>
+
+      <div class="view" data-view="ch7-3">
+        <div class="chapter-head">
+          <div class="chapter-label">7.3</div>
+          <div class="chapter-title">A股独有的结构性因素</div>
+        </div>
+        <div class="card-grid">
+          <div class="card"><div class="card-num">01</div><div class="card-title">政策直接干预盈利</div><div class="card-desc">集采、双减、双碳、反垄断、地产调控</div></div>
+          <div class="card"><div class="card-num">02</div><div class="card-title">国资非市场化考量</div><div class="card-desc">国企折价与"中特估"修复</div></div>
+          <div class="card"><div class="card-num">03</div><div class="card-title">成长天花板特征</div><div class="card-desc">国内市场 vs 全球市场，能否出海是关键</div></div>
+          <div class="card"><div class="card-num">04</div><div class="card-title">会计与审计差异</div><div class="card-desc">业绩承诺期、业绩变脸、造假风险</div></div>
+        </div>
+        <h3>实战启示</h3>
+        <ul>
+          <li>研究盈利必须把政策纳入</li>
+          <li>研究A股公司要重点看"国内渗透率"和"能否出海"</li>
+          <li>对A股财报数据需要打折扣，最好看5年以上连续数据</li>
+        </ul>
+      </div>
+
+      <div class="view" data-view="ch7-4">
+        <div class="chapter-head">
+          <div class="chapter-label">7.4</div>
+          <div class="chapter-title">盈利锚与反身性</div>
+        </div>
+        <blockquote>索罗斯的核心洞察：股价不仅反映基本面，还会反过来影响基本面。</blockquote>
+
+        <h3>正反身性</h3>
+        <div class="flow">
+          <div class="flow-node"><span class="flow-step">→</span>股价上涨 → 容易融资 → 投入研发扩产 → 变强 → 盈利提升 → 股价继续涨</div>
+        </div>
+
+        <h3>负反身性</h3>
+        <div class="flow">
+          <div class="flow-node"><span class="flow-step">↓</span>股价下跌 → 融资受阻 → 经营恶化 → 盈利下滑 → 股价继续跌</div>
+        </div>
+
+        <h3>关键启示</h3>
+        <ul>
+          <li>不要把盈利完全当独立变量</li>
+          <li>强势股容易越强越强</li>
+          <li>弱势股容易越弱越弱</li>
+          <li>这解释了为什么"左侧抄底"经常失败</li>
+          <li>拐点出现在反身性逆转时</li>
+        </ul>
+      </div>
+
+      <div class="view" data-view="ch7-5">
+        <div class="chapter-head">
+          <div class="chapter-label">7.5</div>
+          <div class="chapter-title">研究与持有的"心理账户"鸿沟</div>
+        </div>
+        <blockquote>研究一家公司和实际持有它，需要的能力完全不同。</blockquote>
+
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>维度</th><th>研究时</th><th>持有时</th></tr></thead>
+            <tbody>
+              <tr><td>状态</td><td>客观冷静全面</td><td>情绪化有偏见选择性</td></tr>
+              <tr><td>对问题</td><td>会规避</td><td>会自我安慰</td></tr>
+              <tr><td>对机会</td><td>会兴奋</td><td>会犹豫</td></tr>
+              <tr><td>结论</td><td>容易清晰</td><td>容易摇摆</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h3>四个应对方法</h3>
+        <div class="card-grid">
+          <div class="card"><div class="card-num">01</div><div class="card-title">持有清单制</div><div class="card-desc">每只持仓股建立"持有理由清单"，每季度复核一次</div></div>
+          <div class="card"><div class="card-num">02</div><div class="card-title">假装没持有</div><div class="card-desc">每次决策前问：如果今天没买，现在会买吗？</div></div>
+          <div class="card"><div class="card-num">03</div><div class="card-title">反对派日志</div><div class="card-desc">强迫自己收集负面信息和空头逻辑</div></div>
+          <div class="card"><div class="card-num">04</div><div class="card-title">研究决策分离</div><div class="card-desc">研究用分析脑，决策用执行脑</div></div>
+        </div>
+        <div class="warning">AI在这个维度帮不上忙——它是纯粹的心理学问题。但这恰恰是盈利锚能否真正变现的最大瓶颈。</div>
+      </div>
+
+      <div class="view" data-view="ch7-6">
+        <div class="chapter-head">
+          <div class="chapter-label">7.6</div>
+          <div class="chapter-title">组合视角：单点研究 vs 组合构建</div>
+        </div>
+        <h3>组合层四大思维</h3>
+        <div class="card-grid">
+          <div class="card"><div class="card-num">01</div><div class="card-title">行业分散</div><div class="card-desc">单一行业不超过30%，覆盖5–8个行业</div></div>
+          <div class="card"><div class="card-num">02</div><div class="card-title">生命周期分散</div><div class="card-desc">成熟期（稳健）+ 成长期（弹性）+ 少量周期</div></div>
+          <div class="card"><div class="card-num">03</div><div class="card-title">盈利相关性分散</div><div class="card-desc">避免所有公司都依赖同一个变量</div></div>
+          <div class="card"><div class="card-num">04</div><div class="card-title">核心—卫星结构</div><div class="card-desc">核心仓60–80%长持，卫星仓20–40%抓机会</div></div>
+        </div>
+      </div>
+
+      <div class="view" data-view="ch7-7">
+        <div class="chapter-head">
+          <div class="chapter-label">7.7</div>
+          <div class="chapter-title">十个致命陷阱</div>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>#</th><th>陷阱</th><th>表现</th></tr></thead>
+            <tbody>
+              <tr><td>01</td><td>锚定过去的高光</td><td>以历史数据推断未来</td></tr>
+              <tr><td>02</td><td>线性外推</td><td>过去30%增长就假设未来也30%</td></tr>
+              <tr><td>03</td><td>单一指标崇拜</td><td>"PE才10倍太便宜了"</td></tr>
+              <tr><td>04</td><td>叙事先于数据</td><td>先有故事再找数据支持</td></tr>
+              <tr><td>05</td><td>混淆"好公司"与"好股票"</td><td>忽略价格</td></tr>
+              <tr><td>06</td><td>低估"消失风险"</td><td>乐视、康美、康得新曾都是白马</td></tr>
+              <tr><td>07</td><td>忽略机会成本</td><td>涨50%但跑输大盘80%</td></tr>
+              <tr><td>08</td><td>能力圈幻觉</td><td>读几份研报就觉得懂了</td></tr>
+              <tr><td>09</td><td>管理层信任偏差</td><td>缺乏动态观察</td></tr>
+              <tr><td>10</td><td>忽略"二阶效应"</td><td>一阶利好→资本涌入→产能过剩→盈利暴跌</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ============ 第八章 ============ -->
+      <div class="view" data-view="ch8">
+        <div class="chapter-head">
+          <div class="chapter-label">CHAPTER 08</div>
+          <div class="chapter-title">完整心智模型</div>
+          <div class="chapter-desc">四层心智结构 + 四个境界。</div>
+        </div>
+
+        <h2>四层心智结构</h2>
+        <div class="flow">
+          <div class="flow-node"><span class="flow-step">L1</span><strong>地基</strong>：本质 — EPS×PE、滞后性、周期性、政策敏感</div>
+          <div class="flow-arrow">↓</div>
+          <div class="flow-node"><span class="flow-step">L2</span><strong>方法</strong>：六层漏斗 + AI人机分工 + 五级盈利</div>
+          <div class="flow-arrow">↓</div>
+          <div class="flow-node"><span class="flow-step">L3</span><strong>进阶</strong>：动态生命周期、反身性、心理账户、组合视角</div>
+          <div class="flow-arrow">↓</div>
+          <div class="flow-node"><span class="flow-step">L4</span><strong>心法</strong>：能力圈 + 反共识 + 概率思维 + 纪律</div>
+        </div>
+
+        <h2>能力进阶的四个境界</h2>
+        <div class="level-ladder">
+          <div class="level-step"><div class="level-rank">初级</div><div class="level-content"><h5>读懂财报</h5><p>掌握三张报表，看得懂财务指标</p></div></div>
+          <div class="level-step"><div class="level-rank">中级</div><div class="level-content"><h5>理解商业</h5><p>看穿商业模式本质，理解护城河</p></div></div>
+          <div class="level-step"><div class="level-rank">高级</div><div class="level-content"><h5>识对的人与周期</h5><p>识别靠谱管理层，把握产业周期拐点</p></div></div>
+          <div class="level-step"><div class="level-rank">大师</div><div class="level-content"><h5>反身性博弈</h5><p>看透市场预期与企业命运的反馈循环</p></div></div>
+        </div>
+
+        <blockquote>任何阶段，最后的胜负手都是你能否对抗自己的心理弱点。</blockquote>
+      </div>
+
+      <!-- ============================================================ -->
+      <!-- ============ 资金锚 Liquidity Anchor ============ -->
+      <!-- ============================================================ -->
+
+      <div class="view" data-view="cap-overview">
+        <div class="chapter-head">
+          <div class="chapter-label">LIQUIDITY ANCHOR · 资金锚</div>
+          <div class="chapter-title">资金锚总览</div>
+          <div class="chapter-desc">市场中可用于购买股票的资金总量及其流动方向，决定股价的短中期波动中枢。</div>
+        </div>
+
+        <div class="view-intro">
+          <div class="label">核心认知</div>
+          <h3>股票是商品,资金是钱</h3>
+          <p>同样数量的商品，钱多时就贵，钱少时就便宜——这是最朴素的供需关系。A股历次牛市的指数涨幅都<strong style="color:var(--accent)">远超同期企业盈利增速</strong>，差额就是资金推动的估值扩张。</p>
+        </div>
+
+        <h2>资金锚 vs 盈利锚</h2>
+        <div class="card-grid">
+          <div class="card"><div class="card-num">Q1</div><div class="card-title">盈利锚回答</div><div class="card-desc">这只股票值多少钱（价值维度）</div></div>
+          <div class="card"><div class="card-num">Q2</div><div class="card-title">资金锚回答</div><div class="card-desc">市场有多少钱，钱愿意给多少（流动性维度）</div></div>
+        </div>
+
+        <blockquote>资金锚是A股短中期最具爆发力的驱动，它决定了盈利锚能否及时兑现、以及以多大的斜率兑现。理解资金锚的人，赚的是β的钱；只懂盈利锚的人，只能赚α的钱——而β往往大于α。</blockquote>
+
+        <h2>资金锚的章节结构</h2>
+        <div class="map-grid">
+          <div class="map-card" data-jump="cap-structure"><div class="map-arrow">→</div><div class="map-card-head"><div class="map-card-num">L1</div><div class="map-card-title">四层结构</div></div><div class="map-card-desc">宏观流动性 → 入市资金 → 板块轮动 → 个股资金</div></div>
+          <div class="map-card" data-jump="cap-features"><div class="map-arrow">→</div><div class="map-card-head"><div class="map-card-num">L2</div><div class="map-card-title">A股四大特征</div></div><div class="map-card-desc">爆发力、情绪化、政策指挥棒、存量vs增量</div></div>
+          <div class="map-card" data-jump="cap-practice"><div class="map-arrow">→</div><div class="map-card-head"><div class="map-card-num">L3</div><div class="map-card-title">实战应用</div></div><div class="map-card-desc">水位判断、板块轮动、北向跟踪、两融应用</div></div>
+          <div class="map-card" data-jump="cap-advanced"><div class="map-arrow">→</div><div class="map-card-head"><div class="map-card-num">L4</div><div class="map-card-title">高阶认知</div></div><div class="map-card-desc">二阶性、错配期、自我毁灭倾向</div></div>
+          <div class="map-card" data-jump="cap-toolkit"><div class="map-arrow">→</div><div class="map-card-head"><div class="map-card-num">L5</div><div class="map-card-title">工具箱</div></div><div class="map-card-desc">日度/周度/月度监测指标与数据源</div></div>
+        </div>
+
+        <div class="warning">资金锚是放大器，不是创造者。它放大盈利锚的涨跌幅，但无法凭空创造价值。只靠资金锚（无盈利支撑）赚到的钱，最终都会以更大的回撤还回去。</div>
+      </div>
+
+      <div class="view" data-view="cap-structure">
+        <div class="chapter-head">
+          <div class="chapter-label">L1 · 资金锚</div>
+          <div class="chapter-title">资金锚的四层结构</div>
+          <div class="chapter-desc">要真正理解资金锚，必须把"资金"拆成四层来看。</div>
+        </div>
+
+        <div class="flow">
+          <div class="flow-node" data-jump="cap-s1"><span class="flow-step">L1</span>宏观流动性 · 水的总量</div>
+          <div class="flow-arrow">↓</div>
+          <div class="flow-node" data-jump="cap-s2"><span class="flow-step">L2</span>入市资金 · 流进股市的水</div>
+          <div class="flow-arrow">↓</div>
+          <div class="flow-node" data-jump="cap-s3"><span class="flow-step">L3</span>板块资金轮动 · 水流向哪里</div>
+          <div class="flow-arrow">↓</div>
+          <div class="flow-node" data-jump="cap-s4"><span class="flow-step">L4</span>个股资金 · 水进到哪只杯子</div>
+        </div>
+
+        <div class="tip">这四层像一个漏斗：最顶层是全社会的钱，最底层是每只具体股票的买卖。<strong>理解钱如何层层传导，才能预判股价的短中期方向</strong>。</div>
+      </div>
+
+      <div class="view" data-view="cap-s1">
+        <div class="chapter-head">
+          <div class="chapter-label">L1.1 · 资金锚第1层</div>
+          <div class="chapter-title">宏观流动性 · 水的总量</div>
+          <div class="chapter-desc">最上游、最根本，决定了整个A股市场可能得到多少钱。</div>
+        </div>
+
+        <h3>核心观察指标</h3>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>指标</th><th>含义</th></tr></thead>
+            <tbody>
+              <tr><td>M2增速</td><td>广义货币供应量增速，反映整体资金面</td></tr>
+              <tr><td>社融增速</td><td>社会融资规模，反映实体和市场获得资金规模</td></tr>
+              <tr><td>SHIBOR / DR007</td><td>短期拆借利率，反映短期资金松紧</td></tr>
+              <tr><td>10年期国债收益率</td><td>长期无风险利率，直接影响股票估值中枢</td></tr>
+              <tr><td>央行公开市场操作</td><td>逆回购、MLF、降准降息</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h3>传导路径</h3>
+        <div class="formula">央行宽松 → 银行间流动性充裕 → 利率下降 → 股票吸引力上升 → 资金入市</div>
+
+        <div class="warning">A股对宏观流动性的敏感度远超美股。原因是A股散户占比高、短期博弈浓，流动性预期一旦改变，资金可以在很短时间内大进大出。2014年11月央行降息，A股一周内启动大牛市。</div>
+      </div>
+
+      <div class="view" data-view="cap-s2">
+        <div class="chapter-head">
+          <div class="chapter-label">L1.2 · 资金锚第2层</div>
+          <div class="chapter-title">入市资金 · 流进股市的水</div>
+          <div class="chapter-desc">宏观宽松不等于股市一定涨，还要看资金是否真正流入股市。</div>
+        </div>
+
+        <h3>A股五大类入市资金</h3>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>资金类型</th><th>风格</th><th>影响力阶段</th></tr></thead>
+            <tbody>
+              <tr><td>公募基金</td><td>抱团大盘成长/价值</td><td>主升浪中期</td></tr>
+              <tr><td>北向资金（外资）</td><td>偏好龙头白马、ROE稳定</td><td>长期趋势</td></tr>
+              <tr><td>保险资金</td><td>高股息、大金融、大蓝筹</td><td>底部加仓</td></tr>
+              <tr><td>私募 / 游资</td><td>题材、热点、小盘成长</td><td>行情启动 / 末期</td></tr>
+              <tr><td>散户 / 融资</td><td>追涨杀跌、热点</td><td>牛市末期</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h3>判断资金入市的信号</h3>
+        <ul class="checklist">
+          <li>居民储蓄搬家（存款增速下降、基金申购激增）</li>
+          <li>新开户数暴增</li>
+          <li>成交额持续放大（从5000亿 → 1万亿 → 1.5万亿）</li>
+          <li>融资余额上升</li>
+          <li>ETF净申购</li>
+        </ul>
+      </div>
+
+      <div class="view" data-view="cap-s3">
+        <div class="chapter-head">
+          <div class="chapter-label">L1.3 · 资金锚第3层</div>
+          <div class="chapter-title">板块资金轮动 · 水流向哪里</div>
+          <div class="chapter-desc">钱进入股市后不会均匀分布，而是在不同板块之间剧烈轮动。这是中短期最关键的判断。</div>
+        </div>
+
+        <h3>A股典型的轮动顺序</h3>
+        <div class="flow">
+          <div class="flow-node"><span class="flow-step">①</span>金融（券商启动信号）</div>
+          <div class="flow-arrow">↓</div>
+          <div class="flow-node"><span class="flow-step">②</span>周期（有色、钢铁、煤炭）</div>
+          <div class="flow-arrow">↓</div>
+          <div class="flow-node"><span class="flow-step">③</span>大盘蓝筹（消费、医药）</div>
+          <div class="flow-arrow">↓</div>
+          <div class="flow-node"><span class="flow-step">④</span>科技成长（半导体、新能源）</div>
+          <div class="flow-arrow">↓</div>
+          <div class="flow-node"><span class="flow-step">⑤</span>主题 / 概念（AI、机器人）</div>
+          <div class="flow-arrow">↓</div>
+          <div class="flow-node"><span class="flow-step">⑥</span>小盘股 / 题材（情绪高潮）</div>
+          <div class="flow-arrow">↓</div>
+          <div class="flow-node"><span class="flow-step">⑦</span>退潮（轮动结束）</div>
+        </div>
+
+        <h3>观察板块轮动的工具</h3>
+        <ul>
+          <li>申万一级/二级行业涨跌幅</li>
+          <li>行业资金净流入数据</li>
+          <li>ETF份额变化</li>
+          <li>两市成交额前20的行业分布</li>
+        </ul>
+      </div>
+
+      <div class="view" data-view="cap-s4">
+        <div class="chapter-head">
+          <div class="chapter-label">L1.4 · 资金锚第4层</div>
+          <div class="chapter-title">个股资金 · 水进到哪只杯子</div>
+          <div class="chapter-desc">最微观的一层，决定具体某只股票的短期股价。</div>
+        </div>
+
+        <h3>关键观察</h3>
+        <div class="card-grid">
+          <div class="card"><div class="card-num">01</div><div class="card-title">龙虎榜</div><div class="card-desc">游资、机构席位的真实动向</div></div>
+          <div class="card"><div class="card-num">02</div><div class="card-title">大宗交易</div><div class="card-desc">产业资本和机构的大单动作</div></div>
+          <div class="card"><div class="card-num">03</div><div class="card-title">北向持仓变化</div><div class="card-desc">外资对单只股票的进出</div></div>
+          <div class="card"><div class="card-num">04</div><div class="card-title">主力资金净流入</div><div class="card-desc">有噪音，但趋势性变化有意义</div></div>
+          <div class="card"><div class="card-num">05</div><div class="card-title">换手率</div><div class="card-desc">筹码活跃度和资金博弈激烈程度</div></div>
+        </div>
+      </div>
+
+      <div class="view" data-view="cap-features">
+        <div class="chapter-head">
+          <div class="chapter-label">L2 · 资金锚</div>
+          <div class="chapter-title">A股资金锚的四大特征</div>
+        </div>
+
+        <h3>特征1 · 爆发力远超盈利驱动</h3>
+        <p>美股长牛靠盈利，A股牛市靠资金。</p>
+        <ul>
+          <li>2006–2007年：上证从1000点涨到6000点，涨500%；企业盈利增长仅100%</li>
+          <li>2014–2015年：创业板从1500点涨到4000点，公司盈利增速不到30%</li>
+        </ul>
+        <blockquote>差额就是资金推动的估值扩张。在A股，看懂资金面往往比看懂基本面更能把握大级别机会。</blockquote>
+
+        <h3>特征2 · 情绪化特别强</h3>
+        <ul>
+          <li>申购基金的人在牛市末期暴增，在熊市底部清零</li>
+          <li>公募基金也会抱团，导致少数板块极致高估</li>
+          <li>北向资金虽然相对理性，但短期也受情绪影响</li>
+        </ul>
+
+        <h3>特征3 · 政策指挥棒效应</h3>
+        <ul>
+          <li>降准降息 → 资金宽松预期 → 股市上涨</li>
+          <li>规范两融、限制场外配资 → 杠杆撤离 → 股市下跌</li>
+          <li>鼓励长钱入市 → 机构增量</li>
+          <li>加大IPO和再融资 → 分流存量</li>
+        </ul>
+        <div class="tip">A股资金面是"市场+政策"双轨制。成熟市场主要由市场自发决定，A股需要同时观察政策信号。</div>
+
+        <h3>特征4 · 存量博弈 vs 增量资金</h3>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>类型</th><th>特征</th><th>板块表现</th></tr></thead>
+            <tbody>
+              <tr><td>增量资金市</td><td>新资金不断入场</td><td>板块共同上涨</td></tr>
+              <tr><td>存量博弈市</td><td>钱在挪来挪去</td><td>板块跷跷板、此消彼长</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h4>判断方法</h4>
+        <ul>
+          <li>成交额持续放大 → 增量</li>
+          <li>两融余额快速上升 → 增量</li>
+          <li>新基金发行火爆 → 增量</li>
+          <li>板块齐涨齐跌 → 增量</li>
+          <li>反之则为存量博弈</li>
+        </ul>
+      </div>
+
+      <div class="view" data-view="cap-practice">
+        <div class="chapter-head">
+          <div class="chapter-label">L3 · 资金锚</div>
+          <div class="chapter-title">资金锚的实战应用</div>
+        </div>
+
+        <h3>应用1 · 判断市场"水位"</h3>
+        <p>做任何个股决策前，先问四个问题：</p>
+        <ul class="checklist">
+          <li>当前宏观流动性松紧（看M2、利率）</li>
+          <li>股市资金面松紧（看成交额、两融）</li>
+          <li>增量市还是存量市（看资金流向趋势）</li>
+          <li>当前主导资金是谁（北向/公募/游资/散户）</li>
+        </ul>
+        <div class="tip"><strong>水位高 + 增量市 + 主力在场 = 大胆进攻</strong><br><strong>水位低 + 存量博弈 + 散户主导 = 谨慎防守</strong></div>
+
+        <h3>应用2 · 板块轮动跟踪</h3>
+        <ul>
+          <li>每日复盘涨幅榜前5的行业，观察持续性</li>
+          <li>对比行业成交额排名（钱多的地方有机会）</li>
+          <li>关注领涨龙头的持续性（连续3天 = 主升浪启动）</li>
+          <li>警惕"成交额巨大但指数不涨"（主力在高位出货）</li>
+        </ul>
+
+        <h3>应用3 · 北向资金跟踪</h3>
+        <ul>
+          <li>看整体净流入/流出 → 判断大盘趋势</li>
+          <li>看行业偏好 → 辅助板块选择</li>
+          <li>看个股连续增持 → 寻找阿尔法</li>
+          <li>注意：北向短期也受情绪影响，不要神化</li>
+        </ul>
+
+        <h3>应用4 · 融资余额应用</h3>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>现象</th><th>含义</th></tr></thead>
+            <tbody>
+              <tr><td>两融快速上升</td><td>情绪亢奋，杠杆资金进场，短期偏乐观</td></tr>
+              <tr><td>两融创新高但指数不涨</td><td><strong>危险信号</strong>，杠杆积累无法推高</td></tr>
+              <tr><td>两融大幅下降</td><td>杠杆撤退，警惕踩踏</td></tr>
+              <tr><td>两融低位横盘</td><td>市场冷清，常是底部区域</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="view" data-view="cap-advanced">
+        <div class="chapter-head">
+          <div class="chapter-label">L4 · 资金锚</div>
+          <div class="chapter-title">资金锚的三个高阶认知</div>
+        </div>
+
+        <h3>高阶1 · 资金锚是二阶的——反映预期而非现实</h3>
+        <p>资金流动不是被动反应当前情况，而是<strong>主动押注未来</strong>：</p>
+        <ul>
+          <li>经济数据公布前，资金已在交易预期</li>
+          <li>降息公告发布时，股价可能已涨了一段</li>
+          <li>你看到"资金流入"数据时，行情可能已走了一半</li>
+        </ul>
+        <blockquote>这就是"跟着资金走"常常滞后的原因——你看到的流入，是已经形成的事实。应关注<strong>资金流动的边际变化（拐点）</strong>而非绝对值。</blockquote>
+
+        <h3>高阶2 · 资金锚与盈利锚的错配期最危险</h3>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>情形</th><th>表现</th><th>陷阱</th></tr></thead>
+            <tbody>
+              <tr><td>盈利好但资金撤</td><td>业绩向上、股价阴跌</td><td>觉得"这么好的公司为什么跌"→加仓→被套更深</td></tr>
+              <tr><td>盈利差但资金涌</td><td>业绩恶化、股价飙涨</td><td>觉得"基本面烂怎么会涨"→错过或迟到接盘</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="tip">应对：识别错配 → 一致时重仓（双锚共振是最好机会）→ 错配时降低仓位等待共振</div>
+
+        <h3>高阶3 · 资金锚的自我毁灭倾向</h3>
+        <p>反身性在资金层面的体现：</p>
+        <div class="formula">资金涌入 → 股价上涨 → 吸引更多资金 → 估值脱离基本面 → 触发点 → 资金反向 → 暴跌</div>
+        <div class="warning">资金推动的上涨内含崩溃的种子。越是"涨得让人看不懂"的阶段，越要警惕崩溃临近。历史顶点如2007年10月、2015年6月、2021年2月，共同特征都是资金面极度狂热。</div>
+      </div>
+
+      <div class="view" data-view="cap-toolkit">
+        <div class="chapter-head">
+          <div class="chapter-label">L5 · 资金锚</div>
+          <div class="chapter-title">资金锚实战工具箱</div>
+          <div class="chapter-desc">一套可落地的监测体系。</div>
+        </div>
+
+        <h3>每日必看的5个指标</h3>
+        <div class="card-grid">
+          <div class="card"><div class="card-num">01</div><div class="card-title">两市成交额</div><div class="card-desc">1.5万亿以上 = 增量市；跌破7000亿 = 存量博弈</div></div>
+          <div class="card"><div class="card-num">02</div><div class="card-title">北向资金净流入</div><div class="card-desc">单日&gt;50亿短期乐观；连续流出警惕风险</div></div>
+          <div class="card"><div class="card-num">03</div><div class="card-title">融资余额变化</div><div class="card-desc">单周+500亿 = 杠杆进场；创新高+指数不涨 = 危险</div></div>
+          <div class="card"><div class="card-num">04</div><div class="card-title">涨跌停家数</div><div class="card-desc">涨停&gt;100 = 情绪亢奋；连板高度反映短线</div></div>
+          <div class="card"><div class="card-num">05</div><div class="card-title">申万行业涨跌幅前5</div><div class="card-desc">主线方向 · 是否有持续性（3日以上）</div></div>
+        </div>
+
+        <h3>每周关注的4个中期指标</h3>
+        <ul>
+          <li><strong>新成立基金规模</strong>：连续多周&gt;300亿 = 机构增量显著</li>
+          <li><strong>公募基金仓位</strong>：85%+偏高，75%-偏低</li>
+          <li><strong>股债利差</strong>：长期最有效的资金面指标</li>
+          <li><strong>产业资本增减持</strong>：大股东动向</li>
+        </ul>
+
+        <h3>每月关注的3个宏观指标</h3>
+        <ul>
+          <li><strong>M2和社融</strong>：社融增速拐点领先A股3–6个月</li>
+          <li><strong>CPI和PPI</strong>：影响货币政策取向</li>
+          <li><strong>央行货币政策例会纪要</strong>：政策拐点的前瞻信号</li>
+        </ul>
+
+        <div class="tip"><strong>建议建立个人资金面仪表盘</strong>（每日/周/月维护一张Excel）。关键不在数据本身，在于你每天/每周都在做——积累3个月会形成直觉，6个月能提前感知变化，1-2年就是行家。</div>
+      </div>
+
+      <!-- ============================================================ -->
+      <!-- ============ 情绪锚 Sentiment Anchor ============ -->
+      <!-- ============================================================ -->
+
+      <div class="view" data-view="sent-overview">
+        <div class="chapter-head">
+          <div class="chapter-label">SENTIMENT ANCHOR · 情绪锚</div>
+          <div class="chapter-title">情绪锚总览</div>
+          <div class="chapter-desc">市场参与者的集体心理状态、预期差异和叙事共识，决定股价短期的方向与幅度。</div>
+        </div>
+
+        <div class="view-intro">
+          <div class="label">核心认知</div>
+          <h3>股价短期不反映公司好坏,而反映市场相信的程度</h3>
+          <p>公司没变，但市场开始怀疑它，股价就跌；公司没变好，但市场开始相信它将变好，股价就涨。<strong style="color:var(--accent)">你赚的不是"公司的钱"，而是"大众预期变化的钱"</strong>。</p>
+        </div>
+
+        <h2>凯恩斯选美理论</h2>
+        <blockquote>投资不是选你觉得最美的人，而是猜大家觉得谁最美——不是选你觉得最美的，也不是选你觉得大家觉得最美的，而是选大家觉得大家觉得最美的。</blockquote>
+
+        <h2>情绪锚的章节结构</h2>
+        <div class="map-grid">
+          <div class="map-card" data-jump="sent-structure"><div class="map-arrow">→</div><div class="map-card-head"><div class="map-card-num">S1</div><div class="map-card-title">四层结构</div></div><div class="map-card-desc">预期差 → 叙事 → 共识 → 情绪波动</div></div>
+          <div class="map-card" data-jump="sent-features"><div class="map-arrow">→</div><div class="map-card-head"><div class="map-card-num">S2</div><div class="map-card-title">A股四大特征</div></div><div class="map-card-desc">波动极致、政策放大、题材炒作、两极化</div></div>
+          <div class="map-card" data-jump="sent-practice"><div class="map-arrow">→</div><div class="map-card-head"><div class="map-card-num">S3</div><div class="map-card-title">实战应用</div></div><div class="map-card-desc">预期差挖掘、叙事选择、情绪反向、事件博弈</div></div>
+          <div class="map-card" data-jump="sent-advanced"><div class="map-arrow">→</div><div class="map-card-head"><div class="map-card-num">S4</div><div class="map-card-title">高阶认知</div></div><div class="map-card-desc">反身性最强、二阶思维、情绪悖论</div></div>
+          <div class="map-card" data-jump="sent-traps"><div class="map-arrow">→</div><div class="map-card-head"><div class="map-card-num">S5</div><div class="map-card-title">十大陷阱</div></div><div class="map-card-desc">常见的情绪认知陷阱</div></div>
+        </div>
+      </div>
+
+      <div class="view" data-view="sent-structure">
+        <div class="chapter-head">
+          <div class="chapter-label">S1 · 情绪锚</div>
+          <div class="chapter-title">情绪锚的四层结构</div>
+        </div>
+
+        <div class="flow">
+          <div class="flow-node" data-jump="sent-s1"><span class="flow-step">S1.1</span>预期差 · 最底层驱动</div>
+          <div class="flow-arrow">↓</div>
+          <div class="flow-node" data-jump="sent-s2"><span class="flow-step">S1.2</span>叙事 · 中层催化</div>
+          <div class="flow-arrow">↓</div>
+          <div class="flow-node" data-jump="sent-s3"><span class="flow-step">S1.3</span>共识 · 上层状态</div>
+          <div class="flow-arrow">↓</div>
+          <div class="flow-node" data-jump="sent-s4"><span class="flow-step">S1.4</span>情绪波动 · 表层表现</div>
+        </div>
+
+        <div class="tip">预期差是引擎，叙事是载体，共识是状态，情绪是表现。<strong>从底层到表层的每一层都在驱动股价</strong>。</div>
+      </div>
+
+      <div class="view" data-view="sent-s1">
+        <div class="chapter-head">
+          <div class="chapter-label">S1.1 · 情绪锚第1层</div>
+          <div class="chapter-title">预期差 · 最底层驱动</div>
+        </div>
+
+        <div class="formula">股价变化 ∝ 实际情况 - 市场预期</div>
+        <p>股价不反映"公司怎么样"，而反映"<strong>公司与市场预期的偏差</strong>"。</p>
+
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>预期</th><th>实际</th><th>结果</th><th>解释</th></tr></thead>
+            <tbody>
+              <tr><td>低</td><td>超预期</td><td><strong>暴涨</strong></td><td>戴维斯双击</td></tr>
+              <tr><td>低</td><td>符合预期</td><td>小涨</td><td>预期修复</td></tr>
+              <tr><td>高</td><td>超预期</td><td>微涨</td><td>预期透支</td></tr>
+              <tr><td>高</td><td>符合预期</td><td><strong>下跌</strong></td><td>利好出尽</td></tr>
+              <tr><td>高</td><td>低于预期</td><td><strong>暴跌</strong></td><td>戴维斯双杀</td></tr>
+              <tr><td>低</td><td>低于预期</td><td>横盘</td><td>反正没人信</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h3>实战启示</h3>
+        <ul>
+          <li>最好的买点：<strong>公司不算差但市场觉得很差</strong></li>
+          <li>最危险的：<strong>公司不错但市场觉得极好</strong></li>
+          <li>好公司+低预期 = 戴维斯双击的温床</li>
+          <li>烂公司+高预期 = 戴维斯双杀的倒计时</li>
+        </ul>
+      </div>
+
+      <div class="view" data-view="sent-s2">
+        <div class="chapter-head">
+          <div class="chapter-label">S1.2 · 情绪锚第2层</div>
+          <div class="chapter-title">叙事 · 中层催化</div>
+          <div class="chapter-desc">预期差是抽象的，叙事是具体的载体。人类不是通过数据做决策，而是通过故事。</div>
+        </div>
+
+        <h3>A股常见的强势叙事类型</h3>
+        <div class="card-grid">
+          <div class="card"><div class="card-num">01</div><div class="card-title">产业革命叙事</div><div class="card-desc">新能源替代燃油、AI改变一切、国产替代 · 十年级大叙事</div></div>
+          <div class="card"><div class="card-num">02</div><div class="card-title">周期反转叙事</div><div class="card-desc">猪周期底部、化工触底、地产松绑 · 中期逻辑</div></div>
+          <div class="card"><div class="card-num">03</div><div class="card-title">事件催化叙事</div><div class="card-desc">华为新机、政策会议、明星代言 · 短期爆发</div></div>
+          <div class="card"><div class="card-num">04</div><div class="card-title">困境反转叙事</div><div class="card-desc">换管理层、巨亏出清、供给侧改革 · 难以证伪</div></div>
+          <div class="card"><div class="card-num">05</div><div class="card-title">稀缺性叙事</div><div class="card-desc">独家技术、独家牌照 · 容易被高估</div></div>
+        </div>
+
+        <h3>叙事的三个关键特征</h3>
+        <div class="formula">强叙事 = 易传播 + 有画面感 + 难证伪</div>
+        <ul>
+          <li><strong>易传播</strong>：一句话能说明白</li>
+          <li><strong>有画面感</strong>：能想象出未来的场景</li>
+          <li><strong>难证伪</strong>：短期内无法被数据推翻</li>
+        </ul>
+        <div class="tip">同时满足三条的叙事，往往是阶段性大行情的发动机。</div>
+      </div>
+
+      <div class="view" data-view="sent-s3">
+        <div class="chapter-head">
+          <div class="chapter-label">S1.3 · 情绪锚第3层</div>
+          <div class="chapter-title">共识 · 上层状态</div>
+          <div class="chapter-desc">叙事传播到一定程度就形成共识，共识的阶段决定了股价的空间。</div>
+        </div>
+
+        <h3>共识演化的五阶段</h3>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>阶段</th><th>市场状态</th><th>股价位置</th><th>最佳策略</th></tr></thead>
+            <tbody>
+              <tr><td>① 无人关注</td><td>产业内少数人知道</td><td>底部</td><td><strong>深度研究、重仓埋伏</strong></td></tr>
+              <tr><td>② 少数人知道</td><td>研究员开始关注</td><td>底部启动</td><td>加仓，风险报酬比最佳</td></tr>
+              <tr><td>③ 开始扩散</td><td>研报增多、媒体报道</td><td>主升浪</td><td>持有，享受双击</td></tr>
+              <tr><td>④ 广泛共识</td><td>散户讨论、基金抱团</td><td>高位</td><td><strong>警惕，开始减仓</strong></td></tr>
+              <tr><td>⑤ 极致共识</td><td>"一定会涨"</td><td>泡沫顶部</td><td><strong>必须卖出</strong></td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="warning">共识形成的那一刻，就是赚钱机会结束的那一刻。一旦所有人都相信了，股价已经涨到位，后续只剩"情绪惯性"支撑，随时可能崩塌。</div>
+
+        <h3>历史案例</h3>
+        <ul>
+          <li>2007年10月"买股就赚钱" → 6124点崩盘</li>
+          <li>2015年6月"改革牛" → 5178点崩盘</li>
+          <li>2021年2月"核心资产永远涨" → 核心资产崩盘</li>
+          <li>2022年"新能源是未来" → 新能源大跌</li>
+        </ul>
+      </div>
+
+      <div class="view" data-view="sent-s4">
+        <div class="chapter-head">
+          <div class="chapter-label">S1.4 · 情绪锚第4层</div>
+          <div class="chapter-title">情绪波动 · 表层表现</div>
+        </div>
+
+        <h3>情绪周期的循环</h3>
+        <div class="flow">
+          <div class="flow-node"><span class="flow-step">↓底</span>绝望 → 怀疑 → 希望</div>
+          <div class="flow-arrow">↓</div>
+          <div class="flow-node"><span class="flow-step">↑升</span>乐观 → 兴奋 → 狂热</div>
+          <div class="flow-arrow">↓</div>
+          <div class="flow-node"><span class="flow-step">↓降</span>自满 → 焦虑 → 否认 → 恐慌</div>
+        </div>
+
+        <h3>极度乐观（顶部信号）</h3>
+        <ul class="checklist">
+          <li>涨停家数持续&gt;100只</li>
+          <li>融资余额快速上升创新高</li>
+          <li>新基金发行火爆（"一日售罄"）</li>
+          <li>出租车司机都在聊股票</li>
+          <li>媒体全是"下一个XX倍股"</li>
+          <li>证券账户新开户数暴增</li>
+          <li>"这次不一样"的论调盛行</li>
+        </ul>
+
+        <h3>极度悲观（底部信号）</h3>
+        <ul class="checklist">
+          <li>涨停&lt;30只，跌停&gt;涨停</li>
+          <li>融资余额快速下降</li>
+          <li>基金发行冷清、延募</li>
+          <li>媒体充斥"股市还能跌多久"</li>
+          <li>券商营业部门可罗雀</li>
+          <li>卖方分析师看空成共识</li>
+          <li>"这个市场没救了"盛行</li>
+        </ul>
+      </div>
+
+      <div class="view" data-view="sent-features">
+        <div class="chapter-head">
+          <div class="chapter-label">S2 · 情绪锚</div>
+          <div class="chapter-title">A股情绪锚的四大特征</div>
+        </div>
+
+        <h3>特征1 · 情绪波动远超成熟市场</h3>
+        <ul>
+          <li>散户占成交60%+（美股&lt;20%）</li>
+          <li>羊群效应极强</li>
+          <li>涨跌停制度放大连续极端走势</li>
+          <li>媒体和自媒体影响力巨大</li>
+        </ul>
+        <blockquote>在A股，理解情绪比理解基本面更重要（短期而言）。</blockquote>
+
+        <h3>特征2 · 政策事件的放大效应</h3>
+        <ul>
+          <li>央行降息 → 情绪瞬间转暖</li>
+          <li>监管收紧 → 情绪瞬间恐慌（如2018年去杠杆）</li>
+          <li>产业政策 → 板块情绪爆发（双碳、数字经济）</li>
+          <li>领导人表态 → 重大情绪转折（如2024年9月26日）</li>
+        </ul>
+
+        <h3>特征3 · 题材炒作是A股独特产物</h3>
+        <ul>
+          <li>一个概念能掀起炒作（元宇宙、低空经济）</li>
+          <li><strong>炒概念不炒业绩</strong>——多数题材股无真实受益</li>
+          <li>游资+散户合力推到离谱高度</li>
+          <li>炒作退潮只剩一地鸡毛</li>
+        </ul>
+
+        <h3>特征4 · 两极化和季节性</h3>
+        <ul>
+          <li>A股很少温和上涨或下跌，要么全面亢奋，要么全面冰封</li>
+          <li><strong>春季躁动</strong>（1–3月）：资金入市、政策预期</li>
+          <li><strong>5月效应</strong>：财报季结束，题材冷却</li>
+          <li><strong>7–8月</strong>：经济数据公布期</li>
+          <li><strong>国庆前</strong>：避险情绪，震荡</li>
+          <li><strong>年底</strong>：基金排名战、次年布局</li>
+        </ul>
+      </div>
+
+      <div class="view" data-view="sent-practice">
+        <div class="chapter-head">
+          <div class="chapter-label">S3 · 情绪锚</div>
+          <div class="chapter-title">情绪锚的实战应用</div>
+        </div>
+
+        <h3>应用1 · 预期差挖掘</h3>
+        <p>核心问题：市场当前对某个标的的预期是什么？我的判断与之有何差异？</p>
+        <ul>
+          <li><strong>看研报一致预期</strong>：实际超预期→双击；低于预期→杀估值</li>
+          <li><strong>看估值隐含增长率</strong>：反推当前股价隐含了多少增长</li>
+          <li><strong>看媒体情绪</strong>：利好满屏→预期打满；充斥质疑→预期极低</li>
+          <li><strong>看卖方共识</strong>：全"买入"评级→警惕；被集体看空→机会可能来了</li>
+        </ul>
+
+        <h3>应用2 · 叙事选择</h3>
+        <h4>必要条件</h4>
+        <ul class="checklist">
+          <li>符合时代大势（政策方向、技术趋势、人口结构）</li>
+          <li>有真实产业变化支撑</li>
+          <li>处于叙事初期（共识阶段1–3）</li>
+          <li>有可跟踪的数据来验证</li>
+        </ul>
+        <h4>必须回避</h4>
+        <div class="warning">纯概念炒作 · 共识已极致 · 频繁切换的短期热点 · 连续被证伪的"狼来了"叙事</div>
+
+        <h3>应用3 · 情绪极值的反向操作（最高胜率）</h3>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>情绪状态</th><th>观察信号</th><th>操作</th></tr></thead>
+            <tbody>
+              <tr><td>极度悲观</td><td>连续下跌、全面恐慌、两融断崖、身边人都说股市完蛋</td><td><strong>买入指数ETF或龙头</strong></td></tr>
+              <tr><td>极度乐观</td><td>连续上涨、全民亢奋、爆款频出、身边人谈辞职炒股</td><td><strong>减仓落袋</strong></td></tr>
+            </tbody>
+          </table>
+        </div>
+        <blockquote>别人恐惧我贪婪，别人贪婪我恐惧。</blockquote>
+
+        <h3>应用4 · 情绪指标综合应用</h3>
+        <p>建立个人情绪温度计（每日0-10打分）：</p>
+        <ul>
+          <li>涨跌停家数比</li>
+          <li>两融变化</li>
+          <li>新开户数</li>
+          <li>媒体热度</li>
+          <li>身边人讨论</li>
+        </ul>
+        <div class="tip">0–3：极度悲观（考虑加仓） · 4–6：正常区间 · 7–10：极度乐观（考虑减仓）</div>
+      </div>
+
+      <div class="view" data-view="sent-advanced">
+        <div class="chapter-head">
+          <div class="chapter-label">S4 · 情绪锚</div>
+          <div class="chapter-title">情绪锚的三个高阶认知</div>
+        </div>
+
+        <h3>高阶1 · 情绪的反身性最强</h3>
+        <div class="formula">乐观 → 买入 → 涨 → 强化乐观 → 继续买 → 继续涨 → 临界点 → 反转 → 恐慌 → 暴跌</div>
+        <div class="warning">这就是股市"泡沫-崩溃"循环。你永远无法精准预判情绪何时反转——只能识别情绪已经极端。宁可提前一周卖在山腰，也不要在山顶等着被埋。</div>
+
+        <h3>高阶2 · 情绪锚是二阶的——你在预判别人的预判</h3>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>层级</th><th>思维方式</th></tr></thead>
+            <tbody>
+              <tr><td>一阶</td><td>这家公司好 → 买入（散户层面）</td></tr>
+              <tr><td>二阶</td><td>公司好但大家都知道 → 不买（没预期差）</td></tr>
+              <tr><td>三阶</td><td>大家都知道但以为其他人还不知道 → 可能还有空间</td></tr>
+              <tr><td>四阶</td><td>所有人都在想第三阶 → 已经没空间了</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <blockquote>凯恩斯原话：不是选你觉得最美的，也不是选你觉得大家觉得最美的，而是选大家觉得大家觉得最美的。</blockquote>
+
+        <h3>高阶3 · 情绪锚的最大悖论</h3>
+        <p>当你学会识别情绪极值时，情绪极值本身可能正在消失。</p>
+        <ul>
+          <li>2015年以前：A股常出现"一致看空"底部 → 逆向抄底高胜率</li>
+          <li>2024年以后：大量量化和机构都在用逆向策略</li>
+          <li>结果：<strong>当所有人都想当逆向者时，逆向失效</strong></li>
+        </ul>
+        <div class="tip">情绪锚的规律会随时代演变。一个曾经有效的情绪指标，可能正在失效。最好的情绪研究者，始终对市场结构变化保持敏感。</div>
+      </div>
+
+      <div class="view" data-view="sent-traps">
+        <div class="chapter-head">
+          <div class="chapter-label">S5 · 情绪锚</div>
+          <div class="chapter-title">情绪锚的十大认知陷阱</div>
+        </div>
+
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>#</th><th>陷阱</th><th>表现</th></tr></thead>
+            <tbody>
+              <tr><td>1</td><td>把自己的情绪当市场情绪</td><td>自己恐慌就以为底部到了</td></tr>
+              <tr><td>2</td><td>过度相信某一叙事</td><td>"这次真的不一样"</td></tr>
+              <tr><td>3</td><td>误把短期情绪当长期趋势</td><td>情绪反弹误认为牛市来了</td></tr>
+              <tr><td>4</td><td>追逐过热叙事</td><td>所有人都在讨论时才进场</td></tr>
+              <tr><td>5</td><td>忽视叙事演化</td><td>还在用旧叙事看新行情</td></tr>
+              <tr><td>6</td><td>不认识共识阶段</td><td>不知道自己在哪一阶段</td></tr>
+              <tr><td>7</td><td>提前猜顶/底</td><td>猜了十次终于猜中一次</td></tr>
+              <tr><td>8</td><td>政策依赖症</td><td>等政策来了再行动（已经晚了）</td></tr>
+              <tr><td>9</td><td>自媒体影响</td><td>被几个大V左右了判断</td></tr>
+              <tr><td>10</td><td>过度反向</td><td>为反向而反向，对抗趋势</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ============================================================ -->
+      <!-- ============ 筹码锚 Chips Anchor ============ -->
+      <!-- ============================================================ -->
+
+      <div class="view" data-view="chip-overview">
+        <div class="chapter-head">
+          <div class="chapter-label">CHIPS ANCHOR · 筹码锚</div>
+          <div class="chapter-title">筹码锚总览</div>
+          <div class="chapter-desc">股票的筹码分布结构和交易博弈关系，决定短期价格的波动方向和幅度。</div>
+        </div>
+
+        <div class="view-intro">
+          <div class="label">核心认知</div>
+          <h3>最微观 · 最博弈 · 最零和</h3>
+          <p>筹码锚是最接近<strong style="color:var(--accent)">"赌场"本质</strong>的一个锚——它不创造价值，只是决定价值如何在交易者之间重新分配。<strong>你赚的钱就是别人亏的钱</strong>。</p>
+        </div>
+
+        <h2>四锚定位对比</h2>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>锚</th><th>回答的问题</th><th>维度</th></tr></thead>
+            <tbody>
+              <tr><td>盈利锚</td><td>值多少钱</td><td>价值</td></tr>
+              <tr><td>资金锚</td><td>有多少钱</td><td>流动性</td></tr>
+              <tr><td>情绪锚</td><td>预期差是什么</td><td>认知</td></tr>
+              <tr><td><strong>筹码锚</strong></td><td>谁持有、谁在买、谁在卖、谁被套、谁解套</td><td>结构博弈</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="warning">A股80%的散户亏损，不是因为选错了公司，而是因为只玩筹码锚却不自知——他们以为自己在"投资"，实际上在"博弈"。</div>
+
+        <h2>筹码锚的章节结构</h2>
+        <div class="map-grid">
+          <div class="map-card" data-jump="chip-structure"><div class="map-arrow">→</div><div class="map-card-head"><div class="map-card-num">C1</div><div class="map-card-title">四层结构</div></div><div class="map-card-desc">存量 → 流动 → 成本 → 意图</div></div>
+          <div class="map-card" data-jump="chip-features"><div class="map-arrow">→</div><div class="map-card-head"><div class="map-card-num">C2</div><div class="map-card-title">A股四大特征</div></div><div class="map-card-desc">操纵普遍、小盘主导、T+1影响、涨跌停放大</div></div>
+          <div class="map-card" data-jump="chip-practice"><div class="map-arrow">→</div><div class="map-card-head"><div class="map-card-num">C3</div><div class="map-card-title">实战应用</div></div><div class="map-card-desc">建仓识别、顶部识别、龙虎榜、解禁节奏</div></div>
+          <div class="map-card" data-jump="chip-advanced"><div class="map-arrow">→</div><div class="map-card-head"><div class="map-card-num">C4</div><div class="map-card-title">高阶认知</div></div><div class="map-card-desc">零和性、与三锚关系、自我毁灭</div></div>
+          <div class="map-card" data-jump="chip-traps"><div class="map-arrow">→</div><div class="map-card-head"><div class="map-card-num">C5</div><div class="map-card-title">十大陷阱</div></div><div class="map-card-desc">散户最容易自作聪明的领域</div></div>
+        </div>
+      </div>
+
+      <div class="view" data-view="chip-structure">
+        <div class="chapter-head">
+          <div class="chapter-label">C1 · 筹码锚</div>
+          <div class="chapter-title">筹码锚的四层结构</div>
+        </div>
+
+        <div class="flow">
+          <div class="flow-node" data-jump="chip-s1"><span class="flow-step">C1.1</span>存量结构 · 静态 · 谁持有</div>
+          <div class="flow-arrow">↓</div>
+          <div class="flow-node" data-jump="chip-s2"><span class="flow-step">C1.2</span>流动结构 · 动态 · 怎么流动</div>
+          <div class="flow-arrow">↓</div>
+          <div class="flow-node" data-jump="chip-s3"><span class="flow-step">C1.3</span>成本结构 · 历史 · 哪些价位套牢</div>
+          <div class="flow-arrow">↓</div>
+          <div class="flow-node" data-jump="chip-s4"><span class="flow-step">C1.4</span>意图博弈 · 心理 · 谁在算计谁</div>
+        </div>
+      </div>
+
+      <div class="view" data-view="chip-s1">
+        <div class="chapter-head">
+          <div class="chapter-label">C1.1 · 筹码锚第1层</div>
+          <div class="chapter-title">存量结构 · 谁持有这只股票</div>
+        </div>
+
+        <h3>股东结构</h3>
+        <ul>
+          <li><strong>大股东/实控人持股</strong>：高度集中→易控盘；过度分散→易被游资扰动</li>
+          <li><strong>机构持股比例</strong>：高→定价权在机构；低→散户主导</li>
+          <li><strong>前十大股东变化</strong>：季度变化比绝对数更重要</li>
+        </ul>
+
+        <h3>流通盘大小</h3>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>流通市值</th><th>类型</th><th>特征</th></tr></thead>
+            <tbody>
+              <tr><td>&lt;50亿</td><td>小盘股</td><td>易被资金推动</td></tr>
+              <tr><td>50–200亿</td><td>中盘股</td><td>需要一定资金量</td></tr>
+              <tr><td>&gt;500亿</td><td>大盘股</td><td>单只资金难以撼动</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h3>限售解禁节奏</h3>
+        <ul>
+          <li>限售股解禁 = <strong>供给冲击</strong>，筹码池突然变大</li>
+          <li>原始股东、PE/VC、高管的解禁行为差异巨大</li>
+          <li>解禁前常打压，解禁后抛售</li>
+        </ul>
+
+        <h3>股东人数变化（被严重低估的指标）</h3>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>股东户数</th><th>股价</th><th>含义</th></tr></thead>
+            <tbody>
+              <tr><td>下降</td><td>上涨</td><td><strong>筹码集中，主力建仓</strong></td></tr>
+              <tr><td>下降</td><td>下跌</td><td>主力未走，散户割肉</td></tr>
+              <tr><td>上升</td><td>上涨</td><td>散户追涨，警惕顶部</td></tr>
+              <tr><td>上升</td><td>下跌</td><td>散户接盘，机构出货</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="view" data-view="chip-s2">
+        <div class="chapter-head">
+          <div class="chapter-label">C1.2 · 筹码锚第2层</div>
+          <div class="chapter-title">流动结构 · 筹码怎么流动</div>
+        </div>
+
+        <h3>换手率</h3>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>板块类型</th><th>正常换手率</th></tr></thead>
+            <tbody>
+              <tr><td>大盘蓝筹</td><td>&lt;1%</td></tr>
+              <tr><td>中盘成长</td><td>1–3%</td></tr>
+              <tr><td>小盘题材</td><td>3–10%</td></tr>
+              <tr><td>概念炒作</td><td>10%+</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <ul>
+          <li><strong>异常高换手</strong>（远超均值）→ 博弈激烈，要么启动要么见顶</li>
+          <li><strong>极低换手</strong>（萎缩）→ 筹码锁定或无人关注</li>
+        </ul>
+
+        <h3>龙虎榜</h3>
+        <ul>
+          <li>A股最真实的博弈数据之一</li>
+          <li>能看到<strong>具体席位</strong>的动向（知名游资、机构、北向）</li>
+          <li>游资的"接力"关系可识别</li>
+          <li>净买入&gt;净卖出+次日高开 → 主力继续推</li>
+          <li>净卖出+次日低开 → 主力出货</li>
+        </ul>
+
+        <h3>大宗交易</h3>
+        <ul>
+          <li><strong>折价大宗+股价下跌</strong> → 主力抛售</li>
+          <li><strong>溢价大宗</strong> → 有机构高价接盘，偏正面</li>
+          <li>接盘方是关键（游资还是长线机构）</li>
+        </ul>
+
+        <h3>融资买入占比</h3>
+        <ul>
+          <li>融资买入占成交额比重&gt;15% → 杠杆资金主导，风险高</li>
+          <li>两融余额占流通市值&gt;5% → 筹码不稳，易踩踏</li>
+        </ul>
+      </div>
+
+      <div class="view" data-view="chip-s3">
+        <div class="chapter-head">
+          <div class="chapter-label">C1.3 · 筹码锚第3层</div>
+          <div class="chapter-title">成本结构 · 历史维度</div>
+          <div class="chapter-desc">不同价位有多少套牢盘或获利盘。</div>
+        </div>
+
+        <h3>筹码分布图（成本分布）</h3>
+        <ul>
+          <li>通过历史成交重构每个价位的筹码密度</li>
+          <li><strong>筹码集中区</strong>（密集峰）= 心理价位、支撑或压力</li>
+          <li><strong>筹码稀疏区</strong>（低密度带）= 价格容易快速穿越</li>
+          <li><strong>上方套牢筹码多</strong> → 反弹遇压</li>
+          <li><strong>下方获利盘厚</strong> → 有跑路冲动</li>
+        </ul>
+
+        <h3>主力成本位</h3>
+        <ul>
+          <li>通过龙虎榜、大宗、机构调研回推建仓成本</li>
+          <li><strong>主力成本以上</strong> = 主力获利，随时兑现</li>
+          <li><strong>主力成本附近</strong> = 护盘意愿强</li>
+          <li><strong>跌破主力成本</strong> = 主力可能止损，踩踏风险</li>
+        </ul>
+
+        <h3>关键技术位的筹码意义</h3>
+        <ul>
+          <li><strong>前高</strong> = 历史高点套牢盘</li>
+          <li><strong>前低</strong> = 抄底盘成本，破位则恐慌</li>
+          <li><strong>均线密集区</strong> = 中期成本集中</li>
+        </ul>
+        <div class="tip">这些位置不是"技术性的"，而是<strong>真实成本分布的体现</strong>。</div>
+
+        <div class="warning">长期深套的筹码，一旦接近成本线就会大量抛售——这就是为什么长期熊股反弹往往无力，每次反弹都在消化解套盘。</div>
+      </div>
+
+      <div class="view" data-view="chip-s4">
+        <div class="chapter-head">
+          <div class="chapter-label">C1.4 · 筹码锚第4层</div>
+          <div class="chapter-title">意图博弈 · 谁在算计谁</div>
+          <div class="chapter-desc">最难但最关键。</div>
+        </div>
+
+        <h3>A股常见的博弈模式</h3>
+        <div class="card-grid">
+          <div class="card"><div class="card-num">01</div><div class="card-title">主力控盘</div><div class="card-desc">大股东/机构低位建仓→洗盘→筹码集中→启动主升浪。特征：股东户数下降+换手温和+区间震荡</div></div>
+          <div class="card"><div class="card-num">02</div><div class="card-title">游资接力</div><div class="card-desc">多个游资席位轮流炒作，每天换一批参与者。特征：龙虎榜席位不断变化+高换手+无机构</div></div>
+          <div class="card"><div class="card-num">03</div><div class="card-title">机构抱团</div><div class="card-desc">多家公募/外资持有同一标的，筹码机构间转手。特征：机构持仓上升+低换手+股价创新高</div></div>
+          <div class="card"><div class="card-num">04</div><div class="card-title">抱团瓦解</div><div class="card-desc">一家机构率先卖出→连锁反应→筹码大规模外流。特征：股东户数激增+成交异常+连续大跌（2021核心资产）</div></div>
+          <div class="card"><div class="card-num">05</div><div class="card-title">游资vs机构博弈</div><div class="card-desc">游资拉高→机构接盘（陷阱）；机构抛→游资抢（搏反弹）</div></div>
+          <div class="card"><div class="card-num">06</div><div class="card-title">散户放大器</div><div class="card-desc">散户不创造趋势，但放大趋势。上涨追涨筑顶，下跌恐慌探底</div></div>
+        </div>
+
+        <blockquote>筹码锚最核心的博弈：机构+游资 vs 散户的零和博弈。</blockquote>
+      </div>
+
+      <div class="view" data-view="chip-features">
+        <div class="chapter-head">
+          <div class="chapter-label">C2 · 筹码锚</div>
+          <div class="chapter-title">A股筹码锚的四大特征</div>
+        </div>
+
+        <h3>特征1 · 筹码操纵在A股更普遍</h3>
+        <p>由于：散户占比高 · 监管相对宽松 · 信息披露参差 · 做空机制不完善——<strong>坐庄、控盘、题材炒作在A股远比美股常见</strong>。筹码锚在A股的研究价值比成熟市场更高。</p>
+
+        <h3>特征2 · 小盘股筹码锚影响力&gt;&gt;大盘股</h3>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>市值类型</th><th>筹码锚影响</th></tr></thead>
+            <tbody>
+              <tr><td>大盘蓝筹</td><td>难撼动，主要看盈利+资金锚</td></tr>
+              <tr><td>中盘成长</td><td>开始明显发挥作用</td></tr>
+              <tr><td>小盘股</td><td><strong>筹码锚是主导因素</strong></td></tr>
+              <tr><td>ST/次新/题材</td><td>完全由筹码锚驱动，基本面失效</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h3>特征3 · T+1制度的独特影响</h3>
+        <ul>
+          <li>主力拉高出货需多日配合，容易留痕迹</li>
+          <li>散户追涨当天买入次日才能反应，容易被套</li>
+          <li>龙虎榜数据更有分析价值（日内买卖痕迹清晰）</li>
+          <li>尾盘博弈成为A股特有现象</li>
+        </ul>
+
+        <h3>特征4 · 涨跌停板放大筹码博弈</h3>
+        <ul>
+          <li><strong>一字板/连板</strong>本质是筹码极度锁定</li>
+          <li><strong>炸板</strong>（封涨停后开板）= 主力出货或资金分歧</li>
+          <li>打板战术是A股独有的筹码博弈玩法</li>
+          <li>炸板率是情绪+筹码的核心指标</li>
+        </ul>
+      </div>
+
+      <div class="view" data-view="chip-practice">
+        <div class="chapter-head">
+          <div class="chapter-label">C3 · 筹码锚</div>
+          <div class="chapter-title">筹码锚的实战应用</div>
+        </div>
+
+        <h3>应用1 · 建仓阶段的筹码识别</h3>
+        <p>判断是否处于"主力建仓期"：</p>
+        <ul class="checklist">
+          <li>股东户数连续3个季度下降</li>
+          <li>股价底部横盘，换手率温和（1–2%）</li>
+          <li>成交呈"缩量下跌、放量上涨"</li>
+          <li>无明显利空但股价坚韧</li>
+          <li>大股东/机构小幅增持或未减持</li>
+        </ul>
+        <div class="tip">满足多项 → 可能处于建仓尾声，值得关注。</div>
+
+        <h3>应用2 · 顶部的筹码识别</h3>
+        <p>判断是否处于"主力出货期"：</p>
+        <ul class="checklist">
+          <li>股东户数快速上升（散户接盘）</li>
+          <li>换手率持续异常放大</li>
+          <li>龙虎榜频繁出现卖方席位</li>
+          <li>高位放巨量但股价滞涨</li>
+          <li>频繁利好但涨幅有限</li>
+          <li>大股东/高管减持公告</li>
+          <li>融资余额持续创新高</li>
+        </ul>
+        <div class="warning">满足多项 → 筹码高度不稳，应减仓避险。</div>
+
+        <h3>应用3 · 龙虎榜实战</h3>
+        <ol>
+          <li><strong>看席位类型</strong>：机构（长线）、游资（爆发）、北向（趋势）、散户席位分散（持续性差）</li>
+          <li><strong>看净买入占成交比</strong>：&gt;20%偏强，&lt;5%方向不明</li>
+          <li><strong>看次日接力</strong>：高开高走=真接力，冲高回落=假接力</li>
+        </ol>
+
+        <h3>应用4 · 筹码集中度与风险</h3>
+        <ul>
+          <li>前十大&gt;60%：易拉升，但机构撤退跌得惨</li>
+          <li>机构&lt;5%：散户主导，波动大难成趋势</li>
+          <li><strong>最健康结构</strong>：机构30–50% + 大股东稳定 + 散户适度</li>
+        </ul>
+
+        <h3>应用5 · 解禁节奏</h3>
+        <ul>
+          <li>解禁前1个月：股价常被打压</li>
+          <li>解禁当天：无放量下跌=原股东惜售，利多</li>
+          <li>解禁后1个月：真正抛售压力期</li>
+        </ul>
+      </div>
+
+      <div class="view" data-view="chip-advanced">
+        <div class="chapter-head">
+          <div class="chapter-label">C4 · 筹码锚</div>
+          <div class="chapter-title">筹码锚的三个高阶认知</div>
+        </div>
+
+        <h3>高阶1 · 筹码锚是零和博弈，长期注定亏损</h3>
+        <p>与前三个锚不同，<strong>筹码锚不创造任何新价值</strong>——只是在交易者之间重新分配。</p>
+        <ul>
+          <li>你赚的=别人亏的（扣除手续费、印花税后甚至负和）</li>
+          <li>散户在筹码博弈中长期必然亏损</li>
+          <li>想靠筹码锚赚钱，必须成为信息、资金、心态上的少数派</li>
+        </ul>
+
+        <h3>高阶2 · 筹码锚与其他三锚的关系</h3>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>盈利锚</th><th>筹码结构</th><th>判断</th></tr></thead>
+            <tbody>
+              <tr><td>好</td><td>好</td><td><strong>最佳组合</strong>，中长线布局</td></tr>
+              <tr><td>好</td><td>差（减持、解禁）</td><td>短期压制，等筹码消化</td></tr>
+              <tr><td>差</td><td>好（控盘）</td><td>可能短期炒作，风险极高</td></tr>
+              <tr><td>差</td><td>差</td><td>坚决回避</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="tip">筹码锚应作为"择时辅助"和"风险过滤"，而不是投资逻辑主干。只看筹码不看基本面 = 纯赌博。</div>
+
+        <h3>高阶3 · 筹码锚的反身性与自我毁灭</h3>
+        <div class="formula">集中 → 易涨 → 更多人买 → 进一步集中 → 继续涨 → 临界点 → 瞬间释放 → 暴跌 → 踩踏</div>
+        <p>这就是A股小盘股"暴涨暴跌"的本质——<strong>筹码锚的自我毁灭循环</strong>。</p>
+        <ul>
+          <li>在筹码高度集中但未启动时埋伏 → 高胜率</li>
+          <li>在筹码启动后追 → 中胜率，要快</li>
+          <li>在筹码极度集中+股价新高时追 → 低胜率，必亏</li>
+          <li><strong>永远不要在筹码瓦解初期抄底</strong> → 踩踏远未结束</li>
+        </ul>
+      </div>
+
+      <div class="view" data-view="chip-traps">
+        <div class="chapter-head">
+          <div class="chapter-label">C5 · 筹码锚</div>
+          <div class="chapter-title">筹码锚的十大实战陷阱</div>
+        </div>
+
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>#</th><th>陷阱</th><th>表现</th></tr></thead>
+            <tbody>
+              <tr><td>1</td><td>把技术指标当筹码</td><td>以为MACD/KDJ是筹码分析</td></tr>
+              <tr><td>2</td><td>迷信庄股逻辑</td><td>以为"有庄家就会拉"</td></tr>
+              <tr><td>3</td><td>追龙虎榜游资</td><td>游资轮动快，散户永远慢一拍</td></tr>
+              <tr><td>4</td><td>低估解禁冲击</td><td>忽略未来6–12个月解禁压力</td></tr>
+              <tr><td>5</td><td>无视大股东减持</td><td>实控人都在卖还相信"长期看好"</td></tr>
+              <tr><td>6</td><td>小盘股重仓</td><td>流动性枯竭时卖不掉</td></tr>
+              <tr><td>7</td><td>忽视融资占比</td><td>高杠杆踩踏时跌幅双倍</td></tr>
+              <tr><td>8</td><td>只看筹码不看基本面</td><td>烂公司筹码再好也是炸药桶</td></tr>
+              <tr><td>9</td><td>错把"控盘"当安全</td><td>主力出货时散户跑不赢</td></tr>
+              <tr><td>10</td><td>接抱团解散的机构票</td><td>机构出货散户接盘经典陷阱</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ============================================================ -->
+      <!-- ============ 四锚整合 Synthesis ============ -->
+      <!-- ============================================================ -->
+
+      <div class="view" data-view="synthesis">
+        <div class="chapter-head">
+          <div class="chapter-label">★ SYNTHESIS · 四锚整合</div>
+          <div class="chapter-title">四锚关系的终极图景</div>
+          <div class="chapter-desc">四锚不是并列的四个独立因素，而是互相交织、层层放大的系统。</div>
+        </div>
+
+        <h2>四锚完整关系图景</h2>
+        <div class="formula">股价 = 盈利的现实 + 资金的供给 + 筹码的结构 —— 通过"情绪"翻译为买卖行为</div>
+        <blockquote>情绪锚不是一个独立的锚，而是其他三锚起作用的必经通道。</blockquote>
+
+        <h2>四锚综合对比表</h2>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>锚</th><th>核心问题</th><th>时间尺度</th><th>本质</th><th>最大风险</th></tr></thead>
+            <tbody>
+              <tr><td><strong>盈利锚</strong></td><td>值多少</td><td>3年+</td><td>价值创造</td><td>短期失效、价值陷阱</td></tr>
+              <tr><td><strong>资金锚</strong></td><td>涨多少</td><td>月–季</td><td>流动性放大</td><td>反身性崩溃</td></tr>
+              <tr><td><strong>情绪锚</strong></td><td>何时涨</td><td>日–月</td><td>预期/叙事翻译器</td><td>情绪极值反转</td></tr>
+              <tr><td><strong>筹码锚</strong></td><td>短期波动</td><td>分钟–日</td><td>零和博弈</td><td>被收割</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="tip"><strong>四锚共振则暴涨</strong>（最佳买点） · <strong>四锚背离则震荡</strong>（观望） · <strong>四锚反转则崩盘</strong>（必须卖出）</div>
+
+        <h2>不同投资风格的锚重视程度</h2>
+        <div class="card-grid">
+          <div class="card"><div class="card-num">VALUE</div><div class="card-title">价值投资者</div><div class="card-desc">盈利锚70% + 其他三锚30%。代表：巴菲特、段永平</div></div>
+          <div class="card"><div class="card-num">GROWTH</div><div class="card-title">成长投资者</div><div class="card-desc">盈利锚50% + 资金锚30% + 情绪锚20%。代表：张坤（早期）</div></div>
+          <div class="card"><div class="card-num">TREND</div><div class="card-title">趋势投资者</div><div class="card-desc">情绪锚40% + 资金锚30% + 其他30%。代表：利弗莫尔</div></div>
+          <div class="card"><div class="card-num">SHORT</div><div class="card-title">短线炒家</div><div class="card-desc">筹码锚40% + 情绪锚40% + 其他20%。代表：顶级游资</div></div>
+        </div>
+
+        <blockquote>没有哪种风格绝对正确，关键是"自洽"——你的方法、性格、资金属性、时间精力要形成一个闭环。</blockquote>
+
+        <h2>四锚的时间层次</h2>
+        <div class="flow">
+          <div class="flow-node"><span class="flow-step">宏观</span>盈利锚 · 3年以上 · 决定"应该值多少"</div>
+          <div class="flow-arrow">↓</div>
+          <div class="flow-node"><span class="flow-step">中观</span>资金锚 · 月到季度 · 决定"能涨多少"</div>
+          <div class="flow-arrow">↓</div>
+          <div class="flow-node"><span class="flow-step">短期</span>情绪锚 · 日到月 · 决定"何时启动"</div>
+          <div class="flow-arrow">↓</div>
+          <div class="flow-node"><span class="flow-step">微观</span>筹码锚 · 分钟到日 · 决定"短期震荡"</div>
+        </div>
+
+        <div class="warning">不同时间视角的投资者，应该关注不同的锚。用短线方法研究长线股票 → 错失耐心；用长线方法参与短线博弈 → 死扛到底。这是散户最常见的错误。</div>
+
+        <h2>最终启示</h2>
+        <blockquote style="font-size:15px">研究的是盈利锚，交易的是资金锚，赚的是情绪锚，博弈的是筹码锚——四者缺一不可。</blockquote>
+
+        <h3>学习四锚的三个阶段</h3>
+        <div class="level-ladder">
+          <div class="level-step"><div class="level-rank">初级</div><div class="level-content"><h5>理解每个锚是什么</h5><p>建立基础概念，知道四锚各自的定义和作用</p></div></div>
+          <div class="level-step"><div class="level-rank">中级</div><div class="level-content"><h5>判断当前哪个锚主导</h5><p>识别市场阶段，用对应的锚做决策</p></div></div>
+          <div class="level-step"><div class="level-rank">高级</div><div class="level-content"><h5>预判锚的切换</h5><p>在锚切换之前布局，实现认知变现</p></div></div>
+        </div>
+
+        <div class="tip"><strong>最高境界</strong>：把四锚融会贯通，形成属于自己的投资体系，最终超越"锚"本身——因为市场结构一直在变，锚只是工具，<strong>建立独立判断才是终点</strong>。</div>
+      </div>
+
+
+      <!-- ============ 附录 A ============ -->
+      <div class="view" data-view="appA">
+        <div class="chapter-head">
+          <div class="chapter-label">APPENDIX A</div>
+          <div class="chapter-title">核心清单</div>
+          <div class="chapter-desc">四锚体系的实战清单（点击勾选）。</div>
+        </div>
+
+        <h2>① 盈利锚清单</h2>
+        <h3>判断"盈利锚是否在场"的6条标准</h3>
+        <ul class="checklist">
+          <li>近3年营收和扣非利润增速稳定为正</li>
+          <li>ROE长期在12%以上</li>
+          <li>经营性现金流/净利润 ≥ 0.8</li>
+          <li>商业模式清晰、壁垒明确</li>
+          <li>非经常性损益占比低（&lt;20%）</li>
+          <li>大股东质押比例低、无大规模减持</li>
+        </ul>
+
+        <h3>财务排雷的5个信号</h3>
+        <ul class="checklist">
+          <li>利润与经营现金流长期背离</li>
+          <li>应收账款增速远超营收增速</li>
+          <li>商誉占净资产比例过高</li>
+          <li>非经常性损益频繁撑业绩</li>
+          <li>大股东高质押 + 减持</li>
+        </ul>
+
+        <h2>② 资金锚清单</h2>
+        <h3>判断"市场水位"的4个问题</h3>
+        <ul class="checklist">
+          <li>当前宏观流动性是松还是紧（M2、利率）</li>
+          <li>股市资金面松紧（成交额、两融）</li>
+          <li>是增量市还是存量市（资金趋势）</li>
+          <li>当前主导资金是谁（北向/公募/游资/散户）</li>
+        </ul>
+
+        <h3>资金面警示信号</h3>
+        <ul class="checklist">
+          <li>两融余额创新高但指数不涨</li>
+          <li>成交额巨大但指数滞涨（主力出货）</li>
+          <li>北向资金连续大幅流出</li>
+          <li>新基金发行"一日售罄"频出（牛市末期）</li>
+          <li>出租车司机都在聊股票（顶部信号）</li>
+        </ul>
+
+        <h2>③ 情绪锚清单</h2>
+        <h3>识别叙事价值的4个条件</h3>
+        <ul class="checklist">
+          <li>符合时代大势（政策方向、技术趋势）</li>
+          <li>有真实产业变化支撑</li>
+          <li>处于叙事初期（共识阶段1–3）</li>
+          <li>有可跟踪的数据来验证</li>
+        </ul>
+
+        <h3>情绪极值反向操作时机</h3>
+        <ul class="checklist">
+          <li>极度悲观：连续下跌、全面恐慌、两融断崖 → 买入</li>
+          <li>极度乐观：爆款频出、全民亢奋、身边人谈辞职炒股 → 卖出</li>
+        </ul>
+
+        <h3>个人情绪温度计（每日0-10打分）</h3>
+        <ul class="checklist">
+          <li>涨跌停家数比</li>
+          <li>两融变化</li>
+          <li>新开户数</li>
+          <li>媒体热度</li>
+          <li>身边人讨论程度</li>
+        </ul>
+
+        <h2>④ 筹码锚清单</h2>
+        <h3>识别"主力建仓期"的5个信号</h3>
+        <ul class="checklist">
+          <li>股东户数连续3个季度下降</li>
+          <li>股价底部横盘，换手率温和（1–2%）</li>
+          <li>成交呈"缩量下跌、放量上涨"</li>
+          <li>无明显利空但股价坚韧</li>
+          <li>大股东/机构小幅增持或未减持</li>
+        </ul>
+
+        <h3>识别"主力出货期"的7个警示</h3>
+        <ul class="checklist">
+          <li>股东户数快速上升（散户接盘）</li>
+          <li>换手率持续异常放大</li>
+          <li>龙虎榜频繁出现卖方席位</li>
+          <li>高位放巨量但股价滞涨</li>
+          <li>频繁利好但涨幅有限</li>
+          <li>大股东/高管减持公告</li>
+          <li>融资余额持续创新高</li>
+        </ul>
+
+        <h2>⑤ 综合持有纪律（所有锚共用）</h2>
+        <h3>持有期纪律的4条规则</h3>
+        <ul class="checklist">
+          <li>每只持仓股有书面"持有理由清单"</li>
+          <li>每季度做一次"假装没持有"的复核</li>
+          <li>设定明确的止损/止错触发条件</li>
+          <li>单一个股仓位不超过20%，单一行业不超过30%</li>
+        </ul>
+
+        <h3>四锚体检清单（每月一次）</h3>
+        <ul class="checklist">
+          <li>我的持仓在盈利锚上是否扎实</li>
+          <li>当前资金面有利于我的持仓风格吗</li>
+          <li>市场情绪处于什么阶段</li>
+          <li>我的持仓筹码结构健康吗</li>
+          <li>四锚中有几个指向一致（越多越安全）</li>
+        </ul>
+      </div>
+
+      <!-- ============ 附录 B ============ -->
+      <div class="view" data-view="appB">
+        <div class="chapter-head">
+          <div class="chapter-label">APPENDIX B</div>
+          <div class="chapter-title">术语速查</div>
+          <div class="chapter-desc">四锚体系中的核心术语速查。</div>
+        </div>
+
+        <h3>四锚核心术语</h3>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>术语</th><th>含义</th></tr></thead>
+            <tbody>
+              <tr><td>盈利锚</td><td>股价由公司创造利润能力决定的底层逻辑</td></tr>
+              <tr><td>资金锚</td><td>市场资金总量和流向决定股价短中期方向</td></tr>
+              <tr><td>情绪锚</td><td>市场预期和叙事共识决定股价短期波动</td></tr>
+              <tr><td>筹码锚</td><td>筹码分布和交易博弈决定短期价格结构</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h3>盈利锚相关</h3>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>术语</th><th>含义</th></tr></thead>
+            <tbody>
+              <tr><td>戴维斯双击</td><td>EPS增长+PE扩张共振，股价大涨</td></tr>
+              <tr><td>戴维斯双杀</td><td>EPS下滑+PE压缩同时发生，股价暴跌</td></tr>
+              <tr><td>护城河</td><td>企业长期保持竞争优势的能力来源</td></tr>
+              <tr><td>价值陷阱</td><td>看似便宜但基本面持续恶化的标的</td></tr>
+              <tr><td>ROE</td><td>净资产收益率，衡量股东回报效率</td></tr>
+              <tr><td>ROIC</td><td>投入资本回报率，衡量资本使用效率</td></tr>
+              <tr><td>PEG</td><td>PE / 盈利增速，衡量成长股性价比</td></tr>
+              <tr><td>扣非净利润</td><td>扣除非经常性损益后的净利润</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h3>资金锚相关</h3>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>术语</th><th>含义</th></tr></thead>
+            <tbody>
+              <tr><td>M2增速</td><td>广义货币供应量增速，反映整体资金面</td></tr>
+              <tr><td>社融增速</td><td>社会融资规模增速，反映实体融资</td></tr>
+              <tr><td>北向资金</td><td>通过沪深港通流入A股的外资</td></tr>
+              <tr><td>两融余额</td><td>融资+融券的总规模，反映杠杆水平</td></tr>
+              <tr><td>增量市</td><td>新资金持续入场，板块共同上涨</td></tr>
+              <tr><td>存量博弈</td><td>无新增资金，板块跷跷板切换</td></tr>
+              <tr><td>股债利差</td><td>股票风险溢价，长期有效的资金面指标</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h3>情绪锚相关</h3>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>术语</th><th>含义</th></tr></thead>
+            <tbody>
+              <tr><td>预期差</td><td>市场预期与实际情况的差距</td></tr>
+              <tr><td>叙事</td><td>支撑市场相信某种未来的"故事"载体</td></tr>
+              <tr><td>共识</td><td>市场参与者对某一看法的普遍认同</td></tr>
+              <tr><td>反身性</td><td>股价与基本面/预期的相互强化</td></tr>
+              <tr><td>二阶思维</td><td>预判别人的预判，而非直接判断</td></tr>
+              <tr><td>边际定价者</td><td>决定股价的最后一笔成交的买卖双方</td></tr>
+              <tr><td>选美理论</td><td>投资是猜大家觉得谁最美，而非自己觉得</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h3>筹码锚相关</h3>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>术语</th><th>含义</th></tr></thead>
+            <tbody>
+              <tr><td>筹码分布</td><td>不同价位持有筹码的密度结构</td></tr>
+              <tr><td>股东户数</td><td>持有该股票的账户数量，反映集中度</td></tr>
+              <tr><td>龙虎榜</td><td>A股每日公布的大额交易席位数据</td></tr>
+              <tr><td>控盘</td><td>主力资金高度集中持有某只股票</td></tr>
+              <tr><td>洗盘</td><td>主力制造恐慌让散户交出筹码</td></tr>
+              <tr><td>解禁</td><td>限售股解除限售，可自由流通</td></tr>
+              <tr><td>抱团</td><td>多家机构集中持有同一类标的</td></tr>
+              <tr><td>一字板</td><td>开盘即涨停或跌停，成交极少</td></tr>
+              <tr><td>炸板</td><td>封涨停后被打开，反映分歧</td></tr>
+              <tr><td>换手率</td><td>日成交量占流通盘的比例</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h3>通用概念</h3>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>术语</th><th>含义</th></tr></thead>
+            <tbody>
+              <tr><td>Alpha (α)</td><td>超额收益，主要来自个股/行业选择</td></tr>
+              <tr><td>Beta (β)</td><td>市场整体收益，主要来自资金/情绪</td></tr>
+              <tr><td>幸存者偏差</td><td>只看见成功案例而忽视失败案例</td></tr>
+              <tr><td>事后归因</td><td>用事后的结果倒推理由</td></tr>
+              <tr><td>归纳法困境</td><td>历史规律不保证未来有效</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    </div>
+  </main>
+</div>
+
+<button class="menu-toggle" id="menuToggle">≡</button>
+
+<script>
+// ============ 导航切换 ============
+const views = document.querySelectorAll('.view');
+const navItems = document.querySelectorAll('[data-view]');
+const breadcrumbCurrent = document.getElementById('crumb-current');
+const main = document.getElementById('main');
+
+// 章节名称映射
+const crumbMap = {
+  'views': '立体认知地图 · 四视图总览',
+  'view-front': '立体认知 · 正视图 · 四锚结构',
+  'view-side': '立体认知 · 侧视图 · 时间演化',
+  'view-top': '立体认知 · 俯视图 · 博弈结构',
+  'view-3d': '立体认知 · 立体总图 · 决策流程',
+  'map': '知识地图',
+  'cap-overview': '资金锚 · 总览',
+  'cap-structure': '资金锚 · 四层结构',
+  'cap-s1': '资金锚 · L1.1 宏观流动性',
+  'cap-s2': '资金锚 · L1.2 入市资金',
+  'cap-s3': '资金锚 · L1.3 板块轮动',
+  'cap-s4': '资金锚 · L1.4 个股资金',
+  'cap-features': '资金锚 · L2 A股四大特征',
+  'cap-practice': '资金锚 · L3 实战应用',
+  'cap-advanced': '资金锚 · L4 高阶认知',
+  'cap-toolkit': '资金锚 · L5 工具箱',
+  'sent-overview': '情绪锚 · 总览',
+  'sent-structure': '情绪锚 · 四层结构',
+  'sent-s1': '情绪锚 · S1.1 预期差',
+  'sent-s2': '情绪锚 · S1.2 叙事',
+  'sent-s3': '情绪锚 · S1.3 共识演化',
+  'sent-s4': '情绪锚 · S1.4 情绪周期',
+  'sent-features': '情绪锚 · S2 A股四大特征',
+  'sent-practice': '情绪锚 · S3 实战应用',
+  'sent-advanced': '情绪锚 · S4 高阶认知',
+  'sent-traps': '情绪锚 · S5 十大陷阱',
+  'chip-overview': '筹码锚 · 总览',
+  'chip-structure': '筹码锚 · 四层结构',
+  'chip-s1': '筹码锚 · C1.1 存量结构',
+  'chip-s2': '筹码锚 · C1.2 流动结构',
+  'chip-s3': '筹码锚 · C1.3 成本结构',
+  'chip-s4': '筹码锚 · C1.4 意图博弈',
+  'chip-features': '筹码锚 · C2 A股四大特征',
+  'chip-practice': '筹码锚 · C3 实战应用',
+  'chip-advanced': '筹码锚 · C4 高阶认知',
+  'chip-traps': '筹码锚 · C5 十大陷阱',
+  'synthesis': '四锚整合 · 终极图景',
+  'preface': '前言',
+  'ch1': '第一章 · 盈利锚的本质',
+  'ch1-1': '第一章 · 1.1 核心定义',
+  'ch1-2': '第一章 · 1.2 A股四大特殊性',
+  'ch1-3': '第一章 · 1.3 实战运用原则',
+  'ch2': '第二章 · 研究的能力体系',
+  'ch2-1': '第二章 · 2.1 财报解读',
+  'ch2-2': '第二章 · 2.2 商业模式',
+  'ch2-3': '第二章 · 2.3 行业产业',
+  'ch2-4': '第二章 · 2.4 宏观周期',
+  'ch2-5': '第二章 · 2.5 估值交易',
+  'ch3': '第三章 · AI与人的分工',
+  'ch3-1': '第三章 · 3.1 AI高效工作',
+  'ch3-2': '第三章 · 3.2 AI需警惕',
+  'ch3-3': '第三章 · 3.3 人必备能力',
+  'ch3-4': '第三章 · 3.4 分工对照表',
+  'ch4': '第四章 · 六层漏斗',
+  'ch4-1': '第四章 · 4.1 宏观时代',
+  'ch4-2': '第四章 · 4.2 行业研究',
+  'ch4-3': '第四章 · 4.3 商业模式',
+  'ch4-4': '第四章 · 4.4 财务分析',
+  'ch4-5': '第四章 · 4.5 管理层治理',
+  'ch4-6': '第四章 · 4.6 估值分析',
+  'ch5': '第五章 · 边际定价与预期差',
+  'ch5-1': '第五章 · 5.1 边际定价原理',
+  'ch5-2': '第五章 · 5.2 不同阶段定价者',
+  'ch5-3': '第五章 · 5.3 预期差理论',
+  'ch5-4': '第五章 · 5.4 四条路径',
+  'ch6': '第六章 · 逻辑有效性困境',
+  'ch6-1': '第六章 · 6.1 根本问题',
+  'ch6-2': '第六章 · 6.2 四个原因',
+  'ch6-3': '第六章 · 6.3 六个应对方法',
+  'ch7': '第七章 · 七个进阶维度',
+  'ch7-1': '第七章 · 7.1 五级质量分层',
+  'ch7-2': '第七章 · 7.2 时间维度演化',
+  'ch7-3': '第七章 · 7.3 A股独有因素',
+  'ch7-4': '第七章 · 7.4 反身性原理',
+  'ch7-5': '第七章 · 7.5 心理账户鸿沟',
+  'ch7-6': '第七章 · 7.6 组合视角',
+  'ch7-7': '第七章 · 7.7 十个致命陷阱',
+  'ch8': '第八章 · 完整心智模型',
+  'appA': '附录 A · 核心清单',
+  'appB': '附录 B · 术语速查'
+};
+
+function switchView(viewId) {
+  // 切换视图
+  views.forEach(v => v.classList.remove('active'));
+  const targetView = document.querySelector(`.view[data-view="${viewId}"]`);
+  if (!targetView) return;
+  targetView.classList.add('active');
+
+  // 滚动到顶部
+  main.scrollTo({ top: 0, behavior: 'smooth' });
+
+  // 更新面包屑
+  breadcrumbCurrent.textContent = crumbMap[viewId] || viewId;
+
+  // 更新导航激活态
+  document.querySelectorAll('.nav-item, .nav-sub-item').forEach(el => {
+    el.classList.remove('active');
+  });
+
+  const navEl = document.querySelector(`.nav-item[data-view="${viewId}"], .nav-sub-item[data-view="${viewId}"]`);
+  if (navEl) {
+    navEl.classList.add('active');
+    // 如果是子项，展开父章节
+    const parentChapter = navEl.closest('.nav-chapter');
+    if (parentChapter) parentChapter.classList.add('open');
+  }
+
+  // 如果是主章节，也展开其子菜单
+  const chapterWrap = document.querySelector(`.nav-chapter:has(.nav-item[data-view="${viewId}"])`);
+  if (chapterWrap) chapterWrap.classList.add('open');
+
+  // 更新URL hash
+  if (history.replaceState) {
+    history.replaceState(null, '', '#' + viewId);
+  }
+
+  // 移动端关闭侧边栏
+  document.getElementById('sidebar').classList.remove('open');
+}
+
+// 点击导航项
+navItems.forEach(item => {
+  item.addEventListener('click', (e) => {
+    e.stopPropagation();
+    const viewId = item.dataset.view;
+
+    // 如果是章节主项且有子项，先切换视图，但不阻止展开
+    const chapter = item.closest('.nav-chapter');
+    if (chapter && item.classList.contains('nav-item')) {
+      chapter.classList.toggle('open');
+    }
+
+    switchView(viewId);
+  });
+});
+
+// 点击卡片跳转
+document.querySelectorAll('[data-jump]').forEach(card => {
+  card.addEventListener('click', () => {
+    switchView(card.dataset.jump);
+  });
+});
+
+// 点击流程节点跳转
+document.querySelectorAll('.flow-node[data-jump]').forEach(node => {
+  node.style.cursor = 'pointer';
+});
+
+// 清单勾选
+document.querySelectorAll('.checklist li').forEach(li => {
+  li.addEventListener('click', () => {
+    li.classList.toggle('checked');
+  });
+});
+
+// 搜索过滤
+const searchInput = document.getElementById('search');
+searchInput.addEventListener('input', (e) => {
+  const q = e.target.value.trim().toLowerCase();
+  document.querySelectorAll('.nav-item, .nav-sub-item').forEach(el => {
+    const text = el.textContent.toLowerCase();
+    if (!q || text.includes(q)) {
+      el.style.display = '';
+    } else {
+      el.style.display = 'none';
+    }
+  });
+  // 搜索时展开所有章节
+  if (q) {
+    document.querySelectorAll('.nav-chapter').forEach(c => c.classList.add('open'));
+  }
+});
+
+// 移动端菜单
+document.getElementById('menuToggle').addEventListener('click', () => {
+  document.getElementById('sidebar').classList.toggle('open');
+});
+
+// 初始加载：根据URL hash显示
+const initHash = window.location.hash.substring(1);
+if (initHash && crumbMap[initHash]) {
+  switchView(initHash);
+}
+
+// 键盘快捷键
+document.addEventListener('keydown', (e) => {
+  if (e.key === '/' && document.activeElement !== searchInput) {
+    e.preventDefault();
+    searchInput.focus();
+  }
+  if (e.key === 'Escape') {
+    searchInput.blur();
+    searchInput.value = '';
+    searchInput.dispatchEvent(new Event('input'));
+  }
+});
+</script>
+</body>
+</html>

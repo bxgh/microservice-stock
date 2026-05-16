@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>投资指南 - 知识体系门户</title>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;500;700;900&family=Noto+Sans+SC:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #0e0d0b;
+            --bg-elev-1: #15130f;
+            --bg-elev-2: #1c1915;
+            --bg-elev-3: #2a2520;
+            --ink: #ede3cc;
+            --ink-dim: #dcd4c0;
+            --ink-mute: #8c836e;
+            --ink-whisper: #4d4538;
+            --amber: #d4a23e;
+            --amber-bright: #f0c968;
+            --amber-soft: rgba(212, 162, 62, 0.18);
+            --hair: #2a2520;
+            --font-serif: 'Noto Serif SC', 'Songti SC', serif;
+            --font-sans: 'Noto Sans SC', -apple-system, sans-serif;
+            --font-mono: 'JetBrains Mono', 'SF Mono', Consolas, monospace;
+            --fs-xs: 12px;
+            --fs-sm: 13px;
+            --fs-base: 15px;
+            --fs-md: 17px;
+            --fs-lg: 20px;
+            --fs-xl: 24px;
+            --space-1: 4px;
+            --space-2: 8px;
+            --space-3: 12px;
+            --space-4: 16px;
+            --space-6: 24px;
+            --space-8: 32px;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            background: var(--bg);
+            color: var(--ink);
+            font-family: var(--font-sans);
+            font-size: var(--fs-base);
+            line-height: 1.6;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        body::before {
+            content: '';
+            position: fixed;
+            inset: 0;
+            pointer-events: none;
+            z-index: 999;
+            background: white;
+            mix-blend-mode: overlay;
+            opacity: 0.03;
+            filter: contrast(120%) brightness(100%);
+        }
+
+        .header {
+            padding: var(--space-8) var(--space-6);
+            border-bottom: 1px solid var(--hair);
+            background: var(--bg-elev-1);
+        }
+
+        .header-content { max-width: 1200px; margin: 0 auto; }
+
+        .brand {
+            font-family: var(--font-serif);
+            font-size: var(--fs-xl);
+            color: var(--amber);
+            margin-bottom: var(--space-2);
+            letter-spacing: 0.05em;
+        }
+
+        .subtitle {
+            font-size: var(--fs-sm);
+            color: var(--ink-mute);
+            font-family: var(--font-mono);
+        }
+
+        .main {
+            flex: 1;
+            padding: var(--space-8) var(--space-6);
+            max-width: 1200px;
+            margin: 0 auto;
+            width: 100%;
+        }
+
+        .section { margin-bottom: var(--space-8); }
+
+        .section-title {
+            font-family: var(--font-serif);
+            font-size: var(--fs-lg);
+            color: var(--ink);
+            margin-bottom: var(--space-4);
+            display: flex;
+            align-items: center;
+            gap: var(--space-3);
+        }
+
+        .section-title::after {
+            content: '';
+            flex: 1;
+            height: 1px;
+            background: var(--hair);
+        }
+
+        .recent-section {
+            background: var(--bg-elev-1);
+            border: 1px solid var(--hair);
+            padding: var(--space-6);
+            margin-bottom: var(--space-4);
+        }
+
+        .doc-list { display: flex; flex-direction: column; gap: var(--space-2); }
+
+        .doc-item {
+            display: flex;
+            align-items: center;
+            gap: var(--space-4);
+            padding: var(--space-2) 0;
+            border-bottom: 1px solid var(--hair);
+            text-decoration: none;
+            color: var(--ink-dim);
+            transition: all 0.15s;
+        }
+
+        .doc-item:hover { color: var(--amber); padding-left: var(--space-2); }
+
+        .doc-title { flex: 1; font-size: var(--fs-base); }
+        .doc-tag {
+            font-size: 10px;
+            color: var(--amber);
+            border: 1px solid var(--amber-soft);
+            padding: 1px 4px;
+            text-transform: uppercase;
+            font-family: var(--font-mono);
+        }
+
+        .footer {
+            padding: var(--space-6);
+            text-align: center;
+            border-top: 1px solid var(--hair);
+            color: var(--ink-whisper);
+            font-size: var(--fs-xs);
+            font-family: var(--font-mono);
+        }
+        
+        .breadcrumb {
+            margin-bottom: var(--space-4);
+            font-family: var(--font-mono);
+            font-size: var(--fs-xs);
+            color: var(--ink-mute);
+        }
+        .breadcrumb a { color: var(--amber); text-decoration: none; }
+        .breadcrumb a:hover { text-decoration: underline; }
+    </style>
+</head>
+<body>
+    <header class="header">
+        <div class="header-content">
+            <h1 class="brand">投资指南知识库</h1>
+            <p class="subtitle">A股认知体系 / 盈利锚 / 量化成交量 / 实战手册</p>
+        </div>
+    </header>
+
+    <main class="main">
+        <div class="breadcrumb"><a href="../index.html">Project Hub</a> / 投资指南</div>
+
+        <section class="section">
+            <h2 class="section-title">核心认知与操作体系</h2>
+            <div class="recent-section">
+                <div class="doc-list">
+                    <a href="投资体系.html" class="doc-item" target="_blank">
+                        <span class="doc-tag">PHILOSOPHY</span>
+                        <span class="doc-title">你的投资体系 1.0</span>
+                    </a>
+                    <a href="A股认知体系.html" class="doc-item" target="_blank">
+                        <span class="doc-tag">CORE</span>
+                        <span class="doc-title">A股认知体系</span>
+                    </a>
+                    <a href="A股四锚知识框架.html" class="doc-item" target="_blank">
+                        <span class="doc-tag">FRAMEWORK</span>
+                        <span class="doc-title">A股四锚知识框架</span>
+                    </a>
+                    <a href="A股操作指南.html" class="doc-item" target="_blank">
+                        <span class="doc-tag">GUIDE</span>
+                        <span class="doc-title">A股操作指南</span>
+                    </a>
+                    <a href="execution_handbook.html" class="doc-item" target="_blank">
+                        <span class="doc-tag">HANDBOOK</span>
+                        <span class="doc-title">Execution Handbook - 实战手册</span>
+                    </a>
+                    <a href="six-disciplines-terminal.html" class="doc-item" target="_blank">
+                        <span class="doc-tag">TERMINAL</span>
+                        <span class="doc-title">六大纪律终端 (Six Disciplines)</span>
+                    </a>
+                </div>
+            </div>
+        </section>
+
+        <section class="section">
+            <h2 class="section-title">盈利锚深度研究</h2>
+            <div class="recent-section">
+                <div class="doc-list">
+                    <a href="盈利锚完整体系.html" class="doc-item" target="_blank">
+                        <span class="doc-tag">SYSTEM</span>
+                        <span class="doc-title">盈利锚完整体系</span>
+                    </a>
+                    <a href="盈利锚知识框架.html" class="doc-item" target="_blank">
+                        <span class="doc-tag">KNOWLEDGE</span>
+                        <span class="doc-title">盈利锚知识框架 (Standard)</span>
+                    </a>
+                    <a href="盈利锚知识框架_1.html" class="doc-item" target="_blank">
+                        <span class="doc-tag">KNOWLEDGE</span>
+                        <span class="doc-title">盈利锚知识框架 (Extended)</span>
+                    </a>
+                    <a href="four-anchors-analysis.html" class="doc-item" target="_blank">
+                        <span class="doc-tag">ANALYSIS</span>
+                        <span class="doc-title">四锚深度分析 (Four Anchors)</span>
+                    </a>
+                </div>
+            </div>
+        </section>
+
+        <section class="section">
+            <h2 class="section-title">成交量与量化波段</h2>
+            <div class="recent-section">
+                <div class="doc-list">
+                    <a href="volume_x_quantitative_wave.html" class="doc-item" target="_blank">
+                        <span class="doc-tag">QUANT</span>
+                        <span class="doc-title">Volume X: Quantitative Wave (Light)</span>
+                    </a>
+                    <a href="volume_x_quantitative_wave_dark.html" class="doc-item" target="_blank">
+                        <span class="doc-tag">QUANT</span>
+                        <span class="doc-title">Volume X: Quantitative Wave (Dark)</span>
+                    </a>
+                    <a href="volume_xi_critical_transition.html" class="doc-item" target="_blank">
+                        <span class="doc-tag">QUANT</span>
+                        <span class="doc-title">Volume XI: Critical Transition</span>
+                    </a>
+                    <a href="volume_x_cheatsheet_dark.html" class="doc-item" target="_blank">
+                        <span class="doc-tag">CHEATSHEET</span>
+                        <span class="doc-title">Volume X Cheatsheet (Dark)</span>
+                    </a>
+                </div>
+            </div>
+        </section>
+
+        <section class="section">
+            <h2 class="section-title">资金面与市场监控</h2>
+            <div class="recent-section">
+                <div class="doc-list">
+                    <a href="capital_perspective.html" class="doc-item" target="_blank">
+                        <span class="doc-tag">CAPITAL</span>
+                        <span class="doc-title">Capital Perspective - 资金视角</span>
+                    </a>
+                    <a href="capital_map_methodology.html" class="doc-item" target="_blank">
+                        <span class="doc-tag">METHOD</span>
+                        <span class="doc-title">Capital Map Methodology</span>
+                    </a>
+                    <a href="capital_index.html" class="doc-item" target="_blank">
+                        <span class="doc-tag">INDEX</span>
+                        <span class="doc-title">Capital Index Research</span>
+                    </a>
+                    <a href="ashare_monitoring_system.html" class="doc-item" target="_blank">
+                        <span class="doc-tag">SYSTEM</span>
+                        <span class="doc-title">A-Share Monitoring System Design</span>
+                    </a>
+                </div>
+            </div>
+        </section>
+
+        <section class="section">
+            <h2 class="section-title">个股案例研究</h2>
+            <div class="recent-section">
+                <div class="doc-list">
+                    <a href="moutai-four-anchors-terminal.html" class="doc-item" target="_blank">
+                        <span class="doc-tag">MOUTAI</span>
+                        <span class="doc-title">贵州茅台：四锚研究终端</span>
+                    </a>
+                    <a href="catl_case_study.html" class="doc-item" target="_blank">
+                        <span class="doc-tag">CATL</span>
+                        <span class="doc-title">宁德时代：案例研究报告</span>
+                    </a>
+                    <a href="mindray_case_study.html" class="doc-item" target="_blank">
+                        <span class="doc-tag">MINDRAY</span>
+                        <span class="doc-title">迈瑞医疗：案例研究报告</span>
+                    </a>
+                </div>
+            </div>
+        </section>
+
+        <section class="section">
+            <h2 class="section-title">工程与工具说明</h2>
+            <div class="recent-section">
+                <div class="doc-list">
+                    <a href="用AI搭建政策跟踪系统.html" class="doc-item" target="_blank">
+                        <span class="doc-tag">ENGINEERING</span>
+                        <span class="doc-title">用AI搭建政策跟踪系统</span>
+                    </a>
+                    <a href="diary_app_screens_overview.html" class="doc-item" target="_blank">
+                        <span class="doc-tag">UI/UX</span>
+                        <span class="doc-title">Diary App Screens Overview</span>
+                    </a>
+                    <a href="diary_detail_redesign_three_options.html" class="doc-item" target="_blank">
+                        <span class="doc-tag">RE-DESIGN</span>
+                        <span class="doc-title">Diary Detail Redesign Options</span>
+                    </a>
+                    <a href="engineering_appendix.html" class="doc-item" target="_blank">
+                        <span class="doc-tag">ENG</span>
+                        <span class="doc-title">Engineering Appendix (Standard)</span>
+                    </a>
+                    <a href="meta_research.html" class="doc-item" target="_blank">
+                        <span class="doc-tag">RESEARCH</span>
+                        <span class="doc-title">Meta Research Framework</span>
+                    </a>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer class="footer">
+        Generated by Antigravity AI Portal Manager | 2026-05-16 | Standalone Mode
+    </footer>
+</body>
+</html>

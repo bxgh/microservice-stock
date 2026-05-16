@@ -1,0 +1,487 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>E1 数据基础设施 (重整版)</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Noto+Serif+SC:wght@400;700;900&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    
+    <!-- Libraries -->
+    <script src="https://lib.baomitu.com/marked/11.1.1/marked.min.js"></script>
+    <link rel="stylesheet" href="https://lib.baomitu.com/github-markdown-css/5.5.0/github-markdown-dark.min.css">
+    <script src="https://lib.baomitu.com/mermaid/10.9.0/mermaid.min.js"></script>
+    
+    <!-- Syntax Highlighting -->
+    <link rel="stylesheet" href="https://lib.baomitu.com/highlight.js/11.9.0/styles/tokyo-night-dark.min.css">
+    <script src="https://lib.baomitu.com/highlight.js/11.9.0/highlight.min.js"></script>
+    
+    <style>
+        :root {
+            --bg: #0a0a0a;
+            --surface: #121212;
+            --surface-hover: #1a1a1a;
+            --border: #222222;
+            --accent: #eab308;
+            --accent-glow: rgba(234, 179, 8, 0.1);
+            --text-primary: #f1f5f9;
+            --text-secondary: #94a3b8;
+            --text-muted: #64748b;
+            --font-sans: 'Outfit', 'Noto Sans SC', -apple-system, sans-serif;
+            --font-serif: 'Noto Serif SC', serif;
+            --font-mono: 'JetBrains Mono', monospace;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background-color: var(--bg);
+            color: var(--text-primary);
+            font-family: var(--font-sans);
+            line-height: 1.7;
+            -webkit-font-smoothing: antialiased;
+            overflow-x: hidden;
+        }
+
+        /* Subtle background glow */
+        body::after {
+            content: '';
+            position: fixed;
+            top: 0;
+            right: 0;
+            width: 40vw;
+            height: 40vh;
+            background: radial-gradient(circle, var(--accent-glow) 0%, transparent 70%);
+            z-index: -1;
+            filter: blur(100px);
+            pointer-events: none;
+        }
+
+        .sidebar {
+            width: 260px;
+            height: 100vh;
+            position: fixed;
+            left: 0;
+            top: 0;
+            border-right: 1px solid var(--border);
+            background: var(--bg);
+            padding: 1.5rem;
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+            overflow-y: auto;
+            z-index: 100;
+        }
+
+        .nav-link {
+            color: var(--text-muted);
+            text-decoration: none;
+            font-size: 0.85rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            transition: color 0.2s;
+            padding: 0.5rem;
+            border-radius: 6px;
+        }
+        .nav-link:hover { color: var(--accent); background: var(--surface); }
+
+        .toc-title {
+            font-family: var(--font-serif);
+            font-size: 1rem;
+            color: var(--text-primary);
+            margin-bottom: 0.8rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding-left: 0.5rem;
+        }
+        .toc-title::before {
+            content: '';
+            width: 3px;
+            height: 1rem;
+            background: var(--accent);
+            border-radius: 2px;
+        }
+
+        .toc-list {
+            list-style: none;
+            display: flex;
+            flex-direction: column;
+            gap: 0.4rem;
+        }
+        .toc-item {
+            font-size: 0.8rem;
+            line-height: 1.3;
+        }
+        .toc-item a {
+            color: var(--text-muted);
+            text-decoration: none;
+            transition: all 0.2s;
+            display: block;
+            padding: 0.4rem 0.5rem;
+            border-radius: 4px;
+        }
+        .toc-item a:hover { color: var(--accent); background: var(--surface); }
+        .toc-item.level-3 { margin-left: 0.8rem; border-left: 1px solid var(--border); }
+
+        .container {
+            max-width: 860px;
+            margin: 0 auto 0 260px;
+            padding: 3rem 4rem;
+            animation: fadeIn 0.6s ease-out;
+        }
+
+        @media (max-width: 1024px) {
+            .sidebar { width: 220px; padding: 1rem; }
+            .container { margin-left: 220px; padding: 2rem; }
+        }
+
+        @media (max-width: 800px) {
+            .sidebar { position: static; width: 100%; height: auto; border-right: none; border-bottom: 1px solid var(--border); }
+            .container { margin-left: 0; padding: 1.5rem; }
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(5px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        header {
+            margin-bottom: 3rem;
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 1.5rem;
+        }
+
+        .meta {
+            font-family: var(--font-mono);
+            font-size: 0.75rem;
+            color: var(--accent);
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            margin-bottom: 0.8rem;
+            display: flex;
+            align-items: center;
+            gap: 0.8rem;
+        }
+
+        .meta::before {
+            content: '';
+            width: 20px;
+            height: 1px;
+            background-color: var(--accent);
+        }
+
+        h1 {
+            font-family: var(--font-serif);
+            font-size: 2.2rem;
+            font-weight: 900;
+            line-height: 1.2;
+            margin-bottom: 1rem;
+            color: var(--text-primary);
+        }
+
+        .markdown-body {
+            background: transparent !important;
+            color: var(--text-primary) !important;
+            font-family: var(--font-sans) !important;
+            font-size: 0.95rem !important;
+        }
+
+        .markdown-body h2 {
+            font-family: var(--font-serif);
+            font-size: 1.5rem !important;
+            color: var(--accent) !important;
+            border-bottom: 1px solid var(--border) !important;
+            padding-bottom: 0.5rem !important;
+            margin-top: 2.5rem !important;
+            scroll-margin-top: 1rem;
+        }
+
+        .markdown-body h3 {
+            font-family: var(--font-serif);
+            font-size: 1.25rem !important;
+            color: var(--text-primary) !important;
+            margin-top: 2rem !important;
+            scroll-margin-top: 1rem;
+        }
+
+        .markdown-body p, .markdown-body li {
+            font-size: 0.95rem !important;
+            color: var(--text-primary) !important;
+        }
+        
+        .markdown-body pre {
+            background-color: #1a1b26 !important; /* Match Tokyo Night Dark */
+            border: 1px solid var(--border);
+            border-radius: 8px !important;
+            padding: 0 !important; /* Code internal handles padding */
+            margin: 1.2rem 0 !important;
+            overflow: hidden;
+        }
+
+        .markdown-body pre code {
+            background-color: transparent !important;
+            padding: 1.2rem !important;
+            display: block;
+            font-family: var(--font-mono) !important;
+            font-size: 0.85rem !important;
+            line-height: 1.5;
+        }
+
+        .markdown-body blockquote {
+            border-left: 3px solid var(--accent) !important;
+            background: var(--surface);
+            padding: 0.8rem 1.2rem;
+            color: var(--text-secondary) !important;
+            margin: 1.2rem 0 !important;
+        }
+
+        .markdown-body table {
+            background: var(--surface);
+            font-size: 0.85rem !important;
+            margin: 1.2rem 0 !important;
+        }
+
+        footer {
+            margin-top: 4rem;
+            padding-top: 1.5rem;
+            border-top: 1px solid var(--border);
+            color: var(--text-muted);
+            font-size: 0.8rem;
+            text-align: center;
+        }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar { width: 5px; }
+        ::-webkit-scrollbar-track { background: var(--bg); }
+        ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+    </style>
+</head>
+<body>
+    <aside class="sidebar">
+        <a href="index.html" class="nav-link">
+            <span>←</span> 返回目录门户
+        </a>
+        
+        <div class="toc-container">
+            <h3 class="toc-title">文档导航</h3>
+            <ul class="toc-list" id="toc">
+                <!-- TOC items will be injected here -->
+            </ul>
+        </div>
+    </aside>
+
+    <div class="container">
+        <header>
+            <div class="meta">GLOBAL | 2026-05-16 19:06</div>
+            <h1>E1 数据基础设施 (重整版)</h1>
+        </header>
+
+        <article id="content" class="markdown-body">
+            <!-- Loading indicator -->
+            <p style="color: var(--text-muted)">正在解析文档内容...</p>
+        </article>
+
+        <footer>
+            &copy; 2026 MicroStock Project Docs | Generated by Antigravity
+        </footer>
+    </div>
+
+    <script id="markdown-raw" type="text/markdown"># E1 数据基础设施 (重整版)
+
+> **现状评估**: 项目已具备 `tushare-api`、`akshare-api` 及成熟的 `stock-manager-api` 同步机制。MySQL 5.7 与 ClickHouse 已投产。
+> **重整目标**: 将现有的分散财务同步逻辑整合进标准化的 `ods_*` 层，并新增公告全文抓取能力。
+
+构建本地化数据底座,所有后续分析依赖此层。**核心原则:数据全部本地化,不在分析时实时拉取**。预计耗时 1 周 (基于已有设施)。
+
+## E1-S1 数据源接入扩展
+
+**作为** 系统数据管理员,**我希望** 在现有 `tushare-api` 中增加财务三报表接口，并统一由 `stock-manager-api` 调度,**以便** 补齐基本面分析所需的原始 Fact 数据。
+
+### 任务
+
+- E1-S1-T1 (已完成) 申请 Tushare Pro 账号并获取 API token。
+- E1-S1-T2 (MODIFY) 扩展 `tushare-api` 的 `TushareService`，增加 `balancesheet`, `income`, `cashflow`, `fina_indicator` 接口。
+- E1-S1-T3 (NEW) 在 `stock-manager-api` 中封装 `FinancialDataService`，支持从 Tushare 增量拉取报告期数据。
+- E1-S1-T4 (MODIFY) 升级历史回填脚本 `init_history.py`，专门负责 2010 年至今的财务三报表及核心指标的全量补齐。
+- E1-S1-T5 (REUSE) 复用现有的 `_execute` 异步封装与限频重试机制。
+
+### 验收标准
+
+- **AC1**: 财务数据增量同步
+  - **Given** 公司发布新财报
+  - **When** 每日定时任务触发
+  - **Then** 自动拉取并存入 `ods_financial_balancesheet` 等表，数据偏差 ≤ 0.01% (与 Tushare 官网对比)
+
+---
+
+## E1-S2 数据库标准化与 Schema 演进
+
+**作为** 系统架构维护者,**我希望** 将现有的 `stock_balance_sheet` 等旧表规范化为 `ods_*` 系列，并补充审计字段,**以便** 满足 v1.2 治理要求。
+
+### 任务
+
+- E1-S2-T1 (REUSE) 现有的腾讯云 MySQL 5.7 和 ClickHouse 环境。
+- E1-S2-T2 (STRICT) 强制执行 `ods_*` 命名规范。将旧表数据迁移至新表（如 `ods_fin_balancesheet`）。
+- E1-S2-T3 (DDL) 编写 DDL 补齐 `created_at`, `updated_at`, `is_deleted` 及其索引（详见 `AGENTS.md`）。
+- E1-S2-T4 (REUSE) 现有的内网 Slave 容灾架构。
+- E1-S2-T5 (NEW) 在 ClickHouse 中建立财务宽表物化视图，支持跨季度同比/环比秒级查询。
+
+### 验收标准
+
+- **AC1**: 核心表规范化
+  - **Given** 执行 DDL 变更
+  - **Then** 所有基本面相关表必须包含 `is_deleted` 字段，且默认为 0。
+
+---
+
+## E1-S3 公告/纪要全文抓取 (New Layer)
+
+**作为** AI 抽取层的上游,**我希望** 全量抓取年报、季报、调研纪要、业绩说明会的 PDF 原文并归档,**以便** L3 层可以基于全文做结构化抽取。
+
+### 任务
+
+- E1-S3-T1 编写巨潮资讯网爬虫,抓取年报/半年报/季报 PDF (新增 `crawler-service`)
+- E1-S3-T2 抓取业绩说明会纪要(投资者关系互动平台)
+- E1-S3-T3 抓取机构调研纪要(深交所互动易、上交所 e 互动)
+- E1-S3-T4 PDF 文本提取(用 `pdfplumber` 或 `PyMuPDF`)并存储为 Markdown
+- E1-S3-T5 文件归档命名规范:`{ts_code}_{report_type}_{report_period}.md`,存储路径 `/data/disclosures/`
+
+### 验收标准
+
+- **AC1**: 年报抓取覆盖率
+  - **Given** 半导体 + 生物合成研究池(预计 ~200 只)
+  - **When** 执行 `fetch_annual_reports.py --year 2024`
+  - **Then** 抓取覆盖率 ≥ 95%
+
+---
+
+## E1-S4 数据质量与契约集成
+
+**作为** 系统使用者,**我希望** 财务数据接入自动触发 `meta_data_readiness` 信号,**以便** 后续 AI 抽取任务能够基于事件驱动。
+
+### 任务
+
+- E1-S4-T1 (REUSE) 现有 `data_readiness` 机制。
+- E1-S4-T2 在财务同步完成后，自动向 `meta_data_readiness` 插入就绪状态。
+- E1-S4-T3 (NEW) 跨源校验：对比 Tushare 与 AkShare 的净利润、净资产关键字段，差异 > 1% 则告警。
+- E1-S4-T4 异常告警通过已有的邮件 / Bark 系统推送。
+
+### 验收标准
+
+- **AC1**: 事件驱动链路
+  - **Given** 财务报表同步完成
+  - **Then** `meta_data_readiness` 出现对应记录，状态为 `READY`
+DF 原文并归档,**以便** L3 层可以基于全文做结构化抽取。
+
+### 任务
+
+- E1-S3-T1 编写巨潮资讯网爬虫,抓取年报/半年报/季报 PDF
+- E1-S3-T2 抓取业绩说明会纪要(投资者关系互动平台)
+- E1-S3-T3 抓取机构调研纪要(深交所互动易、上交所 e 互动)
+- E1-S3-T4 PDF 文本提取(用 `pdfplumber` 或 `PyMuPDF`)并存储为 Markdown
+- E1-S3-T5 文件归档命名规范:`{ts_code}_{report_type}_{report_period}.md`,存储路径 `/data/disclosures/`
+
+### 验收标准
+
+- **AC1**: 年报抓取覆盖率
+  - **Given** 半导体 + 生物合成研究池(预计 ~200 只)
+  - **When** 执行 `fetch_annual_reports.py --year 2024`
+  - **Then** 抓取覆盖率 ≥ 95%,失败的股票输出到 `failed_list.txt`(可能由于公告未披露、PDF 解析失败等),手工兜底
+
+- **AC2**: PDF 文本提取质量
+  - **Given** 一份 100 页年报 PDF
+  - **When** 执行文本提取
+  - **Then** 提取后的 Markdown 文本中"管理层讨论与分析"章节完整,表格保留为 Markdown 表格格式,提取时长 ≤ 30 秒
+
+- **AC3**: 增量更新
+  - **Given** 系统已运行,某公司发布新年报
+  - **When** E1-S1 检测到新披露事件
+  - **Then** 自动触发该公司年报抓取,30 分钟内完成抓取 + 文本提取 + 归档
+
+---
+
+## E1-S4 数据质量校验
+
+**作为** 系统使用者,**我希望** 数据异常被自动发现和告警,**以便** 不会基于错误数据做错误判断。
+
+### 任务
+
+- E1-S4-T1 编写每日数据质量校验脚本(空值检查、异常值检查、跨源对比)
+- E1-S4-T2 Tushare vs akshare 关键字段交叉验证(如收盘价、市值)
+- E1-S4-T3 财报数据勾稽校验(资产 = 负债 + 所有者权益等基础恒等式)
+- E1-S4-T4 异常告警通过邮件 / Bark 推送
+
+### 验收标准
+
+- **AC1**: 跨源价格校验
+  - **Given** 当日行情已同步完成
+  - **When** 触发 `qc_price_cross_check.py`
+  - **Then** Tushare 与 akshare 收盘价偏差 > 1% 的股票输出到告警列表,推送至预设邮箱
+
+- **AC2**: 财报恒等式校验
+  - **Given** 新披露的财报数据已入库
+  - **When** 触发 `qc_financial_identity.py`
+  - **Then** 资产 ≠ 负债 + 所有者权益(误差 > 1 万元)的报告记录到 `meta_qc_alerts` 表,人工复核后标记 resolved/wontfix
+</script>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', async () => {
+            const rawMd = document.getElementById('markdown-raw').textContent;
+            const contentEl = document.getElementById('content');
+            const tocEl = document.getElementById('toc');
+            
+            // Set options for marked
+            marked.setOptions({
+                gfm: true,
+                breaks: true,
+                headerIds: true,
+                mangle: false,
+                highlight: function(code, lang) {
+                    const language = hljs.getLanguage(lang) ? lang : 'plaintext';
+                    return hljs.highlight(code, { language }).value;
+                }
+            });
+
+            // Parse Markdown
+            contentEl.innerHTML = marked.parse(rawMd);
+            
+            // Generate TOC
+            const headings = contentEl.querySelectorAll('h2, h3');
+            headings.forEach((h, index) => {
+                if (!h.id) h.id = 'heading-' + index;
+                
+                const li = document.createElement('li');
+                li.className = 'toc-item level-' + h.tagName.toLowerCase().charAt(1);
+                
+                const a = document.createElement('a');
+                a.href = '#' + h.id;
+                a.textContent = h.textContent;
+                
+                li.appendChild(a);
+                tocEl.appendChild(li);
+            });
+
+            // Handle Mermaid
+            if (window.mermaid) {
+                mermaid.initialize({ startOnLoad: false, theme: 'dark', useWorker: false });
+                document.querySelectorAll('pre code.language-mermaid').forEach(el => {
+                    const pre = el.parentElement;
+                    const div = document.createElement('div');
+                    div.className = 'mermaid';
+                    div.textContent = el.textContent;
+                    pre.parentElement.replaceChild(div, pre);
+                });
+                mermaid.run();
+            }
+        });
+    </script>
+</body>
+</html>

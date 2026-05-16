@@ -1,0 +1,581 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>案例册 · 宁德时代资金运行周期全景解剖</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;500;700;900&family=JetBrains+Mono:wght@300;400;500;600;700&family=Bodoni+Moda:ital,wght@0,400;0,700;0,900;1,400&display=swap" rel="stylesheet">
+<style>
+:root{--bg-deep:#0a0e14;--bg-card:#11161f;--bg-elevated:#1a212d;--border:#2a3441;--border-bright:#3d4a5c;--text-primary:#e8eaed;--text-secondary:#9ba7b8;--text-muted:#5a6779;--amber:#ffb547;--amber-bright:#ffc875;--amber-dim:#8a6027;--cyan:#4dd0e1;--red:#ff5252;--green:#66bb6a;--purple:#b794f4;--rose:#f48fb1;--grid-line:rgba(255,181,71,0.06)}*{margin:0;padding:0;box-sizing:border-box}html{scroll-behavior:smooth}body{font-family:'Noto Serif SC',serif;background:var(--bg-deep);color:var(--text-primary);line-height:1.7;background-image:linear-gradient(var(--grid-line) 1px,transparent 1px),linear-gradient(90deg,var(--grid-line) 1px,transparent 1px);background-size:60px 60px;background-attachment:fixed}.header{position:relative;padding:100px 60px 80px;border-bottom:1px solid var(--border);overflow:hidden}.header::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,var(--amber),transparent)}.header::after{content:'CATL';position:absolute;font-family:'JetBrains Mono',monospace;font-weight:700;font-size:360px;color:rgba(255,181,71,0.025);bottom:-100px;right:-40px;letter-spacing:-12px;pointer-events:none;line-height:.8}.header-meta{display:flex;justify-content:space-between;font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text-muted);letter-spacing:2px;text-transform:uppercase;margin-bottom:60px}.header-meta .dot{display:inline-block;width:8px;height:8px;background:var(--amber);border-radius:50%;margin-right:8px;box-shadow:0 0 12px var(--amber);animation:pulse 2s infinite}@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}.title-tag{font-family:'JetBrains Mono',monospace;font-size:14px;color:var(--amber);margin-bottom:20px;letter-spacing:2px;position:relative;z-index:1}.title-zh{font-family:'Noto Serif SC',serif;font-size:72px;font-weight:900;line-height:1.05;letter-spacing:-2px;margin-bottom:24px;position:relative;z-index:1}.title-zh .accent{color:var(--amber);font-family:'Bodoni Moda',serif;font-style:italic;font-weight:900}.title-en{font-family:'Bodoni Moda',serif;font-style:italic;font-size:22px;color:var(--text-secondary);margin-bottom:40px;letter-spacing:1px;position:relative;z-index:1}.subtitle{font-size:17px;color:var(--text-secondary);max-width:850px;border-left:2px solid var(--amber);padding-left:24px;line-height:1.8;position:relative;z-index:1}.subtitle strong{color:var(--amber)}.header-stats{display:grid;grid-template-columns:repeat(5,1fr);gap:1px;margin-top:60px;background:var(--border);border:1px solid var(--border);position:relative;z-index:1}.stat-cell{background:var(--bg-deep);padding:24px 16px;text-align:center}.stat-label{font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--text-muted);text-transform:uppercase;letter-spacing:1.5px;margin-bottom:8px}.stat-value{font-family:'JetBrains Mono',monospace;font-size:32px;font-weight:700;color:var(--amber)}.stat-unit{font-size:12px;color:var(--text-secondary);margin-top:2px;display:block;font-family:'Noto Serif SC',serif}.nav{position:sticky;top:0;z-index:100;background:rgba(10,14,20,.95);backdrop-filter:blur(10px);border-bottom:1px solid var(--border);padding:16px 60px;font-family:'JetBrains Mono',monospace;font-size:11px;text-transform:uppercase;letter-spacing:1.5px}.nav ul{display:flex;gap:30px;list-style:none;flex-wrap:wrap}.nav a{color:var(--text-secondary);text-decoration:none;transition:color .3s;position:relative;padding-bottom:4px}.nav a:hover{color:var(--amber)}.nav a::after{content:'';position:absolute;bottom:0;left:0;width:0;height:1px;background:var(--amber);transition:width .3s}.nav a:hover::after{width:100%}.section{padding:100px 60px;border-bottom:1px solid var(--border);position:relative}.section-header{display:flex;align-items:baseline;gap:30px;margin-bottom:60px;padding-bottom:30px;border-bottom:1px dashed var(--border)}.section-num{font-family:'Bodoni Moda',serif;font-size:96px;font-weight:900;color:transparent;-webkit-text-stroke:1px var(--amber);line-height:.8;font-style:italic}.section-title{font-size:38px;font-weight:700;margin-bottom:8px;letter-spacing:-1px;line-height:1.2}.section-subtitle{font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--text-muted);text-transform:uppercase;letter-spacing:2px}.lead{font-size:16px;color:var(--text-secondary);line-height:1.9;max-width:880px;margin-bottom:40px}.lead strong{color:var(--amber-bright);font-weight:500}
+
+/* 时间轴 */
+.chronicle{margin-top:40px;position:relative}.chronicle::before{content:'';position:absolute;left:140px;top:20px;bottom:20px;width:2px;background:linear-gradient(180deg,var(--green),var(--amber),var(--red),var(--green),var(--amber))}.phase{display:grid;grid-template-columns:140px 50px 1fr;gap:30px;margin-bottom:40px;position:relative}.phase-date{font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--amber);text-align:right;padding-top:28px;letter-spacing:.5px;line-height:1.5}.phase-marker{position:relative;padding-top:22px}.phase-dot{width:20px;height:20px;border:3px solid var(--bg-deep);border-radius:50%;margin:0 auto;position:relative;z-index:1;box-shadow:0 0 0 4px var(--bg-deep),0 0 16px rgba(255,181,71,.3)}.phase-dot.bottom{background:var(--green)}.phase-dot.accumulate{background:var(--cyan)}.phase-dot.main-rise{background:var(--amber)}.phase-dot.frenzy{background:var(--red)}.phase-dot.new-high{background:var(--purple)}.phase-content{background:var(--bg-card);border:1px solid var(--border);padding:28px 34px;border-left:3px solid}.phase-content.bottom{border-left-color:var(--green)}.phase-content.accumulate{border-left-color:var(--cyan)}.phase-content.main-rise{border-left-color:var(--amber)}.phase-content.frenzy{border-left-color:var(--red)}.phase-content.new-high{border-left-color:var(--purple)}.phase-tag{font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:2px;margin-bottom:8px}.phase-content.bottom .phase-tag{color:var(--green)}.phase-content.accumulate .phase-tag{color:var(--cyan)}.phase-content.main-rise .phase-tag{color:var(--amber)}.phase-content.frenzy .phase-tag{color:var(--red)}.phase-content.new-high .phase-tag{color:var(--purple)}.phase-title{font-size:22px;font-weight:700;color:var(--text-primary);margin-bottom:6px}.phase-price{font-family:'JetBrains Mono',monospace;font-size:13px;color:var(--text-muted);margin-bottom:16px;letter-spacing:.5px}.phase-body{display:grid;grid-template-columns:1fr 1fr;gap:24px}.phase-body-full{grid-template-columns:1fr}.sub-label{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--amber);letter-spacing:1.5px;margin-bottom:10px;text-transform:uppercase;display:flex;align-items:center;gap:8px}.sub-label::before{content:'';width:16px;height:1px;background:var(--amber)}.sub-content{font-size:13px;color:var(--text-secondary);line-height:1.85}.sub-content strong{color:var(--amber-bright);font-weight:500}.sub-content ul{list-style:none;margin-top:8px}.sub-content li{padding:3px 0;padding-left:16px;position:relative;font-size:12px}.sub-content li::before{content:'·';position:absolute;left:4px;color:var(--amber);font-weight:700}
+
+/* 数据表格 */
+.data-table{width:100%;border-collapse:collapse;font-size:12px;margin-top:12px}.data-table th{background:var(--bg-elevated);padding:10px 14px;text-align:left;font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--amber);letter-spacing:1.2px;text-transform:uppercase;border:1px solid var(--border);font-weight:500}.data-table td{padding:10px 14px;border:1px solid var(--border);color:var(--text-secondary);vertical-align:top}.data-table .col-key{color:var(--text-primary);font-weight:500}.data-table .green{color:var(--green)}.data-table .red{color:var(--red)}.data-table .amber{color:var(--amber)}
+
+/* 洞察框 */
+.insight-box{background:linear-gradient(135deg,rgba(255,181,71,.05),rgba(255,181,71,.01));border:1px solid var(--amber-dim);padding:24px 28px;margin:20px 0;border-left:4px solid var(--amber)}.insight-label{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--amber);letter-spacing:2px;margin-bottom:10px}.insight-text{font-size:14px;color:var(--text-primary);line-height:1.8}.insight-text strong{color:var(--amber)}
+
+/* 接力图 */
+.relay-visual{background:var(--bg-card);border:1px solid var(--border);padding:40px;margin-top:40px}.relay-bar{display:grid;grid-template-columns:repeat(5,1fr);gap:4px;margin-bottom:20px}.relay-leg{padding:24px 16px;background:var(--bg-elevated);border:1px solid var(--border);text-align:center;transition:all .3s}.relay-leg.passed{background:rgba(255,181,71,.15);border-color:var(--amber-dim)}.relay-leg.active{background:var(--amber);color:var(--bg-deep);border-color:var(--amber)}.relay-leg-num{font-family:'Bodoni Moda',serif;font-weight:900;font-style:italic;font-size:24px;margin-bottom:6px}.relay-leg-name{font-size:11px;font-weight:600;margin-bottom:4px}.relay-leg-time{font-family:'JetBrains Mono',monospace;font-size:9px;opacity:.6;letter-spacing:.5px}
+
+/* 教训卡片 */
+.lessons{display:grid;grid-template-columns:repeat(3,1fr);gap:20px;margin-top:40px}.lesson{background:var(--bg-card);border:1px solid var(--border);padding:28px 24px;border-top:3px solid var(--amber);position:relative}.lesson-num{font-family:'Bodoni Moda',serif;font-style:italic;font-weight:900;font-size:56px;color:rgba(255,181,71,.1);position:absolute;top:12px;right:20px;line-height:.8}.lesson-title{font-size:16px;font-weight:700;color:var(--amber);margin-bottom:12px;max-width:75%}.lesson-desc{font-size:12px;color:var(--text-secondary);line-height:1.8}
+
+/* Footer */
+.ultimate{padding:120px 60px;text-align:center;border-top:1px solid var(--border);background:radial-gradient(ellipse at center top,rgba(255,181,71,.08) 0%,transparent 60%),var(--bg-deep)}.ultimate-tag{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--amber);letter-spacing:3px;margin-bottom:30px}.ultimate-quote{font-family:'Noto Serif SC',serif;font-weight:700;font-size:34px;color:var(--text-primary);max-width:950px;margin:0 auto 30px;line-height:1.5;letter-spacing:-.5px}.ultimate-quote .highlight{color:var(--amber);font-family:'Bodoni Moda',serif;font-style:italic}.series-info{display:flex;justify-content:center;gap:20px;padding-top:40px;border-top:1px solid var(--border);max-width:1200px;margin:40px auto 0;flex-wrap:wrap}.series-item{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--text-muted);letter-spacing:1.2px;text-transform:uppercase;text-align:center;flex:1;min-width:110px}.series-item.current{color:var(--amber)}.series-item .num{font-weight:700;font-size:18px;display:block;margin-bottom:4px}
+
+@media(max-width:968px){.header{padding:60px 30px 40px}.header::after{font-size:180px}.title-zh{font-size:40px}.title-en{font-size:16px}.header-stats{grid-template-columns:1fr 1fr}.nav{padding:16px 30px}.nav ul{gap:14px}.section{padding:60px 30px}.section-num{font-size:60px}.section-title{font-size:24px}.chronicle::before{left:8px}.phase{grid-template-columns:1fr;gap:12px}.phase-date{text-align:left;padding-top:0}.phase-marker{display:none}.phase-body{grid-template-columns:1fr}.relay-bar{grid-template-columns:1fr}.lessons{grid-template-columns:1fr}.ultimate{padding:60px 30px}.ultimate-quote{font-size:22px}}
+</style>
+</head>
+<body>
+
+<header class="header">
+  <div class="header-meta">
+    <div><span class="dot"></span>CASE STUDY · DEEP ANALYSIS</div>
+    <div>SERIES · CASE BOOK</div>
+  </div>
+  <div class="title-tag">/* 300750.SZ · CATL · CONTEMPORARY AMPEREX */</div>
+  <h1 class="title-zh">宁德时代<br><span class="accent">资金运行周期全景解剖</span></h1>
+  <div class="title-en">From ¥133 to ¥433 · A Two-Year Capital Relay Masterclass</div>
+  <p class="subtitle">
+    宁德时代从2024年1月的<strong>133元低点</strong>到2026年4月的<strong>433元历史新高</strong>,涨幅超过两倍。这不是一个"基本面改善所以股价涨了"的简单故事,而是一个<strong>产业资本、公募、北向、散户、游资在不同阶段轮番主导</strong>的完整资金接力教科书。
+  </p>
+
+  <div class="header-stats">
+    <div class="stat-cell">
+      <div class="stat-label">Low Point</div>
+      <div class="stat-value">¥133</div>
+      <span class="stat-unit">2024年1月</span>
+    </div>
+    <div class="stat-cell">
+      <div class="stat-label">All-Time High</div>
+      <div class="stat-value">¥433</div>
+      <span class="stat-unit">2026年4月</span>
+    </div>
+    <div class="stat-cell">
+      <div class="stat-label">Return</div>
+      <div class="stat-value">+225%</div>
+      <span class="stat-unit">区间涨幅</span>
+    </div>
+    <div class="stat-cell">
+      <div class="stat-label">Mkt Cap Peak</div>
+      <div class="stat-value">2万亿</div>
+      <span class="stat-unit">总市值</span>
+    </div>
+    <div class="stat-cell">
+      <div class="stat-label">Duration</div>
+      <div class="stat-value">27个月</div>
+      <span class="stat-unit">完整周期</span>
+    </div>
+  </div>
+</header>
+
+<nav class="nav">
+  <ul>
+    <li><a href="#why">01 · 为什么选这个案例</a></li>
+    <li><a href="#chronicle">02 · 资金周期编年史</a></li>
+    <li><a href="#relay">03 · 接力赛全景图</a></li>
+    <li><a href="#data">04 · 关键数据矩阵</a></li>
+    <li><a href="#lessons">05 · 教训与启示</a></li>
+  </ul>
+</nav>
+
+<!-- ========== 01 为什么选这个案例 ========== -->
+<section class="section" id="why">
+  <div class="section-header">
+    <div class="section-num">01</div>
+    <div>
+      <h2 class="section-title">为什么选宁德时代作为案例</h2>
+      <div class="section-subtitle">Why CATL is the Perfect Case Study</div>
+    </div>
+  </div>
+
+  <p class="lead">
+    A股有上千只股票经历过资金博弈,但宁德时代之所以是<strong>最佳教科书案例</strong>,有五个原因:
+  </p>
+
+  <div class="insight-box">
+    <div class="insight-label">— FIVE REASONS —</div>
+    <div class="insight-text">
+      <strong>第一,数据透明度最高。</strong>作为创业板第一权重股、公募基金长期第一大重仓股、北向资金第一大持股,宁德时代的每一类资金动向都有公开可追溯的数据。<br><br>
+      <strong>第二,覆盖完整的资金接力周期。</strong>从产业资本和价值投资者在底部吸纳,到公募回补仓位,到北向配置盘加仓,再到散户涌入,最后产业资本在高位配售——经典的五棒接力完整呈现。<br><br>
+      <strong>第三,市场影响力极大。</strong>宁德时代的涨跌直接拉动创业板指数和新能源板块,它的资金运行代表了整个核心资产风格的潮汐。<br><br>
+      <strong>第四,叙事转变清晰。</strong>从"行业产能过剩、增长见顶"的看空叙事,到"储能第二曲线、固态电池、全球化"的看多叙事,叙事的转向节点与资金拐点高度吻合。<br><br>
+      <strong>第五,涵盖了政策、估值、技术、情绪多重因素的交叉影响。</strong>924新政、港股上市、行业整顿座谈会、碳酸锂价格反弹等事件,使得这个案例具备了多因子分析的丰富性。
+    </div>
+  </div>
+</section>
+
+<!-- ========== 02 编年史 ========== -->
+<section class="section" id="chronicle">
+  <div class="section-header">
+    <div class="section-num">02</div>
+    <div>
+      <h2 class="section-title">资金周期编年史</h2>
+      <div class="section-subtitle">The Capital Cycle Chronicle · Five Phases</div>
+    </div>
+  </div>
+
+  <p class="lead">
+    这段27个月的行情可以分为<strong>五个阶段</strong>,每个阶段的主导资金、驱动逻辑和市场特征完全不同。这是"研究研究股票的人"最好的实战教材。
+  </p>
+
+  <div class="chronicle">
+
+    <!-- Phase 1: 底部 -->
+    <div class="phase">
+      <div class="phase-date">2024.01<br>—<br>2024.04</div>
+      <div class="phase-marker"><div class="phase-dot bottom"></div></div>
+      <div class="phase-content bottom">
+        <div class="phase-tag">— PHASE 1 · BOTTOM FORMATION —</div>
+        <div class="phase-title">产业资本 + 价值资金的底部吸纳</div>
+        <div class="phase-price">股价区间: ¥133 — ¥185 · 市值: 6400亿 — 8200亿</div>
+        <div class="phase-body">
+          <div>
+            <div class="sub-label">主导资金</div>
+            <div class="sub-content">
+              <strong>产业资本(回购)</strong>:宁德时代2024年1月宣布大规模回购计划,以真金白银向市场传递信心。管理层在估值跌至历史低位(PE约20倍)时选择回购,是典型的"信息优势者的逆向操作"。<br><br>
+              <strong>深度价值型基金经理</strong>:部分逆向投资风格的公募和私募(如睿远、淡水泉等)在此阶段开始左侧布局。
+            </div>
+          </div>
+          <div>
+            <div class="sub-label">市场背景</div>
+            <div class="sub-content">
+              <ul>
+                <li>碳酸锂价格全年跌幅超50%,行业产能过剩</li>
+                <li>2024年1月A股经历小微盘流动性危机,恐慌蔓延</li>
+                <li>宁德时代PE约20倍,较峰值150倍回落超85%</li>
+                <li>一季度营收797.7亿,同比下滑10%;但净利105.1亿,同比增长7%</li>
+                <li><strong>"增利不增收"</strong>的业绩特征被市场看空解读</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+
+        <div class="insight-box" style="margin-top:20px">
+          <div class="insight-label">▸ 二阶研究视角</div>
+          <div class="insight-text">
+            此时的<strong>对手盘结构</strong>是:买方是产业资本和少数逆向基金,卖方是恐慌散户和被迫止损的私募。当"信息最充分的人"(管理层)在买、"信息最匮乏的人"(散户)在卖时,<strong>这是经典的底部信号</strong>。但大多数投资者此时看到的只是"基本面恶化",完全忽略了资金结构的信息。
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Phase 2: 蓄势 -->
+    <div class="phase">
+      <div class="phase-date">2024.05<br>—<br>2024.09</div>
+      <div class="phase-marker"><div class="phase-dot accumulate"></div></div>
+      <div class="phase-content accumulate">
+        <div class="phase-tag">— PHASE 2 · INSTITUTIONAL ACCUMULATION —</div>
+        <div class="phase-title">公募 + 北向的静默回补</div>
+        <div class="phase-price">股价区间: ¥170 — ¥240 · 924新政前后急涨</div>
+        <div class="phase-body">
+          <div>
+            <div class="sub-label">主导资金</div>
+            <div class="sub-content">
+              <strong>公募基金的仓位回补</strong>:2024年一季度,宁德时代被1529只基金持有。到三季度末,公募仍是宁德时代的最大机构持有者群体。这一阶段,公募经理从"减持出逃"转向"试探性加仓"。<br><br>
+              <strong>北向资金的持续配置</strong>:标普于2024年5月将宁德时代评级上调,同期北向资金连续5个交易日净买入,累计净流入约24亿。电力设备行业连续多个季度位居北向持股市值之首。
+            </div>
+          </div>
+          <div>
+            <div class="sub-label">关键催化</div>
+            <div class="sub-content">
+              <ul>
+                <li><strong>2024年5月:</strong>标普上调宁德时代长期评级至BBB+→正面展望</li>
+                <li><strong>2024年5月:</strong>全球动力电池装车量,宁德时代连续7年全球第一,Q1份额37.9%</li>
+                <li><strong>2024年7月:</strong>以旧换新补贴政策出台,新能源汽车补贴7000-10000元</li>
+                <li><strong>2024年9月:</strong>市值时隔一年重回万亿,PE约23倍</li>
+                <li><strong>2024年9月24日:</strong>924新政(降息降准+股市支持),全市场暴涨,宁德时代受益</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+
+        <div class="insight-box" style="margin-top:20px">
+          <div class="insight-label">▸ 二阶研究视角</div>
+          <div class="insight-text">
+            这个阶段的<strong>接力逻辑</strong>是:产业资本用回购完成了第一棒,公募和北向接过第二棒和第三棒。注意一个关键变化——<strong>2024年四季度,宁德时代反超贵州茅台成为公募基金第一大重仓股</strong>(被2044只基金重仓持有,持股总市值1708亿元)。这意味着公募的"抱团效应"正式启动。
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Phase 3: 主升浪 -->
+    <div class="phase">
+      <div class="phase-date">2024.10<br>—<br>2025.06</div>
+      <div class="phase-marker"><div class="phase-dot main-rise"></div></div>
+      <div class="phase-content main-rise">
+        <div class="phase-tag">— PHASE 3 · MAIN UPTREND —</div>
+        <div class="phase-title">多类资金共振的主升浪</div>
+        <div class="phase-price">股价区间: ¥195 — ¥300+ · 多类资金同向加仓</div>
+        <div class="phase-body">
+          <div>
+            <div class="sub-label">主导资金(多方共振)</div>
+            <div class="sub-content">
+              <strong>公募持续加仓</strong>:电力设备行业被公募大幅超配,2024年四季度环比提升0.65pct。<br><br>
+              <strong>北向配置盘大举涌入</strong>:2025年全年,北向资金对电力设备行业持股市值增加超1600亿元。宁德时代北向持股比例连续7个季度增加,到2025年末持股市值超2500亿元,较上年增加超1000亿。<br><br>
+              <strong>924新政后散户增量</strong>:2024年10月单月A股新开户684.68万户(创五年新高),大量增量资金涌入新能源龙头。<br><br>
+              <strong>2025年5月港股上市</strong>:宁德时代登陆港股,打开全球资金配置通道。
+            </div>
+          </div>
+          <div>
+            <div class="sub-label">业绩印证</div>
+            <div class="sub-content">
+              <ul>
+                <li>2024年全年净利润507亿元,同比增长15%</li>
+                <li>毛利率从22.91%提升至24.44%,创近三年新高</li>
+                <li>动力电池销量381GWh(+18.85%),储能93GWh(+34.32%)</li>
+                <li>2025年净利润达722亿元,同比增长42.28%</li>
+                <li>储能业务成为真正的第二增长曲线</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+
+        <div class="insight-box" style="margin-top:20px">
+          <div class="insight-label">▸ 二阶研究视角</div>
+          <div class="insight-text">
+            这是接力赛的<strong>"甜蜜区"</strong>——公募(第二棒)、北向(第三棒)、散户增量(第四棒前期)同时在场。<strong>当多类资金方向一致、叙事统一("储能第二曲线+全球化")时,趋势的力量几乎不可逆</strong>。这个阶段做高抛低吸是错误的,跟随趋势才是正确策略。
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Phase 4: 加速与狂热 -->
+    <div class="phase">
+      <div class="phase-date">2025.07<br>—<br>2026.03</div>
+      <div class="phase-marker"><div class="phase-dot frenzy"></div></div>
+      <div class="phase-content frenzy">
+        <div class="phase-tag">— PHASE 4 · ACCELERATION & FRENZY —</div>
+        <div class="phase-title">散户涌入 + 叙事极致化</div>
+        <div class="phase-price">股价区间: ¥250 — ¥400+ · 加速上涨</div>
+        <div class="phase-body">
+          <div>
+            <div class="sub-label">资金结构变化</div>
+            <div class="sub-content">
+              <strong>散户和融资盘成为边际增量</strong>:两融余额持续攀升,杠杆资金积极入场。媒体和社交平台对"宁王重回巅峰"的讨论热度显著上升。<br><br>
+              <strong>北向资金结构分化</strong>:配置盘持续加仓,但交易盘的波动加大,部分对冲基金开始博弈短期波动。<br><br>
+              <strong>公募"被动抱团"</strong>:宁德时代作为创业板第一权重股,大量创业板相关ETF和指数基金的被动配置持续推高。
+            </div>
+          </div>
+          <div>
+            <div class="sub-label">叙事与催化</div>
+            <div class="sub-content">
+              <ul>
+                <li>固态电池技术突破预期</li>
+                <li>储能需求爆发,碳酸锂价格反弹</li>
+                <li>3月国内动力及储能电池产量同比大增50.2%</li>
+                <li>人形机器人、电动船舶等新应用场景叙事</li>
+                <li>"2万亿市值"的目标价开始出现</li>
+                <li>2026年Q1国内市占率重回50%以上</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+
+        <div class="insight-box" style="margin-top:20px">
+          <div class="insight-label">▸ 二阶研究视角</div>
+          <div class="insight-text">
+            此阶段<strong>接力赛进入第四棒</strong>——散户和媒体成为主要推动力。值得注意的信号是:<strong>2026年4月,四部门召开座谈会整治行业"内卷"</strong>,这是政策催化的典型案例,既修复了短期盈利预期,也给了散户"利好故事"继续入场的理由。但从资金结构看,此时产业资本已开始考虑在高位通过港股配售"变现"。
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Phase 5: 创新高 -->
+    <div class="phase">
+      <div class="phase-date">2026.04</div>
+      <div class="phase-marker"><div class="phase-dot new-high"></div></div>
+      <div class="phase-content new-high">
+        <div class="phase-tag">— PHASE 5 · ALL-TIME HIGH · DISTRIBUTION BEGINS? —</div>
+        <div class="phase-title">历史新高 · 配售与分歧</div>
+        <div class="phase-price">股价: ¥433.33(盘中最高) · A+H总市值突破2万亿</div>
+        <div class="phase-body phase-body-full">
+          <div>
+            <div class="sub-label">2026年4月13日:标志性事件</div>
+            <div class="sub-content">
+              <strong>宁德时代A股盘中最高触及433.33元,创历史新高,A+H总市值一度突破2万亿。</strong>从2024年1月133元的阶段性低点到此,区间涨幅超过两倍。<br><br>
+              <strong>同日传出消息:</strong>宁德时代正考虑在港股配售股份,筹集最多50亿美元。这是典型的<strong>产业资本在高位变现的信号</strong>——管理层在底部回购、在高位配售,完美诠释了"信息优势者的逆向操作"。
+            </div>
+          </div>
+          <div style="margin-top:20px">
+            <div class="sub-label">资金博弈的分歧点</div>
+            <div class="sub-content">
+              <ul>
+                <li><strong>看多方:</strong>基金经理认为新能源硬科技"价值重估"才刚开始,储能爆发+全球化+固态电池</li>
+                <li><strong>看空方:</strong>港股配售是高位套现信号,2万亿市值需要更强的业绩支撑</li>
+                <li><strong>关键观察:</strong>4月15日创业板指冲高回落,宁德时代当日振幅显著,资金分歧加大</li>
+                <li><strong>对手盘分析:</strong>买方以散户和被动ETF为主,卖方出现了配置盘减持信号</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+
+        <div class="insight-box" style="margin-top:20px">
+          <div class="insight-label">▸ 二阶研究视角 · 最关键的问题</div>
+          <div class="insight-text">
+            接力赛到了什么位置?产业资本在底部回购(第一棒)、公募大举加仓至第一重仓(第二棒)、北向连续7个季度增持(第三棒)、散户涌入+杠杆资金入场(第四棒)。<strong>当产业资本在高位启动港股配售时,接力赛有没有进入第五棒(出货期)?</strong>这是每一个投资者在此刻都必须问自己的问题。
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<!-- ========== 03 接力赛全景图 ========== -->
+<section class="section" id="relay">
+  <div class="section-header">
+    <div class="section-num">03</div>
+    <div>
+      <h2 class="section-title">资金接力赛全景图</h2>
+      <div class="section-subtitle">The Complete Capital Relay Map</div>
+    </div>
+  </div>
+
+  <div class="relay-visual">
+    <div style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--amber);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:20px">— CATL CAPITAL RELAY · 2024.01 → 2026.04 —</div>
+    <div class="relay-bar">
+      <div class="relay-leg passed">
+        <div class="relay-leg-num">1</div>
+        <div class="relay-leg-name">产业资本</div>
+        <div class="relay-leg-time">2024.01 - 2024.04</div>
+      </div>
+      <div class="relay-leg passed">
+        <div class="relay-leg-num">2</div>
+        <div class="relay-leg-name">公募基金</div>
+        <div class="relay-leg-time">2024.05 - 2024.12</div>
+      </div>
+      <div class="relay-leg passed">
+        <div class="relay-leg-num">3</div>
+        <div class="relay-leg-name">北向配置盘</div>
+        <div class="relay-leg-time">2024.09 - 2025.12</div>
+      </div>
+      <div class="relay-leg active">
+        <div class="relay-leg-num">4</div>
+        <div class="relay-leg-name">散户·杠杆</div>
+        <div class="relay-leg-time">2025.07 - 2026.04</div>
+      </div>
+      <div class="relay-leg">
+        <div class="relay-leg-num">5</div>
+        <div class="relay-leg-name">出货期?</div>
+        <div class="relay-leg-time">港股配售信号</div>
+      </div>
+    </div>
+    <div style="text-align:center;font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--amber);letter-spacing:1px;margin-top:8px">
+      ⚠ 当前位于第4棒 · 产业资本高位配售信号已出现 · 需密切观察第5棒是否启动
+    </div>
+  </div>
+</section>
+
+<!-- ========== 04 关键数据矩阵 ========== -->
+<section class="section" id="data">
+  <div class="section-header">
+    <div class="section-num">04</div>
+    <div>
+      <h2 class="section-title">关键数据矩阵</h2>
+      <div class="section-subtitle">Critical Data Points Across Phases</div>
+    </div>
+  </div>
+
+  <p class="lead">
+    数据比叙事更诚实。下面是宁德时代五个阶段中<strong>最关键的可验证数据</strong>,每一条都对应公开信息源。
+  </p>
+
+  <table class="data-table">
+    <thead>
+      <tr>
+        <th>维度</th>
+        <th>底部期(24.01)</th>
+        <th>蓄势期(24.09)</th>
+        <th>主升浪(25.06)</th>
+        <th>新高(26.04)</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td class="col-key">股价</td>
+        <td>¥133</td>
+        <td>¥240左右</td>
+        <td>¥300+</td>
+        <td class="amber">¥433</td>
+      </tr>
+      <tr>
+        <td class="col-key">市值</td>
+        <td>约6400亿</td>
+        <td>约1万亿</td>
+        <td>约1.1万亿</td>
+        <td class="amber">突破2万亿(A+H)</td>
+      </tr>
+      <tr>
+        <td class="col-key">滚动PE</td>
+        <td>约20倍</td>
+        <td>约23倍</td>
+        <td>约20-22倍</td>
+        <td>约28倍</td>
+      </tr>
+      <tr>
+        <td class="col-key">持有基金数</td>
+        <td>约1529只</td>
+        <td>持续增加</td>
+        <td>约2000+只</td>
+        <td class="amber">2044+只(四季报)</td>
+      </tr>
+      <tr>
+        <td class="col-key">公募持股市值</td>
+        <td>低于贵州茅台</td>
+        <td>逐步追赶</td>
+        <td>接近茅台</td>
+        <td class="amber">¥1708亿(超越茅台成第一)</td>
+      </tr>
+      <tr>
+        <td class="col-key">北向持股市值</td>
+        <td>约1500亿</td>
+        <td>约1800亿</td>
+        <td>增加超1000亿</td>
+        <td class="amber">超¥2500亿(第一大持股)</td>
+      </tr>
+      <tr>
+        <td class="col-key">北向持股比例</td>
+        <td>基准水平</td>
+        <td>开始上升</td>
+        <td>连续7季增加</td>
+        <td class="amber">连续增加中</td>
+      </tr>
+      <tr>
+        <td class="col-key">年度净利润</td>
+        <td>2023年:441亿</td>
+        <td>—</td>
+        <td>2024年:507亿(+15%)</td>
+        <td class="green">2025年:722亿(+42%)</td>
+      </tr>
+      <tr>
+        <td class="col-key">毛利率</td>
+        <td>22.91%(2023)</td>
+        <td>—</td>
+        <td>24.44%(2024)</td>
+        <td class="green">持续改善</td>
+      </tr>
+      <tr>
+        <td class="col-key">产业资本动作</td>
+        <td class="green">回购(底部信号)</td>
+        <td>稳定持有</td>
+        <td>稳定持有</td>
+        <td class="red">港股配售(高位信号)</td>
+      </tr>
+      <tr>
+        <td class="col-key">散户情绪</td>
+        <td>极度悲观</td>
+        <td>开始回暖</td>
+        <td>924后大量开户</td>
+        <td class="red">"2万亿"叙事流行</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="insight-box" style="margin-top:30px">
+    <div class="insight-label">▸ 数据中的资金博弈密码</div>
+    <div class="insight-text">
+      最耐人寻味的是<strong>产业资本的两次对称操作</strong>:在¥133(市值6400亿)时启动回购,在¥433(市值2万亿)时启动港股配售。管理层显然认为底部被低估、高位被充分定价。<strong>这是"研究研究股票的人"这个方法论最直观的体现——同一只股票,同一个管理层,在不同价格做出了完全相反的决策,因为他们对"价值"的判断没有变,变的是"价格"</strong>。
+    </div>
+  </div>
+</section>
+
+<!-- ========== 05 教训与启示 ========== -->
+<section class="section" id="lessons">
+  <div class="section-header">
+    <div class="section-num">05</div>
+    <div>
+      <h2 class="section-title">教训与启示</h2>
+      <div class="section-subtitle">Lessons from the CATL Capital Cycle</div>
+    </div>
+  </div>
+
+  <p class="lead">
+    这个案例对"资金视角方法论"提供了几条可以被反复引用的<strong>铁律式教训</strong>。
+  </p>
+
+  <div class="lessons">
+    <div class="lesson">
+      <div class="lesson-num">1</div>
+      <div class="lesson-title">产业资本回购是底部的必要条件</div>
+      <div class="lesson-desc">
+        当管理层(信息最充分的人)在用自己的钱回购时,说明他们认为股价被低估。这不保证是最低点,但底部区域的可能性极高。宁德时代在¥133附近的回购,事后看是整个27个月行情的起点。
+      </div>
+    </div>
+
+    <div class="lesson">
+      <div class="lesson-num">2</div>
+      <div class="lesson-title">公募成为第一重仓是趋势确认信号</div>
+      <div class="lesson-desc">
+        2024年四季度宁德时代反超茅台成为公募第一大重仓股——这是机构"抱团正反馈"启动的标志。当公募的抱团效应启动后,趋势会自我强化,此时应该跟随而非逆向。
+      </div>
+    </div>
+
+    <div class="lesson">
+      <div class="lesson-num">3</div>
+      <div class="lesson-title">北向连续多季加仓是中长期的定心丸</div>
+      <div class="lesson-desc">
+        北向持股比例连续7个季度增加,持股市值从约1500亿增长到超2500亿。配置盘的持续性是验证"长期逻辑成立"的最佳指标——它不是短线博弈,而是全球资产配置框架下的结构性布局。
+      </div>
+    </div>
+
+    <div class="lesson">
+      <div class="lesson-num">4</div>
+      <div class="lesson-title">接力赛的位置比趋势更重要</div>
+      <div class="lesson-desc">
+        同样是上涨,第一棒上涨(产业资本买入)和第四棒上涨(散户涌入)的风险收益比完全不同。在¥133买入有225%的上涨空间;在¥400买入则面对的是产业资本配售的潜在卖压。永远先判断"你在第几棒",再决定要不要参与。
+      </div>
+    </div>
+
+    <div class="lesson">
+      <div class="lesson-num">5</div>
+      <div class="lesson-title">叙事的转向领先于资金的转向</div>
+      <div class="lesson-desc">
+        从"产能过剩、增长见顶"到"储能第二曲线、全球化",叙事的转向发生在2024年中——早于公募大规模加仓约两个季度。如果你只看数据不看叙事,会错过布局窗口;如果你只看叙事不看数据,会陷入"故事泡沫"。
+      </div>
+    </div>
+
+    <div class="lesson">
+      <div class="lesson-num">6</div>
+      <div class="lesson-title">高位配售是产业资本发出的最诚实信号</div>
+      <div class="lesson-desc">
+        管理层在底部回购、在高位配售——这两个动作构成了一个完整的"信息优势者的价值判断"。当你看到产业资本在高位启动任何形式的融资、减持或配售时,必须提高警惕——因为他们比你更了解公司的真实价值。
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ========== 终极洞察 ========== -->
+<section class="ultimate">
+  <div class="ultimate-tag">— CASE STUDY · CLOSING INSIGHT —</div>
+
+  <h2 class="ultimate-quote">
+    宁德时代的故事不是一只股票的故事,<br>
+    而是<span class="highlight">九类资金在27个月内</span><br>
+    <span class="highlight">轮番登场、各取所需</span>的博弈剧本。
+  </h2>
+
+  <p style="font-size:17px;color:var(--text-secondary);max-width:720px;margin:0 auto 40px;line-height:1.8;">
+    产业资本在底部买入信心,公募在中段买入景气度,北向在全程买入核心资产配置,散户在高位买入"2万亿的梦想"。每一个人都买到了他想买的东西,但不是每一个人都会带着利润离开。
+  </p>
+
+  <p style="font-family:'Bodoni Moda',serif;font-style:italic;font-size:22px;color:var(--amber);max-width:700px;margin:0 auto 60px;line-height:1.7;">
+    理解了谁在买、谁在卖、谁在等待、谁在离场——你就理解了价格。
+  </p>
+
+  <div class="series-info">
+    <div class="series-item"><div class="num">I</div>监测体系</div>
+    <div class="series-item"><div class="num">II</div>资金方法论</div>
+    <div class="series-item"><div class="num">III</div>资金图谱</div>
+    <div class="series-item"><div class="num">IV</div>研究的研究</div>
+    <div class="series-item"><div class="num">V</div>实战篇</div>
+    <div class="series-item"><div class="num">A</div>工程附录</div>
+    <div class="series-item current"><div class="num">B</div>案例册 · NOW</div>
+  </div>
+</section>
+
+</body>
+</html>

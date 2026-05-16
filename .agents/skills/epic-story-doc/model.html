@@ -628,6 +628,20 @@
             border: 1px solid rgba(212, 162, 62, 0.2);
         }
 
+        .block-mermaid {
+            margin: var(--space-4) 0;
+            background: var(--bg-elev-1);
+            border: 1px solid var(--hair);
+            padding: var(--space-6);
+            border-radius: 6px;
+            text-align: center;
+        }
+
+        .block-mermaid svg {
+            max-width: 100%;
+            height: auto;
+        }
+
         .copy-btn {
             position: absolute;
             bottom: 8px;
@@ -1009,6 +1023,16 @@
             renderNavTree();
             renderMainContent();
             updateStats();
+
+            // 初始化 Mermaid
+            if (window.mermaid) {
+                mermaid.initialize({ 
+                    startOnLoad: false, 
+                    theme: 'dark',
+                    useWorker: false 
+                });
+                mermaid.init(undefined, document.querySelectorAll('.mermaid'));
+            }
         }
 
         function renderNavTree() {
@@ -1337,6 +1361,7 @@
 
         init();
     </script>
+    <script src="https://lib.baomitu.com/mermaid/10.9.0/mermaid.min.js"></script>
 </body>
 
 </html>

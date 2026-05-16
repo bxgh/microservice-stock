@@ -1,0 +1,519 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>A股盈利锚智能投研系统 - 架构与开发设计白皮书</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Noto+Serif+SC:wght@400;700;900&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    
+    <!-- Libraries -->
+    <script src="https://lib.baomitu.com/marked/11.1.1/marked.min.js"></script>
+    <link rel="stylesheet" href="https://lib.baomitu.com/github-markdown-css/5.5.0/github-markdown-dark.min.css">
+    <script src="https://lib.baomitu.com/mermaid/10.9.0/mermaid.min.js"></script>
+    
+    <!-- Syntax Highlighting -->
+    <link rel="stylesheet" href="https://lib.baomitu.com/highlight.js/11.9.0/styles/tokyo-night-dark.min.css">
+    <script src="https://lib.baomitu.com/highlight.js/11.9.0/highlight.min.js"></script>
+    
+    <style>
+        :root {
+            --bg: #0a0a0a;
+            --surface: #121212;
+            --surface-hover: #1a1a1a;
+            --border: #222222;
+            --accent: #eab308;
+            --accent-glow: rgba(234, 179, 8, 0.1);
+            --text-primary: #f1f5f9;
+            --text-secondary: #94a3b8;
+            --text-muted: #64748b;
+            --font-sans: 'Outfit', 'Noto Sans SC', -apple-system, sans-serif;
+            --font-serif: 'Noto Serif SC', serif;
+            --font-mono: 'JetBrains Mono', monospace;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background-color: var(--bg);
+            color: var(--text-primary);
+            font-family: var(--font-sans);
+            line-height: 1.7;
+            -webkit-font-smoothing: antialiased;
+            overflow-x: hidden;
+        }
+
+        /* Subtle background glow */
+        body::after {
+            content: '';
+            position: fixed;
+            top: 0;
+            right: 0;
+            width: 40vw;
+            height: 40vh;
+            background: radial-gradient(circle, var(--accent-glow) 0%, transparent 70%);
+            z-index: -1;
+            filter: blur(100px);
+            pointer-events: none;
+        }
+
+        .sidebar {
+            width: 260px;
+            height: 100vh;
+            position: fixed;
+            left: 0;
+            top: 0;
+            border-right: 1px solid var(--border);
+            background: var(--bg);
+            padding: 1.5rem;
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+            overflow-y: auto;
+            z-index: 100;
+        }
+
+        .nav-link {
+            color: var(--text-muted);
+            text-decoration: none;
+            font-size: 0.85rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            transition: color 0.2s;
+            padding: 0.5rem;
+            border-radius: 6px;
+        }
+        .nav-link:hover { color: var(--accent); background: var(--surface); }
+
+        .toc-title {
+            font-family: var(--font-serif);
+            font-size: 1rem;
+            color: var(--text-primary);
+            margin-bottom: 0.8rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding-left: 0.5rem;
+        }
+        .toc-title::before {
+            content: '';
+            width: 3px;
+            height: 1rem;
+            background: var(--accent);
+            border-radius: 2px;
+        }
+
+        .toc-list {
+            list-style: none;
+            display: flex;
+            flex-direction: column;
+            gap: 0.4rem;
+        }
+        .toc-item {
+            font-size: 0.8rem;
+            line-height: 1.3;
+        }
+        .toc-item a {
+            color: var(--text-muted);
+            text-decoration: none;
+            transition: all 0.2s;
+            display: block;
+            padding: 0.4rem 0.5rem;
+            border-radius: 4px;
+        }
+        .toc-item a:hover { color: var(--accent); background: var(--surface); }
+        .toc-item.level-3 { margin-left: 0.8rem; border-left: 1px solid var(--border); }
+
+        .container {
+            max-width: 860px;
+            margin: 0 auto 0 260px;
+            padding: 3rem 4rem;
+            animation: fadeIn 0.6s ease-out;
+        }
+
+        @media (max-width: 1024px) {
+            .sidebar { width: 220px; padding: 1rem; }
+            .container { margin-left: 220px; padding: 2rem; }
+        }
+
+        @media (max-width: 800px) {
+            .sidebar { position: static; width: 100%; height: auto; border-right: none; border-bottom: 1px solid var(--border); }
+            .container { margin-left: 0; padding: 1.5rem; }
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(5px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        header {
+            margin-bottom: 3rem;
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 1.5rem;
+        }
+
+        .meta {
+            font-family: var(--font-mono);
+            font-size: 0.75rem;
+            color: var(--accent);
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            margin-bottom: 0.8rem;
+            display: flex;
+            align-items: center;
+            gap: 0.8rem;
+        }
+
+        .meta::before {
+            content: '';
+            width: 20px;
+            height: 1px;
+            background-color: var(--accent);
+        }
+
+        h1 {
+            font-family: var(--font-serif);
+            font-size: 2.2rem;
+            font-weight: 900;
+            line-height: 1.2;
+            margin-bottom: 1rem;
+            color: var(--text-primary);
+        }
+
+        .markdown-body {
+            background: transparent !important;
+            color: var(--text-primary) !important;
+            font-family: var(--font-sans) !important;
+            font-size: 0.95rem !important;
+        }
+
+        .markdown-body h2 {
+            font-family: var(--font-serif);
+            font-size: 1.5rem !important;
+            color: var(--accent) !important;
+            border-bottom: 1px solid var(--border) !important;
+            padding-bottom: 0.5rem !important;
+            margin-top: 2.5rem !important;
+            scroll-margin-top: 1rem;
+        }
+
+        .markdown-body h3 {
+            font-family: var(--font-serif);
+            font-size: 1.25rem !important;
+            color: var(--text-primary) !important;
+            margin-top: 2rem !important;
+            scroll-margin-top: 1rem;
+        }
+
+        .markdown-body p, .markdown-body li {
+            font-size: 0.95rem !important;
+            color: var(--text-primary) !important;
+        }
+        
+        .markdown-body pre {
+            background-color: #1a1b26 !important; /* Match Tokyo Night Dark */
+            border: 1px solid var(--border);
+            border-radius: 8px !important;
+            padding: 0 !important; /* Code internal handles padding */
+            margin: 1.2rem 0 !important;
+            overflow: hidden;
+        }
+
+        .markdown-body pre code {
+            background-color: transparent !important;
+            padding: 1.2rem !important;
+            display: block;
+            font-family: var(--font-mono) !important;
+            font-size: 0.85rem !important;
+            line-height: 1.5;
+        }
+
+        .markdown-body blockquote {
+            border-left: 3px solid var(--accent) !important;
+            background: var(--surface);
+            padding: 0.8rem 1.2rem;
+            color: var(--text-secondary) !important;
+            margin: 1.2rem 0 !important;
+        }
+
+        .markdown-body table {
+            background: var(--surface);
+            font-size: 0.85rem !important;
+            margin: 1.2rem 0 !important;
+        }
+
+        footer {
+            margin-top: 4rem;
+            padding-top: 1.5rem;
+            border-top: 1px solid var(--border);
+            color: var(--text-muted);
+            font-size: 0.8rem;
+            text-align: center;
+        }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar { width: 5px; }
+        ::-webkit-scrollbar-track { background: var(--bg); }
+        ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+    </style>
+</head>
+<body>
+    <aside class="sidebar">
+        <a href="index.html" class="nav-link">
+            <span>←</span> 返回目录门户
+        </a>
+        
+        <div class="toc-container">
+            <h3 class="toc-title">文档导航</h3>
+            <ul class="toc-list" id="toc">
+                <!-- TOC items will be injected here -->
+            </ul>
+        </div>
+    </aside>
+
+    <div class="container">
+        <header>
+            <div class="meta">GLOBAL | 2026-05-16 19:07</div>
+            <h1>A股盈利锚智能投研系统 - 架构与开发设计白皮书</h1>
+        </header>
+
+        <article id="content" class="markdown-body">
+            <!-- Loading indicator -->
+            <p style="color: var(--text-muted)">正在解析文档内容...</p>
+        </article>
+
+        <footer>
+            &copy; 2026 MicroStock Project Docs | Generated by Antigravity
+        </footer>
+    </div>
+
+    <script id="markdown-raw" type="text/markdown"># A股盈利锚智能投研系统 - 架构与开发设计白皮书
+
+> **文档定位**：将《A股投资四锚框架之一：盈利锚完整体系》转化为可落地的微服务架构与开发需求文档。
+> **适用对象**：架构师、后端研发（Python/FastAPI）、前端研发（React/Vite）、数据工程师。
+
+---
+
+## 1. 产品定位与核心目标
+
+“盈利锚智能投研系统”是整个 A股微服务数据体系（`microservice-stock`）的核心分析中枢。其目标是将原本极度依赖投资者个人经验的“六层基本面漏斗”、“财务排雷”以及“克服心理偏差的纪律执行”，固化为一套**半自动化、人机协作的软件系统**。
+
+**核心痛点解决**：
+- **消除看报表慢且容易漏的问题**：机器在秒级内完成百家公司十年横向与纵向数据对比及异动预警。
+- **缓解“伪盈利”陷阱**：通过穿透式的定量算法（现金流匹配度等），自动化排除D级账面盈利的垃圾公司。
+- **对抗“人性”弱点**：构建交易纪律流程管理（买入清单强制验证与定期的持仓扫雷盲测）。
+
+---
+
+## 2. 总体系统架构设计 (Architecture Topology)
+
+系统基于已有的 `FastAPI + Pydantic v2` 微服务架构构建，分为四层：
+
+### 2.1 架构分层蓝图
+1. **基础设施与数据层 (Data & Infrastructure)**：
+   - 数据源：`baostock-api` (宏观、K线), `akshare-api` (海量财务指标、行业数据), `pywencai` (自然语言量化匹配)。
+   - 存储：`MySQL` (结点结构化存储与排雷得分), `Redis` (队列与高速缓存)。
+2. **规则引擎与计算层 (Rules Engine - 定量引擎)**：
+   - `Stock-Manager (API)` 内部新增模块 `Earnings-Anchor-Engine`（盈利锚计算引擎）。负责执行四大报表勾稽关系的运算、成长与周期的识别等。
+3. **AI 中台层 (LLM AI Tier - 定性赋能)**：
+   - 接入大模型 API，用于长文档（研报、招股书、MD&A）的商业模式抽象、护城河判断辅助及舆情/政策影响评估。
+4. **前端交互与纪律管理层 (UI / Execution)**：
+   - Vite + React 前端大盘（Dashboard），展示 S/A/B/C/D 五级矩阵，管理投资候选池（Watchlist）与“心理账户持有清单”。
+
+---
+
+## 3. 数据库与核心数据模型设计 (Database Schema)
+
+在 `MySQL` 中新增或扩展以下表结构，用以支撑六层漏斗逻辑。
+
+### 3.1 盈利质量引擎表: `anchor_financial_health`
+主要存储定量财务健康指标及触发的预警信号：
+- `stock_code` (VARCHAR)
+- `report_date` (DATE): 财报日期
+- `eps_ttm` (DECIMAL): 滚动每股收益
+- `roe_avg_3y` (DECIMAL): 三年平均 ROE
+- `operating_cashflow_ratio` (DECIMAL): 经营现金流/净利润比例（核心排雷指标）
+- `goodwill_ratio` (DECIMAL): 商誉占净资产比例
+- `ar_revenue_gap` (DECIMAL): 应收账款增速与营收增速差（检测压货）
+- `health_score` (INT): 满分100，排雷项逐条扣分
+- `health_flags` (JSON): 存放触发的具体预警枚举，如 `["LOW_CASHFLOW", "HIGH_GOODWILL"]`
+
+### 3.2 盈利质量定级表: `anchor_profit_grade`
+对应文档第七章“盈利的五级质量分层”对公司进行S/A/B/C/D分类：
+- `stock_code` (VARCHAR)
+- `grade` (ENUM: 'S', 'A', 'B', 'C', 'D')
+- `growth_rate_3y` (DECIMAL): 三年复合增长率
+- `roic_latest` (DECIMAL): 最新投入资本回报率
+- `industry_cycle` (ENUM: 'STARTUP', 'GROWTH', 'MATURE', 'DECLINE')
+
+### 3.3 投资纪律辅助表: `portfolio_discipline_logs`
+为了对抗心理认知偏差，强制流程化记录买入/卖出逻辑：
+- `id` (INT / PK)
+- `stock_code` (VARCHAR)
+- `action_type` (ENUM: 'BUY_PLAN', 'HOLD_REVIEW', 'SELL_PLAN')
+- `core_reasons` (JSON): 买入/持有的3-5个核心逻辑
+- `failure_conditions` (JSON): 预设什么情况下逻辑失效必须走人
+- `review_date` (DATE): 下一次“假装没持有”的复盘日期
+
+---
+
+## 4. 核心功能开发拆解：财务规则过滤器（Python实现逻辑）
+
+这是代码实现的核心挑战，将于后续在 `stock-manager` 微服务的 `services/anchor_engine.py` 内实现。
+
+### 4.1 盈利锚“在场”基础验证 (Basic Filter)
+实现函数判断公司的基础底色是否值得研究：
+```python
+async def check_anchor_presence(stock_code: str) -> bool:
+    """
+    检查盈利锚是否在场的6条基础标准
+    """
+    data_3y = await fetch_financials_last_3years(stock_code)
+    
+    # 规则1：近3年营收和扣非净利润增速大于0
+    if data_3y.revenue_growth_avg <= 0 or data_3y.deducted_profit_growth_avg <= 0:
+        return False
+        
+    # 规则2：ROE长期大于12%
+    if data_3y.roe_avg < 12.0:
+        return False
+        
+    # 规则3：经营现金流/净利润 >= 0.8
+    if data_3y.cashflow_netprofit_ratio < 0.8:
+        return False
+        
+    # 规则4：大股东高质押预警(>50%)排查
+    if await check_high_pledge_or_reduction(stock_code):
+        return False
+        
+    return True
+```
+
+### 4.2 财务五大排雷算法 (Minefield Scanning)
+利用杜邦分析扩展数据开发预警系统，标记风险点。
+*   **雷区A (利润虚胖)**：最近一期 `net_profit > 0` 且连续三年 `operating_cash_flow / net_profit < 0.6`。
+*   **雷区B (财务造假或压货嫌疑)**：`ar_growth (应收增速) - revenue_growth (营收增速) > 0.20 (20%)`。
+*   **雷区C (资产减值地雷)**：`goodwill (商誉) / net_assets (净资产) > 0.3`。
+*   **雷区D (主业萎靡)**：`non_recurring_gains (非经常损益) / net_profit > 0.4`。
+
+---
+
+## 5. AI 定性分析中台集成设计 (LLM Copilot)
+
+基于文档第三章（AI与人的分工），将大语言模型深度融合进工作流，但让其退居辅助位（只做提炼，不做判断）。
+
+### 5.1 【定性提炼接口】—— 行业背景与护城河抽取
+**API Endpoint:** `POST /api/v1/anchor/llm/moat-analysis`
+**Workflow:**
+1. 下载/获取公司最新年报的 `管理层讨论与分析(MD&A)` 章节以及外部深度行业研报。
+2. 传送给 LLM。
+3. **预设 Prompt 模版**：
+   > "你是一个A股基本面结构化分析师。请依据以下研报与财报片段，结合Pat Dorsey的 七种护城河理论（无形资产、转换成本、网络效应、成本优势、高效规模等），提炼出该公司最可能的1-2项核心护城河，并提供支持证据。输出必须为严格的JSON格式。"
+
+### 5.2 【预期差管理】—— 历史研报一致性偏移
+**逻辑实现**：
+系统记录卖方机构一年前预测的某公司 EPS 数据，对比当前最新发布的真实 EPS。若相差巨大，自动在前端 Dashboard 标记高强度的红灯或绿灯标识，揭示极其关键的“戴维斯双击（低预期+高兑现）”潜伏前兆。
+
+---
+
+## 6. 前端展示层互动与投资纪律 (UI/UX)
+
+React 前端不仅是图表展示，更是**投资者对抗人性的纪律约束工具**。
+
+### 6.1 个股洞察驾驶舱 (Company Cockpit)
+*   **定量雷达 (Radar)**: ROE, 营收增速，现金回款效率的雷达图。
+*   **估值折线带 (Valuation Bands)**: 利用 Echarts 绘制，叠加快照 EPS 与五年滚动的 PE/PB 分位带空间。
+*   **排雷警报箱 (Alarm Box)**: 红色系卡片化展示高亮病灶提示。
+*   **AI摘要看板 (AI Summary Board)**: 一行字概括极度复杂冗长的业务变更和宏观事件影响链向。
+
+### 6.2 “防冲动”交易纪律阻断弹窗 (Discipline Check Flow)
+为了对付第七章的“心理账户鸿沟”，设计强制节点流：
+当用户点击 [加入模拟持仓] 按钮时，**拦截组件 (Modal) 必须被强制触发并填写提交**：
+```text
+【建立持有认知】
+系统检测到您准备持仓 [股票代码]。必须先完成此纪律承诺：
+[下拉框] 拟匹配锚位？ (盈利锚，资金锚...)
+[输入框 1] 这家公司在行业内核心赚的是什么壁垒的钱？
+[输入框 2] 未来一年催化它的业绩驱动事件预计是什么？
+[输入框 3 (必填)] 【失效条件红线】：发生什么事实，代表我的上述判断彻底弄错了，必须止损割肉？
+```
+
+---
+
+## 7. 敏捷开发路线图 (Roadmap Phase)
+
+*   **Sprint 1: 底座搭建 (Week 1-2)**
+    - 完成数据库表 `anchor_financial_health`, `anchor_profit_grade` 等的设计并执行 DDL。
+    - 在 `akshare-api` 开发专用端点提取三大表和核心财务历史指标数据。
+*   **Sprint 2: 核心排雷规则引擎构建 (Week 3-4)**
+    - 在后端编码实现包含 5 个排雷算法与底色验证逻辑的 `Earnings Anchor Engine`。
+    - 开放 API `/api/v1/anchor/health-check` 用于前端查询评级报告。
+*   **Sprint 3: AI 定性辅助与估值分层 (Week 5-6)**
+    - 接入本地/外部 LLM 服务端点。
+    - 完善提示词工程 (Prompt Engineering) 处理长文本抓取与 JSON 化摘要回传。
+    - 完成估值带宽计算落地。
+*   **Sprint 4: UI/UX与纪律管理工具落位 (Week 7-8)**
+    - 基于 React/Vite 进行大图表 (ECharts) 的驾驶舱前端界面冲刺开发。
+    - 全面打通防脑热强制填写模态框的存储/提取闭环功能。
+</script>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', async () => {
+            const rawMd = document.getElementById('markdown-raw').textContent;
+            const contentEl = document.getElementById('content');
+            const tocEl = document.getElementById('toc');
+            
+            // Set options for marked
+            marked.setOptions({
+                gfm: true,
+                breaks: true,
+                headerIds: true,
+                mangle: false,
+                highlight: function(code, lang) {
+                    const language = hljs.getLanguage(lang) ? lang : 'plaintext';
+                    return hljs.highlight(code, { language }).value;
+                }
+            });
+
+            // Parse Markdown
+            contentEl.innerHTML = marked.parse(rawMd);
+            
+            // Generate TOC
+            const headings = contentEl.querySelectorAll('h2, h3');
+            headings.forEach((h, index) => {
+                if (!h.id) h.id = 'heading-' + index;
+                
+                const li = document.createElement('li');
+                li.className = 'toc-item level-' + h.tagName.toLowerCase().charAt(1);
+                
+                const a = document.createElement('a');
+                a.href = '#' + h.id;
+                a.textContent = h.textContent;
+                
+                li.appendChild(a);
+                tocEl.appendChild(li);
+            });
+
+            // Handle Mermaid
+            if (window.mermaid) {
+                mermaid.initialize({ startOnLoad: false, theme: 'dark', useWorker: false });
+                document.querySelectorAll('pre code.language-mermaid').forEach(el => {
+                    const pre = el.parentElement;
+                    const div = document.createElement('div');
+                    div.className = 'mermaid';
+                    div.textContent = el.textContent;
+                    pre.parentElement.replaceChild(div, pre);
+                });
+                mermaid.run();
+            }
+        });
+    </script>
+</body>
+</html>

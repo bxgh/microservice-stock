@@ -1,0 +1,483 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Stock-Manager 业务中台接口文档 (Stock-Manager API)</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Noto+Serif+SC:wght@400;700;900&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    
+    <!-- Libraries -->
+    <script src="https://lib.baomitu.com/marked/11.1.1/marked.min.js"></script>
+    <link rel="stylesheet" href="https://lib.baomitu.com/github-markdown-css/5.5.0/github-markdown-dark.min.css">
+    <script src="https://lib.baomitu.com/mermaid/10.9.0/mermaid.min.js"></script>
+    
+    <!-- Syntax Highlighting -->
+    <link rel="stylesheet" href="https://lib.baomitu.com/highlight.js/11.9.0/styles/tokyo-night-dark.min.css">
+    <script src="https://lib.baomitu.com/highlight.js/11.9.0/highlight.min.js"></script>
+    
+    <style>
+        :root {
+            --bg: #0a0a0a;
+            --surface: #121212;
+            --surface-hover: #1a1a1a;
+            --border: #222222;
+            --accent: #eab308;
+            --accent-glow: rgba(234, 179, 8, 0.1);
+            --text-primary: #f1f5f9;
+            --text-secondary: #94a3b8;
+            --text-muted: #64748b;
+            --font-sans: 'Outfit', 'Noto Sans SC', -apple-system, sans-serif;
+            --font-serif: 'Noto Serif SC', serif;
+            --font-mono: 'JetBrains Mono', monospace;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background-color: var(--bg);
+            color: var(--text-primary);
+            font-family: var(--font-sans);
+            line-height: 1.7;
+            -webkit-font-smoothing: antialiased;
+            overflow-x: hidden;
+        }
+
+        /* Subtle background glow */
+        body::after {
+            content: '';
+            position: fixed;
+            top: 0;
+            right: 0;
+            width: 40vw;
+            height: 40vh;
+            background: radial-gradient(circle, var(--accent-glow) 0%, transparent 70%);
+            z-index: -1;
+            filter: blur(100px);
+            pointer-events: none;
+        }
+
+        .sidebar {
+            width: 260px;
+            height: 100vh;
+            position: fixed;
+            left: 0;
+            top: 0;
+            border-right: 1px solid var(--border);
+            background: var(--bg);
+            padding: 1.5rem;
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+            overflow-y: auto;
+            z-index: 100;
+        }
+
+        .nav-link {
+            color: var(--text-muted);
+            text-decoration: none;
+            font-size: 0.85rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            transition: color 0.2s;
+            padding: 0.5rem;
+            border-radius: 6px;
+        }
+        .nav-link:hover { color: var(--accent); background: var(--surface); }
+
+        .toc-title {
+            font-family: var(--font-serif);
+            font-size: 1rem;
+            color: var(--text-primary);
+            margin-bottom: 0.8rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding-left: 0.5rem;
+        }
+        .toc-title::before {
+            content: '';
+            width: 3px;
+            height: 1rem;
+            background: var(--accent);
+            border-radius: 2px;
+        }
+
+        .toc-list {
+            list-style: none;
+            display: flex;
+            flex-direction: column;
+            gap: 0.4rem;
+        }
+        .toc-item {
+            font-size: 0.8rem;
+            line-height: 1.3;
+        }
+        .toc-item a {
+            color: var(--text-muted);
+            text-decoration: none;
+            transition: all 0.2s;
+            display: block;
+            padding: 0.4rem 0.5rem;
+            border-radius: 4px;
+        }
+        .toc-item a:hover { color: var(--accent); background: var(--surface); }
+        .toc-item.level-3 { margin-left: 0.8rem; border-left: 1px solid var(--border); }
+
+        .container {
+            max-width: 860px;
+            margin: 0 auto 0 260px;
+            padding: 3rem 4rem;
+            animation: fadeIn 0.6s ease-out;
+        }
+
+        @media (max-width: 1024px) {
+            .sidebar { width: 220px; padding: 1rem; }
+            .container { margin-left: 220px; padding: 2rem; }
+        }
+
+        @media (max-width: 800px) {
+            .sidebar { position: static; width: 100%; height: auto; border-right: none; border-bottom: 1px solid var(--border); }
+            .container { margin-left: 0; padding: 1.5rem; }
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(5px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        header {
+            margin-bottom: 3rem;
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 1.5rem;
+        }
+
+        .meta {
+            font-family: var(--font-mono);
+            font-size: 0.75rem;
+            color: var(--accent);
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            margin-bottom: 0.8rem;
+            display: flex;
+            align-items: center;
+            gap: 0.8rem;
+        }
+
+        .meta::before {
+            content: '';
+            width: 20px;
+            height: 1px;
+            background-color: var(--accent);
+        }
+
+        h1 {
+            font-family: var(--font-serif);
+            font-size: 2.2rem;
+            font-weight: 900;
+            line-height: 1.2;
+            margin-bottom: 1rem;
+            color: var(--text-primary);
+        }
+
+        .markdown-body {
+            background: transparent !important;
+            color: var(--text-primary) !important;
+            font-family: var(--font-sans) !important;
+            font-size: 0.95rem !important;
+        }
+
+        .markdown-body h2 {
+            font-family: var(--font-serif);
+            font-size: 1.5rem !important;
+            color: var(--accent) !important;
+            border-bottom: 1px solid var(--border) !important;
+            padding-bottom: 0.5rem !important;
+            margin-top: 2.5rem !important;
+            scroll-margin-top: 1rem;
+        }
+
+        .markdown-body h3 {
+            font-family: var(--font-serif);
+            font-size: 1.25rem !important;
+            color: var(--text-primary) !important;
+            margin-top: 2rem !important;
+            scroll-margin-top: 1rem;
+        }
+
+        .markdown-body p, .markdown-body li {
+            font-size: 0.95rem !important;
+            color: var(--text-primary) !important;
+        }
+        
+        .markdown-body pre {
+            background-color: #1a1b26 !important; /* Match Tokyo Night Dark */
+            border: 1px solid var(--border);
+            border-radius: 8px !important;
+            padding: 0 !important; /* Code internal handles padding */
+            margin: 1.2rem 0 !important;
+            overflow: hidden;
+        }
+
+        .markdown-body pre code {
+            background-color: transparent !important;
+            padding: 1.2rem !important;
+            display: block;
+            font-family: var(--font-mono) !important;
+            font-size: 0.85rem !important;
+            line-height: 1.5;
+        }
+
+        .markdown-body blockquote {
+            border-left: 3px solid var(--accent) !important;
+            background: var(--surface);
+            padding: 0.8rem 1.2rem;
+            color: var(--text-secondary) !important;
+            margin: 1.2rem 0 !important;
+        }
+
+        .markdown-body table {
+            background: var(--surface);
+            font-size: 0.85rem !important;
+            margin: 1.2rem 0 !important;
+        }
+
+        footer {
+            margin-top: 4rem;
+            padding-top: 1.5rem;
+            border-top: 1px solid var(--border);
+            color: var(--text-muted);
+            font-size: 0.8rem;
+            text-align: center;
+        }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar { width: 5px; }
+        ::-webkit-scrollbar-track { background: var(--bg); }
+        ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+    </style>
+</head>
+<body>
+    <aside class="sidebar">
+        <a href="index.html" class="nav-link">
+            <span>←</span> 返回目录门户
+        </a>
+        
+        <div class="toc-container">
+            <h3 class="toc-title">文档导航</h3>
+            <ul class="toc-list" id="toc">
+                <!-- TOC items will be injected here -->
+            </ul>
+        </div>
+    </aside>
+
+    <div class="container">
+        <header>
+            <div class="meta">GLOBAL | 2026-05-16 19:06</div>
+            <h1>Stock-Manager 业务中台接口文档 (Stock-Manager API)</h1>
+        </header>
+
+        <article id="content" class="markdown-body">
+            <!-- Loading indicator -->
+            <p style="color: var(--text-muted)">正在解析文档内容...</p>
+        </article>
+
+        <footer>
+            &copy; 2026 MicroStock Project Docs | Generated by Antigravity
+        </footer>
+    </div>
+
+    <script id="markdown-raw" type="text/markdown"># Stock-Manager 业务中台接口文档 (Stock-Manager API)
+
+> **端口 (Port)**: 8004  
+> **核心职能**: 多源数据同步调度、元数据管理、博弈/筹码记录持久化、监控评分查询。
+> **⚠️ 重要提示**: 本服务 (8004) **不提供** K 线行情及估值数据的查询。如需 K 线数据，请调用 `BaoStock-API` (Port 8001)。
+腾讯云ip: [IP_ADDRESS]  124.221.80.250
+---
+
+## 1. 基础元数据 (Fundamental & Metadata)
+涉及标的基础信息、交易日历等核心字典数据。
+
+| 接口路径 | 方法 | 数据性质 | 说明 |
+| :--- | :--- | :--- | :--- |
+| `/api/v1/metadata/baseline/current` | GET | **静态/统计** | 从 `stock-basic-info` 获取全市场 A 股标的总数及分类统计。 |
+| `/api/v1/metadata/calendar/tradingDays` | GET | **时序/字典** | 从 `trade-calendar` 获取指定周期的交易日历。 |
+
+---
+
+## 2. 股东数据 (Shareholders)
+涉及 `stock_shareholder_count` 和 `stock_shareholder_top10` 字表。
+
+| 接口路径 | 方法 | 数据性质 | 说明 |
+| :--- | :--- | :--- | :--- |
+| `/api/v1/shareholders/count/{code}` | GET | **季度报告** | 获取个股历史股东户数及变化比例。 |
+| `/api/v1/shareholders/top10/{code}` | GET | **季度报告** | 获取个股最近一期前十大自由流通股东明细。 |
+| `/api/v1/shareholders/sync/{code}` | POST | **增量入库** | 手动触发单只股票的股东数据从源端同步至 MySQL。 |
+| `/api/v1/shareholders/sync-batch` | POST | **批处理** | 批量同步多只股票的股东信息。 |
+
+---
+
+## 3. 财务报表 (Financial Reports)
+涉及核心三大会计报表的历史记录。数据源自 AkShare (EM/Tushare) 并持久化于 MySQL。
+
+| 接口路径 | 方法 | 数据性质 | 说明 |
+| :--- | :--- | :--- | :--- |
+| `/api/v1/finance/reports/{code}` | GET | **时序报表** | 获取个股历史三大会计报表（资产负债表、利润表、现金流量表）。支持 `limit` 参数控制返回的报告期数量。 |
+| `/api/v1/finance/indicators/{code}` | GET | **衍生指标** | 获取个股历史财务衍生指标（ROE, ROA, 毛利率, 资产负债率, EPS等）。 |
+| `/api/v1/finance/sync/{code}` | POST | **个股同步** | 触发特定个股的历史财务报表从数据源完整同步至本地 MySQL。 |
+| `/api/v1/finance/sync-indicators/{code}` | POST | **个股指标同步** | 触发特定个股的历史财务衍生指标同步，确保“盈利锚”引擎计算准确。 |
+| `/api/v1/finance/sync-all-indicators` | POST | **全市场同步** | **[后台]** 触发全市场所有在市标的的财务衍生指标增量同步。建议每周执行。 |
+
+---
+
+## 4. 博弈与资金 (Game & Capital Flow)
+涉及龙虎榜 (`stock_lhb_daily`) 和北向资金 (`stock_north_funds_daily`)。
+
+| 接口路径 | 方法 | 数据性质 | 说明 |
+| :--- | :--- | :--- | :--- |
+| `/api/v1/game/lhb/{code}` | GET | **时序记录** | 查询个股历史龙虎榜成交记录（含机构买卖额）。 |
+| `/api/v1/game/north/{code}` | GET | **时序指标** | 查询个股北向资金历史持股数量及占比波动。 |
+| `/api/v1/game/sync/lhb` | POST | **每日增量** | 将全市场龙虎榜明细数据持久化到 MySQL。 |
+| `/api/v1/game/sync/north` | POST | **每日增量** | 将每日北向资金持仓快照同步至 MySQL。 |
+| `/api/v1/game/sync/north/history/{code}` | POST | **补全入库** | 补全特定标的历史北向持仓变化。 |
+
+---
+
+## 4. 筹码与供给 (Chips & Supply)
+| `/api/v1/chips/restricted/{code}` | GET | **计划/事件** | 查询个股未来 60 天及历史的限售解禁计划。 |
+| `/api/v1/chips/block_trade/{code}` | GET | **时序记录** | 记录个股成交价、成交额等大宗交易细节。 |
+| `/api/v1/chips/sync/restricted` | POST | **增量更新** | 增量抓取全市场限售解禁信息并存入 MySQL。 |
+| `/api/v1/chips/sync/block_trade` | POST | **增量更新** | 批量或单日同步全市场大宗交易记录。 |
+
+---
+
+## 5. 信息与舆情 (Information & Sentiment)
+| 接口路径 | 方法 | 数据性质 | 说明 |
+| :--- | :--- | :--- | :--- |
+| `/api/v1/information/analyst-ranks/{code}` | GET | **评级记录** | 获取各机构对标的的评级历史（买入/增持等）。 |
+| `/api/v1/information/forecasts/{code}` | GET | **季度报告** | 获取公司发布的季度/年度业绩预告细节。 |
+| `/api/v1/information/sentiment/{code}` | GET | **每日状态** | 查询每日市场热度分布与排名得分情况。 |
+| `/api/v1/information/analyst-ranks/sync` | POST | **当日同步** | 同步最新当日分析师研报数据。 |
+| `/api/v1/information/analyst-ranks/sync-fetch` | POST | **深度同步** | **[强制]** 从源端重新全量拉取机构评级数据。 |
+| `/api/v1/information/forecasts/sync` | POST | **当日同步** | 抓取最新当日业绩预告并持久化入库。 |
+| `/api/v1/information/forecasts/sync-fetch` | POST | **深度同步** | **[强制]** 从源端重新全量拉取业绩预告数据。 |
+| `/api/v1/information/sentiment/sync` | POST | **当日同步** | 同步当日全市场热度评分。 |
+| `/api/v1/information/sentiment/sync-fetch/{code}` | POST | **深度同步** | **[强制]** 重新拉取指定个股的深度热度数据。 |
+
+---
+
+## 6. 监控与评分 (Monitor & Scores)
+涉及综合健康分 (`monitor_scores`) 和各项子统计。
+
+| 接口路径 | 方法 | 数据性质 | 说明 |
+| :--- | :--- | :--- | :--- |
+| `/api/v1/monitor/summary` | GET | **聚合统计** | 计算并返回当前高分标的占比、入库进度等概览指标。 |
+| `/api/v1/monitor/history/score` | GET | **时序曲线** | 查询全市场监控得分的历史连续变动，用于绘图。 |
+| `/api/v1/monitor/history/indicator/{name}` | GET | **分项统计** | 查询特定监控指标（如 LHB 热度）的历史变动。 |
+
+---
+
+## 7. 运维与审计 (Ops & Audit)
+| 接口路径 | 方法 | 数据性质 | 说明 |
+| :--- | :--- | :--- | :--- |
+| `/api/v1/ops/freshness` | GET | **状态概览** | 检测 MySQL 中各大核心表的同步刷新时间，判断滞后情况。 |
+| `/api/v1/ops/adjust-factor` | GET | **核查数据** | 返回指定日期的全市场复权因子“覆盖统计”，不返回序列数据。 |
+| `/api/v1/audit/weekly` | GET | **审计报告** | 汇总最近一周的同步执行记录，生成完整性报告。 |
+| `/api/v1/data-audits` | GET | **日志记录** | 列出所有的静态数据/动态数据一致性核查记录。 |
+
+---
+
+## 8. 指令与任务流 (Commands & Tasks)
+线上存在两套平行的指令控制机制。
+
+### 8.1 即时指令 (Simple Commands)
+用于下达触发简单的、即时反馈的后台同步操作。
+
+| 接口路径 | 方法 | 数据性质 | 说明 |
+| :--- | :--- | :--- | :--- |
+| `/api/v1/commands` | GET | **日志** | 查阅所有已下达的即时指令记录。 |
+| `/api/v1/commands` | POST | **指令写入** | 下达一个即时同步指令（如：`daily_kline_sync`）。 |
+| `/api/v1/commands/{id}` | GET | **状态** | 获取特定指令的执行进度。 |
+
+### 8.2 长效任务流 (Task Commands)
+用于管理涉及多步操作或长审计周期的高阶异步任务。
+
+| 接口路径 | 方法 | 数据性质 | 说明 |
+| :--- | :--- | :--- | :--- |
+| `/api/v1/task-commands` | GET | **任务日志** | 获取所有下达的长效异步指令执行记录。 |
+| `/api/v1/task-commands` | POST | **任务写入** | 下达一个新的异步任务指令。 |
+| `/api/v1/task-commands/{id}` | GET | **状态细节** | 查看长效任务的实时原子日志。 |
+
+---
+
+## 9. 数据库表映射参考 (Appendix)
+*   **基础**: `stock-basic-info`, `trade-calendar`
+*   **财务**: `stock-balance-sheet`, `stock-income-statement`, `stock-cash-flow-statement`, `stock-finance-indicators`
+*   **行情**: `stock-kline-daily`, `stock-valuation-daily` (**注：仅供后台同步，8004 不对外提供查询**)
+*   **博弈**: `stock-lhb-daily`, `stock-north-funds-daily`
+*   **股东**: `stock-shareholder-count`, `stock-shareholder-top10`
+*   **筹码**: `stock-block-trade`, `stock-restricted-release`
+*   **监控**: `monitor-scores`, `monitor-indicators`
+*   **系统**: `task-commands`, `ops-audit-logs`, `sync-progress`
+</script>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', async () => {
+            const rawMd = document.getElementById('markdown-raw').textContent;
+            const contentEl = document.getElementById('content');
+            const tocEl = document.getElementById('toc');
+            
+            // Set options for marked
+            marked.setOptions({
+                gfm: true,
+                breaks: true,
+                headerIds: true,
+                mangle: false,
+                highlight: function(code, lang) {
+                    const language = hljs.getLanguage(lang) ? lang : 'plaintext';
+                    return hljs.highlight(code, { language }).value;
+                }
+            });
+
+            // Parse Markdown
+            contentEl.innerHTML = marked.parse(rawMd);
+            
+            // Generate TOC
+            const headings = contentEl.querySelectorAll('h2, h3');
+            headings.forEach((h, index) => {
+                if (!h.id) h.id = 'heading-' + index;
+                
+                const li = document.createElement('li');
+                li.className = 'toc-item level-' + h.tagName.toLowerCase().charAt(1);
+                
+                const a = document.createElement('a');
+                a.href = '#' + h.id;
+                a.textContent = h.textContent;
+                
+                li.appendChild(a);
+                tocEl.appendChild(li);
+            });
+
+            // Handle Mermaid
+            if (window.mermaid) {
+                mermaid.initialize({ startOnLoad: false, theme: 'dark', useWorker: false });
+                document.querySelectorAll('pre code.language-mermaid').forEach(el => {
+                    const pre = el.parentElement;
+                    const div = document.createElement('div');
+                    div.className = 'mermaid';
+                    div.textContent = el.textContent;
+                    pre.parentElement.replaceChild(div, pre);
+                });
+                mermaid.run();
+            }
+        });
+    </script>
+</body>
+</html>

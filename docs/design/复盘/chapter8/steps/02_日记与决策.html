@@ -1,0 +1,511 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>第 8 章 · 认知训练系统 (第二步：日记与决策)</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Noto+Serif+SC:wght@400;700;900&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    
+    <!-- Libraries -->
+    <script src="https://lib.baomitu.com/marked/11.1.1/marked.min.js"></script>
+    <link rel="stylesheet" href="https://lib.baomitu.com/github-markdown-css/5.5.0/github-markdown-dark.min.css">
+    <script src="https://lib.baomitu.com/mermaid/10.9.0/mermaid.min.js"></script>
+    
+    <!-- Syntax Highlighting -->
+    <link rel="stylesheet" href="https://lib.baomitu.com/highlight.js/11.9.0/styles/tokyo-night-dark.min.css">
+    <script src="https://lib.baomitu.com/highlight.js/11.9.0/highlight.min.js"></script>
+    
+    <style>
+        :root {
+            --bg: #0a0a0a;
+            --surface: #121212;
+            --surface-hover: #1a1a1a;
+            --border: #222222;
+            --accent: #eab308;
+            --accent-glow: rgba(234, 179, 8, 0.1);
+            --text-primary: #f1f5f9;
+            --text-secondary: #94a3b8;
+            --text-muted: #64748b;
+            --font-sans: 'Outfit', 'Noto Sans SC', -apple-system, sans-serif;
+            --font-serif: 'Noto Serif SC', serif;
+            --font-mono: 'JetBrains Mono', monospace;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background-color: var(--bg);
+            color: var(--text-primary);
+            font-family: var(--font-sans);
+            line-height: 1.7;
+            -webkit-font-smoothing: antialiased;
+            overflow-x: hidden;
+        }
+
+        /* Subtle background glow */
+        body::after {
+            content: '';
+            position: fixed;
+            top: 0;
+            right: 0;
+            width: 40vw;
+            height: 40vh;
+            background: radial-gradient(circle, var(--accent-glow) 0%, transparent 70%);
+            z-index: -1;
+            filter: blur(100px);
+            pointer-events: none;
+        }
+
+        .sidebar {
+            width: 260px;
+            height: 100vh;
+            position: fixed;
+            left: 0;
+            top: 0;
+            border-right: 1px solid var(--border);
+            background: var(--bg);
+            padding: 1.5rem;
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+            overflow-y: auto;
+            z-index: 100;
+        }
+
+        .nav-link {
+            color: var(--text-muted);
+            text-decoration: none;
+            font-size: 0.85rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            transition: color 0.2s;
+            padding: 0.5rem;
+            border-radius: 6px;
+        }
+        .nav-link:hover { color: var(--accent); background: var(--surface); }
+
+        .toc-title {
+            font-family: var(--font-serif);
+            font-size: 1rem;
+            color: var(--text-primary);
+            margin-bottom: 0.8rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding-left: 0.5rem;
+        }
+        .toc-title::before {
+            content: '';
+            width: 3px;
+            height: 1rem;
+            background: var(--accent);
+            border-radius: 2px;
+        }
+
+        .toc-list {
+            list-style: none;
+            display: flex;
+            flex-direction: column;
+            gap: 0.4rem;
+        }
+        .toc-item {
+            font-size: 0.8rem;
+            line-height: 1.3;
+        }
+        .toc-item a {
+            color: var(--text-muted);
+            text-decoration: none;
+            transition: all 0.2s;
+            display: block;
+            padding: 0.4rem 0.5rem;
+            border-radius: 4px;
+        }
+        .toc-item a:hover { color: var(--accent); background: var(--surface); }
+        .toc-item.level-3 { margin-left: 0.8rem; border-left: 1px solid var(--border); }
+
+        .container {
+            max-width: 860px;
+            margin: 0 auto 0 260px;
+            padding: 3rem 4rem;
+            animation: fadeIn 0.6s ease-out;
+        }
+
+        @media (max-width: 1024px) {
+            .sidebar { width: 220px; padding: 1rem; }
+            .container { margin-left: 220px; padding: 2rem; }
+        }
+
+        @media (max-width: 800px) {
+            .sidebar { position: static; width: 100%; height: auto; border-right: none; border-bottom: 1px solid var(--border); }
+            .container { margin-left: 0; padding: 1.5rem; }
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(5px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        header {
+            margin-bottom: 3rem;
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 1.5rem;
+        }
+
+        .meta {
+            font-family: var(--font-mono);
+            font-size: 0.75rem;
+            color: var(--accent);
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            margin-bottom: 0.8rem;
+            display: flex;
+            align-items: center;
+            gap: 0.8rem;
+        }
+
+        .meta::before {
+            content: '';
+            width: 20px;
+            height: 1px;
+            background-color: var(--accent);
+        }
+
+        h1 {
+            font-family: var(--font-serif);
+            font-size: 2.2rem;
+            font-weight: 900;
+            line-height: 1.2;
+            margin-bottom: 1rem;
+            color: var(--text-primary);
+        }
+
+        .markdown-body {
+            background: transparent !important;
+            color: var(--text-primary) !important;
+            font-family: var(--font-sans) !important;
+            font-size: 0.95rem !important;
+        }
+
+        .markdown-body h2 {
+            font-family: var(--font-serif);
+            font-size: 1.5rem !important;
+            color: var(--accent) !important;
+            border-bottom: 1px solid var(--border) !important;
+            padding-bottom: 0.5rem !important;
+            margin-top: 2.5rem !important;
+            scroll-margin-top: 1rem;
+        }
+
+        .markdown-body h3 {
+            font-family: var(--font-serif);
+            font-size: 1.25rem !important;
+            color: var(--text-primary) !important;
+            margin-top: 2rem !important;
+            scroll-margin-top: 1rem;
+        }
+
+        .markdown-body p, .markdown-body li {
+            font-size: 0.95rem !important;
+            color: var(--text-primary) !important;
+        }
+        
+        .markdown-body pre {
+            background-color: #1a1b26 !important; /* Match Tokyo Night Dark */
+            border: 1px solid var(--border);
+            border-radius: 8px !important;
+            padding: 0 !important; /* Code internal handles padding */
+            margin: 1.2rem 0 !important;
+            overflow: hidden;
+        }
+
+        .markdown-body pre code {
+            background-color: transparent !important;
+            padding: 1.2rem !important;
+            display: block;
+            font-family: var(--font-mono) !important;
+            font-size: 0.85rem !important;
+            line-height: 1.5;
+        }
+
+        .markdown-body blockquote {
+            border-left: 3px solid var(--accent) !important;
+            background: var(--surface);
+            padding: 0.8rem 1.2rem;
+            color: var(--text-secondary) !important;
+            margin: 1.2rem 0 !important;
+        }
+
+        .markdown-body table {
+            background: var(--surface);
+            font-size: 0.85rem !important;
+            margin: 1.2rem 0 !important;
+        }
+
+        footer {
+            margin-top: 4rem;
+            padding-top: 1.5rem;
+            border-top: 1px solid var(--border);
+            color: var(--text-muted);
+            font-size: 0.8rem;
+            text-align: center;
+        }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar { width: 5px; }
+        ::-webkit-scrollbar-track { background: var(--bg); }
+        ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+    </style>
+</head>
+<body>
+    <aside class="sidebar">
+        <a href="index.html" class="nav-link">
+            <span>←</span> 返回目录门户
+        </a>
+        
+        <div class="toc-container">
+            <h3 class="toc-title">文档导航</h3>
+            <ul class="toc-list" id="toc">
+                <!-- TOC items will be injected here -->
+            </ul>
+        </div>
+    </aside>
+
+    <div class="container">
+        <header>
+            <div class="meta">GLOBAL | 2026-05-16 19:06</div>
+            <h1>第 8 章 · 认知训练系统 (第二步：日记与决策)</h1>
+        </header>
+
+        <article id="content" class="markdown-body">
+            <!-- Loading indicator -->
+            <p style="color: var(--text-muted)">正在解析文档内容...</p>
+        </article>
+
+        <footer>
+            &copy; 2026 MicroStock Project Docs | Generated by Antigravity
+        </footer>
+    </div>
+
+    <script id="markdown-raw" type="text/markdown"># 第 8 章 · 认知训练系统 (第二步：日记与决策)
+
+## E2 · 每日 3 句话日记 (Daily Journal)
+
+> 作为投资者,我希望收盘后 2 分钟内写完核心矛盾 / 预期对错 / 明日观察,以便强制输出形成认知。
+
+### E2-S1 数据表 `train_journal_daily`
+
+```sql
+CREATE TABLE IF NOT EXISTS train_journal_daily (
+    journal_id          VARCHAR(32)   NOT NULL,
+    user_id             VARCHAR(32)   NOT NULL,
+    trade_date          DATE          NOT NULL,
+
+    -- 三句话(强制结构,各限 100 字)
+    core_conflict       VARCHAR(200)  NOT NULL                  COMMENT '今日核心矛盾(一句话概括市场)',
+    prediction_review   VARCHAR(200)  NOT NULL                  COMMENT '昨日预期对错(对/错/部分对+原因)',
+    tomorrow_focus      VARCHAR(200)  NOT NULL                  COMMENT '明日观察点',
+
+    -- 自评对错(辅助,系统会用 prediction 表客观校验)
+    self_eval           VARCHAR(16)   DEFAULT NULL              COMMENT 'right/wrong/partial',
+
+    -- 心情标签(可选,用于识别情绪化交易)
+    mood                VARCHAR(16)   DEFAULT NULL              COMMENT 'calm/excited/anxious/regret/fomo',
+
+    -- 关联当日预判
+    related_pred_id     VARCHAR(32)   DEFAULT NULL,
+
+    submit_time         DATETIME      NOT NULL,
+    update_time         TIMESTAMP     DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY (journal_id),
+    UNIQUE KEY uk_user_date (user_id, trade_date),
+    KEY idx_mood (user_id, mood)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='每日 3 句话日记';
+```
+
+### E2-S2 提交规则
+
+- **触发时间**: 15:00 收盘后开放, 18:00 后系统 push 一次提醒
+- **三句话强制**: 任一字段为空不允许提交
+- **字数引导**: 30-200 字, < 30 字时前端弹"太短了,再具体一点"
+- **mood 标签**: 可选但鼓励填, 用于后期分析"焦虑时是否更易判断错"
+
+### E2-S3 验收标准
+
+- **Given** 用户提交时三句话有任一空,**When** 提交,**Then** 前端拦截,后端返回 422
+- **Given** 当日已有预判,**When** 提交日记,**Then** 自动关联 `related_pred_id`
+- **Given** `mood='fomo'` 频率超 30%,**When** 周报生成,**Then** 在认知画像中标记"FOMO 倾向"
+
+---
+
+## E3 · 决策日志 (Decision Log)
+
+> 作为投资者,我希望记录每次买卖决策的当时理由,并在 5/20 日后强制反思,以便区分"判断对错"与"运气"。
+
+### E3-S1 数据表 `train_decision_log`
+
+```sql
+CREATE TABLE IF NOT EXISTS train_decision_log (
+    decision_id         VARCHAR(32)   NOT NULL,
+    user_id             VARCHAR(32)   NOT NULL,
+    decision_time       DATETIME      NOT NULL,
+    trade_date          DATE          NOT NULL,
+
+    -- 决策本体
+    action              VARCHAR(16)   NOT NULL                  COMMENT 'buy/sell/add/reduce/hold/watch',
+    ts_code             VARCHAR(12)   DEFAULT NULL              COMMENT '可空,如果是仓位级决策(如清仓所有)',
+    name                VARCHAR(40)   DEFAULT NULL,
+
+    -- 决策依据(强制结构化,3 个槽位)
+    reason_layer        VARCHAR(16)   NOT NULL                  COMMENT '决策属于哪一层:env/theme/rhythm/stock',
+    reason_evidence     JSON          NOT NULL                  COMMENT '量化依据,如 [{indicator:"北向净流入", value:"60亿", source:"L3"}]',
+    reason_text         VARCHAR(300)  NOT NULL                  COMMENT '一句话决策逻辑',
+
+    -- 预期(关键,事后比对)
+    expected_outcome    VARCHAR(200)  NOT NULL                  COMMENT '预期会发生什么,如:5日内涨 8%',
+    expected_horizon    VARCHAR(16)   NOT NULL                  COMMENT '预期周期:1d/5d/20d/60d',
+    stop_loss           VARCHAR(100)  DEFAULT NULL              COMMENT '止损条件,如:跌破 5 日线',
+
+    -- 决策时的关键数据快照
+    price_at_decision   DECIMAL(16,4) DEFAULT NULL,
+    context_snapshot    JSON          DEFAULT NULL              COMMENT '当时市场环境快照',
+
+    -- 仓位变动(可选)
+    position_before     DECIMAL(6,4)  DEFAULT NULL              COMMENT '决策前仓位占比 0-1',
+    position_after      DECIMAL(6,4)  DEFAULT NULL,
+
+    -- ==== 5/20 日后反思(系统 push 触发,反思必须延迟写)====
+    review_5d           TEXT          DEFAULT NULL,
+    review_5d_time      DATETIME      DEFAULT NULL,
+    review_20d          TEXT          DEFAULT NULL,
+    review_20d_time     DATETIME      DEFAULT NULL,
+
+    -- ==== 客观结果(自动计算,5d / 20d 后 cron 写入)====
+    price_5d            DECIMAL(16,4) DEFAULT NULL,
+    return_5d           DECIMAL(10,6) DEFAULT NULL              COMMENT '5日收益率(小数)',
+    price_20d           DECIMAL(16,4) DEFAULT NULL,
+    return_20d          DECIMAL(10,6) DEFAULT NULL,
+
+    -- ==== 判断 vs 结果分类(关键认知诊断)====
+    -- 4 象限分析: right_judge_right_result / right_judge_wrong_result / wrong_judge_right_result / wrong_judge_wrong_result
+    outcome_quadrant    VARCHAR(20)   DEFAULT NULL,
+
+    update_time         TIMESTAMP     DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY (decision_id),
+    KEY idx_user_date (user_id, trade_date),
+    KEY idx_quadrant (user_id, outcome_quadrant)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='决策日志';
+```
+
+### E3-S2 4 象限分析逻辑
+
+这是整个系统**最重要的功能**,把决策好坏与结果好坏解耦:
+
+- **判断质量好**: `reason_evidence` 中 ≥ 3 项数据支持,且属于结构性变量(env/theme)
+- **判断质量差**: < 3 项依据,或属于纯叙事(reason_text 含"传闻/听说/感觉"等)
+- **结果好**: `return >= expected * 0.5`(达成预期一半以上)
+- **结果差**: `return < 0` 或反向
+
+### E3-S3 反思与结果更新 (SQL & Push)
+
+```sql
+-- T+5 / T+20 自动写入客观结果
+UPDATE train_decision_log d
+LEFT JOIN stock_kline_daily k5
+  ON k5.code = SUBSTRING_INDEX(d.ts_code, '.', 1)
+  AND k5.trade_date = (
+      SELECT MIN(cal_date) FROM trade_cal
+      WHERE cal_date > d.trade_date AND is_open = 1
+      ORDER BY cal_date LIMIT 1 OFFSET 4   -- 第 5 个交易日
+  )
+SET
+    d.price_5d = k5.close,
+    d.return_5d = (k5.close - d.price_at_decision) / d.price_at_decision
+WHERE d.return_5d IS NULL
+  AND DATEDIFF(CURDATE(), d.trade_date) >= 7;
+
+-- 4 象限分类
+UPDATE train_decision_log
+SET outcome_quadrant = CASE
+    WHEN judge_quality = 'good' AND return_20d >= 0.05 THEN 'right_judge_right_result'
+    WHEN judge_quality = 'good' AND return_20d <  0    THEN 'right_judge_wrong_result'
+    WHEN judge_quality = 'poor' AND return_20d >= 0.05 THEN 'wrong_judge_right_result'  -- 危险:幸存者偏差
+    WHEN judge_quality = 'poor' AND return_20d <  0    THEN 'wrong_judge_wrong_result'
+    ELSE 'neutral'
+END
+WHERE return_20d IS NOT NULL AND outcome_quadrant IS NULL;
+```
+
+**push 时机:**
+- **T+5 18:00**: 小程序 push「您 5 日前关于 XX 的决策,该写中期反思了」
+- **T+20 18:00**: 再次 push, 要求写终期反思
+- **反思必须延迟写**: T+0 ~ T+4 期间, 反思字段在前端是禁用状态
+
+### E3-S4 验收标准
+
+- **Given** 用户在 T+0 想填 review_5d,**When** 操作,**Then** 前端禁用
+- **Given** 决策的 `reason_evidence` 只有 1 项数据,**When** 自动评判,**Then** `judge_quality='poor'`
+- **Given** `expected_outcome="5日涨8%"`、实际涨 6%,**When** 计算,**Then** `return_5d=0.06` 且标 right_result
+- **Given** 决策属于"右上象限"(蒙对),**When** 周报生成,**Then** 高亮提示"运气成分较大"
+</script>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', async () => {
+            const rawMd = document.getElementById('markdown-raw').textContent;
+            const contentEl = document.getElementById('content');
+            const tocEl = document.getElementById('toc');
+            
+            // Set options for marked
+            marked.setOptions({
+                gfm: true,
+                breaks: true,
+                headerIds: true,
+                mangle: false,
+                highlight: function(code, lang) {
+                    const language = hljs.getLanguage(lang) ? lang : 'plaintext';
+                    return hljs.highlight(code, { language }).value;
+                }
+            });
+
+            // Parse Markdown
+            contentEl.innerHTML = marked.parse(rawMd);
+            
+            // Generate TOC
+            const headings = contentEl.querySelectorAll('h2, h3');
+            headings.forEach((h, index) => {
+                if (!h.id) h.id = 'heading-' + index;
+                
+                const li = document.createElement('li');
+                li.className = 'toc-item level-' + h.tagName.toLowerCase().charAt(1);
+                
+                const a = document.createElement('a');
+                a.href = '#' + h.id;
+                a.textContent = h.textContent;
+                
+                li.appendChild(a);
+                tocEl.appendChild(li);
+            });
+
+            // Handle Mermaid
+            if (window.mermaid) {
+                mermaid.initialize({ startOnLoad: false, theme: 'dark', useWorker: false });
+                document.querySelectorAll('pre code.language-mermaid').forEach(el => {
+                    const pre = el.parentElement;
+                    const div = document.createElement('div');
+                    div.className = 'mermaid';
+                    div.textContent = el.textContent;
+                    pre.parentElement.replaceChild(div, pre);
+                });
+                mermaid.run();
+            }
+        });
+    </script>
+</body>
+</html>

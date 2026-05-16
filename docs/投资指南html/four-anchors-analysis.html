@@ -1,0 +1,2039 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>四锚框架 · 个股分析 · 示范样本</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;500;700;900&family=Noto+Sans+SC:wght@300;400;500;700&family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,700;1,9..144,400&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  /* ============================================================
+     四锚框架 · 设计系统
+     Palette: paper cream / ink black / oxblood red / gold accent
+     ============================================================ */
+  :root {
+    --paper:        #f1ead9;
+    --paper-deep:   #e8dfc9;
+    --paper-line:   #d8cbad;
+    --ink:          #1a1614;
+    --ink-soft:     #4a4136;
+    --ink-mute:     #7a6f5f;
+    --oxblood:      #8b1e1e;
+    --oxblood-deep: #5e1414;
+    --gold:         #b08318;
+    --gold-soft:    #d4b164;
+
+    /* status colors */
+    --s-strong:  #2d6a4f;   /* 🟢 green */
+    --s-neutral: #b08318;   /* 🟡 amber */
+    --s-weak:    #8b1e1e;   /* 🔴 red */
+    --s-cold:    #345d7e;   /* ❄️ blue */
+    --s-alert:   #b5621f;   /* ⚠️ orange */
+
+    --mono: "JetBrains Mono", ui-monospace, monospace;
+    --serif-cn: "Noto Serif SC", "Songti SC", serif;
+    --sans-cn: "Noto Sans SC", "PingFang SC", sans-serif;
+    --display-en: "Fraunces", Georgia, serif;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    font-family: var(--sans-cn);
+    background: var(--paper);
+    color: var(--ink);
+    line-height: 1.7;
+    -webkit-font-smoothing: antialiased;
+    /* grain texture */
+    background-image:
+      radial-gradient(ellipse at top, rgba(176,131,24,0.06), transparent 50%),
+      radial-gradient(ellipse at bottom right, rgba(139,30,30,0.04), transparent 50%),
+      url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='120' height='120'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0.1 0 0 0 0 0.08 0 0 0 0 0.05 0 0 0 0.05 0'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>");
+  }
+
+  /* ============================================================
+     TOP NAV
+     ============================================================ */
+  .topnav {
+    position: sticky;
+    top: 0;
+    z-index: 50;
+    background: rgba(241,234,217,0.92);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    border-bottom: 1px solid var(--paper-line);
+  }
+  .topnav-inner {
+    max-width: 1280px;
+    margin: 0 auto;
+    padding: 14px 40px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 32px;
+  }
+  .brand {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+    font-family: var(--serif-cn);
+    font-weight: 700;
+  }
+  .brand-seal {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px; height: 32px;
+    background: var(--oxblood);
+    color: var(--paper);
+    font-family: var(--serif-cn);
+    font-weight: 900;
+    font-size: 14px;
+    letter-spacing: 0;
+    transform: translateY(4px);
+    box-shadow: 1px 1px 0 var(--oxblood-deep);
+  }
+  .brand-cn { font-size: 20px; letter-spacing: 0.04em; }
+  .brand-en {
+    font-family: var(--display-en);
+    font-style: italic;
+    font-weight: 400;
+    color: var(--ink-mute);
+    font-size: 13px;
+    letter-spacing: 0.1em;
+  }
+  .nav-links {
+    display: flex;
+    gap: 28px;
+    list-style: none;
+    font-size: 13px;
+    letter-spacing: 0.08em;
+  }
+  .nav-links a {
+    color: var(--ink-soft);
+    text-decoration: none;
+    position: relative;
+    padding-bottom: 2px;
+    transition: color .2s;
+  }
+  .nav-links a:hover { color: var(--oxblood); }
+  .nav-links a::after {
+    content: "";
+    position: absolute;
+    left: 0; right: 0; bottom: -2px;
+    height: 1px;
+    background: var(--oxblood);
+    transform: scaleX(0);
+    transform-origin: left;
+    transition: transform .3s ease;
+  }
+  .nav-links a:hover::after { transform: scaleX(1); }
+  .nav-meta {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--ink-mute);
+    letter-spacing: 0.08em;
+  }
+
+  /* ============================================================
+     HERO
+     ============================================================ */
+  .hero {
+    max-width: 1280px;
+    margin: 0 auto;
+    padding: 80px 40px 40px;
+    position: relative;
+  }
+  .hero-meta {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--ink-mute);
+    letter-spacing: 0.15em;
+    margin-bottom: 32px;
+  }
+  .hero-meta::before {
+    content: "";
+    width: 40px;
+    height: 1px;
+    background: var(--ink-mute);
+  }
+  .hero-title {
+    font-family: var(--serif-cn);
+    font-weight: 900;
+    font-size: clamp(48px, 8vw, 110px);
+    line-height: 0.95;
+    letter-spacing: -0.02em;
+    margin-bottom: 24px;
+    color: var(--ink);
+  }
+  .hero-title .accent {
+    color: var(--oxblood);
+    font-style: italic;
+    font-family: var(--display-en);
+    font-weight: 400;
+    font-size: 0.7em;
+    display: inline-block;
+    transform: translateY(-0.08em);
+    margin: 0 0.1em;
+  }
+  .hero-sub {
+    font-family: var(--serif-cn);
+    font-size: 20px;
+    font-weight: 400;
+    color: var(--ink-soft);
+    max-width: 680px;
+    line-height: 1.6;
+    margin-bottom: 40px;
+  }
+  .hero-divider {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1px;
+    background: var(--paper-line);
+    border-top: 1px solid var(--paper-line);
+    border-bottom: 1px solid var(--paper-line);
+    margin-top: 48px;
+  }
+  .hero-divider > div {
+    background: var(--paper);
+    padding: 22px 20px;
+  }
+  .hero-divider .num {
+    font-family: var(--display-en);
+    font-size: 12px;
+    color: var(--oxblood);
+    letter-spacing: 0.2em;
+    margin-bottom: 8px;
+    display: block;
+  }
+  .hero-divider .label {
+    font-family: var(--serif-cn);
+    font-weight: 700;
+    font-size: 22px;
+    letter-spacing: 0.08em;
+    margin-bottom: 6px;
+  }
+  .hero-divider .desc {
+    font-size: 12px;
+    color: var(--ink-mute);
+    line-height: 1.5;
+  }
+
+  /* ============================================================
+     DISCLAIMER BAND
+     ============================================================ */
+  .disclaimer-band {
+    max-width: 1280px;
+    margin: 40px auto 0;
+    padding: 20px 32px;
+    background: repeating-linear-gradient(
+      45deg,
+      transparent,
+      transparent 12px,
+      rgba(139,30,30,0.04) 12px,
+      rgba(139,30,30,0.04) 24px
+    );
+    border-left: 3px solid var(--oxblood);
+    display: flex;
+    gap: 20px;
+    align-items: flex-start;
+    margin-left: 40px;
+    margin-right: 40px;
+  }
+  .disclaimer-band .tag {
+    font-family: var(--display-en);
+    font-weight: 700;
+    font-size: 11px;
+    letter-spacing: 0.2em;
+    color: var(--oxblood);
+    white-space: nowrap;
+    padding-top: 2px;
+  }
+  .disclaimer-band p {
+    font-size: 13px;
+    color: var(--ink-soft);
+    line-height: 1.65;
+  }
+
+  /* ============================================================
+     CASE TABS
+     ============================================================ */
+  .cases-wrap {
+    max-width: 1280px;
+    margin: 80px auto 0;
+    padding: 0 40px;
+  }
+  .section-label {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.2em;
+    color: var(--ink-mute);
+    margin-bottom: 24px;
+    text-transform: uppercase;
+  }
+  .section-label::before,
+  .section-label::after {
+    content: "";
+    flex: 1;
+    height: 1px;
+    background: var(--paper-line);
+  }
+  .section-label.left::before { display: none; }
+  .section-label.left::after { display: none; }
+  .section-label.left { justify-content: flex-start; }
+
+  .section-heading {
+    font-family: var(--serif-cn);
+    font-weight: 700;
+    font-size: clamp(36px, 5vw, 56px);
+    line-height: 1.05;
+    letter-spacing: -0.01em;
+    margin-bottom: 16px;
+  }
+  .section-heading .em {
+    color: var(--oxblood);
+    font-style: italic;
+    font-family: var(--display-en);
+    font-weight: 400;
+  }
+  .section-intro {
+    font-family: var(--serif-cn);
+    font-size: 17px;
+    color: var(--ink-soft);
+    max-width: 720px;
+    margin-bottom: 48px;
+  }
+
+  .case-tabs {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 0;
+    border: 1px solid var(--ink);
+    margin-bottom: 48px;
+    background: var(--paper);
+  }
+  .case-tab {
+    background: transparent;
+    border: none;
+    border-right: 1px solid var(--ink);
+    padding: 22px 20px;
+    text-align: left;
+    cursor: pointer;
+    font-family: var(--sans-cn);
+    color: var(--ink);
+    transition: all .25s ease;
+    position: relative;
+  }
+  .case-tab:last-child { border-right: none; }
+  .case-tab:hover { background: var(--paper-deep); }
+  .case-tab.active {
+    background: var(--ink);
+    color: var(--paper);
+  }
+  .case-tab.active .case-tab-num { color: var(--gold-soft); }
+  .case-tab.active .case-tab-tag { color: var(--paper); opacity: 0.7; }
+
+  .case-tab-num {
+    font-family: var(--display-en);
+    font-weight: 700;
+    font-style: italic;
+    font-size: 12px;
+    letter-spacing: 0.2em;
+    color: var(--oxblood);
+    display: block;
+    margin-bottom: 6px;
+  }
+  .case-tab-name {
+    font-family: var(--serif-cn);
+    font-weight: 700;
+    font-size: 20px;
+    letter-spacing: 0.04em;
+    margin-bottom: 2px;
+  }
+  .case-tab-code {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--ink-mute);
+    letter-spacing: 0.08em;
+  }
+  .case-tab.active .case-tab-code { color: var(--gold-soft); }
+  .case-tab-tag {
+    font-size: 11px;
+    color: var(--ink-mute);
+    margin-top: 10px;
+    letter-spacing: 0.04em;
+  }
+
+  /* ============================================================
+     CASE BODY
+     ============================================================ */
+  .case-body { display: none; }
+  .case-body.active {
+    display: block;
+    animation: fadeUp .5s ease;
+  }
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(12px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  /* Stock header */
+  .stock-header {
+    display: grid;
+    grid-template-columns: 1.2fr 1fr;
+    gap: 0;
+    margin-bottom: 48px;
+    border: 1px solid var(--ink);
+  }
+  .stock-header-left {
+    padding: 36px 40px;
+    border-right: 1px solid var(--ink);
+    background: var(--paper);
+    position: relative;
+  }
+  .stock-verdict {
+    display: inline-block;
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.25em;
+    padding: 5px 10px;
+    border: 1px solid var(--ink);
+    color: var(--ink);
+    margin-bottom: 20px;
+    text-transform: uppercase;
+  }
+  .stock-name {
+    font-family: var(--serif-cn);
+    font-weight: 900;
+    font-size: 52px;
+    line-height: 1;
+    letter-spacing: -0.01em;
+    margin-bottom: 12px;
+  }
+  .stock-code {
+    font-family: var(--mono);
+    font-size: 14px;
+    color: var(--ink-mute);
+    letter-spacing: 0.1em;
+    margin-bottom: 24px;
+  }
+  .stock-thesis {
+    font-family: var(--serif-cn);
+    font-size: 17px;
+    color: var(--ink-soft);
+    line-height: 1.7;
+    padding-left: 16px;
+    border-left: 2px solid var(--oxblood);
+  }
+
+  .stock-header-right {
+    background: var(--ink);
+    color: var(--paper);
+    padding: 36px 40px;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 24px 32px;
+    align-content: center;
+  }
+  .metric {
+    border-top: 1px solid rgba(241,234,217,0.2);
+    padding-top: 14px;
+  }
+  .metric-label {
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.15em;
+    color: var(--gold-soft);
+    margin-bottom: 6px;
+    text-transform: uppercase;
+  }
+  .metric-value {
+    font-family: var(--serif-cn);
+    font-weight: 700;
+    font-size: 22px;
+    letter-spacing: 0.02em;
+  }
+  .metric-value .unit {
+    font-family: var(--sans-cn);
+    font-size: 12px;
+    color: var(--paper-line);
+    font-weight: 400;
+    margin-left: 3px;
+  }
+  .metric-value.pos { color: var(--s-strong); }
+  .metric-value.neg { color: #d6868e; }
+  .metric-delta {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--gold-soft);
+    margin-top: 4px;
+  }
+
+  /* ============================================================
+     KEY DATA STRIP
+     ============================================================ */
+  .key-data {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 40px;
+    padding: 28px 0;
+    border-top: 1px solid var(--paper-line);
+    border-bottom: 1px solid var(--paper-line);
+    margin-bottom: 64px;
+  }
+  .key-data-title {
+    font-family: var(--serif-cn);
+    font-weight: 700;
+    font-size: 14px;
+    letter-spacing: 0.15em;
+    color: var(--ink-mute);
+    writing-mode: vertical-rl;
+    text-orientation: upright;
+    padding: 6px 8px;
+    border-right: 1px solid var(--paper-line);
+  }
+  .key-data-list {
+    list-style: none;
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 14px 48px;
+  }
+  .key-data-list li {
+    font-size: 13.5px;
+    line-height: 1.6;
+    color: var(--ink-soft);
+    padding-left: 18px;
+    position: relative;
+  }
+  .key-data-list li::before {
+    content: "▸";
+    position: absolute;
+    left: 0;
+    color: var(--oxblood);
+    font-size: 10px;
+    top: 4px;
+  }
+  .key-data-list strong {
+    color: var(--ink);
+    font-family: var(--mono);
+    font-weight: 500;
+    letter-spacing: 0.02em;
+  }
+
+  /* ============================================================
+     ANCHORS — THE HERO COMPONENT
+     ============================================================ */
+  .anchors-title-row {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    margin-bottom: 32px;
+    padding-bottom: 20px;
+    border-bottom: 1px solid var(--ink);
+  }
+  .anchors-title {
+    font-family: var(--serif-cn);
+    font-weight: 900;
+    font-size: 36px;
+    letter-spacing: 0.04em;
+  }
+  .anchors-title .en {
+    font-family: var(--display-en);
+    font-style: italic;
+    font-weight: 400;
+    color: var(--oxblood);
+    font-size: 18px;
+    margin-left: 12px;
+  }
+  .anchors-legend {
+    display: flex;
+    gap: 20px;
+    font-size: 11px;
+    color: var(--ink-mute);
+  }
+  .legend-dot {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-family: var(--mono);
+    letter-spacing: 0.05em;
+  }
+  .legend-dot::before {
+    content: "";
+    width: 10px; height: 10px;
+    border-radius: 50%;
+    background: currentColor;
+  }
+  .legend-dot.strong { color: var(--s-strong); }
+  .legend-dot.neutral { color: var(--s-neutral); }
+  .legend-dot.weak { color: var(--s-weak); }
+  .legend-dot.cold { color: var(--s-cold); }
+
+  .anchors-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1px;
+    background: var(--ink);
+    border: 1px solid var(--ink);
+    margin-bottom: 48px;
+  }
+
+  .anchor {
+    background: var(--paper);
+    padding: 32px 32px 28px;
+    position: relative;
+    min-height: 340px;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .anchor-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 20px;
+    margin-bottom: 20px;
+    padding-bottom: 16px;
+    border-bottom: 1px dashed var(--paper-line);
+  }
+  .anchor-mark {
+    display: flex;
+    align-items: baseline;
+    gap: 14px;
+  }
+  .anchor-numeral {
+    font-family: var(--serif-cn);
+    font-weight: 900;
+    font-size: 40px;
+    line-height: 1;
+    color: var(--oxblood);
+    letter-spacing: -0.02em;
+  }
+  .anchor-title {
+    font-family: var(--serif-cn);
+    font-weight: 700;
+    font-size: 24px;
+    letter-spacing: 0.06em;
+  }
+  .anchor-title-en {
+    display: block;
+    font-family: var(--display-en);
+    font-style: italic;
+    font-weight: 400;
+    font-size: 12px;
+    letter-spacing: 0.15em;
+    color: var(--ink-mute);
+    margin-top: 2px;
+    text-transform: uppercase;
+  }
+
+  .anchor-status {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 7px 12px;
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    border: 1px solid currentColor;
+    white-space: nowrap;
+    text-transform: uppercase;
+  }
+  .anchor-status::before {
+    content: "";
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: currentColor;
+  }
+  .anchor-status.strong  { color: var(--s-strong);  background: rgba(45,106,79,0.06); }
+  .anchor-status.neutral { color: var(--s-neutral); background: rgba(176,131,24,0.08); }
+  .anchor-status.weak    { color: var(--s-weak);    background: rgba(139,30,30,0.06); }
+  .anchor-status.cold    { color: var(--s-cold);    background: rgba(52,93,126,0.06); }
+  .anchor-status.alert   { color: var(--s-alert);   background: rgba(181,98,31,0.06); }
+
+  .anchor-points {
+    list-style: none;
+    flex: 1;
+  }
+  .anchor-points li {
+    font-size: 13.5px;
+    line-height: 1.65;
+    color: var(--ink-soft);
+    padding: 10px 0 10px 22px;
+    position: relative;
+    border-bottom: 1px dotted var(--paper-line);
+  }
+  .anchor-points li:last-child { border-bottom: none; }
+  .anchor-points li::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 17px;
+    width: 12px;
+    height: 1px;
+    background: var(--oxblood);
+  }
+  .anchor-points strong {
+    color: var(--ink);
+    font-weight: 500;
+    background: linear-gradient(180deg, transparent 60%, rgba(176,131,24,0.25) 60%);
+    padding: 0 2px;
+  }
+
+  .anchor-verdict {
+    margin-top: 20px;
+    padding: 14px 16px;
+    background: var(--paper-deep);
+    border-left: 3px solid var(--oxblood);
+    font-size: 13px;
+    line-height: 1.6;
+    color: var(--ink);
+  }
+  .anchor-verdict-label {
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.2em;
+    color: var(--oxblood);
+    display: block;
+    margin-bottom: 4px;
+    text-transform: uppercase;
+  }
+
+  /* ============================================================
+     SYNTHESIS
+     ============================================================ */
+  .synthesis {
+    margin-bottom: 100px;
+    display: grid;
+    grid-template-columns: 320px 1fr;
+    gap: 0;
+    border: 1px solid var(--ink);
+  }
+  .synthesis-side {
+    background: var(--ink);
+    color: var(--paper);
+    padding: 40px 32px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    min-height: 360px;
+  }
+  .synthesis-side .label {
+    font-family: var(--display-en);
+    font-style: italic;
+    font-size: 12px;
+    letter-spacing: 0.25em;
+    color: var(--gold-soft);
+    margin-bottom: 10px;
+  }
+  .synthesis-side .headline {
+    font-family: var(--serif-cn);
+    font-weight: 700;
+    font-size: 28px;
+    line-height: 1.4;
+    letter-spacing: 0.02em;
+  }
+  .synthesis-side .foot {
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.2em;
+    color: var(--gold-soft);
+    text-transform: uppercase;
+    margin-top: 24px;
+    padding-top: 20px;
+    border-top: 1px solid rgba(241,234,217,0.2);
+  }
+
+  .synthesis-main {
+    padding: 40px;
+    background: var(--paper);
+  }
+  .synth-block {
+    margin-bottom: 28px;
+  }
+  .synth-block:last-child { margin-bottom: 0; }
+  .synth-block-title {
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.25em;
+    color: var(--oxblood);
+    text-transform: uppercase;
+    margin-bottom: 10px;
+  }
+  .synth-block-body {
+    font-family: var(--serif-cn);
+    font-size: 16px;
+    line-height: 1.75;
+    color: var(--ink-soft);
+  }
+  .synth-block-body strong { color: var(--ink); font-weight: 700; }
+
+  /* ============================================================
+     MATRIX
+     ============================================================ */
+  .matrix-section {
+    max-width: 1280px;
+    margin: 0 auto;
+    padding: 80px 40px;
+    background: var(--paper-deep);
+    position: relative;
+    margin-top: 80px;
+  }
+  .matrix-section::before {
+    content: "";
+    position: absolute;
+    top: 0; left: 40px; right: 40px;
+    height: 1px;
+    background: var(--ink);
+  }
+  .matrix-table {
+    width: 100%;
+    border-collapse: collapse;
+    background: var(--paper);
+    margin-top: 40px;
+    border: 1px solid var(--ink);
+    font-size: 14px;
+  }
+  .matrix-table th {
+    background: var(--ink);
+    color: var(--paper);
+    padding: 16px 14px;
+    text-align: left;
+    font-family: var(--serif-cn);
+    font-weight: 500;
+    font-size: 13px;
+    letter-spacing: 0.08em;
+    border-right: 1px solid rgba(241,234,217,0.15);
+  }
+  .matrix-table th:last-child { border-right: none; }
+  .matrix-table td {
+    padding: 16px 14px;
+    border-right: 1px solid var(--paper-line);
+    border-bottom: 1px solid var(--paper-line);
+    vertical-align: middle;
+  }
+  .matrix-table tr:last-child td { border-bottom: none; }
+  .matrix-table td:last-child { border-right: none; }
+  .matrix-table td:first-child {
+    font-family: var(--serif-cn);
+    font-weight: 700;
+    font-size: 16px;
+    color: var(--ink);
+    background: var(--paper-deep);
+  }
+  .matrix-table .mini-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.05em;
+  }
+  .matrix-table .mini-tag::before {
+    content: "";
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: currentColor;
+  }
+  .mini-tag.strong  { color: var(--s-strong); }
+  .mini-tag.neutral { color: var(--s-neutral); }
+  .mini-tag.weak    { color: var(--s-weak); }
+  .mini-tag.cold    { color: var(--s-cold); }
+  .mini-tag.alert   { color: var(--s-alert); }
+
+  .verdict-cell {
+    font-family: var(--serif-cn);
+    font-weight: 700;
+    color: var(--oxblood);
+  }
+
+  /* ============================================================
+     OBSERVATIONS
+     ============================================================ */
+  .observations {
+    max-width: 1280px;
+    margin: 0 auto;
+    padding: 100px 40px 60px;
+  }
+  .obs-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 40px;
+    margin-top: 48px;
+  }
+  .obs-card {
+    padding: 36px 32px;
+    border-top: 2px solid var(--ink);
+    position: relative;
+  }
+  .obs-num {
+    font-family: var(--display-en);
+    font-weight: 700;
+    font-style: italic;
+    font-size: 64px;
+    line-height: 1;
+    color: var(--oxblood);
+    margin-bottom: 16px;
+    letter-spacing: -0.02em;
+  }
+  .obs-title {
+    font-family: var(--serif-cn);
+    font-weight: 700;
+    font-size: 22px;
+    line-height: 1.4;
+    margin-bottom: 14px;
+    letter-spacing: 0.02em;
+  }
+  .obs-body {
+    font-family: var(--serif-cn);
+    font-size: 15.5px;
+    line-height: 1.75;
+    color: var(--ink-soft);
+  }
+  .obs-body strong {
+    color: var(--ink);
+    font-weight: 700;
+    background: linear-gradient(180deg, transparent 65%, rgba(176,131,24,0.25) 65%);
+  }
+
+  /* ============================================================
+     DISCIPLINE
+     ============================================================ */
+  .discipline {
+    max-width: 1280px;
+    margin: 40px auto 0;
+    padding: 60px 40px;
+    background: var(--ink);
+    color: var(--paper);
+    position: relative;
+  }
+  .discipline::after {
+    content: "四锚 · 纪律 · 四锚 · 纪律 · 四锚 · 纪律 · 四锚 · 纪律";
+    position: absolute;
+    top: 16px;
+    left: 40px;
+    right: 40px;
+    font-family: var(--display-en);
+    font-style: italic;
+    font-size: 10px;
+    color: var(--gold-soft);
+    letter-spacing: 0.3em;
+    opacity: 0.4;
+    overflow: hidden;
+    white-space: nowrap;
+  }
+  .disc-head {
+    font-family: var(--serif-cn);
+    font-weight: 900;
+    font-size: 48px;
+    letter-spacing: 0.02em;
+    margin-bottom: 12px;
+    margin-top: 20px;
+  }
+  .disc-head .em {
+    font-family: var(--display-en);
+    font-weight: 400;
+    font-style: italic;
+    color: var(--gold-soft);
+  }
+  .disc-sub {
+    font-family: var(--serif-cn);
+    font-size: 16px;
+    color: var(--paper-line);
+    max-width: 640px;
+    margin-bottom: 48px;
+  }
+  .disc-list {
+    list-style: none;
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 24px 40px;
+    counter-reset: disc;
+  }
+  .disc-list li {
+    counter-increment: disc;
+    padding: 24px 24px 24px 72px;
+    border: 1px solid rgba(241,234,217,0.18);
+    position: relative;
+    font-size: 14px;
+    line-height: 1.65;
+    color: var(--paper-line);
+  }
+  .disc-list li::before {
+    content: counter(disc, decimal-leading-zero);
+    position: absolute;
+    top: 20px;
+    left: 24px;
+    font-family: var(--display-en);
+    font-weight: 700;
+    font-style: italic;
+    font-size: 24px;
+    color: var(--gold-soft);
+  }
+  .disc-list strong { color: var(--paper); font-weight: 700; }
+
+  /* ============================================================
+     FOOTER
+     ============================================================ */
+  footer {
+    background: var(--ink);
+    color: var(--paper-line);
+    padding: 60px 40px 40px;
+    border-top: 1px solid rgba(241,234,217,0.15);
+  }
+  .footer-inner {
+    max-width: 1280px;
+    margin: 0 auto;
+    display: grid;
+    grid-template-columns: 2fr 1fr 1fr;
+    gap: 60px;
+  }
+  .footer-note {
+    font-size: 13px;
+    line-height: 1.7;
+    color: var(--paper-line);
+  }
+  .footer-note strong {
+    color: var(--oxblood);
+    font-weight: 700;
+    display: block;
+    margin-bottom: 8px;
+    font-family: var(--display-en);
+    font-style: italic;
+    font-size: 11px;
+    letter-spacing: 0.25em;
+    text-transform: uppercase;
+  }
+  .footer-col-title {
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.25em;
+    color: var(--gold-soft);
+    margin-bottom: 14px;
+    text-transform: uppercase;
+  }
+  .footer-col ul {
+    list-style: none;
+    font-size: 13px;
+    line-height: 2;
+  }
+  .footer-col ul a {
+    color: var(--paper-line);
+    text-decoration: none;
+    transition: color .2s;
+  }
+  .footer-col ul a:hover { color: var(--gold-soft); }
+  .footer-bottom {
+    max-width: 1280px;
+    margin: 40px auto 0;
+    padding-top: 30px;
+    border-top: 1px solid rgba(241,234,217,0.12);
+    display: flex;
+    justify-content: space-between;
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.15em;
+    color: var(--ink-mute);
+    text-transform: uppercase;
+  }
+
+  /* ============================================================
+     RESPONSIVE
+     ============================================================ */
+  @media (max-width: 960px) {
+    .topnav-inner { padding: 14px 20px; }
+    .nav-links { display: none; }
+    .hero { padding: 48px 20px 24px; }
+    .cases-wrap, .matrix-section, .observations, .discipline { padding-left: 20px; padding-right: 20px; }
+    .disclaimer-band { margin-left: 20px; margin-right: 20px; padding: 16px 20px; flex-direction: column; gap: 8px; }
+    .hero-divider { grid-template-columns: repeat(2, 1fr); }
+    .case-tabs { grid-template-columns: 1fr 1fr; }
+    .case-tab:nth-child(2) { border-right: none; }
+    .case-tab:nth-child(1),
+    .case-tab:nth-child(2) { border-bottom: 1px solid var(--ink); }
+    .stock-header { grid-template-columns: 1fr; }
+    .stock-header-left { border-right: none; border-bottom: 1px solid var(--ink); }
+    .stock-header-right { grid-template-columns: 1fr; }
+    .key-data-list { grid-template-columns: 1fr; }
+    .key-data { grid-template-columns: 1fr; }
+    .key-data-title { writing-mode: horizontal-tb; text-orientation: unset; border-right: none; border-bottom: 1px solid var(--paper-line); padding: 0 0 10px; }
+    .anchors-grid { grid-template-columns: 1fr; }
+    .synthesis { grid-template-columns: 1fr; }
+    .obs-grid { grid-template-columns: 1fr; }
+    .disc-list { grid-template-columns: 1fr; }
+    .footer-inner { grid-template-columns: 1fr; gap: 32px; }
+    .anchors-title-row { flex-direction: column; align-items: flex-start; gap: 16px; }
+    .anchors-legend { flex-wrap: wrap; gap: 12px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ========================================================
+     TOP NAV
+     ======================================================== -->
+<nav class="topnav">
+  <div class="topnav-inner">
+    <div class="brand">
+      <span class="brand-seal">锚</span>
+      <div>
+        <div class="brand-cn">四锚框架</div>
+        <div class="brand-en">FOUR ANCHORS · EQUITY RESEARCH</div>
+      </div>
+    </div>
+    <ul class="nav-links">
+      <li><a href="#cases">案例分析</a></li>
+      <li><a href="#matrix">对比矩阵</a></li>
+      <li><a href="#observations">核心观察</a></li>
+      <li><a href="#discipline">使用纪律</a></li>
+    </ul>
+    <div class="nav-meta">截至 · 2026.04.17</div>
+  </div>
+</nav>
+
+<!-- ========================================================
+     HERO
+     ======================================================== -->
+<header class="hero">
+  <div class="hero-meta">VOL.&nbsp;01 · EQUITY ANALYSIS SAMPLE · FRONTEND SPEC</div>
+  <h1 class="hero-title">
+    四锚<span class="accent">framework</span><br/>
+    下的个股<br/>结构化分析
+  </h1>
+  <p class="hero-sub">
+    盈利、资金、情绪、筹码——四把尺子同时丈量一只股票的温度。本页为四锚框架的 <em>应用示范</em> 页面，面向前端开发作为样本参考。
+  </p>
+
+  <div class="hero-divider">
+    <div><span class="num">ANCHOR · Ⅰ</span><span class="label">盈利锚</span><span class="desc">基本面的根·最硬之锚</span></div>
+    <div><span class="num">ANCHOR · Ⅱ</span><span class="label">资金锚</span><span class="desc">定价的手·边际决定方向</span></div>
+    <div><span class="num">ANCHOR · Ⅲ</span><span class="label">情绪锚</span><span class="desc">共识的温度·最易反转</span></div>
+    <div><span class="num">ANCHOR · Ⅳ</span><span class="label">筹码锚</span><span class="desc">供给的结构·博弈的前线</span></div>
+  </div>
+</header>
+
+<div class="disclaimer-band">
+  <span class="tag">DISCLAIMER</span>
+  <p>本页内容仅为四锚框架的<strong>应用示范</strong>，使用的数据来源于公开信息，不保证完全准确和实时。<strong>不构成任何投资建议</strong>。市场有风险，任何投资决策应基于独立判断，自负盈亏。</p>
+</div>
+
+<!-- ========================================================
+     CASES
+     ======================================================== -->
+<section class="cases-wrap" id="cases">
+  <div class="section-label left">01 · CASE STUDIES · 案例</div>
+  <h2 class="section-heading">四个<span class="em">典型</span>标的</h2>
+  <p class="section-intro">选择四只覆盖不同锚点组合的代表性A股，演示框架如何落到具体个股。点击标签切换案例。</p>
+
+  <!-- Case tabs -->
+  <div class="case-tabs" role="tablist">
+    <button class="case-tab active" data-case="1" role="tab">
+      <span class="case-tab-num">CASE · 01</span>
+      <span class="case-tab-name">贵州茅台</span>
+      <span class="case-tab-code">600519 · SH</span>
+      <span class="case-tab-tag">盈利锚松动型</span>
+    </button>
+    <button class="case-tab" data-case="2" role="tab">
+      <span class="case-tab-num">CASE · 02</span>
+      <span class="case-tab-name">宁德时代</span>
+      <span class="case-tab-code">300750 · SZ</span>
+      <span class="case-tab-tag">四锚共振型</span>
+    </button>
+    <button class="case-tab" data-case="3" role="tab">
+      <span class="case-tab-num">CASE · 03</span>
+      <span class="case-tab-name">中国神华</span>
+      <span class="case-tab-code">601088 · SH</span>
+      <span class="case-tab-tag">资金锚主导型</span>
+    </button>
+    <button class="case-tab" data-case="4" role="tab">
+      <span class="case-tab-num">CASE · 04</span>
+      <span class="case-tab-name">寒 武 纪</span>
+      <span class="case-tab-code">688256 · SH</span>
+      <span class="case-tab-tag">情绪+筹码主导</span>
+    </button>
+  </div>
+
+  <!-- ============= CASE 1 · 贵州茅台 ============= -->
+  <div class="case-body active" data-case-body="1">
+
+    <div class="stock-header">
+      <div class="stock-header-left">
+        <span class="stock-verdict">盈利锚松动 · 筹码稳定</span>
+        <div class="stock-name">贵州茅台</div>
+        <div class="stock-code">600519 · 上海证券交易所</div>
+        <p class="stock-thesis">盈利锚从 S 级向 B 级过渡中：如果这是行业周期底部，是估值修复机会；如果是消费习惯的长期变化，则是价值中枢下移的开始。</p>
+      </div>
+      <div class="stock-header-right">
+        <div class="metric">
+          <div class="metric-label">2025 营收</div>
+          <div class="metric-value">1,688<span class="unit">亿元</span></div>
+          <div class="metric-delta">YoY −1.21%</div>
+        </div>
+        <div class="metric">
+          <div class="metric-label">归母净利润</div>
+          <div class="metric-value">823<span class="unit">亿元</span></div>
+          <div class="metric-delta">YoY −4.53%</div>
+        </div>
+        <div class="metric">
+          <div class="metric-label">加权 ROE</div>
+          <div class="metric-value">32.53<span class="unit">%</span></div>
+          <div class="metric-delta">品牌壁垒仍在</div>
+        </div>
+        <div class="metric">
+          <div class="metric-label">PE (TTM)</div>
+          <div class="metric-value">20.35<span class="unit">×</span></div>
+          <div class="metric-delta">历史低位 · PB 7.13×</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="key-data">
+      <div class="key-data-title">核心数据</div>
+      <ul class="key-data-list">
+        <li>直销渠道营收增长 <strong>12.96%</strong> 至 845.43 亿元</li>
+        <li>批发代理渠道营收下降 <strong>12.05%</strong> 至 842.32 亿元</li>
+        <li>经营活动现金流量净额 <strong>615.22 亿</strong>，同比 −33.46%</li>
+        <li>每股派发现金红利 <strong>27.993 元</strong>（含税）</li>
+        <li>2025 年分红占归母净利润 <strong>79%</strong>，较上年 +4pct</li>
+        <li>茅台集团累计增持约 <strong>207.14 万股</strong> / 约 30 亿元</li>
+      </ul>
+    </div>
+
+    <div class="anchors-title-row">
+      <div class="anchors-title">四锚拆解<span class="en">Four Anchors Breakdown</span></div>
+      <div class="anchors-legend">
+        <span class="legend-dot strong">强</span>
+        <span class="legend-dot neutral">中性</span>
+        <span class="legend-dot weak">弱/告警</span>
+        <span class="legend-dot cold">偏冷</span>
+      </div>
+    </div>
+
+    <div class="anchors-grid">
+      <!-- 盈利锚 -->
+      <div class="anchor">
+        <div class="anchor-header">
+          <div class="anchor-mark">
+            <div class="anchor-numeral">壹</div>
+            <div>
+              <div class="anchor-title">盈利锚</div>
+              <span class="anchor-title-en">Earnings · Anchor Ⅰ</span>
+            </div>
+          </div>
+          <span class="anchor-status alert">出现裂痕</span>
+        </div>
+        <ul class="anchor-points">
+          <li>茅台首次出现 <strong>营收与利润双降</strong>，上市以来罕见</li>
+          <li>系列酒收入同比 <strong>−9.76%</strong>，拖累整体营收</li>
+          <li>经营现金流大降 <strong>33%</strong>，利润含金量下降的早期信号</li>
+          <li>ROE 仍高达 <strong>32.53%</strong>，品牌壁垒未松</li>
+        </ul>
+        <div class="anchor-verdict">
+          <span class="anchor-verdict-label">判定</span>
+          盈利锚从 S 级（印钞机）向 B 级（稳健型）过渡中 —— 未崩塌，但已降级。
+        </div>
+      </div>
+
+      <!-- 资金锚 -->
+      <div class="anchor">
+        <div class="anchor-header">
+          <div class="anchor-mark">
+            <div class="anchor-numeral">贰</div>
+            <div>
+              <div class="anchor-title">资金锚</div>
+              <span class="anchor-title-en">Capital · Anchor Ⅱ</span>
+            </div>
+          </div>
+          <span class="anchor-status neutral">中性偏弱</span>
+        </div>
+        <ul class="anchor-points">
+          <li>当前 PE <strong>20×</strong> 处历史低位区间（五年前 40+）</li>
+          <li>茅台集团增持约 <strong>30 亿元</strong>，产业资本做多</li>
+          <li>外资（北向）持仓高位区间，边际流入放缓</li>
+          <li>股息率 <strong>1.6%+</strong>，对险资具配置价值</li>
+        </ul>
+        <div class="anchor-verdict">
+          <span class="anchor-verdict-label">判定</span>
+          长钱仍在，但增量资金动力不足，估值支撑多于驱动。
+        </div>
+      </div>
+
+      <!-- 情绪锚 -->
+      <div class="anchor">
+        <div class="anchor-header">
+          <div class="anchor-mark">
+            <div class="anchor-numeral">叁</div>
+            <div>
+              <div class="anchor-title">情绪锚</div>
+              <span class="anchor-title-en">Sentiment · Anchor Ⅲ</span>
+            </div>
+          </div>
+          <span class="anchor-status cold">偏冷</span>
+        </div>
+        <ul class="anchor-points">
+          <li>市场叙事从"永远涨的核心资产"转为"<strong>白酒降速</strong>"</li>
+          <li>估值从 70× 回落到 <strong>20×</strong> PE，共识回到中性偏悲观</li>
+          <li>券商预测 25–27 年净利 901 / 901 / 940 亿</li>
+          <li>预期已下修 → <strong>留出低预期被超越的空间</strong></li>
+        </ul>
+        <div class="anchor-verdict">
+          <span class="anchor-verdict-label">判定</span>
+          共识处于偏冷阶段，反而降低反转所需的动能。
+        </div>
+      </div>
+
+      <!-- 筹码锚 -->
+      <div class="anchor">
+        <div class="anchor-header">
+          <div class="anchor-mark">
+            <div class="anchor-numeral">肆</div>
+            <div>
+              <div class="anchor-title">筹码锚</div>
+              <span class="anchor-title-en">Holdings · Anchor Ⅳ</span>
+            </div>
+          </div>
+          <span class="anchor-status strong">稳定</span>
+        </div>
+        <ul class="anchor-points">
+          <li>流通盘极大（市值 <strong>2 万亿</strong>），资金无法单边推动</li>
+          <li>年内实施 <strong>两轮注销式回购</strong>，主动优化筹码结构</li>
+          <li>机构 + 社保 + 外资构成稳定锁仓，散户占比低</li>
+          <li>几乎不存在筹码博弈风险</li>
+        </ul>
+        <div class="anchor-verdict">
+          <span class="anchor-verdict-label">判定</span>
+          筹码锚是当下最"硬"的一把锚，构成估值保护垫。
+        </div>
+      </div>
+    </div>
+
+    <div class="synthesis">
+      <div class="synthesis-side">
+        <div>
+          <div class="label">SYNTHESIS · 综合评估</div>
+          <div class="headline">盈利动摇但未崩 · 估值处低位 · 情绪偏冷 · 筹码稳定。</div>
+        </div>
+        <div class="foot">背离型共振 · Divergent</div>
+      </div>
+      <div class="synthesis-main">
+        <div class="synth-block">
+          <div class="synth-block-title">Logic · 逻辑框架</div>
+          <div class="synth-block-body">典型的"<strong>盈利锚降级</strong>"中的白马。若 2026 年业绩企稳，就是预期差修复机会；若继续下滑，估值仍可能进一步下压。</div>
+        </div>
+        <div class="synth-block">
+          <div class="synth-block-title">Risk · 最大风险</div>
+          <div class="synth-block-body">消费降级、商务场景萎缩如果是 <strong>结构性变化</strong> 而非周期性变化，盈利锚会继续下移。</div>
+        </div>
+        <div class="synth-block">
+          <div class="synth-block-title">Watch · 关键观察点</div>
+          <div class="synth-block-body">2026 年中报营收是否企稳 · 飞天茅台批价走势 · 系列酒能否恢复增长。</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============= CASE 2 · 宁德时代 ============= -->
+  <div class="case-body" data-case-body="2">
+
+    <div class="stock-header">
+      <div class="stock-header-left">
+        <span class="stock-verdict">四锚全面共振 · 戴维斯双击中后段</span>
+        <div class="stock-name">宁德时代</div>
+        <div class="stock-code">300750 · 深圳证券交易所</div>
+        <p class="stock-thesis">动力 + 储能双轮驱动，全球能源科技巨头叙事已形成广泛共识。但估值已到位，需警惕预期过高。</p>
+      </div>
+      <div class="stock-header-right">
+        <div class="metric">
+          <div class="metric-label">2026 Q1 营收</div>
+          <div class="metric-value pos">1,291<span class="unit">亿元</span></div>
+          <div class="metric-delta">YoY +52.45%</div>
+        </div>
+        <div class="metric">
+          <div class="metric-label">Q1 归母净利</div>
+          <div class="metric-value pos">207<span class="unit">亿元</span></div>
+          <div class="metric-delta">YoY +48.52%</div>
+        </div>
+        <div class="metric">
+          <div class="metric-label">A+H 总市值</div>
+          <div class="metric-value">2.1<span class="unit">万亿</span></div>
+          <div class="metric-delta">A 股市值 TOP 3</div>
+        </div>
+        <div class="metric">
+          <div class="metric-label">Q1 国内装机市占</div>
+          <div class="metric-value">47.7<span class="unit">%</span></div>
+          <div class="metric-delta">同比 +3.4pct</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="key-data">
+      <div class="key-data-title">核心数据</div>
+      <ul class="key-data-list">
+        <li>2025 全年营收 <strong>4,237 亿</strong>，同比 +17.04%</li>
+        <li>2025 归母净利润 <strong>722 亿</strong>，同比 +42.28%（日赚约 1.98 亿）</li>
+        <li>货币资金 <strong>3,520 亿</strong> + 交易性金融资产 603 亿</li>
+        <li>4 月 16 日 A 股 <strong>+5.33%</strong>，股价 453.98 元</li>
+        <li>股东人数从 22.63 万户降至 <strong>20.45 万户</strong>（−10%）</li>
+        <li>27 家机构评级：<strong>买入 24</strong> / 增持 3，目标均价 524.37</li>
+      </ul>
+    </div>
+
+    <div class="anchors-title-row">
+      <div class="anchors-title">四锚拆解<span class="en">Four Anchors Breakdown</span></div>
+      <div class="anchors-legend">
+        <span class="legend-dot strong">强</span>
+        <span class="legend-dot neutral">中性</span>
+        <span class="legend-dot weak">弱/告警</span>
+        <span class="legend-dot cold">偏冷</span>
+      </div>
+    </div>
+
+    <div class="anchors-grid">
+      <div class="anchor">
+        <div class="anchor-header">
+          <div class="anchor-mark">
+            <div class="anchor-numeral">壹</div>
+            <div>
+              <div class="anchor-title">盈利锚</div>
+              <span class="anchor-title-en">Earnings · Anchor Ⅰ</span>
+            </div>
+          </div>
+          <span class="anchor-status strong">A 级高成长</span>
+        </div>
+        <ul class="anchor-points">
+          <li>Q1 净利 <strong>208 亿 · +48.5%</strong>，扣非增速 +52.95%</li>
+          <li>储能占比提升至 <strong>~25%</strong>，第二增长曲线已形成</li>
+          <li>现金 + 金融资产近 <strong>4,120 亿</strong>，可支撑扩产</li>
+          <li>隐忧：经营净现金流仅 +2.47%，<strong>远低于利润增速</strong></li>
+        </ul>
+        <div class="anchor-verdict">
+          <span class="anchor-verdict-label">判定</span>
+          盈利锚处 A 级（高成长兑现）中后期，戴维斯双击正在进行。
+        </div>
+      </div>
+
+      <div class="anchor">
+        <div class="anchor-header">
+          <div class="anchor-mark">
+            <div class="anchor-numeral">贰</div>
+            <div>
+              <div class="anchor-title">资金锚</div>
+              <span class="anchor-title-en">Capital · Anchor Ⅱ</span>
+            </div>
+          </div>
+          <span class="anchor-status strong">主力流入</span>
+        </div>
+        <ul class="anchor-points">
+          <li>4 月 16 日主力资金净买入 <strong>10.14 亿</strong>，机构持续加仓</li>
+          <li>港股同步 <strong>+9%</strong>，外资认同度高</li>
+          <li>公募基金持仓集中度高，花旗目标价 <strong>576 元</strong></li>
+          <li>海外机构定价权在场，全球资本共识</li>
+        </ul>
+        <div class="anchor-verdict">
+          <span class="anchor-verdict-label">判定</span>
+          资金锚呈全球性共振，A+H 双轮驱动。
+        </div>
+      </div>
+
+      <div class="anchor">
+        <div class="anchor-header">
+          <div class="anchor-mark">
+            <div class="anchor-numeral">叁</div>
+            <div>
+              <div class="anchor-title">情绪锚</div>
+              <span class="anchor-title-en">Sentiment · Anchor Ⅲ</span>
+            </div>
+          </div>
+          <span class="anchor-status strong">偏正未极致</span>
+        </div>
+        <ul class="anchor-points">
+          <li>叙事升级：<strong>"动力龙头"→"全球能源科技巨头"</strong></li>
+          <li>共识阶段：约 <strong>3–4</strong>（广泛共识但未极致）</li>
+          <li>拟投 <strong>300 亿</strong> 设时代资源集团，叙事不断升级</li>
+          <li><strong>警示</strong>：股价已创新高，预期差空间在收窄</li>
+        </ul>
+        <div class="anchor-verdict">
+          <span class="anchor-verdict-label">判定</span>
+          情绪热度正向但未极致，最舒服同时也最微妙。
+        </div>
+      </div>
+
+      <div class="anchor">
+        <div class="anchor-header">
+          <div class="anchor-mark">
+            <div class="anchor-numeral">肆</div>
+            <div>
+              <div class="anchor-title">筹码锚</div>
+              <span class="anchor-title-en">Holdings · Anchor Ⅳ</span>
+            </div>
+          </div>
+          <span class="anchor-status strong">向好集中</span>
+        </div>
+        <ul class="anchor-points">
+          <li>股东户数 <strong>22.63 → 20.45 万</strong>，典型机构建仓信号</li>
+          <li>机构抱团未瓦解，<strong>27 家券商一致看好</strong></li>
+          <li>大股东稳定，无大规模减持</li>
+          <li>流通盘大，筹码博弈风险低</li>
+        </ul>
+        <div class="anchor-verdict">
+          <span class="anchor-verdict-label">判定</span>
+          筹码持续锁仓，供给端对价格形成正向支撑。
+        </div>
+      </div>
+    </div>
+
+    <div class="synthesis">
+      <div class="synthesis-side">
+        <div>
+          <div class="label">SYNTHESIS · 综合评估</div>
+          <div class="headline">四锚全面共振 · 但估值已到位 · 需警惕预期过高。</div>
+        </div>
+        <div class="foot">正向共振 · Bull Resonance</div>
+      </div>
+      <div class="synthesis-main">
+        <div class="synth-block">
+          <div class="synth-block-title">Logic · 逻辑框架</div>
+          <div class="synth-block-body">盈利锚强、资金锚强、情绪锚偏正、筹码锚集中 —— 典型的"<strong>戴维斯双击中后段</strong>"。</div>
+        </div>
+        <div class="synth-block">
+          <div class="synth-block-title">Risk · 最大风险</div>
+          <div class="synth-block-body"><strong>共识即将进入阶段 5</strong>。一旦某季度业绩不及预期，情绪锚反转将触发估值收缩。参考 2021 年"核心资产"共识极致后的回撤。</div>
+        </div>
+        <div class="synth-block">
+          <div class="synth-block-title">Watch · 关键观察点</div>
+          <div class="synth-block-body">经营现金流能否跟上利润增速 · 储能业务毛利率 · 海外市场拓展 · 下一个关键节点：半年报。</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============= CASE 3 · 中国神华 ============= -->
+  <div class="case-body" data-case-body="3">
+
+    <div class="stock-header">
+      <div class="stock-header-left">
+        <span class="stock-verdict">高股息防御 · 长钱锁仓</span>
+        <div class="stock-name">中国神华</div>
+        <div class="stock-code">601088 · 上海证券交易所</div>
+        <p class="stock-thesis">盈利周期性下行，但靠分红率 + 长钱配置形成股价支撑。"中特估 + 高分红 + 能源安全"三重叙事稳定持续。</p>
+      </div>
+      <div class="stock-header-right">
+        <div class="metric">
+          <div class="metric-label">2025 营收</div>
+          <div class="metric-value">2,949<span class="unit">亿元</span></div>
+          <div class="metric-delta">YoY −13.21%</div>
+        </div>
+        <div class="metric">
+          <div class="metric-label">归母净利润</div>
+          <div class="metric-value">528<span class="unit">亿元</span></div>
+          <div class="metric-delta">YoY −5.3%</div>
+        </div>
+        <div class="metric">
+          <div class="metric-label">股息率</div>
+          <div class="metric-value pos">~4.5<span class="unit">%</span></div>
+          <div class="metric-delta">分红占净利 79.1%</div>
+        </div>
+        <div class="metric">
+          <div class="metric-label">PE (26E)</div>
+          <div class="metric-value">17.8<span class="unit">×</span></div>
+          <div class="metric-delta">EPS 预期 2.63 元</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="key-data">
+      <div class="key-data-title">核心数据</div>
+      <ul class="key-data-list">
+        <li>2025 现金分红 <strong>418.11 亿</strong>（含税），上市累计 5,337 亿</li>
+        <li>近四年分红比例均 <strong>超过 70%</strong></li>
+        <li>毛利率 35.08% · 负债率 <strong>23.31%</strong></li>
+        <li>自产煤单位成本 171.6 元/吨，同比 <strong>−4.8%</strong></li>
+        <li>4 月 15 日收盘 <strong>45.83 元</strong>，换手率仅 0.17%</li>
+        <li>股东户数 17.88 万，较上期 <strong>−1.67%</strong></li>
+      </ul>
+    </div>
+
+    <div class="anchors-title-row">
+      <div class="anchors-title">四锚拆解<span class="en">Four Anchors Breakdown</span></div>
+      <div class="anchors-legend">
+        <span class="legend-dot strong">强</span>
+        <span class="legend-dot neutral">中性</span>
+        <span class="legend-dot weak">弱/告警</span>
+        <span class="legend-dot cold">偏冷</span>
+      </div>
+    </div>
+
+    <div class="anchors-grid">
+      <div class="anchor">
+        <div class="anchor-header">
+          <div class="anchor-mark">
+            <div class="anchor-numeral">壹</div>
+            <div>
+              <div class="anchor-title">盈利锚</div>
+              <span class="anchor-title-en">Earnings · Anchor Ⅰ</span>
+            </div>
+          </div>
+          <span class="anchor-status neutral">稳定中下行</span>
+        </div>
+        <ul class="anchor-points">
+          <li>营收 −13% · 利润 −5.3%，<strong>煤炭价格下行压力</strong>显现</li>
+          <li>毛利率 35% · 负债率 23%，<strong>财务结构健康</strong></li>
+          <li>自产煤成本同比 −4.8%，成本管控能力强</li>
+          <li>利润绝对值仍巨大（528 亿净利）</li>
+        </ul>
+        <div class="anchor-verdict">
+          <span class="anchor-verdict-label">判定</span>
+          B 级稳健型 + C 级周期性的混合，盈利下滑但底部清晰。
+        </div>
+      </div>
+
+      <div class="anchor">
+        <div class="anchor-header">
+          <div class="anchor-mark">
+            <div class="anchor-numeral">贰</div>
+            <div>
+              <div class="anchor-title">资金锚</div>
+              <span class="anchor-title-en">Capital · Anchor Ⅱ</span>
+            </div>
+          </div>
+          <span class="anchor-status strong">长线偏好</span>
+        </div>
+        <ul class="anchor-points">
+          <li>十大股东含 <strong>证金、北向、大型 ETF</strong> —— 险资/社保配置型</li>
+          <li>主力 & 散户吸纳，<strong>游资抛售</strong> —— 长钱接盘结构</li>
+          <li>换手率仅 <strong>0.17%</strong>，典型大盘股特征</li>
+          <li>股息率 4.5%+，对险资吸引力强</li>
+        </ul>
+        <div class="anchor-verdict">
+          <span class="anchor-verdict-label">判定</span>
+          资金锚是当前最核心的股价支撑，长钱持续流入。
+        </div>
+      </div>
+
+      <div class="anchor">
+        <div class="anchor-header">
+          <div class="anchor-mark">
+            <div class="anchor-numeral">叁</div>
+            <div>
+              <div class="anchor-title">情绪锚</div>
+              <span class="anchor-title-en">Sentiment · Anchor Ⅲ</span>
+            </div>
+          </div>
+          <span class="anchor-status neutral">平淡持续</span>
+        </div>
+        <ul class="anchor-points">
+          <li>不是市场热点（无 AI、新能源强叙事）</li>
+          <li>但叙事稳定：<strong>"中特估 + 高分红 + 能源安全"</strong></li>
+          <li>19 家机构评级：买入 15 / 增持 4，目标均价 <strong>51.32 元</strong></li>
+          <li>共识阶段 3–4，机构广泛认同但散户参与少</li>
+        </ul>
+        <div class="anchor-verdict">
+          <span class="anchor-verdict-label">判定</span>
+          平淡即稳定。分红稳定性是市场最看重的预期，持续兑现即可维持。
+        </div>
+      </div>
+
+      <div class="anchor">
+        <div class="anchor-header">
+          <div class="anchor-mark">
+            <div class="anchor-numeral">肆</div>
+            <div>
+              <div class="anchor-title">筹码锚</div>
+              <span class="anchor-title-en">Holdings · Anchor Ⅳ</span>
+            </div>
+          </div>
+          <span class="anchor-status strong">极其稳定</span>
+        </div>
+        <ul class="anchor-points">
+          <li>大股东神华集团 <strong>稳定高持股</strong></li>
+          <li>主要持仓者是长线机构</li>
+          <li>股东人数下降，筹码继续集中</li>
+          <li>流通盘大，题材扰动几乎不可能 —— <strong>零博弈风险</strong></li>
+        </ul>
+        <div class="anchor-verdict">
+          <span class="anchor-verdict-label">判定</span>
+          筹码锁死，结构极其稳固，几乎不存在供给扰动。
+        </div>
+      </div>
+    </div>
+
+    <div class="synthesis">
+      <div class="synthesis-side">
+        <div>
+          <div class="label">SYNTHESIS · 综合评估</div>
+          <div class="headline">盈利周期性下行 · 资金锚锁定 · 情绪平淡 · 筹码锁死。</div>
+        </div>
+        <div class="foot">稳定型 · Yield Anchor</div>
+      </div>
+      <div class="synthesis-main">
+        <div class="synth-block">
+          <div class="synth-block-title">Logic · 逻辑框架</div>
+          <div class="synth-block-body">典型的"<strong>股息型投资</strong>"标的，靠分红率 + 长钱配置形成股价支撑。</div>
+        </div>
+        <div class="synth-block">
+          <div class="synth-block-title">Risk · 最大风险</div>
+          <div class="synth-block-body">煤炭价格长期下行 + 电力需求增速放缓，将影响<strong>盈利和分红的可持续性</strong>。</div>
+        </div>
+        <div class="synth-block">
+          <div class="synth-block-title">Watch · 关键观察点</div>
+          <div class="synth-block-body">煤炭价格走势 · 分红政策是否持续 · "十五五"资本开支规划是否影响自由现金流。</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============= CASE 4 · 寒武纪 ============= -->
+  <div class="case-body" data-case-body="4">
+
+    <div class="stock-header">
+      <div class="stock-header-left">
+        <span class="stock-verdict">盈利跃升 · 估值透支 · 多锚告警</span>
+        <div class="stock-name">寒武纪</div>
+        <div class="stock-code">688256 · 科创板</div>
+        <p class="stock-thesis">基本面确实在好转，但价格已提前定价数年的乐观情形。盈利兑现 × 预期透支的典型组合。</p>
+      </div>
+      <div class="stock-header-right">
+        <div class="metric">
+          <div class="metric-label">2025 营收</div>
+          <div class="metric-value pos">64.97<span class="unit">亿元</span></div>
+          <div class="metric-delta">YoY +453.21%</div>
+        </div>
+        <div class="metric">
+          <div class="metric-label">2025 净利润</div>
+          <div class="metric-value pos">20.59<span class="unit">亿元</span></div>
+          <div class="metric-delta">首次整年盈利</div>
+        </div>
+        <div class="metric">
+          <div class="metric-label">PE (TTM)</div>
+          <div class="metric-value neg">220<span class="unit">×+</span></div>
+          <div class="metric-delta">估值显著透支</div>
+        </div>
+        <div class="metric">
+          <div class="metric-label">券商目标均价</div>
+          <div class="metric-value">1,150<span class="unit">元</span></div>
+          <div class="metric-delta">32 家覆盖 / 28 买入</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="key-data">
+      <div class="key-data-title">核心数据</div>
+      <ul class="key-data-list">
+        <li>2026 年净利预测 <strong>58–67 亿</strong>，增速 180%+</li>
+        <li>2025 年 8 月股价最高接近 <strong>1,600 元</strong></li>
+        <li>2026 年 3 月 23 日盘中跌破 1,000 元，<strong>年内最大跌幅 −26%</strong></li>
+        <li>4 月 9 日融资净买入 <strong>7.46 亿</strong>，全市场首位</li>
+        <li>存货 25.12 vs 25.6 <strong>翻倍</strong>，订单绝对不缺</li>
+        <li>股东户数约 <strong>6.2 万</strong>，流通盘中散户不多</li>
+      </ul>
+    </div>
+
+    <div class="anchors-title-row">
+      <div class="anchors-title">四锚拆解<span class="en">Four Anchors Breakdown</span></div>
+      <div class="anchors-legend">
+        <span class="legend-dot strong">强</span>
+        <span class="legend-dot neutral">中性</span>
+        <span class="legend-dot weak">弱/告警</span>
+        <span class="legend-dot cold">偏冷</span>
+      </div>
+    </div>
+
+    <div class="anchors-grid">
+      <div class="anchor">
+        <div class="anchor-header">
+          <div class="anchor-mark">
+            <div class="anchor-numeral">壹</div>
+            <div>
+              <div class="anchor-title">盈利锚</div>
+              <span class="anchor-title-en">Earnings · Anchor Ⅰ</span>
+            </div>
+          </div>
+          <span class="anchor-status strong">快速兑现</span>
+        </div>
+        <ul class="anchor-points">
+          <li>营收增速 <strong>+453%</strong>、扣非转正 —— 从 D 级跃升至 A 级</li>
+          <li>PE 220× —— 估值已 <strong>包含未来 2–3 年</strong>的高速增长</li>
+          <li>预计今年营收 100–150 亿，业绩增速 70–120%</li>
+          <li><strong>关键悖论</strong>：公司在变好，但股价已提前定价</li>
+        </ul>
+        <div class="anchor-verdict">
+          <span class="anchor-verdict-label">判定</span>
+          盈利锚从 D 级跃升到 A 级，正向转变罕见 —— 但估值匹配度极差。
+        </div>
+      </div>
+
+      <div class="anchor">
+        <div class="anchor-header">
+          <div class="anchor-mark">
+            <div class="anchor-numeral">贰</div>
+            <div>
+              <div class="anchor-title">资金锚</div>
+              <span class="anchor-title-en">Capital · Anchor Ⅱ</span>
+            </div>
+          </div>
+          <span class="anchor-status weak">高度杠杆化</span>
+        </div>
+        <ul class="anchor-points">
+          <li>融资净买入 <strong>7.46 亿</strong>居两市首位 —— 杠杆资金主导</li>
+          <li>游资席位频繁切换，大户进出频繁</li>
+          <li>机构、散户、游资 <strong>三方共存</strong></li>
+          <li>资金结构 = <strong>脆弱的高位平台</strong>，风险偏好一降融资盘先撤</li>
+        </ul>
+        <div class="anchor-verdict">
+          <span class="anchor-verdict-label">判定</span>
+          资金锚明显告警，杠杆使上涨加速、下跌同样加速。
+        </div>
+      </div>
+
+      <div class="anchor">
+        <div class="anchor-header">
+          <div class="anchor-mark">
+            <div class="anchor-numeral">叁</div>
+            <div>
+              <div class="anchor-title">情绪锚</div>
+              <span class="anchor-title-en">Sentiment · Anchor Ⅲ</span>
+            </div>
+          </div>
+          <span class="anchor-status weak">接近极致</span>
+        </div>
+        <ul class="anchor-points">
+          <li>32 家券商 / 28 买入，<strong>股价已接近目标价</strong></li>
+          <li>融资余额持续走高，"不恐高"的非理性繁荣阶段</li>
+          <li>叙事：<strong>"AI 算力国产替代"</strong>、英伟达被禁的历史性机遇</li>
+          <li>共识阶段 4–5 之间，已定价<strong>业绩持续 200%+ 增长若干年</strong></li>
+        </ul>
+        <div class="anchor-verdict">
+          <span class="anchor-verdict-label">判定</span>
+          情绪锚接近极致，任何低于假设的数据都会触发负反馈。
+        </div>
+      </div>
+
+      <div class="anchor">
+        <div class="anchor-header">
+          <div class="anchor-mark">
+            <div class="anchor-numeral">肆</div>
+            <div>
+              <div class="anchor-title">筹码锚</div>
+              <span class="anchor-title-en">Holdings · Anchor Ⅳ</span>
+            </div>
+          </div>
+          <span class="anchor-status alert">集中但敏感</span>
+        </div>
+        <ul class="anchor-points">
+          <li>流通盘相对较小，<strong>易被资金推动</strong></li>
+          <li>4 月 7 日单日 <strong>155 亿</strong>天量成交，筹码极度活跃</li>
+          <li>A 股第二高价股，高价股筹码结构特殊，<strong>易被控盘</strong></li>
+          <li>抱团机构 + 游资 + 散户融资盘共存，<strong>任何一方先动都连锁反应</strong></li>
+        </ul>
+        <div class="anchor-verdict">
+          <span class="anchor-verdict-label">判定</span>
+          表面集中 ≠ 稳定，脆弱的高集中度可能随时松动。
+        </div>
+      </div>
+    </div>
+
+    <div class="synthesis">
+      <div class="synthesis-side">
+        <div>
+          <div class="label">SYNTHESIS · 综合评估</div>
+          <div class="headline">盈利锚正向跃升 · 但资金 + 情绪 + 筹码锚全面告警。</div>
+        </div>
+        <div class="foot">顶部背离型 · Top Divergence</div>
+      </div>
+      <div class="synthesis-main">
+        <div class="synth-block">
+          <div class="synth-block-title">Logic · 逻辑框架</div>
+          <div class="synth-block-body">典型的"<strong>盈利兑现 × 预期透支</strong>"组合。基本面确实在好转，但价格已经提前定价数年的乐观情形。</div>
+        </div>
+        <div class="synth-block">
+          <div class="synth-block-title">Risk · 最大风险</div>
+          <div class="synth-block-body">"一季报是最大试金石 —— 超预期继续打开空间，低于预期则可能阶段性见顶。<strong>承受不住 20%+ 回撤的投资者不适合参与</strong>。"</div>
+        </div>
+        <div class="synth-block">
+          <div class="synth-block-title">Watch · 关键观察点</div>
+          <div class="synth-block-body">4 月底一季报是否超预期 · 存货能否顺利转为营收 · 美国制裁政策变化 · 英伟达竞品情况。</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</section>
+
+<!-- ========================================================
+     COMPARISON MATRIX
+     ======================================================== -->
+<section class="matrix-section" id="matrix">
+  <div class="section-label left">02 · COMPARISON · 对比</div>
+  <h2 class="section-heading">四锚<span class="em">对照</span>矩阵</h2>
+  <p class="section-intro">将四个案例横向对齐，一眼看出每个锚点的强弱分布与整体共振模式。</p>
+
+  <table class="matrix-table">
+    <thead>
+      <tr>
+        <th>标的</th>
+        <th>盈利锚</th>
+        <th>资金锚</th>
+        <th>情绪锚</th>
+        <th>筹码锚</th>
+        <th>综合共振</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>贵州茅台</td>
+        <td><span class="mini-tag alert">降级中</span></td>
+        <td><span class="mini-tag neutral">中性</span></td>
+        <td><span class="mini-tag cold">偏冷</span></td>
+        <td><span class="mini-tag strong">稳定</span></td>
+        <td class="verdict-cell">背离（盈利弱 + 筹码稳）</td>
+      </tr>
+      <tr>
+        <td>宁德时代</td>
+        <td><span class="mini-tag strong">强</span></td>
+        <td><span class="mini-tag strong">流入</span></td>
+        <td><span class="mini-tag strong">偏热</span></td>
+        <td><span class="mini-tag strong">集中</span></td>
+        <td class="verdict-cell">四锚正向共振</td>
+      </tr>
+      <tr>
+        <td>中国神华</td>
+        <td><span class="mini-tag neutral">下行</span></td>
+        <td><span class="mini-tag strong">长钱锁定</span></td>
+        <td><span class="mini-tag neutral">平淡</span></td>
+        <td><span class="mini-tag strong">锁死</span></td>
+        <td class="verdict-cell">稳定（资金锚主导）</td>
+      </tr>
+      <tr>
+        <td>寒 武 纪</td>
+        <td><span class="mini-tag strong">跃升</span></td>
+        <td><span class="mini-tag weak">高杠杆</span></td>
+        <td><span class="mini-tag weak">极致</span></td>
+        <td><span class="mini-tag alert">敏感</span></td>
+        <td class="verdict-cell">背离（盈利 + 情绪顶部）</td>
+      </tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- ========================================================
+     OBSERVATIONS
+     ======================================================== -->
+<section class="observations" id="observations">
+  <div class="section-label left">03 · KEY INSIGHTS · 观察</div>
+  <h2 class="section-heading">几个<span class="em">重要</span>观察</h2>
+
+  <div class="obs-grid">
+    <div class="obs-card">
+      <div class="obs-num">01</div>
+      <div class="obs-title">"四锚共振"是最美的时刻，也是最危险的前夜。</div>
+      <div class="obs-body">宁德时代当下接近全面共振，这是投资最舒服的状态。但要警惕：<strong>共振是向"极致共识"演化的过程，一旦达到极致就会反转</strong>。理想的买点是共振刚启动时（阶段 2–3），而不是已到阶段 4+。</div>
+    </div>
+
+    <div class="obs-card">
+      <div class="obs-num">02</div>
+      <div class="obs-title">"盈利锚动摇"并不等于立即卖出。</div>
+      <div class="obs-body">茅台盈利动摇，但因为筹码锚极其稳定、估值已反映悲观预期，反而形成了<strong>保护垫</strong>。真正危险的是"盈利锚动摇 + 筹码松动 + 估值在高位"的组合（这才是戴维斯双杀）。</div>
+    </div>
+
+    <div class="obs-card">
+      <div class="obs-num">03</div>
+      <div class="obs-title">"高股息"是对抗情绪锚的最强工具。</div>
+      <div class="obs-body">中国神华的盈利其实也在下滑，但<strong>高分红 + 长线资金锁仓</strong>使它不受情绪扰动。这类标的的核心看点永远是"分红持续性"，而非短期股价。</div>
+    </div>
+
+    <div class="obs-card">
+      <div class="obs-num">04</div>
+      <div class="obs-title">"高成长+高估值"是最大的双刃剑。</div>
+      <div class="obs-body">寒武纪是最典型的"盈利锚正向但情绪锚已在顶部"。这类股票的上行空间依赖于持续超预期，一旦不超预期就会引发估值杀。<strong>不懂四锚的人会在这里追涨，懂四锚的人会退到场外观察</strong>。</div>
+    </div>
+  </div>
+</section>
+
+<!-- ========================================================
+     DISCIPLINE
+     ======================================================== -->
+<section class="discipline" id="discipline">
+  <div class="disc-head">使用<span class="em">纪律</span></div>
+  <p class="disc-sub">基于以上示范，给出使用四锚分析的四条纪律。把抽象框架转化为具体个股分析时，始终回到这四条。</p>
+
+  <ol class="disc-list">
+    <li><strong>每锚都要看，不要先入为主。</strong>很多人只看自己认知最强的那一锚（比如只看基本面或只看资金），这是最容易漏判的。</li>
+    <li><strong>四锚打分要多维度。</strong>同一个锚可能在一个维度正向、另一个维度负向（比如茅台的盈利锚）。</li>
+    <li><strong>关注"锚的切换拐点"。</strong>真正的超额收益来自预判锚的切换，而不是跟随已经切换的锚。</li>
+    <li><strong>任何分析都有时效性。</strong>本页分析的时点是 2026-04-17，市场每天都在变化，一周后很多数据就可能失效。</li>
+  </ol>
+</section>
+
+<!-- ========================================================
+     FOOTER
+     ======================================================== -->
+<footer>
+  <div class="footer-inner">
+    <div class="footer-note">
+      <strong>DISCLAIMER · 免责声明</strong>
+      本页内容纯粹是四锚框架的 <em>应用示范</em>，用来展示如何把抽象框架转化为具体个股的结构化分析。所有具体数据均可能与实际有偏差（基于公开信息整合，非实时交易系统），任何结论都 <em>不应作为投资依据</em>。股市有风险，投资决策需完全依靠独立研究与判断，自负盈亏。
+    </div>
+    <div class="footer-col">
+      <div class="footer-col-title">FRAMEWORK</div>
+      <ul>
+        <li><a href="#cases">案例分析</a></li>
+        <li><a href="#matrix">对比矩阵</a></li>
+        <li><a href="#observations">核心观察</a></li>
+        <li><a href="#discipline">使用纪律</a></li>
+      </ul>
+    </div>
+    <div class="footer-col">
+      <div class="footer-col-title">META</div>
+      <ul>
+        <li>Version · 1.0 (Sample)</li>
+        <li>Data · 2026·04·17</li>
+        <li>Purpose · Frontend Spec</li>
+        <li>Status · Demo Only</li>
+      </ul>
+    </div>
+  </div>
+  <div class="footer-bottom">
+    <span>四锚框架 · FOUR ANCHORS</span>
+    <span>Built as frontend reference · 2026</span>
+  </div>
+</footer>
+
+<script>
+  // Case tabs switching
+  (function() {
+    const tabs = document.querySelectorAll('.case-tab');
+    const bodies = document.querySelectorAll('.case-body');
+
+    tabs.forEach(tab => {
+      tab.addEventListener('click', () => {
+        const caseId = tab.getAttribute('data-case');
+
+        tabs.forEach(t => t.classList.remove('active'));
+        bodies.forEach(b => b.classList.remove('active'));
+
+        tab.classList.add('active');
+        const target = document.querySelector(`[data-case-body="${caseId}"]`);
+        if (target) target.classList.add('active');
+
+        // scroll anchor section into view (subtle)
+        const casesSection = document.getElementById('cases');
+        if (casesSection) {
+          const top = casesSection.getBoundingClientRect().top + window.scrollY;
+          window.scrollTo({ top: top - 20, behavior: 'smooth' });
+        }
+      });
+    });
+  })();
+</script>
+
+</body>
+</html>

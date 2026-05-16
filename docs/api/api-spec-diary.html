@@ -1,0 +1,621 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>股市日记系统：API 规格说明书 (V1.0)</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Noto+Serif+SC:wght@400;700;900&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    
+    <!-- Libraries -->
+    <script src="https://lib.baomitu.com/marked/11.1.1/marked.min.js"></script>
+    <link rel="stylesheet" href="https://lib.baomitu.com/github-markdown-css/5.5.0/github-markdown-dark.min.css">
+    <script src="https://lib.baomitu.com/mermaid/10.9.0/mermaid.min.js"></script>
+    
+    <!-- Syntax Highlighting -->
+    <link rel="stylesheet" href="https://lib.baomitu.com/highlight.js/11.9.0/styles/tokyo-night-dark.min.css">
+    <script src="https://lib.baomitu.com/highlight.js/11.9.0/highlight.min.js"></script>
+    
+    <style>
+        :root {
+            --bg: #0a0a0a;
+            --surface: #121212;
+            --surface-hover: #1a1a1a;
+            --border: #222222;
+            --accent: #eab308;
+            --accent-glow: rgba(234, 179, 8, 0.1);
+            --text-primary: #f1f5f9;
+            --text-secondary: #94a3b8;
+            --text-muted: #64748b;
+            --font-sans: 'Outfit', 'Noto Sans SC', -apple-system, sans-serif;
+            --font-serif: 'Noto Serif SC', serif;
+            --font-mono: 'JetBrains Mono', monospace;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background-color: var(--bg);
+            color: var(--text-primary);
+            font-family: var(--font-sans);
+            line-height: 1.7;
+            -webkit-font-smoothing: antialiased;
+            overflow-x: hidden;
+        }
+
+        /* Subtle background glow */
+        body::after {
+            content: '';
+            position: fixed;
+            top: 0;
+            right: 0;
+            width: 40vw;
+            height: 40vh;
+            background: radial-gradient(circle, var(--accent-glow) 0%, transparent 70%);
+            z-index: -1;
+            filter: blur(100px);
+            pointer-events: none;
+        }
+
+        .sidebar {
+            width: 260px;
+            height: 100vh;
+            position: fixed;
+            left: 0;
+            top: 0;
+            border-right: 1px solid var(--border);
+            background: var(--bg);
+            padding: 1.5rem;
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+            overflow-y: auto;
+            z-index: 100;
+        }
+
+        .nav-link {
+            color: var(--text-muted);
+            text-decoration: none;
+            font-size: 0.85rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            transition: color 0.2s;
+            padding: 0.5rem;
+            border-radius: 6px;
+        }
+        .nav-link:hover { color: var(--accent); background: var(--surface); }
+
+        .toc-title {
+            font-family: var(--font-serif);
+            font-size: 1rem;
+            color: var(--text-primary);
+            margin-bottom: 0.8rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding-left: 0.5rem;
+        }
+        .toc-title::before {
+            content: '';
+            width: 3px;
+            height: 1rem;
+            background: var(--accent);
+            border-radius: 2px;
+        }
+
+        .toc-list {
+            list-style: none;
+            display: flex;
+            flex-direction: column;
+            gap: 0.4rem;
+        }
+        .toc-item {
+            font-size: 0.8rem;
+            line-height: 1.3;
+        }
+        .toc-item a {
+            color: var(--text-muted);
+            text-decoration: none;
+            transition: all 0.2s;
+            display: block;
+            padding: 0.4rem 0.5rem;
+            border-radius: 4px;
+        }
+        .toc-item a:hover { color: var(--accent); background: var(--surface); }
+        .toc-item.level-3 { margin-left: 0.8rem; border-left: 1px solid var(--border); }
+
+        .container {
+            max-width: 860px;
+            margin: 0 auto 0 260px;
+            padding: 3rem 4rem;
+            animation: fadeIn 0.6s ease-out;
+        }
+
+        @media (max-width: 1024px) {
+            .sidebar { width: 220px; padding: 1rem; }
+            .container { margin-left: 220px; padding: 2rem; }
+        }
+
+        @media (max-width: 800px) {
+            .sidebar { position: static; width: 100%; height: auto; border-right: none; border-bottom: 1px solid var(--border); }
+            .container { margin-left: 0; padding: 1.5rem; }
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(5px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        header {
+            margin-bottom: 3rem;
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 1.5rem;
+        }
+
+        .meta {
+            font-family: var(--font-mono);
+            font-size: 0.75rem;
+            color: var(--accent);
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            margin-bottom: 0.8rem;
+            display: flex;
+            align-items: center;
+            gap: 0.8rem;
+        }
+
+        .meta::before {
+            content: '';
+            width: 20px;
+            height: 1px;
+            background-color: var(--accent);
+        }
+
+        h1 {
+            font-family: var(--font-serif);
+            font-size: 2.2rem;
+            font-weight: 900;
+            line-height: 1.2;
+            margin-bottom: 1rem;
+            color: var(--text-primary);
+        }
+
+        .markdown-body {
+            background: transparent !important;
+            color: var(--text-primary) !important;
+            font-family: var(--font-sans) !important;
+            font-size: 0.95rem !important;
+        }
+
+        .markdown-body h2 {
+            font-family: var(--font-serif);
+            font-size: 1.5rem !important;
+            color: var(--accent) !important;
+            border-bottom: 1px solid var(--border) !important;
+            padding-bottom: 0.5rem !important;
+            margin-top: 2.5rem !important;
+            scroll-margin-top: 1rem;
+        }
+
+        .markdown-body h3 {
+            font-family: var(--font-serif);
+            font-size: 1.25rem !important;
+            color: var(--text-primary) !important;
+            margin-top: 2rem !important;
+            scroll-margin-top: 1rem;
+        }
+
+        .markdown-body p, .markdown-body li {
+            font-size: 0.95rem !important;
+            color: var(--text-primary) !important;
+        }
+        
+        .markdown-body pre {
+            background-color: #1a1b26 !important; /* Match Tokyo Night Dark */
+            border: 1px solid var(--border);
+            border-radius: 8px !important;
+            padding: 0 !important; /* Code internal handles padding */
+            margin: 1.2rem 0 !important;
+            overflow: hidden;
+        }
+
+        .markdown-body pre code {
+            background-color: transparent !important;
+            padding: 1.2rem !important;
+            display: block;
+            font-family: var(--font-mono) !important;
+            font-size: 0.85rem !important;
+            line-height: 1.5;
+        }
+
+        .markdown-body blockquote {
+            border-left: 3px solid var(--accent) !important;
+            background: var(--surface);
+            padding: 0.8rem 1.2rem;
+            color: var(--text-secondary) !important;
+            margin: 1.2rem 0 !important;
+        }
+
+        .markdown-body table {
+            background: var(--surface);
+            font-size: 0.85rem !important;
+            margin: 1.2rem 0 !important;
+        }
+
+        footer {
+            margin-top: 4rem;
+            padding-top: 1.5rem;
+            border-top: 1px solid var(--border);
+            color: var(--text-muted);
+            font-size: 0.8rem;
+            text-align: center;
+        }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar { width: 5px; }
+        ::-webkit-scrollbar-track { background: var(--bg); }
+        ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+    </style>
+</head>
+<body>
+    <aside class="sidebar">
+        <a href="index.html" class="nav-link">
+            <span>←</span> 返回目录门户
+        </a>
+        
+        <div class="toc-container">
+            <h3 class="toc-title">文档导航</h3>
+            <ul class="toc-list" id="toc">
+                <!-- TOC items will be injected here -->
+            </ul>
+        </div>
+    </aside>
+
+    <div class="container">
+        <header>
+            <div class="meta">GLOBAL | 2026-05-16 19:06</div>
+            <h1>股市日记系统：API 规格说明书 (V1.0)</h1>
+        </header>
+
+        <article id="content" class="markdown-body">
+            <!-- Loading indicator -->
+            <p style="color: var(--text-muted)">正在解析文档内容...</p>
+        </article>
+
+        <footer>
+            &copy; 2026 MicroStock Project Docs | Generated by Antigravity
+        </footer>
+    </div>
+
+    <script id="markdown-raw" type="text/markdown"># 股市日记系统：API 规格说明书 (V1.0)
+
+本文档详细描述了股市日记系统的后端 API 接口，供前端（WeChat Taro）与后端（wxch-gateway）对接使用。
+
+---
+
+## 1. 通用规范
+
+- **Base URL**: `https://<gateway-domain>/api/v1/diaries`
+- **认证方式**: 
+  - Header: `Authorization: Bearer <JWT_TOKEN>`
+  - Token 获取见 [token.md](./token.md)
+- **数据格式**: 请求与响应均使用 `application/json`
+- **公共响应结构**:
+  ```json
+  {
+    "code": 200,      // 200=成功, 400=参数错误, 401=未授权, 403=权限不足, 500=服务器错误
+    "data": { ... },   // 业务数据
+    "message": "success"
+  }
+  ```
+
+---
+
+## 2. 核心枚举值 (Constants)
+
+### 2.1 日记类型 (`entry_type`)
+- `1`: 盘前 (Pre-market)
+- `2`: 盘中 (Intra-day)
+- `3`: 盘后 (Post-market)
+- `4`: 周复盘 (Weekly Review)
+- `5`: 随笔 (Notes)
+- `6`: 个股研究 (Stock Research)
+
+### 2.2 情绪标志 (`mood`)
+- `1`: 冷静 (Calm)
+- `2`: 兴奋 (Excited)
+- `3`: 焦虑 (Anxious)
+- `4`: 恐惧 (Fearful)
+- `5`: 贪婪 (Greedy)
+- `6`: 困惑 (Confused)
+
+### 2.3 可见性 (`visibility`)
+- `0`: 私密 (Private)
+- `1`: 链接可见 (Link Only)
+- `2`: 公开 (Public)
+
+---
+
+## 3. 接口列表
+
+### 3.1 看板统计
+- **Endpoint**: `GET /stats`
+- **描述**: 获取用户当月日记统计及情绪概览。 (实际路径: `/api/v1/diaries/stats`)
+- **响应 Data**:
+  ```json
+  {
+    "monthly_days": 12,        // 本月记录天数
+    "error_book_count": 5,     // 错题本总数 (标签 category=2)
+    "latest_mood": 1,          // 最近一次日记的情绪值
+    "mood_distribution": [     // 情绪分布统计
+      { "mood": 1, "count": 10 },
+      { "mood": 3, "count": 2 }
+    ]
+  }
+  ```
+
+### 3.2 日记列表 (分页/过滤)
+- **Endpoint**: `GET /entries`
+- **描述**: 获取日记列表。 (实际路径: `/api/v1/diaries/entries`)
+- **查询参数**:
+  - `page`: (int) 页码, 默认 1
+  - `page_size`: (int) 每页大小, 默认 10
+  - `tab`: (string) 分类 [可选: `all`, `review`, `error`, `research`, `notes`]
+  - `query`: (string) 全文搜索关键词
+  - `stock_code`: (string) 筛选特定股票关联的日记 (ts_code)
+- **响应 Data**:
+  ```json
+  {
+    "total": 100,
+    "list": [
+      {
+        "id": 1024,
+        "title": "今日操作总结",
+        "excerpt": "今天主要关注了人工智能板块的龙头...",
+        "entry_date": "2026-04-30",
+        "entry_type": 3,
+        "mood": 1,
+        "is_pinned": 1,
+        "is_error_book": true,
+        "stocks": [
+          {
+            "ts_code": "600519.SH",
+            "name": "贵州茅台",
+            "price": 1750.5,      // 实时价格 (后端透传)
+            "pct_chg": 1.25       // 实时涨跌幅
+          }
+        ],
+        "tags": ["长线", "龙头"],
+        "created_at": "2026-04-30 15:30:00"
+      }
+    ]
+  }
+  ```
+
+### 3.3 日记详情
+- **Endpoint**: `GET /entries/:id`
+- **描述**: 获取指定日记的完整 Markdown 内容。 (实际路径: `/api/v1/diaries/entries/:id`)
+- **响应 Data**:
+  ```json
+  {
+    "id": 1024,
+    "title": "今日操作总结",
+    "content": "# Markdown 标题\n今天的内容...",
+    "entry_date": "2026-04-30",
+    "entry_type": 3,
+    "mood": 1,
+    "visibility": 0,
+    "stocks": [{ "ts_code": "600519.SH", "name": "贵州茅台" }],
+    "tags": ["长线", "龙头"],
+    "attachments": [
+      { "id": 1, "url": "https://cos.../a.jpg", "mime_type": "image/jpeg" }
+    ],
+    "created_at": "2026-04-30 15:30:00",
+    "updated_at": "2026-04-30 16:00:00"
+  }
+  ```
+
+### 3.4 保存/更新日记
+- **Endpoint**: `POST /entries` (新建) / `PUT /entries/:id` (修改)
+- **描述**: 保存或更新日记内容。 (实际路径: `/api/v1/diaries/entries` 或 `/api/v1/diaries/entries/:id`)
+- **请求 Payload**:
+  ```json
+  {
+    "title": "可选标题",
+    "content": "Markdown 正文",
+    "entry_date": "2026-04-30", // 默认为当天
+    "entry_type": 3,
+    "mood": 1,
+    "visibility": 0,
+    "is_pinned": 0,
+    "stocks": ["600519.SH"],    // 传递 ts_code 数组
+    "tags": ["错题本", "抄底"],  // 传递标签名称数组
+    "attachment_ids": [1, 2]     // 关联已上传的附件 ID
+  }
+  ```
+- **后端处理**: 自动根据内容截取 `excerpt`，自动维护 `diary_stock` 和 `diary_tag` 关联。
+
+### 3.5 删除日记
+- **Endpoint**: `DELETE /entries/:id`
+- **描述**: 软删除日记 (设置 `deleted_at`)。 (实际路径: `/api/v1/diaries/entries/:id`)
+
+### 3.6 标签字典获取
+- **Endpoint**: `GET /tags/dict`
+- **描述**: 获取系统推荐标签及用户历史标签。
+- **响应 Data**:
+  ```json
+  {
+    "system_tags": [
+      { "name": "错题本", "category": 2, "color": "#FF4D4F" },
+      { "name": "核心资产", "category": 3, "color": "#1890FF" }
+    ],
+    "user_tags": ["我的策略", "打板"]
+  }
+  ```
+
+### 3.7 附件上传/登记
+- **Endpoint**: `POST /attachments`
+- **描述**: 客户端完成 COS 上传后，向后端登记附件信息。
+- **请求 Payload**:
+  ```json
+  {
+    "cos_key": "diary/1/202604/abc.jpg",
+    "mime_type": "image/jpeg",
+    "size_bytes": 102450,
+    "original_name": "photo.jpg"
+  }
+  ```
+- **响应 Data**: 返回附件的 `id`。
+
+### 3.8 批量导出任务
+- **Endpoint**: `POST /export`
+- **请求 Payload**:
+  ```json
+  {
+    "task_type": 1,     // 1=单篇, 2=按月, 3=按年, 4=全量
+    "scope": { "month": "2026-04" }, // 视 task_type 而定
+    "format": "md"      // 目前仅支持 md
+  }
+  ```
+- **响应 Data**: `{ "task_id": 1001 }`
+
+### 3.9 公众号发布 (草稿)
+- **Endpoint**: `POST /publish/mp`
+- **描述**: 将日记内容转换为 HTML 并上传至微信公众号草稿箱（仅支持已绑定的单个公众号）。 (实际路径: `/api/v1/diaries/publish/mp`)
+- **请求 Payload**:
+  ```json
+  {
+    "entry_id": 1024,
+    "is_snapshot": true // 是否创建独立快照(允许二次编辑)
+  }
+  ```
+- **响应 Data**: 
+  ```json
+  {
+    "publish_record_id": 500,
+    "wx_media_id": "xxx",
+    "message": "Draft created successfully in WeChat"
+  }
+  ```
+
+---
+
+## 4. 错误码定义
+
+| Code | 描述 |
+|---|---|
+| 200 | 请求成功 |
+| 400 | 参数校验失败 (Invalid Parameter) |
+| 401 | 身份认证失败 (Unauthorized) |
+| 403 | 无权访问该资源 (Forbidden) |
+| 404 | 资源不存在 (Not Found) |
+| 429 | 请求过于频繁 (Rate Limit) |
+| 500 | 服务器内部错误 (Internal Server Error) |
+
+---
+
+## 5. 数据库关联逻辑说明
+
+1. **自动摘要**: 后端在保存日记时，通过正则去掉 Markdown 语法标签，取前 60 个字符存入 `excerpt`。
+2. **股票关联**: 保存时根据 `stocks` 数组中的 `ts_code` 匹配 `stock_info` 表，维护 `diary_stock` 关系。
+3. **标签关联**: 
+   - 检查 `diary_tag_dict` 是否存在该标签名。
+   - 不存在则创建，`owner_user_id` 设为当前用户 ID。
+   - 更新 `diary_tag` 关系。
+4. **行情透传**: `GET /entries` 列表接口中，后端需根据 `stocks` 的 `ts_code` 批量获取实时行情并返回。
+
+---
+
+## 6. 微信小程序调用示例 (WeChat Cloud Container)
+
+建议在小程序中使用 `wx.cloud.callContainer` 进行调用，这样可以享受腾讯云内网加速。
+
+```javascript
+// 示例：创建一篇新日记
+wx.cloud.callContainer({
+  "config": {
+    "env": "prod-xxxxx" // 你的云托管环境ID
+  },
+  "path": "/api/v1/diaries/entries",
+  "header": {
+    "X-WX-SERVICE": "wxch-gateway", // 目标服务名称
+    "Authorization": "Bearer " + wx.getStorageSync('token') // 传递 JWT
+  },
+  "method": "POST",
+  "data": {
+    "entry_date": "2026-05-01",
+    "entry_type": 5,
+    "title": "今日复盘",
+    "content": "今天市场表现...",
+    "stocks": ["600519.SH"]
+  },
+  "success": (res) => {
+    console.log("日记已保存:", res.data);
+  },
+  "fail": (err) => {
+    console.error("请求失败:", err);
+  }
+});
+```
+</script>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', async () => {
+            const rawMd = document.getElementById('markdown-raw').textContent;
+            const contentEl = document.getElementById('content');
+            const tocEl = document.getElementById('toc');
+            
+            // Set options for marked
+            marked.setOptions({
+                gfm: true,
+                breaks: true,
+                headerIds: true,
+                mangle: false,
+                highlight: function(code, lang) {
+                    const language = hljs.getLanguage(lang) ? lang : 'plaintext';
+                    return hljs.highlight(code, { language }).value;
+                }
+            });
+
+            // Parse Markdown
+            contentEl.innerHTML = marked.parse(rawMd);
+            
+            // Generate TOC
+            const headings = contentEl.querySelectorAll('h2, h3');
+            headings.forEach((h, index) => {
+                if (!h.id) h.id = 'heading-' + index;
+                
+                const li = document.createElement('li');
+                li.className = 'toc-item level-' + h.tagName.toLowerCase().charAt(1);
+                
+                const a = document.createElement('a');
+                a.href = '#' + h.id;
+                a.textContent = h.textContent;
+                
+                li.appendChild(a);
+                tocEl.appendChild(li);
+            });
+
+            // Handle Mermaid
+            if (window.mermaid) {
+                mermaid.initialize({ startOnLoad: false, theme: 'dark', useWorker: false });
+                document.querySelectorAll('pre code.language-mermaid').forEach(el => {
+                    const pre = el.parentElement;
+                    const div = document.createElement('div');
+                    div.className = 'mermaid';
+                    div.textContent = el.textContent;
+                    pre.parentElement.replaceChild(div, pre);
+                });
+                mermaid.run();
+            }
+        });
+    </script>
+</body>
+</html>

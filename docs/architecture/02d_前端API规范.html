@@ -1,0 +1,1396 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>02d. 前端 API 规范 (Frontend API Spec)</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Noto+Serif+SC:wght@400;700;900&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    
+    <!-- Libraries -->
+    <script src="https://lib.baomitu.com/marked/11.1.1/marked.min.js"></script>
+    <link rel="stylesheet" href="https://lib.baomitu.com/github-markdown-css/5.5.0/github-markdown-dark.min.css">
+    <script src="https://lib.baomitu.com/mermaid/10.9.0/mermaid.min.js"></script>
+    
+    <!-- Syntax Highlighting -->
+    <link rel="stylesheet" href="https://lib.baomitu.com/highlight.js/11.9.0/styles/tokyo-night-dark.min.css">
+    <script src="https://lib.baomitu.com/highlight.js/11.9.0/highlight.min.js"></script>
+    
+    <style>
+        :root {
+            --bg: #0a0a0a;
+            --surface: #121212;
+            --surface-hover: #1a1a1a;
+            --border: #222222;
+            --accent: #eab308;
+            --accent-glow: rgba(234, 179, 8, 0.1);
+            --text-primary: #f1f5f9;
+            --text-secondary: #94a3b8;
+            --text-muted: #64748b;
+            --font-sans: 'Outfit', 'Noto Sans SC', -apple-system, sans-serif;
+            --font-serif: 'Noto Serif SC', serif;
+            --font-mono: 'JetBrains Mono', monospace;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background-color: var(--bg);
+            color: var(--text-primary);
+            font-family: var(--font-sans);
+            line-height: 1.7;
+            -webkit-font-smoothing: antialiased;
+            overflow-x: hidden;
+        }
+
+        /* Subtle background glow */
+        body::after {
+            content: '';
+            position: fixed;
+            top: 0;
+            right: 0;
+            width: 40vw;
+            height: 40vh;
+            background: radial-gradient(circle, var(--accent-glow) 0%, transparent 70%);
+            z-index: -1;
+            filter: blur(100px);
+            pointer-events: none;
+        }
+
+        .sidebar {
+            width: 260px;
+            height: 100vh;
+            position: fixed;
+            left: 0;
+            top: 0;
+            border-right: 1px solid var(--border);
+            background: var(--bg);
+            padding: 1.5rem;
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+            overflow-y: auto;
+            z-index: 100;
+        }
+
+        .nav-link {
+            color: var(--text-muted);
+            text-decoration: none;
+            font-size: 0.85rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            transition: color 0.2s;
+            padding: 0.5rem;
+            border-radius: 6px;
+        }
+        .nav-link:hover { color: var(--accent); background: var(--surface); }
+
+        .toc-title {
+            font-family: var(--font-serif);
+            font-size: 1rem;
+            color: var(--text-primary);
+            margin-bottom: 0.8rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding-left: 0.5rem;
+        }
+        .toc-title::before {
+            content: '';
+            width: 3px;
+            height: 1rem;
+            background: var(--accent);
+            border-radius: 2px;
+        }
+
+        .toc-list {
+            list-style: none;
+            display: flex;
+            flex-direction: column;
+            gap: 0.4rem;
+        }
+        .toc-item {
+            font-size: 0.8rem;
+            line-height: 1.3;
+        }
+        .toc-item a {
+            color: var(--text-muted);
+            text-decoration: none;
+            transition: all 0.2s;
+            display: block;
+            padding: 0.4rem 0.5rem;
+            border-radius: 4px;
+        }
+        .toc-item a:hover { color: var(--accent); background: var(--surface); }
+        .toc-item.level-3 { margin-left: 0.8rem; border-left: 1px solid var(--border); }
+
+        .container {
+            max-width: 860px;
+            margin: 0 auto 0 260px;
+            padding: 3rem 4rem;
+            animation: fadeIn 0.6s ease-out;
+        }
+
+        @media (max-width: 1024px) {
+            .sidebar { width: 220px; padding: 1rem; }
+            .container { margin-left: 220px; padding: 2rem; }
+        }
+
+        @media (max-width: 800px) {
+            .sidebar { position: static; width: 100%; height: auto; border-right: none; border-bottom: 1px solid var(--border); }
+            .container { margin-left: 0; padding: 1.5rem; }
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(5px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        header {
+            margin-bottom: 3rem;
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 1.5rem;
+        }
+
+        .meta {
+            font-family: var(--font-mono);
+            font-size: 0.75rem;
+            color: var(--accent);
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            margin-bottom: 0.8rem;
+            display: flex;
+            align-items: center;
+            gap: 0.8rem;
+        }
+
+        .meta::before {
+            content: '';
+            width: 20px;
+            height: 1px;
+            background-color: var(--accent);
+        }
+
+        h1 {
+            font-family: var(--font-serif);
+            font-size: 2.2rem;
+            font-weight: 900;
+            line-height: 1.2;
+            margin-bottom: 1rem;
+            color: var(--text-primary);
+        }
+
+        .markdown-body {
+            background: transparent !important;
+            color: var(--text-primary) !important;
+            font-family: var(--font-sans) !important;
+            font-size: 0.95rem !important;
+        }
+
+        .markdown-body h2 {
+            font-family: var(--font-serif);
+            font-size: 1.5rem !important;
+            color: var(--accent) !important;
+            border-bottom: 1px solid var(--border) !important;
+            padding-bottom: 0.5rem !important;
+            margin-top: 2.5rem !important;
+            scroll-margin-top: 1rem;
+        }
+
+        .markdown-body h3 {
+            font-family: var(--font-serif);
+            font-size: 1.25rem !important;
+            color: var(--text-primary) !important;
+            margin-top: 2rem !important;
+            scroll-margin-top: 1rem;
+        }
+
+        .markdown-body p, .markdown-body li {
+            font-size: 0.95rem !important;
+            color: var(--text-primary) !important;
+        }
+        
+        .markdown-body pre {
+            background-color: #1a1b26 !important; /* Match Tokyo Night Dark */
+            border: 1px solid var(--border);
+            border-radius: 8px !important;
+            padding: 0 !important; /* Code internal handles padding */
+            margin: 1.2rem 0 !important;
+            overflow: hidden;
+        }
+
+        .markdown-body pre code {
+            background-color: transparent !important;
+            padding: 1.2rem !important;
+            display: block;
+            font-family: var(--font-mono) !important;
+            font-size: 0.85rem !important;
+            line-height: 1.5;
+        }
+
+        .markdown-body blockquote {
+            border-left: 3px solid var(--accent) !important;
+            background: var(--surface);
+            padding: 0.8rem 1.2rem;
+            color: var(--text-secondary) !important;
+            margin: 1.2rem 0 !important;
+        }
+
+        .markdown-body table {
+            background: var(--surface);
+            font-size: 0.85rem !important;
+            margin: 1.2rem 0 !important;
+        }
+
+        footer {
+            margin-top: 4rem;
+            padding-top: 1.5rem;
+            border-top: 1px solid var(--border);
+            color: var(--text-muted);
+            font-size: 0.8rem;
+            text-align: center;
+        }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar { width: 5px; }
+        ::-webkit-scrollbar-track { background: var(--bg); }
+        ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+    </style>
+</head>
+<body>
+    <aside class="sidebar">
+        <a href="index.html" class="nav-link">
+            <span>←</span> 返回目录门户
+        </a>
+        
+        <div class="toc-container">
+            <h3 class="toc-title">文档导航</h3>
+            <ul class="toc-list" id="toc">
+                <!-- TOC items will be injected here -->
+            </ul>
+        </div>
+    </aside>
+
+    <div class="container">
+        <header>
+            <div class="meta">GLOBAL | 2026-05-16 19:06</div>
+            <h1>02d. 前端 API 规范 (Frontend API Spec)</h1>
+        </header>
+
+        <article id="content" class="markdown-body">
+            <!-- Loading indicator -->
+            <p style="color: var(--text-muted)">正在解析文档内容...</p>
+        </article>
+
+        <footer>
+            &copy; 2026 MicroStock Project Docs | Generated by Antigravity
+        </footer>
+    </div>
+
+    <script id="markdown-raw" type="text/markdown"># 02d. 前端 API 规范 (Frontend API Spec)
+
+> **部署位置**: Cloud-API (BFF 层)  
+> **职责**: 为前端提供完整的业务接口，包括数据查询、任务管理、调度控制
+
+---
+
+## 实现状态总览
+
+> **图例**: ✅ 已实现 | ⏳ 底层已实现(需BFF包装) | ❌ 待开发
+
+| 模块 | 接口数 | 已实现 | 待开发 | 完成度 |
+|:---|:---:|:---:|:---:|:---:|
+| **1. 基础与股票数据** | 8 | 5 | 3 | 63% |
+| **2. 数据审计与修复** | 8 | 5 | 3 | 63% |
+| **3. 回测任务** | 4 | 0 | 4 | 0% |
+| **4. 调度任务管理** | 7 | 5 | 2 | 71% |
+| **5. 用户策略管理** | 4 | 0 | 4 | 0% |
+| **6. 系统监控** | 3 | 2 | 1 | 67% |
+| **合计** | **34** | **17** | **17** | **50%** |
+
+### 详细实现状态
+
+#### 1. 基础与股票数据接口
+| 接口 | 状态 | 对应后端 |
+|:---|:---:|:---|
+| `GET /calendar/tradingDays` | ✅ | BaoStock-API: `trade_cal` 表 |
+| `GET /baseline/current` | ✅ | BaoStock-API: `stock_basic` 表 |
+| `GET /stocks/search` | ❌ | - |
+| `GET /stocks/list` | ❌ | - |
+| `GET /stocks/{code}/profile` | ❌ | - |
+| `GET /stocks/{code}/quote` | ⏳ | `akshare-api: /rank/hot` |
+| `GET /stocks/{code}/kline` | ✅ | `baostock-api: /history/kline/{code}` |
+| `GET /stocks/{code}/financials` | ⏳ | `akshare-api: /finance/{code}` |
+| `GET /stocks/{code}/valuation` | ✅ | `baostock-api: /valuation/{code}/history` |
+
+#### 2. 数据审计与修复
+| 接口 | 状态 | 对应后端 |
+|:---|:---:|:---|
+| `GET /audit/weekly` | ✅ | `data_quality_reports` + `baseline` 计算 |
+| `GET /data/quality/{code}` | ⏳ | `baostock-api: /sync/verify/daily` |
+| `GET /data/quality/reports` | ❌ | MySQL: `data_quality_reports` 表 |
+| `GET /data/quality/reports/{id}` | ❌ | MySQL: `data_quality_reports` 表 |
+| `GET /data/quality/reports/latest` | ❌ | MySQL: `data_quality_reports` 表 |
+| `POST /data/repair` | ✅ | `baostock-api: /collect/stock_history` |
+| `GET /data/repair/{id}` | ✅ | `baostock-api: /collect/task/{id}` |
+| `POST /sync/remediate` | ✅ | 基于 `CollectionService` 封装 |
+
+#### 3. 回测任务
+| 接口 | 状态 | 对应后端 |
+|:---|:---:|:---|
+| `POST /backtest/submit` | ❌ | - |
+| `GET /backtest/{task_id}` | ❌ | - |
+| `GET /backtest/history` | ❌ | - |
+| `DELETE /backtest/{task_id}` | ❌ | - |
+
+#### 4. 调度任务管理
+| 接口 | 状态 | 对应后端 |
+|:---|:---:|:---|
+| `GET /scheduler/jobs` | ✅ | `baostock-api: /scheduler/jobs` |
+| `GET /scheduler/jobs/{id}` | ❌ | - |
+| `POST /scheduler/jobs/{id}/trigger` | ✅ | `baostock-api: /scheduler/jobs/{id}/run` |
+| `PUT /scheduler/jobs/{id}/pause` | ✅ | `baostock-api: /scheduler/jobs/{id}/pause` |
+| `PUT /scheduler/jobs/{id}/resume` | ✅ | `baostock-api: /scheduler/jobs/{id}/resume` |
+| `PUT /scheduler/jobs/{id}/config` | ❌ | - |
+| `GET /scheduler/jobs/{id}/executions` | ⏳ | `baostock-api: /logs/execution` |
+| `GET /scheduler/executions/{id}/logs` | ✅ | `baostock-api: /scheduler/jobs/{id}/logs` |
+
+#### 5. 用户策略管理
+| 接口 | 状态 | 对应后端 |
+|:---|:---:|:---|
+| `GET /strategies` | ❌ | - |
+| `POST /strategies` | ❌ | - |
+| `PUT /strategies/{id}` | ❌ | - |
+| `DELETE /strategies/{id}` | ❌ | - |
+
+#### 6. 系统监控
+| 接口 | 状态 | 对应后端 |
+|:---|:---:|:---|
+| `GET /system/health` | ✅ | 各服务 `/health` 聚合 |
+| `GET /system/stats` | ❌ | - |
+| `GET /sync/freshness` | ✅ | 数据库 `created_at` 实时计算 |
+
+---
+
+## 1. 基础与股票数据接口 (Base & Stock Data)
+
+### 1.1 交易日历 (Trading Calendar)
+
+#### `GET /api/v1/baostock/calendar/tradingDays`
+**用途**: 获取指定周的实际交易日列表（用于渲染 5 节点墙）。
+
+**Query Parameters**:
+| 参数 | 类型 | 说明 |
+|:---|:---|:---|
+| `week` | string | `current`（默认）或 `YYYY-Www`（如 `2026-W01`） |
+
+**Response**:
+```json
+{
+  "weekLabel": "2026-W01",
+  "tradingDays": [
+    { "date": "2025-12-30", "dayOfWeek": 1, "isHoliday": false },
+    { "date": "2025-12-31", "dayOfWeek": 2, "isHoliday": false },
+    { "date": "2026-01-02", "dayOfWeek": 4, "isHoliday": false },
+    { "date": "2026-01-03", "dayOfWeek": 5, "isHoliday": false }
+  ],
+  "holidays": [
+    { "date": "2026-01-01", "name": "元旦" }
+  ]
+}
+```
+
+---
+
+### 1.2 基线数据 (Baseline Data)
+
+#### `GET /api/v1/baostock/baseline/current`
+**用途**: 获取当前标的基线总数（用于审计完整性的分母）。
+
+**Response**:
+```json
+{
+  "lastUpdated": "2025-12-30 00:30:00",
+  "total": 5848,
+  "markets": [
+    { "market": "sh", "name": "沪市A股", "count": 2205 },
+    { "market": "sz", "name": "深市A股", "count": 2812 },
+    { "market": "bj", "name": "北交所", "count": 258 }
+  ]
+}
+```
+
+---
+
+### 1.3 股票搜索与列表
+
+#### `GET /api/v1/stocks/search`
+**用途**: 股票代码/名称模糊搜索
+
+**Query Parameters**:
+```
+q: string          # 搜索关键词 (代码或名称)
+market: string     # 可选，市场过滤 (sh/sz/all)
+limit: int         # 默认 20，最大 100
+```
+
+**Response**:
+```json
+{
+  "total": 156,
+  "items": [
+    {
+      "code": "sh.600519",
+      "name": "贵州茅台",
+      "market": "sh",
+      "industry": "白酒",
+      "listing_date": "2001-08-27"
+    }
+  ]
+}
+```
+
+---
+
+#### `GET /api/v1/stocks/list`
+**用途**: 获取全市场股票列表 (支持分页)
+
+**Query Parameters**:
+```
+page: int          # 页码，从 1 开始
+page_size: int     # 每页数量，默认 50
+market: string     # 可选，sh/sz/all
+industry: string   # 可选，行业过滤
+```
+
+**Response**:
+```json
+{
+  "page": 1,
+  "page_size": 50,
+  "total": 5234,
+  "items": [
+    {
+      "code": "sh.600000",
+      "name": "浦发银行",
+      "market": "sh",
+      "industry": "银行",
+      "status": "active"
+    }
+  ]
+}
+```
+
+---
+
+### 1.2 个股详情与行情
+
+#### `GET /api/v1/stocks/{code}/profile`
+**用途**: 获取个股基本信息
+
+**Response**:
+```json
+{
+  "code": "sh.600519",
+  "name": "贵州茅台",
+  "listing_date": "2001-08-27",
+  "industry": "白酒",
+  "sector": "食品饮料",
+  "total_shares": 1256000000,
+  "float_shares": 1256000000,
+  "description": "贵州茅台酒股份有限公司..."
+}
+```
+
+---
+
+#### `GET /api/v1/stocks/{code}/quote`
+**用途**: 获取实时行情 (缓存 5 秒)
+
+**Response**:
+```json
+{
+  "code": "sh.600519",
+  "name": "贵州茅台",
+  "price": 1685.50,
+  "change": 12.30,
+  "change_pct": 0.73,
+  "volume": 12345678,
+  "amount": 2087654321.00,
+  "high": 1698.00,
+  "low": 1672.00,
+  "open": 1680.00,
+  "pre_close": 1673.20,
+  "timestamp": "2026-01-01T14:30:00+08:00"
+}
+```
+
+---
+
+#### `GET /api/v1/stocks/{code}/kline`
+**用途**: 获取 K 线数据
+
+**Query Parameters**:
+```
+frequency: string  # d/w/m (日/周/月)
+adjust: string     # 0/1/2 (不复权/后复权/前复权)
+start_date: date   # 开始日期
+end_date: date     # 结束日期，默认今天
+limit: int         # 最大返回条数，默认 500
+```
+
+**Response**:
+```json
+{
+  "code": "sh.600519",
+  "frequency": "d",
+  "adjust": "2",
+  "data": [
+    {
+      "date": "2025-12-31",
+      "open": 1680.00,
+      "high": 1698.00,
+      "low": 1672.00,
+      "close": 1685.50,
+      "volume": 12345678,
+      "amount": 2087654321.00,
+      "turn": 0.98
+    }
+  ]
+}
+```
+
+---
+
+### 1.3 财务与估值数据
+
+#### `GET /api/v1/stocks/{code}/financials`
+**用途**: 获取财务报表数据
+
+**Query Parameters**:
+```
+report_type: string  # balance/income/cashflow
+period: string       # quarter/annual
+limit: int           # 最近 N 期，默认 8
+```
+
+**Response**:
+```json
+{
+  "code": "sh.600519",
+  "report_type": "income",
+  "data": [
+    {
+      "report_date": "2025-09-30",
+      "revenue": 123456789012,
+      "net_profit": 45678901234,
+      "eps": 36.35,
+      "roe": 0.28,
+      "gross_margin": 0.91
+    }
+  ]
+}
+```
+
+---
+
+#### `GET /api/v1/stocks/{code}/valuation`
+**用途**: 获取估值指标与历史分位数
+
+**Response**:
+```json
+{
+  "code": "sh.600519",
+  "current": {
+    "pe": 35.6,
+    "pb": 9.8,
+    "ps": 12.3,
+    "date": "2025-12-31"
+  },
+  "percentile": {
+    "pe_5y": 0.68,
+    "pb_5y": 0.72,
+    "ps_5y": 0.65
+  },
+  "history": [
+    {
+      "date": "2025-12-31",
+      "pe": 35.6,
+      "pb": 9.8,
+      "ps": 12.3
+    }
+  ]
+}
+```
+
+---
+
+### 2.1 周度审计报告 (Weekly Audit Report)
+
+#### `GET /api/v1/baostock/audit/weekly` ❌ 待开发
+**用途**: 获取本周每日的三级存储审计数据（预计算结果）。
+
+**Query Parameters**:
+| 参数 | 类型 | 说明 |
+|:---|:---|:---|
+| `week` | string | `current`（默认）或 `YYYY-Www` |
+
+**Response**:
+```json
+{
+  "weekLabel": "2026-W01",
+  "lastUpdated": "2026-01-01 18:35:00",
+  "days": [
+    {
+      "date": "2025-12-30",
+      "kline": {
+        "l1_baseline": 5820,
+        "l2_mysql": 5815,
+        "l3_clickhouse": 5810,
+        "completeness_pct": 99.8
+      },
+      "adjustFactor": {
+        "l1_baseline": 5820,
+        "l2_mysql": 12,
+        "l3_clickhouse": 12,
+        "completeness_pct": 100.0
+      },
+      "overallStatus": "partial"
+    }
+  ]
+}
+```
+
+**`overallStatus` 判定逻辑**:
+- `complete`: 所有数据 100%
+- `partial`: 任一类型 ≥95% 且 <100%
+- `critical`: 任一类型 <95%
+- `holiday`: 休市日
+
+---
+
+### 2.2 数据质量报告 (内网调度任务结果)
+
+> **数据来源**: MySQL `data_quality_reports` 表，由内网服务器定时任务写入
+
+#### `GET /api/v1/data/quality/reports` ❌ 待开发
+**用途**: 获取数据质量检查报告列表
+
+**Query Parameters**:
+| 参数 | 类型 | 默认值 | 说明 |
+|:---|:---|:---|:---|
+| `report_type` | string | `all` | 报告类型 (`daily`/`weekly`/`all`) |
+| `status` | string | `all` | 状态过滤 (`OK`/`WARNING`/`ERROR`/`all`) |
+| `limit` | int | 20 | 返回记录数 |
+
+**Response**:
+```json
+{
+  "total": 30,
+  "reports": [
+    {
+      "id": 1,
+      "report_type": "daily",
+      "overall_status": "ERROR",
+      "check_time": "2025-12-31T23:02:10+08:00",
+      "summary": {
+        "total_checks": 4,
+        "passed": 3,
+        "failed": 1
+      },
+      "created_at": "2025-12-31T23:02:10+08:00"
+    }
+  ]
+}
+```
+
+---
+
+#### `GET /api/v1/data/quality/reports/{report_id}` ❌ 待开发
+**用途**: 获取单个报告的完整详情
+
+**Response**:
+```json
+{
+  "id": 1,
+  "report_type": "daily",
+  "overall_status": "ERROR",
+  "check_time": "2025-12-31T23:02:10+08:00",
+  "checks": {
+    "duplicates": {
+      "status": "OK",
+      "message": "无重复数据",
+      "duplicate_count": 0,
+      "check_range_days": 7
+    },
+    "timeliness": {
+      "status": "OK",
+      "message": "数据时效性正常",
+      "latest_date": "2025-12-31"
+    },
+    "completeness": {
+      "status": "ERROR",
+      "message": "检测到数据缺失",
+      "missing_stocks": ["sh.600000", "sz.000001"],
+      "missing_count": 2
+    },
+    "consistency": {
+      "status": "OK",
+      "message": "数据一致性检查通过"
+    }
+  },
+  "created_at": "2025-12-31T23:02:10+08:00"
+}
+```
+
+**检查项说明**:
+| 检查项 | 说明 |
+|:---|:---|
+| `duplicates` | 重复数据检测 |
+| `timeliness` | 数据时效性 (是否有最新交易日数据) |
+| `completeness` | 完整性 (是否有缺失股票) |
+| `consistency` | 一致性 (云端与本地数据对比) |
+
+---
+
+#### `GET /api/v1/data/quality/reports/latest` ❌ 待开发
+**用途**: 获取最新一次检查报告
+
+**Response**: 同 `/reports/{report_id}`
+
+---
+
+### 2.3 用户触发的数据修复
+
+#### `POST /api/v1/data/repair`
+**用途**: 用户手动触发数据修复 (包装底层 Remote Calibration API)
+
+**Request Body**:
+```json
+{
+  "code": "sh.600519",
+  "data_type": "kline",
+  "start_date": "2024-01-01",
+  "force_refresh": true
+}
+```
+
+**Response** (202 Accepted):
+```json
+{
+  "repair_id": "repair_abc123",
+  "status": "submitted",
+  "message": "数据修复任务已提交",
+  "estimated_time": "约 30 秒"
+}
+```
+
+---
+
+#### `GET /api/v1/data/repair/{repair_id}`
+**用途**: 查询修复任务状态
+
+**Response**:
+```json
+{
+  "repair_id": "repair_abc123",
+  "status": "success",
+  "progress": 100,
+  "code": "sh.600519",
+  "data_type": "kline",
+  "records_updated": 265,
+  "started_at": "2026-01-01T00:35:00+08:00",
+  "completed_at": "2026-01-01T00:35:32+08:00"
+}
+```
+
+**Status 枚举**:
+- `pending`: 等待执行
+- `running`: 执行中
+- `success`: 成功
+- `failed`: 失败
+
+---
+
+---
+
+### 2.4 数据补偿与风险处理
+
+#### `POST /api/v1/baostock/sync/remediate` ⏳ 需封装
+**用途**: 触发指定日期的数据补偿逻辑。
+
+**Request Body**:
+```json
+{
+  "date": "2025-12-30",
+  "dataType": "kline",
+  "scope": "incremental"
+}
+```
+
+**`scope` 枚举**:
+- `incremental`: 仅补缺失部分 (调用 `CollectionService` 不清空数据)
+- `full`: 全量重跑该日 (调用 `CollectionService` 开启 `clear_existing`)
+
+**Response**:
+```json
+{
+  "status": "ok",
+  "triggeredJobId": "remediate_kline_20251230",
+  "message": "补偿任务已启动"
+}
+```
+
+---
+
+## 3. 回测任务接口 (Backtest APIs)
+
+### 3.1 任务提交与管理
+
+#### `POST /api/v1/backtest/submit`
+**用途**: 提交回测任务
+
+**Request Body**:
+```json
+{
+  "strategy_code": "def initialize(context):\n    ...",
+  "stock_pool": ["sh.600519", "sh.600036"],
+  "start_date": "2024-01-01",
+  "end_date": "2025-12-31",
+  "initial_capital": 1000000,
+  "benchmark": "sh.000300"
+}
+```
+
+**Response** (202 Accepted):
+```json
+{
+  "task_id": "bt_xyz789",
+  "status": "queued",
+  "queue_position": 3,
+  "estimated_wait": "约 2 分钟"
+}
+```
+
+---
+
+#### `GET /api/v1/backtest/{task_id}`
+**用途**: 查询回测任务状态
+
+**Response**:
+```json
+{
+  "task_id": "bt_xyz789",
+  "status": "completed",
+  "progress": 100,
+  "result": {
+    "total_return": 0.356,
+    "annual_return": 0.285,
+    "sharpe_ratio": 1.82,
+    "max_drawdown": -0.156,
+    "win_rate": 0.68
+  },
+  "created_at": "2026-01-01T00:30:00+08:00",
+  "completed_at": "2026-01-01T00:32:15+08:00"
+}
+```
+
+---
+
+#### `GET /api/v1/backtest/history`
+**用途**: 获取用户回测历史
+
+**Query Parameters**:
+```
+page: int
+page_size: int
+status: string  # all/completed/failed
+```
+
+**Response**:
+```json
+{
+  "total": 45,
+  "items": [
+    {
+      "task_id": "bt_xyz789",
+      "strategy_name": "均线策略 v2",
+      "status": "completed",
+      "total_return": 0.356,
+      "created_at": "2026-01-01T00:30:00+08:00"
+    }
+  ]
+}
+```
+
+---
+
+#### `DELETE /api/v1/backtest/{task_id}`
+**用途**: 取消或删除回测任务
+
+**Response**:
+```json
+{
+  "task_id": "bt_xyz789",
+  "status": "cancelled"
+}
+```
+
+---
+
+## 4. 调度任务管理接口 (Scheduler Management APIs)
+
+### 4.1 任务列表与状态
+
+#### `GET /api/v1/scheduler/jobs` ✅ 已实现
+**用途**: 获取所有调度任务列表 (跨容器聚合)
+
+> **实现说明**: 该接口聚合了 `baostock-api`、`akshare-api`、`pywencai-api` 三个容器的定时任务，统一返回。
+
+**实际返回数据**:
+```json
+{
+  "jobs": [
+    {
+      "id": "daily_comprehensive_sync",
+      "name": "daily_comprehensive_sync_job_18:30",
+      "next_run_time": "2026-01-01 18:30:00+08:00",
+      "trigger": "cron[hour='18', minute='30', second='0']",
+      "status": "active",
+      "container": "baostock-api",
+      "display_name": "[BaoStock] daily_comprehensive_sync_job_18:30"
+    },
+    {
+      "id": "health_check",
+      "name": "每3600秒_health_check_job",
+      "next_run_time": "2026-01-01 01:06:15+08:00",
+      "trigger": "interval[1:00:00]",
+      "status": "active",
+      "container": "baostock-api",
+      "display_name": "[BaoStock] 每3600秒_health_check_job"
+    },
+    {
+      "id": "akshare_heartbeat",
+      "name": "每3600秒_heartbeat",
+      "next_run_time": "2026-01-01 01:13:27+08:00",
+      "trigger": "interval[1:00:00]",
+      "status": "active",
+      "container": "akshare-api",
+      "display_name": "[Akshare] 每3600秒_heartbeat"
+    }
+  ]
+}
+```
+
+**返回字段说明**:
+| 字段 | 类型 | 说明 |
+|:---|:---|:---|
+| `id` | string | 任务唯一标识 |
+| `name` | string | 任务名称 (APScheduler 原始名) |
+| `next_run_time` | datetime | 下次执行时间 |
+| `trigger` | string | 触发器类型 (`cron` 或 `interval`) |
+| `status` | string | 状态 (`active` / `paused`) |
+| `container` | string | 所属容器 |
+| `display_name` | string | 前端展示名称 (带容器前缀) |
+
+---
+
+#### `GET /api/v1/scheduler/jobs/{job_id}`
+**用途**: 获取单个任务详情
+
+**Response**:
+```json
+{
+  "job_id": "daily_comprehensive_sync",
+  "name": "全市场K线同步",
+  "description": "每日收盘后同步全市场K线数据",
+  "type": "cron",
+  "schedule": {
+    "hour": 18,
+    "minute": 30,
+    "timezone": "Asia/Shanghai"
+  },
+  "status": "enabled",
+  "next_run": "2026-01-01T18:30:00+08:00",
+  "last_run": {
+    "time": "2025-12-31T18:30:00+08:00",
+    "status": "success",
+    "duration": 3245,
+    "message": "同步完成: 5234 只股票"
+  },
+  "statistics": {
+    "total_runs": 365,
+    "success_count": 362,
+    "failure_count": 3,
+    "avg_duration": 3180
+  }
+}
+```
+
+---
+
+### 4.2 任务控制
+
+#### `POST /api/v1/scheduler/jobs/{job_id}/run` ✅ 已实现
+**用途**: 手动触发任务立即执行 (不影响原定时计划)
+
+> **实现说明**: 通过 `POST /scheduler/jobs/{job_id}/run?container=baostock-api` 调用。支持跨容器转发。
+
+**Query Parameters**:
+| 参数 | 类型 | 默认值 | 说明 |
+|:---|:---|:---|:---|
+| `container` | string | `baostock-api` | 目标容器名称 |
+
+**Response**:
+```json
+{
+  "status": "ok",
+  "message": "Action run sent to baostock-api"
+}
+```
+
+---
+
+#### `POST /api/v1/scheduler/jobs/{job_id}/pause` ✅ 已实现
+**用途**: 暂停任务 (任务将不再自动执行)
+
+> **实现说明**: 通过 `POST /scheduler/jobs/{job_id}/pause?container=baostock-api` 调用。
+
+**Response**:
+```json
+{
+  "status": "ok",
+  "message": "Action pause sent to baostock-api"
+}
+```
+
+---
+
+#### `POST /api/v1/scheduler/jobs/{job_id}/resume` ✅ 已实现
+**用途**: 恢复已暂停的任务
+
+> **实现说明**: 通过 `POST /scheduler/jobs/{job_id}/resume?container=baostock-api` 调用。
+
+**Response**:
+```json
+{
+  "status": "ok",
+  "message": "Action resume sent to baostock-api"
+}
+```
+
+---
+
+#### `PUT /api/v1/scheduler/jobs/{job_id}/config` ❌ 待开发
+**用途**: 修改任务配置 (需谨慎使用)
+
+**Request Body**:
+```json
+{
+  "schedule": {
+    "hour": 19,
+    "minute": 0
+  },
+  "enabled": true
+}
+```
+
+**Response**:
+```json
+{
+  "job_id": "daily_comprehensive_sync",
+  "status": "updated",
+  "next_run": "2026-01-01T19:00:00+08:00"
+}
+```
+
+---
+
+### 4.3 执行历史
+
+#### `GET /api/v1/logs/execution` ✅ 已实现
+**用途**: 获取任务执行历史记录
+
+> **实现说明**: 该接口从数据库读取任务执行日志，支持分页和任务名过滤。
+
+**Query Parameters**:
+| 参数 | 类型 | 默认值 | 说明 |
+|:---|:---|:---|:---|
+| `limit` | int | 50 | 返回记录数 (1-500) |
+| `task_name` | string | - | 可选，过滤特定任务 |
+
+**实际返回数据**:
+```json
+{
+  "logs": [
+    {
+      "id": 32,
+      "task_name": "kline_daily_sync",
+      "execution_time": "2025-12-31 23:54:34",
+      "status": "SUCCESS",
+      "records_processed": 57690,
+      "details": "复权因子同步完成，共 57,690 条",
+      "duration_seconds": 4.54648
+    },
+    {
+      "id": 31,
+      "task_name": "kline_daily_sync",
+      "execution_time": "2025-12-31 23:54:30",
+      "status": "SUCCESS",
+      "records_processed": 6337,
+      "details": "按股票代码同步完成：6,337 条记录，1 只股票",
+      "duration_seconds": 0.665247
+    }
+  ],
+  "total": 32
+}
+```
+
+**返回字段说明**:
+| 字段 | 类型 | 说明 |
+|:---|:---|:---|
+| `id` | int | 日志记录ID |
+| `task_name` | string | 任务名称 |
+| `execution_time` | datetime | 执行时间 |
+| `status` | string | 状态 (`SUCCESS` / `FAILED`) |
+| `records_processed` | int | 处理的记录数 |
+| `details` | string | 执行详情/错误信息 |
+| `duration_seconds` | float | 执行耗时 (秒) |
+
+---
+
+#### `GET /api/v1/scheduler/jobs/{job_id}/logs` ✅ 已实现
+**用途**: 获取任务实时输出日志 (支持跨容器)
+
+> **实现说明**: 通过 `GET /scheduler/jobs/{job_id}/logs?container=baostock-api&lines=50` 调用。
+
+**Query Parameters**:
+| 参数 | 类型 | 默认值 | 说明 |
+|:---|:---|:---|:---|
+| `container` | string | `baostock-api` | 目标容器 |
+| `lines` | int | 50 | 返回日志行数 |
+
+**Response**: 返回任务执行的 Summary 摘要和最近日志。
+
+---
+
+## 5. 用户策略管理接口 (Strategy Management APIs)
+
+#### `GET /api/v1/strategies`
+**用途**: 获取用户策略列表
+
+**Response**:
+```json
+{
+  "total": 12,
+  "items": [
+    {
+      "strategy_id": "strat_001",
+      "name": "双均线策略",
+      "description": "5日均线上穿20日均线买入",
+      "created_at": "2025-11-15T10:30:00+08:00",
+      "updated_at": "2025-12-20T14:22:00+08:00",
+      "backtest_count": 15
+    }
+  ]
+}
+```
+
+---
+
+#### `POST /api/v1/strategies`
+**用途**: 创建新策略
+
+**Request Body**:
+```json
+{
+  "name": "双均线策略",
+  "description": "5日均线上穿20日均线买入",
+  "code": "def initialize(context):\n    ..."
+}
+```
+
+---
+
+#### `PUT /api/v1/strategies/{strategy_id}`
+**用途**: 更新策略
+
+---
+
+#### `DELETE /api/v1/strategies/{strategy_id}`
+**用途**: 删除策略
+
+---
+
+## 6. 系统监控接口 (System Monitoring APIs)
+
+#### `GET /api/v1/system/health`
+**用途**: 系统健康检查
+
+**Response**:
+```json
+{
+  "status": "healthy",
+  "services": {
+    "cloud_api": "healthy",
+    "baostock_api": "healthy",
+    "akshare_api": "healthy",
+    "pywencai_api": "degraded",
+    "mysql": "healthy",
+    "redis": "healthy"
+  },
+  "timestamp": "2026-01-01T00:35:00+08:00"
+}
+```
+
+---
+
+#### `GET /api/v1/system/stats`
+**用途**: 系统统计信息
+
+**Response**:
+```json
+{
+  "database": {
+    "total_stocks": 5234,
+    "total_kline_records": 12567890,
+    "last_sync": "2025-12-31T18:30:00+08:00"
+  },
+  "tasks": {
+    "backtest_queue_length": 3,
+    "active_repairs": 1
+  },
+  "scheduler": {
+    "total_jobs": 5,
+    "enabled_jobs": 4,
+    "next_job": "health_check @ 2026-01-01T01:30:00"
+  }
+}
+```
+
+#### `GET /api/v1/baostock/sync/freshness` ❌ 待开发
+**用途**: 获取最新数据入库时间与当前时间的差值（时效性监控）。
+
+**Response**:
+```json
+{
+  "lastSyncTime": "2026-01-01 17:05:23",
+  "lagMinutes": 25,
+  "status": "normal"
+}
+```
+
+**`status` 判定逻辑**:
+- `normal`: lag ≤ 30 分钟
+- `warning`: 30 < lag ≤ 120 分钟
+- `critical`: lag > 120 分钟
+
+---
+
+## 7. 权限与鉴权
+
+### 7.1 接口权限分级
+
+| 权限级别 | Scope | 可访问接口 |
+|:---|:---|:---|
+| **游客** | - | `/api/v1/stocks/search`, `/api/v1/stocks/{code}/quote` |
+| **普通用户** | `read:data` | 所有数据查询接口 |
+| **高级用户** | `write:strategy` | 策略管理、回测提交 |
+| **管理员** | `admin:scheduler` | 调度任务管理、系统配置 |
+
+### 7.2 速率限制
+
+| 用户级别 | 限制 |
+|:---|:---|
+| 游客 | 10 req/min |
+| 普通用户 | 60 req/min |
+| 高级用户 | 300 req/min |
+| 管理员 | 无限制 |
+
+---
+
+## 8. 错误响应规范
+
+所有接口统一使用以下错误格式:
+
+```json
+{
+  "error": {
+    "code": "RESOURCE_NOT_FOUND",
+    "message": "股票代码不存在",
+    "request_id": "req_abc123",
+    "details": {
+      "code": "sh.999999"
+    }
+  }
+}
+```
+
+**常见错误码**:
+- `UNAUTHORIZED`: 401 - 未授权
+- `FORBIDDEN`: 403 - 权限不足
+- `RESOURCE_NOT_FOUND`: 404 - 资源不存在
+- `RATE_LIMIT_EXCEEDED`: 429 - 超过速率限制
+- `INTERNAL_ERROR`: 500 - 服务器内部错误
+</script>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', async () => {
+            const rawMd = document.getElementById('markdown-raw').textContent;
+            const contentEl = document.getElementById('content');
+            const tocEl = document.getElementById('toc');
+            
+            // Set options for marked
+            marked.setOptions({
+                gfm: true,
+                breaks: true,
+                headerIds: true,
+                mangle: false,
+                highlight: function(code, lang) {
+                    const language = hljs.getLanguage(lang) ? lang : 'plaintext';
+                    return hljs.highlight(code, { language }).value;
+                }
+            });
+
+            // Parse Markdown
+            contentEl.innerHTML = marked.parse(rawMd);
+            
+            // Generate TOC
+            const headings = contentEl.querySelectorAll('h2, h3');
+            headings.forEach((h, index) => {
+                if (!h.id) h.id = 'heading-' + index;
+                
+                const li = document.createElement('li');
+                li.className = 'toc-item level-' + h.tagName.toLowerCase().charAt(1);
+                
+                const a = document.createElement('a');
+                a.href = '#' + h.id;
+                a.textContent = h.textContent;
+                
+                li.appendChild(a);
+                tocEl.appendChild(li);
+            });
+
+            // Handle Mermaid
+            if (window.mermaid) {
+                mermaid.initialize({ startOnLoad: false, theme: 'dark', useWorker: false });
+                document.querySelectorAll('pre code.language-mermaid').forEach(el => {
+                    const pre = el.parentElement;
+                    const div = document.createElement('div');
+                    div.className = 'mermaid';
+                    div.textContent = el.textContent;
+                    pre.parentElement.replaceChild(div, pre);
+                });
+                mermaid.run();
+            }
+        });
+    </script>
+</body>
+</html>

@@ -11,7 +11,7 @@ from config.portal_template import (
 # Configuration
 PROJECT_ROOT = Path(__file__).parent.parent
 GLOBAL_INDEX = PROJECT_ROOT / "docs" / "index.html"
-IGNORE_DIRS = {".git", ".agent", ".agents", "scripts", "migrations", "scratch", "logs"}
+IGNORE_DIRS = {".git", ".agent", ".agents", "scripts", "migrations", "scratch", "logs", "投资指南html"}
 
 # Domain Mapping
 DOMAIN_MAP = {

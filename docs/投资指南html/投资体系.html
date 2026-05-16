@@ -1,0 +1,654 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>你的投资体系 1.0</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Noto+Serif+SC:wght@400;700;900&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    
+    <!-- Libraries -->
+    <script src="https://lib.baomitu.com/marked/11.1.1/marked.min.js"></script>
+    <link rel="stylesheet" href="https://lib.baomitu.com/github-markdown-css/5.5.0/github-markdown-dark.min.css">
+    <script src="https://lib.baomitu.com/mermaid/10.9.0/mermaid.min.js"></script>
+    
+    <!-- Syntax Highlighting -->
+    <link rel="stylesheet" href="https://lib.baomitu.com/highlight.js/11.9.0/styles/tokyo-night-dark.min.css">
+    <script src="https://lib.baomitu.com/highlight.js/11.9.0/highlight.min.js"></script>
+    
+    <style>
+        :root {
+            --bg: #0a0a0a;
+            --surface: #121212;
+            --surface-hover: #1a1a1a;
+            --border: #222222;
+            --accent: #eab308;
+            --accent-glow: rgba(234, 179, 8, 0.1);
+            --text-primary: #f1f5f9;
+            --text-secondary: #94a3b8;
+            --text-muted: #64748b;
+            --font-sans: 'Outfit', 'Noto Sans SC', -apple-system, sans-serif;
+            --font-serif: 'Noto Serif SC', serif;
+            --font-mono: 'JetBrains Mono', monospace;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background-color: var(--bg);
+            color: var(--text-primary);
+            font-family: var(--font-sans);
+            line-height: 1.7;
+            -webkit-font-smoothing: antialiased;
+            overflow-x: hidden;
+        }
+
+        /* Subtle background glow */
+        body::after {
+            content: '';
+            position: fixed;
+            top: 0;
+            right: 0;
+            width: 40vw;
+            height: 40vh;
+            background: radial-gradient(circle, var(--accent-glow) 0%, transparent 70%);
+            z-index: -1;
+            filter: blur(100px);
+            pointer-events: none;
+        }
+
+        .sidebar {
+            width: 260px;
+            height: 100vh;
+            position: fixed;
+            left: 0;
+            top: 0;
+            border-right: 1px solid var(--border);
+            background: var(--bg);
+            padding: 1.5rem;
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+            overflow-y: auto;
+            z-index: 100;
+        }
+
+        .nav-link {
+            color: var(--text-muted);
+            text-decoration: none;
+            font-size: 0.85rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            transition: color 0.2s;
+            padding: 0.5rem;
+            border-radius: 6px;
+        }
+        .nav-link:hover { color: var(--accent); background: var(--surface); }
+
+        .toc-title {
+            font-family: var(--font-serif);
+            font-size: 1rem;
+            color: var(--text-primary);
+            margin-bottom: 0.8rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding-left: 0.5rem;
+        }
+        .toc-title::before {
+            content: '';
+            width: 3px;
+            height: 1rem;
+            background: var(--accent);
+            border-radius: 2px;
+        }
+
+        .toc-list {
+            list-style: none;
+            display: flex;
+            flex-direction: column;
+            gap: 0.4rem;
+        }
+        .toc-item {
+            font-size: 0.8rem;
+            line-height: 1.3;
+        }
+        .toc-item a {
+            color: var(--text-muted);
+            text-decoration: none;
+            transition: all 0.2s;
+            display: block;
+            padding: 0.4rem 0.5rem;
+            border-radius: 4px;
+        }
+        .toc-item a:hover { color: var(--accent); background: var(--surface); }
+        .toc-item.level-3 { margin-left: 0.8rem; border-left: 1px solid var(--border); }
+
+        .container {
+            max-width: 860px;
+            margin: 0 auto 0 260px;
+            padding: 3rem 4rem;
+            animation: fadeIn 0.6s ease-out;
+        }
+
+        @media (max-width: 1024px) {
+            .sidebar { width: 220px; padding: 1rem; }
+            .container { margin-left: 220px; padding: 2rem; }
+        }
+
+        @media (max-width: 800px) {
+            .sidebar { position: static; width: 100%; height: auto; border-right: none; border-bottom: 1px solid var(--border); }
+            .container { margin-left: 0; padding: 1.5rem; }
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(5px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        header {
+            margin-bottom: 3rem;
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 1.5rem;
+        }
+
+        .meta {
+            font-family: var(--font-mono);
+            font-size: 0.75rem;
+            color: var(--accent);
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            margin-bottom: 0.8rem;
+            display: flex;
+            align-items: center;
+            gap: 0.8rem;
+        }
+
+        .meta::before {
+            content: '';
+            width: 20px;
+            height: 1px;
+            background-color: var(--accent);
+        }
+
+        h1 {
+            font-family: var(--font-serif);
+            font-size: 2.2rem;
+            font-weight: 900;
+            line-height: 1.2;
+            margin-bottom: 1rem;
+            color: var(--text-primary);
+        }
+
+        .markdown-body {
+            background: transparent !important;
+            color: var(--text-primary) !important;
+            font-family: var(--font-sans) !important;
+            font-size: 0.95rem !important;
+        }
+
+        .markdown-body h2 {
+            font-family: var(--font-serif);
+            font-size: 1.5rem !important;
+            color: var(--accent) !important;
+            border-bottom: 1px solid var(--border) !important;
+            padding-bottom: 0.5rem !important;
+            margin-top: 2.5rem !important;
+            scroll-margin-top: 1rem;
+        }
+
+        .markdown-body h3 {
+            font-family: var(--font-serif);
+            font-size: 1.25rem !important;
+            color: var(--text-primary) !important;
+            margin-top: 2rem !important;
+            scroll-margin-top: 1rem;
+        }
+
+        .markdown-body p, .markdown-body li {
+            font-size: 0.95rem !important;
+            color: var(--text-primary) !important;
+        }
+        
+        .markdown-body pre {
+            background-color: #1a1b26 !important; /* Match Tokyo Night Dark */
+            border: 1px solid var(--border);
+            border-radius: 8px !important;
+            padding: 0 !important; /* Code internal handles padding */
+            margin: 1.2rem 0 !important;
+            overflow: hidden;
+        }
+
+        .markdown-body pre code {
+            background-color: transparent !important;
+            padding: 1.2rem !important;
+            display: block;
+            font-family: var(--font-mono) !important;
+            font-size: 0.85rem !important;
+            line-height: 1.5;
+        }
+
+        .markdown-body blockquote {
+            border-left: 3px solid var(--accent) !important;
+            background: var(--surface);
+            padding: 0.8rem 1.2rem;
+            color: var(--text-secondary) !important;
+            margin: 1.2rem 0 !important;
+        }
+
+        .markdown-body table {
+            background: var(--surface);
+            font-size: 0.85rem !important;
+            margin: 1.2rem 0 !important;
+        }
+
+        footer {
+            margin-top: 4rem;
+            padding-top: 1.5rem;
+            border-top: 1px solid var(--border);
+            color: var(--text-muted);
+            font-size: 0.8rem;
+            text-align: center;
+        }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar { width: 5px; }
+        ::-webkit-scrollbar-track { background: var(--bg); }
+        ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+    </style>
+</head>
+<body>
+    <aside class="sidebar">
+        <a href="index.html" class="nav-link">
+            <span>←</span> 返回目录门户
+        </a>
+        
+        <div class="toc-container">
+            <h3 class="toc-title">文档导航</h3>
+            <ul class="toc-list" id="toc">
+                <!-- TOC items will be injected here -->
+            </ul>
+        </div>
+    </aside>
+
+    <div class="container">
+        <header>
+            <div class="meta">GLOBAL | 2026-05-16 19:07</div>
+            <h1>你的投资体系 1.0</h1>
+        </header>
+
+        <article id="content" class="markdown-body">
+            <!-- Loading indicator -->
+            <p style="color: var(--text-muted)">正在解析文档内容...</p>
+        </article>
+
+        <footer>
+            &copy; 2026 MicroStock Project Docs | Generated by Antigravity
+        </footer>
+    </div>
+
+    <script id="markdown-raw" type="text/markdown">
+# 你的投资体系 1.0
+
+## 第一层:投资哲学(顶层信念)
+
+这一层是其他所有层的根。**如果违反这一层,其他层全部作废**。
+
+**五条核心信念**:
+
+1. **我只赚我能看懂的钱** — 看不懂的标的,涨上天也不买
+2. **我用3-5年视角投资,不用3-5天视角** — 短期波动是噪音
+3. **赛道选对>选股选对>择时选对** — 90%的回报来自赛道和选股,10%来自择时
+4. **我无法预测市场,只能判断长期方向** — 不做预测,做应对
+5. **我的优势是耐心+认知+AI辅助,不是信息速度**
+
+**绝对不做的事**(写下来,贴在屏幕上):
+- 不加杠杆
+- 不抄底下降通道(沐曦的教训)
+- 不买未盈利公司(除非有极强逻辑且仓位<5%)
+- 不满仓任何一只股票
+- 不在3天内对同一标的买入超过目标仓位的50%
+- 不因情绪止损(只因逻辑止损)
+- 不追当日热点
+- 不研究自己不懂的行业(就算朋友推荐)
+
+---
+
+## 第二层:资产配置(战略层)
+
+**200万的总体分配**:
+
+| 资产 | 比例 | 金额 | 用途 |
+|---|---|---|---|
+| 股票核心仓 | 40-60% | 80-120万 | 主要收益来源 |
+| 股票卫星仓 | 5-15% | 10-30万 | 学习/试错/观察 |
+| 现金类资产 | 30-50% | 60-100万 | 缓冲+择时弹药+心理安全垫 |
+
+**为什么留这么多现金?**
+- 你刚从亏损中走出来,心理需要安全垫
+- 市场极端下跌时,你需要补仓子弹
+- "永远有钱可买"比"永远满仓"更重要
+- **现金不是无收益,放货币基金/短债年化2-3%,且零风险**
+
+**绝对不做**:不持有杠杆、不持有期权、不持有杠杆型ETF、不持有商品/外汇
+
+---
+
+## 第三层:股票投资体系(战术层)
+
+### **赛道筛选标准**(政策研究在这里发挥核心作用)
+
+只有满足**全部**5个条件的赛道,才进入候选:
+
+1. **政策长期友好** — 写入"十四五"、"十五五"规划,或国家战略级("五篇大文章"+ 新质生产力)
+2. **行业格局稳定** — 不是疯狂内卷的红海(光伏制造、动力电池目前不符合)
+3. **商业模式可理解** — 能用三句话讲清楚怎么赚钱
+4. **未来5年有清晰增长逻辑** — 不是讲故事,是有量价数据支撑
+5. **未被市场过度定价** — 不是已经涨了3-5倍的"显学"
+
+**当前能通过的赛道(候选清单,需要你自己再筛)**:
+- 创新药/CXO(政策+老龄化+出海)
+- 半导体设备(国产替代+政策强支持)
+- 国产算力链 *但要避开估值过高的标的*
+- 高股息红利(银行/公用事业/资源股)
+- 部分消费(刚需+品牌+定价权)
+- 部分军工(地缘政治+订单可见)
+
+**当前应回避的赛道**:
+- 房地产开发
+- 教育培训
+- 互联网平台(高估部分)
+- 高位科技题材(光模块龙头、AI算力龙头当前位置)
+- 周期性极强且无定价权的行业
+
+### **选股5道漏斗**
+
+**第1道:赛道筛** — 必须在通过的赛道里
+
+**第2道:财务筛**(硬指标)
+- ROE > 12%(或有明确的盈利改善路径)
+- 经营性现金流为正且与净利润匹配
+- 资产负债率在行业合理区间内
+- 营收连续3年增长(或有明确改善拐点)
+
+**第3道:商业模式筛**(必须能回答)
+- 这家公司**凭什么**赚钱?(技术/品牌/规模/网络效应/政策牌照)
+- 客户为什么不换?(粘性)
+- 5年后这个生意还在吗?(护城河)
+
+**第4道:管理层筛**
+- 实控人和管理层历史信用
+- 是否有重大违规、财务造假质疑
+- 股东结构是否稳定(避免大股东持续减持的)
+
+**第5道:估值筛**(最关键的纪律)
+- PE/PB/PS 不在历史估值的80%分位以上
+- 隐含的5年预期年化收益率 > 10%(用DCF或PE反推)
+- **如果通过前4道但估值过高 → 进入"等待清单",不买,等回调**
+
+通过全部5道筛的,才能进入"可买入清单"。**目标是建立10-15只的可买入清单,从中选3-5只持有**。
+
+---
+
+## 第四层:交易规则(执行层)
+
+### **仓位结构**(以股票总仓100万为例)
+
+| 仓位类型 | 单只占比 | 单只金额 | 数量 |
+|---|---|---|---|
+| 核心持仓 | 15-25% | 15-25万 | 3-4只 |
+| 卫星持仓 | 3-8% | 3-8万 | 1-3只 |
+
+**单一标的最大不超过总资金25%**(即50万)。
+
+### **建仓节奏**(绝对规则)
+
+**永远分3批建仓**,单批不超过目标仓位的40%。
+
+举例:你想最终在A股票上配置20万。
+- 第1批:8万(40%)
+- 第2批:6万(30%)
+- 第3批:6万(30%)
+
+**触发加仓的条件**:
+- 价格下跌10-15%且基本面未恶化
+- 或者季报符合预期+股价回调
+
+**如果买入后立刻上涨**:接受买不足的事实,不追高。
+
+### **加仓规则**
+
+- 基本面**验证**(季报符合或超预期)+ 股价回调10%+ → 可加仓
+- 基本面**没变化**但股价无故下跌 → 谨慎加仓(下跌>20%才考虑)
+- 基本面**恶化** → 不加仓,考虑减仓
+- **永远不要在你的"买入价"以下补仓,除非基本面验证了你的判断**
+
+### **减仓/止盈规则**
+
+| 情景 | 动作 |
+|---|---|
+| 单一标的涨幅 > 100% | 卖出1/3,落袋为安+心理减压 |
+| 单一标的占总资金 > 30% | 卖出至25%以内 |
+| 估值进入历史95%分位 | 卖出1/2 |
+| 基本面阶段性达到目标 | 部分获利了结 |
+
+### **止损规则**(关键,与你过去最不同的地方)
+
+**只有基本面理由,没有价格理由**。
+
+| 情况 | 处理 |
+|---|---|
+| **公司基本面恶化**(订单流失、技术替代、客户重大流失、管理层重大问题、财务造假质疑) | **不论价格,清仓** |
+| **当初买入逻辑被证伪**(比如你押注的产品延期、行业政策反转) | **不论价格,清仓** |
+| **股价波动**(没有基本面变化) | **不动** |
+| **单一标的浮亏 > 30%** | **强制重新审视基本面**,如基本面无变化则持有/加仓,有变化则止损 |
+
+**核心原则**:**股价波动不是止损理由,只是重新审视的提醒**。
+
+### **持有期纪律**
+
+- 买入后默认持有3年以上
+- 每季度只看一次财报+做300字总结
+- 不看分钟K线、不看日内涨跌、不看交易软件红绿色
+- **关闭实时行情推送**
+- 每天最多看一次收盘价
+- 不参与任何股票群、不刷股票论坛
+
+---
+
+## 第五层:监测与迭代(反馈层)
+
+这一层是你**AI+编程能力的真正用武之地**。
+
+### **政策跟踪系统**
+
+用Python建立**自动化采集+NLP分析**:
+
+- **每日采集**:央行/证监会/金融监管总局/发改委公告
+- **每周整理**:重要会议、政策吹风会
+- **每月汇总**:政治局会议、国务院常务会议要点
+- **季度报告**:货币政策执行报告、监管报告
+- **年度重点**:中央经济工作会议、两会、五年规划
+
+**关键技术活**(你可以做的):
+- 用NLP做"政策表述措辞变化追踪"(加大→加快→稳步的力度变化)
+- 用历史回测看"特定政策表述出现后,哪些板块平均跑赢"
+- 建立"政策事件-板块表现"数据库
+
+### **持仓跟踪系统**
+
+每只持仓股建立独立档案:
+- 当初买入逻辑(三句话写清楚,做成"买入声明书")
+- 关键假设(列3-5条,明确什么情况下假设被证伪)
+- 季度业绩跟踪
+- 行业地位变化
+- 重大事件记录
+
+### **决策日志**(最重要的认知积累工具)
+
+每笔买卖记录:
+
+```yaml
+日期: 2026-MM-DD
+操作: 买入/卖出/加仓/减仓
+标的: XXXXX
+价格: XX.XX
+数量: X股
+仓位变化: A% → B%
+逻辑(三句话): 
+预期: 1年后/3年后达到XX
+风险: 失败的情景是什么
+情绪状态: 平静/兴奋/恐惧(诚实记录)
+```
+
+**半年后回看**:对照实际结果,**评估当初判断的质量**。
+
+### **季度复盘**
+
+每季度回答5个问题:
+1. 本季度有哪些决策?对了几个?错了几个?
+2. 对的决策是逻辑对还是运气好?
+3. 错的决策是逻辑错还是市场错?
+4. 体系有哪些地方需要调整?
+5. 我有没有违反自己的规则?违反在哪里?
+
+### **年度复盘**
+
+- 总收益 vs 沪深300 / 中证500
+- 决策正确率
+- 体系迭代(产生体系2.0/3.0)
+
+---
+
+## 第六层:心理纪律(最隐形但最重要)
+
+写下来,做成你的"投资十诫":
+
+1. **不预测市场** — 我承认我不知道明天的事
+2. **不与市场赌气** — 错了就改,不证明自己
+3. **不听小道消息** — 所有非公开信息都是噪音或陷阱
+4. **不为短期波动调整长期判断** — 月度波动 ≠ 趋势变化
+5. **不在情绪高峰做决策** — 任何时候情绪激动就停手
+6. **不与人讨论持仓** — 防止社会认同带来的偏见
+7. **不与其他投资者比短期收益** — 比的是10年,不是10天
+8. **不试图抓住所有机会** — 错过比做错好
+9. **不在亏损后立刻"翻本"** — 这是赌徒思维
+10. **不忘记本金的来历** — 200万是你用半生攒下的
+
+---
+
+## 起步路径:未来12个月怎么走
+
+### **第1-2个月:基础设施建设(不操作)**
+
+- 写出你的"投资体系1.0"文档(可以基于上面这套调整)
+- 用AI+编程搭建政策跟踪系统的雏形(至少能自动抓取每日政策公告)
+- 建立"可买入清单"——选出3-5个候选赛道,每个赛道深度研究3-5家公司,共10-15家公司的深度档案
+- **不做任何交易**
+
+### **第3-6个月:小仓位试运行**
+
+- 从可买入清单中选1-2只**最有把握**的,**分3批**建立初步仓位
+- 总仓位不超过30%(即60万)
+- 严格按规则操作,记录每个决策
+- 体验体系运行的实际感受
+
+### **第7-12个月:逐步加仓+体系迭代**
+
+- 根据持仓表现+市场环境,逐步加到50-70%股票仓位
+- 每季度复盘,迭代体系
+- 不急于满仓
+- 关注**决策质量**而不是**短期收益**
+
+### **1年后**:
+
+- 第一次大规模复盘
+- 产出体系2.0版本
+- 此时你已经有了**真实的、可迭代的投资体系**——这是你最大的财富,远超账户金额变化
+
+---
+
+## 给你的几个"反常识"提醒
+
+1. **第1年的目标不是赚钱,是建立体系** — 哪怕跑输大盘都没关系
+2. **不要因为体系"看起来太简单"而抛弃它** — 长期赚钱的人用的都是简单体系
+3. **不要因为某次操作大赚就放弃体系** — 那是运气,不是能力
+4. **不要因为体系下错失了某个10倍股而懊悔** — 你不可能抓住所有机会
+5. **不要在体系运行3个月就否定它** — 一个体系至少要跑3年才能验证
+
+---
+
+## 最后一段实话
+
+这个体系1.0**不完美**,**它必然会有错的地方**。但它的关键不是"完美",是**"事先存在"**。
+
+你过去亏钱不是因为体系错,是因为**根本没有体系**。
+
+200万的资金,如果你严格执行这个体系3年,**就算不赚钱,你也获得了一个真正属于自己的、可迭代的投资框架**——这比任何短期收益都有价值。
+
+**真正的复利,在认知上,不在资金上**。
+
+---
+
+剩下的事,你慢慢消化。需要某一层细化(比如怎么用AI搭建政策跟踪系统,或者怎么做单只股票的深度研究框架),随时来聊。</script>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', async () => {
+            const rawMd = document.getElementById('markdown-raw').textContent;
+            const contentEl = document.getElementById('content');
+            const tocEl = document.getElementById('toc');
+            
+            // Set options for marked
+            marked.setOptions({
+                gfm: true,
+                breaks: true,
+                headerIds: true,
+                mangle: false,
+                highlight: function(code, lang) {
+                    const language = hljs.getLanguage(lang) ? lang : 'plaintext';
+                    return hljs.highlight(code, { language }).value;
+                }
+            });
+
+            // Parse Markdown
+            contentEl.innerHTML = marked.parse(rawMd);
+            
+            // Generate TOC
+            const headings = contentEl.querySelectorAll('h2, h3');
+            headings.forEach((h, index) => {
+                if (!h.id) h.id = 'heading-' + index;
+                
+                const li = document.createElement('li');
+                li.className = 'toc-item level-' + h.tagName.toLowerCase().charAt(1);
+                
+                const a = document.createElement('a');
+                a.href = '#' + h.id;
+                a.textContent = h.textContent;
+                
+                li.appendChild(a);
+                tocEl.appendChild(li);
+            });
+
+            // Handle Mermaid
+            if (window.mermaid) {
+                mermaid.initialize({ startOnLoad: false, theme: 'dark', useWorker: false });
+                document.querySelectorAll('pre code.language-mermaid').forEach(el => {
+                    const pre = el.parentElement;
+                    const div = document.createElement('div');
+                    div.className = 'mermaid';
+                    div.textContent = el.textContent;
+                    pre.parentElement.replaceChild(div, pre);
+                });
+                mermaid.run();
+            }
+        });
+    </script>
+</body>
+</html>

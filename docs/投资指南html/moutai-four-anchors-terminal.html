@@ -1,0 +1,1565 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>贵州茅台 600519 · 四锚分析 · 个股终端</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;500;700;900&family=Noto+Sans+SC:wght@300;400;500;700&family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,400;0,9..144,600;1,9..144,400&family=JetBrains+Mono:wght@300;400;500;700&display=swap" rel="stylesheet">
+<style>
+/* ==========================================================
+   四锚 · 个股终端 · Dark
+   Palette: charcoal + amber gold (premium research)
+   ========================================================== */
+:root {
+  /* base — warm charcoal, not pure black */
+  --bg:            #0e0d0b;
+  --bg-elev-1:     #15130f;
+  --bg-elev-2:     #1c1915;
+  --bg-elev-3:     #262119;
+  --bg-rail:       #0a0908;
+
+  /* text */
+  --ink:           #ede3cc;
+  --ink-dim:       #b5a98e;
+  --ink-mute:      #776d58;
+  --ink-whisper:   #4d4538;
+
+  /* amber gold accent system */
+  --amber:         #d4a23e;
+  --amber-bright:  #f0c968;
+  --amber-deep:    #8a6a24;
+  --amber-soft:    rgba(212, 162, 62, 0.12);
+  --amber-line:    rgba(212, 162, 62, 0.25);
+
+  /* structural lines */
+  --hair:          #2a2520;
+  --hair-soft:     #1f1c17;
+
+  /* semantic status — tuned for dark */
+  --s-strong:      #8ab573;   /* 稳定/强 */
+  --s-neutral:     #c99339;   /* 中性/中性偏弱 */
+  --s-alert:       #d97a3d;   /* 告警/裂痕 */
+  --s-weak:        #c85a4a;   /* 弱/告警 */
+  --s-cold:        #6b8ca8;   /* 偏冷 */
+
+  /* market colors (A股惯例：红涨绿跌) */
+  --mkt-up:        #e5644f;
+  --mkt-down:      #5ca478;
+
+  /* type */
+  --mono:          "JetBrains Mono", ui-monospace, "SF Mono", monospace;
+  --serif-cn:      "Noto Serif SC", "Songti SC", serif;
+  --sans-cn:       "Noto Sans SC", "PingFang SC", sans-serif;
+  --display-en:    "Fraunces", Georgia, serif;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body { height: 100%; }
+
+body {
+  font-family: var(--sans-cn);
+  background: var(--bg);
+  color: var(--ink);
+  line-height: 1.7;
+  -webkit-font-smoothing: antialiased;
+  font-feature-settings: "tnum", "cv11";
+  /* subtle vignette + grain */
+  background-image:
+    radial-gradient(ellipse at 20% 0%, rgba(212,162,62,0.04), transparent 40%),
+    radial-gradient(ellipse at 80% 100%, rgba(212,162,62,0.025), transparent 45%);
+  min-height: 100vh;
+}
+
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  background-image:
+    url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='180' height='180'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0.85  0 0 0 0 0.75  0 0 0 0 0.5  0 0 0 0.02 0'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>");
+  z-index: 0;
+  opacity: 0.6;
+  mix-blend-mode: screen;
+}
+
+.shell {
+  position: relative;
+  z-index: 1;
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 0 32px;
+}
+
+/* ==========================================================
+   TOPBAR
+   ========================================================== */
+.topbar {
+  border-bottom: 1px solid var(--hair);
+  background: var(--bg-elev-1);
+  position: sticky;
+  top: 0;
+  z-index: 40;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+.topbar-inner {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 12px 32px;
+  display: flex;
+  align-items: center;
+  gap: 28px;
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.1em;
+}
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--ink);
+  font-weight: 700;
+}
+.brand-glyph {
+  width: 22px; height: 22px;
+  display: inline-flex; align-items: center; justify-content: center;
+  background: var(--amber);
+  color: var(--bg);
+  font-family: var(--serif-cn);
+  font-weight: 900;
+  font-size: 13px;
+}
+.brand-text { font-family: var(--sans-cn); letter-spacing: 0.15em; font-size: 12px; }
+
+.topbar-meta {
+  display: flex;
+  gap: 24px;
+  margin-left: auto;
+  color: var(--ink-mute);
+}
+.topbar-meta .item { display: flex; gap: 8px; align-items: center; }
+.topbar-meta .lbl { color: var(--ink-whisper); text-transform: uppercase; }
+.topbar-meta .val { color: var(--ink-dim); }
+
+.pulse {
+  width: 7px; height: 7px; border-radius: 50%;
+  background: var(--amber);
+  box-shadow: 0 0 8px var(--amber);
+  animation: pulse 2.4s ease-in-out infinite;
+}
+@keyframes pulse {
+  0%, 100% { opacity: 0.4; }
+  50% { opacity: 1; }
+}
+
+/* ==========================================================
+   STOCK HEADER (PERSISTENT)
+   ========================================================== */
+.stock-header {
+  padding: 36px 0 28px;
+  border-bottom: 1px solid var(--hair);
+  position: relative;
+}
+
+/* corner ticks — terminal aesthetic */
+.stock-header::before,
+.stock-header::after {
+  content: "";
+  position: absolute;
+  top: 24px;
+  width: 10px; height: 10px;
+  border: 1px solid var(--amber);
+}
+.stock-header::before { left: 32px; border-right: none; border-bottom: none; }
+.stock-header::after  { right: 32px; border-left: none; border-bottom: none; }
+
+.stock-crumbs {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.2em;
+  color: var(--ink-mute);
+  margin-bottom: 18px;
+  text-transform: uppercase;
+}
+.stock-crumbs .sep { color: var(--ink-whisper); }
+.stock-crumbs .tag {
+  padding: 3px 8px;
+  border: 1px solid var(--amber-line);
+  color: var(--amber);
+  letter-spacing: 0.15em;
+}
+
+.stock-title-row {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 40px;
+  margin-bottom: 10px;
+  flex-wrap: wrap;
+}
+.stock-identity { display: flex; align-items: baseline; gap: 20px; flex-wrap: wrap; }
+.stock-name {
+  font-family: var(--serif-cn);
+  font-weight: 900;
+  font-size: 52px;
+  letter-spacing: 0.02em;
+  line-height: 1;
+  color: var(--ink);
+}
+.stock-code {
+  font-family: var(--mono);
+  font-size: 18px;
+  letter-spacing: 0.08em;
+  color: var(--amber);
+  font-weight: 500;
+}
+.stock-exchange {
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.2em;
+  color: var(--ink-mute);
+  padding: 3px 7px;
+  border: 1px solid var(--hair);
+}
+
+.stock-thesis-en {
+  font-family: var(--display-en);
+  font-style: italic;
+  font-weight: 300;
+  font-size: 15px;
+  color: var(--ink-mute);
+  letter-spacing: 0.02em;
+  margin-top: 4px;
+}
+
+/* metrics strip */
+.metrics-strip {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 0;
+  margin-top: 28px;
+  border-top: 1px solid var(--hair);
+  border-bottom: 1px solid var(--hair);
+  background: var(--bg-elev-1);
+}
+.metric {
+  padding: 18px 18px;
+  border-right: 1px solid var(--hair);
+  position: relative;
+}
+.metric:last-child { border-right: none; }
+
+.metric-lbl {
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.15em;
+  color: var(--ink-mute);
+  text-transform: uppercase;
+  margin-bottom: 8px;
+}
+.metric-val {
+  font-family: var(--mono);
+  font-weight: 500;
+  font-size: 22px;
+  letter-spacing: 0.01em;
+  color: var(--ink);
+  line-height: 1;
+  display: baseline;
+}
+.metric-val .unit {
+  font-size: 11px;
+  color: var(--ink-mute);
+  margin-left: 3px;
+  letter-spacing: 0;
+}
+.metric-delta {
+  margin-top: 8px;
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.04em;
+}
+.metric-delta.down { color: var(--mkt-down); }
+.metric-delta.up   { color: var(--mkt-up); }
+.metric-delta.flat { color: var(--ink-mute); }
+.metric-delta .arrow { margin-right: 3px; }
+
+/* ==========================================================
+   ANCHOR NAV (PERSISTENT)
+   ========================================================== */
+.anchor-nav {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  margin-top: 0;
+  border-bottom: 1px solid var(--hair);
+  background: var(--bg);
+  position: sticky;
+  top: 45px;
+  z-index: 30;
+}
+.anchor-tab {
+  background: transparent;
+  border: none;
+  border-right: 1px solid var(--hair);
+  padding: 20px 22px;
+  text-align: left;
+  cursor: pointer;
+  color: var(--ink-dim);
+  font-family: var(--sans-cn);
+  transition: background .25s, color .25s;
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.anchor-tab:last-child { border-right: none; }
+.anchor-tab:hover { background: var(--bg-elev-1); color: var(--ink); }
+.anchor-tab::after {
+  content: "";
+  position: absolute;
+  left: 0; right: 0; bottom: -1px;
+  height: 2px;
+  background: var(--amber);
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform .35s ease;
+}
+.anchor-tab.active::after { transform: scaleX(1); }
+.anchor-tab.active {
+  background: var(--bg-elev-1);
+  color: var(--ink);
+}
+
+.anchor-tab-numeral {
+  font-family: var(--serif-cn);
+  font-weight: 700;
+  font-size: 24px;
+  color: var(--amber);
+  line-height: 1;
+  min-width: 28px;
+}
+.anchor-tab-body { flex: 1; min-width: 0; }
+.anchor-tab-name {
+  font-family: var(--serif-cn);
+  font-weight: 500;
+  font-size: 16px;
+  letter-spacing: 0.06em;
+  line-height: 1.2;
+}
+.anchor-tab-status {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  color: var(--ink-mute);
+  margin-top: 4px;
+}
+.status-dot {
+  width: 7px; height: 7px; border-radius: 50%;
+  background: var(--ink-whisper);
+}
+.status-dot.strong  { background: var(--s-strong);  box-shadow: 0 0 6px var(--s-strong); }
+.status-dot.neutral { background: var(--s-neutral); box-shadow: 0 0 6px var(--s-neutral); }
+.status-dot.alert   { background: var(--s-alert);   box-shadow: 0 0 6px var(--s-alert); }
+.status-dot.weak    { background: var(--s-weak);    box-shadow: 0 0 6px var(--s-weak); }
+.status-dot.cold    { background: var(--s-cold);    box-shadow: 0 0 6px var(--s-cold); }
+
+/* synthesis tab is special */
+.anchor-tab.synthesis .anchor-tab-numeral {
+  font-family: var(--display-en);
+  font-style: italic;
+  font-size: 18px;
+  color: var(--amber-bright);
+  font-weight: 600;
+}
+
+/* ==========================================================
+   ANCHOR CONTENT AREA
+   ========================================================== */
+main.anchor-stage {
+  padding: 56px 0 40px;
+  min-height: 680px;
+}
+
+.panel { display: none; animation: panel-in .5s ease; }
+.panel.active { display: block; }
+@keyframes panel-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* anchor hero */
+.anchor-hero {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 48px;
+  align-items: flex-end;
+  padding-bottom: 28px;
+  border-bottom: 1px solid var(--hair);
+  margin-bottom: 40px;
+}
+.anchor-eyebrow {
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.3em;
+  color: var(--amber);
+  text-transform: uppercase;
+  margin-bottom: 14px;
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+.anchor-eyebrow::before {
+  content: "";
+  width: 24px; height: 1px;
+  background: var(--amber);
+}
+.anchor-title {
+  font-family: var(--serif-cn);
+  font-weight: 700;
+  font-size: 64px;
+  line-height: 1;
+  letter-spacing: 0.02em;
+  color: var(--ink);
+  display: flex;
+  align-items: baseline;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+.anchor-title-en {
+  font-family: var(--display-en);
+  font-style: italic;
+  font-weight: 400;
+  font-size: 22px;
+  color: var(--ink-mute);
+  letter-spacing: 0.02em;
+}
+.anchor-headline {
+  font-family: var(--serif-cn);
+  font-size: 19px;
+  line-height: 1.6;
+  color: var(--ink-dim);
+  max-width: 640px;
+  margin-top: 22px;
+}
+
+.status-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 18px;
+  border: 1px solid currentColor;
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  background: rgba(0,0,0,0.3);
+}
+.status-chip .dot {
+  width: 9px; height: 9px; border-radius: 50%;
+  background: currentColor;
+  box-shadow: 0 0 8px currentColor;
+}
+.status-chip.strong  { color: var(--s-strong); }
+.status-chip.neutral { color: var(--s-neutral); }
+.status-chip.alert   { color: var(--s-alert); }
+.status-chip.weak    { color: var(--s-weak); }
+.status-chip.cold    { color: var(--s-cold); }
+
+/* anchor body grid */
+.anchor-body {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
+  gap: 40px;
+  margin-bottom: 40px;
+}
+
+/* Points block */
+.points-block {
+  background: var(--bg-elev-1);
+  border: 1px solid var(--hair);
+  padding: 30px 32px;
+}
+.points-title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: 18px;
+  border-bottom: 1px solid var(--hair);
+  margin-bottom: 6px;
+}
+.points-title {
+  font-family: var(--serif-cn);
+  font-weight: 500;
+  font-size: 18px;
+  letter-spacing: 0.08em;
+  color: var(--ink);
+}
+.points-title-en {
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.25em;
+  color: var(--ink-mute);
+  text-transform: uppercase;
+}
+
+.points-list { list-style: none; }
+.points-list li {
+  padding: 20px 0 20px 36px;
+  border-bottom: 1px solid var(--hair-soft);
+  position: relative;
+  font-size: 14.5px;
+  line-height: 1.75;
+  color: var(--ink-dim);
+}
+.points-list li:last-child { border-bottom: none; padding-bottom: 4px; }
+.points-list li::before {
+  content: attr(data-idx);
+  position: absolute;
+  left: 0;
+  top: 20px;
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--amber);
+  letter-spacing: 0.1em;
+}
+.points-list .num { /* inline monospace numbers */
+  font-family: var(--mono);
+  color: var(--ink);
+  font-weight: 500;
+  background: var(--amber-soft);
+  padding: 1px 6px;
+  margin: 0 2px;
+  border-radius: 1px;
+  font-size: 13px;
+}
+.points-list .arrow {
+  display: inline-block;
+  color: var(--amber);
+  margin: 0 6px;
+  font-family: var(--mono);
+}
+.points-list .takeaway {
+  color: var(--ink);
+  font-weight: 500;
+}
+.points-list .takeaway::before {
+  content: "";
+  display: inline-block;
+}
+
+/* Verdict / side block */
+.verdict-block {
+  background: linear-gradient(180deg, var(--bg-elev-2) 0%, var(--bg-elev-1) 100%);
+  border: 1px solid var(--amber-line);
+  padding: 30px 32px;
+  position: relative;
+}
+.verdict-block::before {
+  content: "";
+  position: absolute;
+  top: -1px; left: -1px;
+  width: 20px; height: 20px;
+  border-top: 2px solid var(--amber);
+  border-left: 2px solid var(--amber);
+}
+.verdict-block::after {
+  content: "";
+  position: absolute;
+  bottom: -1px; right: -1px;
+  width: 20px; height: 20px;
+  border-bottom: 2px solid var(--amber);
+  border-right: 2px solid var(--amber);
+}
+.verdict-label {
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.3em;
+  color: var(--amber);
+  text-transform: uppercase;
+  margin-bottom: 16px;
+}
+.verdict-title {
+  font-family: var(--serif-cn);
+  font-weight: 700;
+  font-size: 28px;
+  line-height: 1.35;
+  color: var(--ink);
+  margin-bottom: 18px;
+  letter-spacing: 0.02em;
+}
+.verdict-body {
+  font-family: var(--serif-cn);
+  font-size: 15.5px;
+  line-height: 1.85;
+  color: var(--ink-dim);
+}
+.verdict-body strong { color: var(--amber-bright); font-weight: 500; }
+
+/* grade ladder */
+.grade-ladder {
+  margin-top: 28px;
+  padding-top: 24px;
+  border-top: 1px dashed var(--hair);
+}
+.grade-ladder-label {
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--ink-mute);
+  letter-spacing: 0.2em;
+  margin-bottom: 14px;
+  text-transform: uppercase;
+}
+.grade-track {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 6px;
+}
+.grade-step {
+  padding: 10px 8px;
+  text-align: center;
+  border: 1px solid var(--hair);
+  font-family: var(--display-en);
+  font-weight: 600;
+  font-size: 14px;
+  color: var(--ink-mute);
+  position: relative;
+}
+.grade-step .cn {
+  display: block;
+  font-family: var(--sans-cn);
+  font-weight: 400;
+  font-size: 10px;
+  color: var(--ink-whisper);
+  margin-top: 4px;
+  letter-spacing: 0.08em;
+}
+.grade-step.was {
+  color: var(--ink-dim);
+  border-color: var(--hair);
+  text-decoration: line-through;
+  text-decoration-color: var(--ink-whisper);
+  opacity: 0.6;
+}
+.grade-step.now {
+  color: var(--amber-bright);
+  border-color: var(--amber);
+  background: var(--amber-soft);
+}
+.grade-step.now .cn { color: var(--amber); }
+.grade-arrow {
+  text-align: center;
+  color: var(--amber);
+  font-family: var(--mono);
+  font-size: 11px;
+  margin-top: 8px;
+  letter-spacing: 0.15em;
+}
+
+/* Supporting data row */
+.support-row {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1px;
+  background: var(--hair);
+  border: 1px solid var(--hair);
+  margin-top: 8px;
+}
+.support-cell {
+  background: var(--bg);
+  padding: 22px 20px;
+}
+.support-lbl {
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.15em;
+  color: var(--ink-mute);
+  text-transform: uppercase;
+  margin-bottom: 10px;
+}
+.support-val {
+  font-family: var(--mono);
+  font-weight: 500;
+  font-size: 22px;
+  color: var(--ink);
+  line-height: 1.1;
+}
+.support-val .unit {
+  font-size: 11px;
+  color: var(--ink-mute);
+  margin-left: 3px;
+}
+.support-note {
+  font-family: var(--sans-cn);
+  font-size: 11px;
+  color: var(--ink-mute);
+  margin-top: 8px;
+  line-height: 1.5;
+}
+
+/* Synthesis panel specifics */
+.synth-hero {
+  padding: 48px 44px;
+  border: 1px solid var(--amber-line);
+  background:
+    linear-gradient(135deg, rgba(212,162,62,0.08) 0%, transparent 50%),
+    var(--bg-elev-1);
+  position: relative;
+  margin-bottom: 40px;
+}
+.synth-hero::before {
+  content: "";
+  position: absolute;
+  top: 20px; left: 20px; right: 20px;
+  height: 1px;
+  background: linear-gradient(90deg, var(--amber), transparent);
+}
+.synth-eyebrow {
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.3em;
+  color: var(--amber);
+  text-transform: uppercase;
+  margin-bottom: 20px;
+}
+.synth-headline {
+  font-family: var(--serif-cn);
+  font-weight: 700;
+  font-size: 38px;
+  line-height: 1.4;
+  letter-spacing: 0.02em;
+  color: var(--ink);
+}
+.synth-headline .em { color: var(--amber-bright); }
+.synth-sig {
+  font-family: var(--display-en);
+  font-style: italic;
+  font-weight: 400;
+  font-size: 15px;
+  color: var(--ink-mute);
+  margin-top: 18px;
+  letter-spacing: 0.04em;
+}
+
+.synth-blocks {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1px;
+  background: var(--hair);
+  border: 1px solid var(--hair);
+}
+.synth-block {
+  background: var(--bg-elev-1);
+  padding: 32px 28px;
+}
+.synth-block-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 18px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--hair);
+}
+.synth-block-num {
+  font-family: var(--display-en);
+  font-style: italic;
+  font-weight: 600;
+  font-size: 28px;
+  color: var(--amber);
+  line-height: 1;
+}
+.synth-block-name {
+  font-family: var(--serif-cn);
+  font-weight: 500;
+  font-size: 17px;
+  letter-spacing: 0.08em;
+  color: var(--ink);
+}
+.synth-block-en {
+  display: block;
+  font-family: var(--mono);
+  font-size: 9px;
+  letter-spacing: 0.25em;
+  color: var(--ink-mute);
+  margin-top: 2px;
+  text-transform: uppercase;
+}
+.synth-block-body {
+  font-family: var(--serif-cn);
+  font-size: 15px;
+  line-height: 1.85;
+  color: var(--ink-dim);
+}
+.synth-block-body strong {
+  color: var(--amber-bright);
+  font-weight: 500;
+}
+
+/* ==========================================================
+   BOTTOM NAV (PREV/NEXT)
+   ========================================================== */
+.bottom-nav {
+  margin-top: 48px;
+  padding: 24px 0;
+  border-top: 1px solid var(--hair);
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: 24px;
+}
+.nav-btn {
+  background: transparent;
+  border: 1px solid var(--hair);
+  padding: 18px 24px;
+  cursor: pointer;
+  color: var(--ink);
+  font-family: var(--sans-cn);
+  text-align: left;
+  transition: border-color .25s, background .25s;
+  min-height: 76px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+.nav-btn:hover:not(:disabled) {
+  border-color: var(--amber);
+  background: var(--bg-elev-1);
+}
+.nav-btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+.nav-btn.next { text-align: right; }
+.nav-btn-direction {
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.25em;
+  color: var(--ink-mute);
+  text-transform: uppercase;
+  margin-bottom: 6px;
+}
+.nav-btn:hover:not(:disabled) .nav-btn-direction {
+  color: var(--amber);
+}
+.nav-btn-label {
+  font-family: var(--serif-cn);
+  font-weight: 500;
+  font-size: 16px;
+  letter-spacing: 0.04em;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.nav-btn.next .nav-btn-label { justify-content: flex-end; }
+.nav-btn-numeral {
+  font-family: var(--serif-cn);
+  font-weight: 700;
+  color: var(--amber);
+  font-size: 20px;
+  line-height: 1;
+}
+
+.nav-progress {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  padding: 12px 18px;
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.2em;
+  color: var(--ink-mute);
+}
+.nav-progress .dots { display: flex; gap: 6px; }
+.nav-progress .pd {
+  width: 28px; height: 2px;
+  background: var(--hair);
+  transition: background .25s;
+}
+.nav-progress .pd.done { background: var(--amber-deep); }
+.nav-progress .pd.now { background: var(--amber); box-shadow: 0 0 6px var(--amber); }
+
+/* ==========================================================
+   FOOTER
+   ========================================================== */
+footer.site-foot {
+  background: var(--bg-elev-1);
+  border-top: 1px solid var(--hair);
+  margin-top: 40px;
+  padding: 32px 0 28px;
+}
+.foot-inner {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 0 32px;
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr;
+  gap: 40px;
+}
+.foot-disclaimer {
+  font-size: 12px;
+  line-height: 1.75;
+  color: var(--ink-mute);
+}
+.foot-disclaimer strong {
+  display: block;
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--s-alert);
+  letter-spacing: 0.25em;
+  margin-bottom: 10px;
+  text-transform: uppercase;
+}
+.foot-col-lbl {
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.25em;
+  color: var(--amber);
+  margin-bottom: 12px;
+  text-transform: uppercase;
+}
+.foot-col ul { list-style: none; }
+.foot-col li {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--ink-dim);
+  padding: 4px 0;
+  letter-spacing: 0.05em;
+}
+.foot-col li .lbl { color: var(--ink-whisper); }
+.foot-bottom {
+  max-width: 1280px;
+  margin: 28px auto 0;
+  padding: 18px 32px 0;
+  border-top: 1px solid var(--hair);
+  display: flex;
+  justify-content: space-between;
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--ink-whisper);
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+}
+
+/* ==========================================================
+   RESPONSIVE
+   ========================================================== */
+@media (max-width: 980px) {
+  .shell { padding: 0 20px; }
+  .topbar-inner { padding: 12px 20px; gap: 16px; flex-wrap: wrap; }
+  .topbar-meta { gap: 14px; font-size: 10px; }
+  .stock-header { padding: 28px 0 22px; }
+  .stock-header::before, .stock-header::after { display: none; }
+  .stock-name { font-size: 38px; }
+  .metrics-strip { grid-template-columns: repeat(2, 1fr); }
+  .metric { border-bottom: 1px solid var(--hair); }
+  .metric:nth-child(2n) { border-right: none; }
+  .anchor-nav { grid-template-columns: repeat(5, 1fr); overflow-x: auto; }
+  .anchor-tab { padding: 14px 10px; gap: 8px; }
+  .anchor-tab-name { font-size: 13px; }
+  .anchor-tab-status { display: none; }
+  .anchor-hero { grid-template-columns: 1fr; gap: 24px; }
+  .anchor-title { font-size: 44px; }
+  .anchor-body { grid-template-columns: 1fr; }
+  .support-row { grid-template-columns: repeat(2, 1fr); }
+  .synth-blocks { grid-template-columns: 1fr; }
+  .foot-inner { grid-template-columns: 1fr; gap: 24px; }
+  .bottom-nav { grid-template-columns: 1fr; }
+  .nav-btn.next { text-align: left; }
+  .nav-btn.next .nav-btn-label { justify-content: flex-start; }
+}
+</style>
+</head>
+<body>
+
+<!-- ==========================================================
+     TOPBAR · persistent
+     ========================================================== -->
+<header class="topbar">
+  <div class="topbar-inner">
+    <div class="brand">
+      <span class="brand-glyph">锚</span>
+      <span class="brand-text">FOUR ANCHORS · EQUITY TERMINAL</span>
+    </div>
+    <div class="topbar-meta">
+      <div class="item"><span class="lbl">As of</span><span class="val" id="asofDate">2026·04·17</span></div>
+      <div class="item"><span class="lbl">Session</span><span class="val">Closed</span></div>
+      <div class="item"><span class="pulse"></span><span class="val">DEMO</span></div>
+    </div>
+  </div>
+</header>
+
+<!-- ==========================================================
+     STOCK HEADER · persistent
+     ========================================================== -->
+<div class="shell">
+  <section class="stock-header" id="stockHeader">
+    <!-- populated by JS -->
+  </section>
+</div>
+
+<!-- ==========================================================
+     ANCHOR NAV · persistent
+     ========================================================== -->
+<div class="shell">
+  <nav class="anchor-nav" id="anchorNav" role="tablist">
+    <!-- populated by JS -->
+  </nav>
+</div>
+
+<!-- ==========================================================
+     ANCHOR STAGE · dynamic
+     ========================================================== -->
+<div class="shell">
+  <main class="anchor-stage" id="anchorStage">
+    <!-- populated by JS per active anchor -->
+  </main>
+
+  <nav class="bottom-nav" id="bottomNav">
+    <!-- populated by JS -->
+  </nav>
+</div>
+
+<!-- ==========================================================
+     FOOTER
+     ========================================================== -->
+<footer class="site-foot">
+  <div class="foot-inner">
+    <div class="foot-disclaimer">
+      <strong>DISCLAIMER · 免责声明</strong>
+      本页内容仅为四锚框架的应用示范，所使用的数据来源于公开信息整合，不保证完全准确和实时。本页不构成任何投资建议。市场有风险，任何投资决策应基于独立判断，自负盈亏。
+    </div>
+    <div class="foot-col">
+      <div class="foot-col-lbl">Endpoint</div>
+      <ul>
+        <li><span class="lbl">GET</span> /stocks/600519</li>
+        <li><span class="lbl">GET</span> /stocks/600519/anchors</li>
+        <li><span class="lbl">GET</span> /stocks/600519/synthesis</li>
+      </ul>
+    </div>
+    <div class="foot-col">
+      <div class="foot-col-lbl">Meta</div>
+      <ul>
+        <li><span class="lbl">Version</span> 1.0</li>
+        <li><span class="lbl">Render</span> data-driven</li>
+        <li><span class="lbl">Theme</span> charcoal · amber</li>
+      </ul>
+    </div>
+  </div>
+  <div class="foot-bottom">
+    <span>四锚 · FOUR ANCHORS TERMINAL</span>
+    <span>Frontend reference · 2026</span>
+  </div>
+</footer>
+
+<script>
+/* ==========================================================
+   API DATA
+   ——
+   In production: replace this object with `await fetch(...)`.
+   All rendering below reads exclusively from `data`.
+   ========================================================== */
+const data = {
+  meta: {
+    asOf: "2026-04-17",
+    priceAsOf: "2026-04-16",
+    source: "公开信息整合 · 示范数据"
+  },
+  stock: {
+    code: "600519",
+    name: "贵州茅台",
+    exchange: "SH",
+    exchangeFull: "上海证券交易所",
+    classification: "盈利锚松动型",
+    thesisEn: "Blue-chip premium spirits · Earnings anchor downgrading"
+  },
+  metrics: [
+    { lbl: "营业收入",   val: "1,688.38", unit: "亿元", delta: "-1.21%", direction: "down", period: "2025FY" },
+    { lbl: "归母净利润", val: "823.20",   unit: "亿元", delta: "-4.53%", direction: "down", period: "2025FY" },
+    { lbl: "扣非净利润", val: "822.93",   unit: "亿元", delta: "-4.58%", direction: "down", period: "2025FY" },
+    { lbl: "加权 ROE",   val: "32.53",    unit: "%",    delta: "品牌壁垒仍在", direction: "flat" },
+    { lbl: "PE (TTM)",   val: "20.35",    unit: "×",    delta: "历史低位",     direction: "flat" },
+    { lbl: "PB",         val: "7.13",     unit: "×",    delta: "—",            direction: "flat" },
+    { lbl: "股息率",     val: "~1.6",     unit: "%",    delta: "分红占比 79%", direction: "flat" }
+  ],
+  anchors: [
+    {
+      id: "earnings",
+      numeral: "壹",
+      index: 1,
+      name: "盈利锚",
+      nameEn: "Earnings Anchor",
+      status: "alert",
+      statusLabel: "出现裂痕",
+      headline: "茅台首次出现营收与利润双双下滑——这是上市以来罕见的，盈利锚的「最硬之锚」属性正受到考验。",
+      points: [
+        {
+          body: "系列酒收入同比下滑 <span class='num'>9.76%</span>，拖累整体营收；扣非净利润降幅略大于净利润。",
+          takeaway: "核心业务的内生动力在减弱。"
+        },
+        {
+          body: "经营现金流大降 <span class='num'>33%</span>。",
+          takeaway: "利润含金量下降的早期信号（需持续观察）。"
+        },
+        {
+          body: "ROE 仍高达 <span class='num'>32.53%</span>，品牌壁垒仍在；盈利锚没有崩塌。",
+          takeaway: "只是从「强增长」降级到「稳定兑现」。"
+        }
+      ],
+      verdict: {
+        title: "S 级 → B 级 过渡中",
+        body: "盈利锚从 S 级（印钞机）向 B 级（稳健型）过渡中。<strong>若为行业周期底部</strong>，是估值修复机会；<strong>若为消费习惯的长期变化</strong>，则是价值中枢下移的开始。",
+        ladder: [
+          { letter: "S", cn: "印钞机",   state: "was" },
+          { letter: "A", cn: "高成长",   state: "" },
+          { letter: "B", cn: "稳健型",   state: "now" },
+          { letter: "C", cn: "周期性",   state: "" }
+        ]
+      },
+      support: [
+        { lbl: "直销渠道营收",   val: "845.43", unit: "亿", note: "+12.96% 同比" },
+        { lbl: "批发代理营收",   val: "842.32", unit: "亿", note: "-12.05% 同比" },
+        { lbl: "经营现金流净额", val: "615.22", unit: "亿", note: "-33.46% 同比" },
+        { lbl: "每股现金红利",   val: "27.993", unit: "元", note: "含税" }
+      ]
+    },
+    {
+      id: "capital",
+      numeral: "贰",
+      index: 2,
+      name: "资金锚",
+      nameEn: "Capital Anchor",
+      status: "neutral",
+      statusLabel: "中性偏弱",
+      headline: "估值处于历史低位，产业资本和险资长钱仍有配置价值；但外资边际流入放缓。",
+      points: [
+        {
+          body: "当前 PE <span class='num'>20×</span> 处于历史低位区间（五年前通常 <span class='num'>40×+</span>）。",
+          takeaway: ""
+        },
+        {
+          body: "2025 全年分红占归母净利润 <span class='num'>79%</span>，较上一年度提高 <span class='num'>4</span> 个百分点；茅台集团累计增持约 <span class='num'>207.14</span> 万股 / 约 <span class='num'>30</span> 亿元。",
+          takeaway: "产业资本做多。"
+        },
+        {
+          body: "外资（北向）持仓处历史高位区间，但<span class='num'>边际流入放缓</span>。",
+          takeaway: ""
+        },
+        {
+          body: "险资 / 长钱维度：当前估值下股息率约 <span class='num'>1.6%+</span>，叠加分红持续性。",
+          takeaway: "对险资具备配置价值。"
+        }
+      ],
+      verdict: {
+        title: "长钱仍在 · 动力不足",
+        body: "估值洼地 + 产业资本增持构成<strong>估值支撑</strong>；但外资边际流入放缓意味着<strong>驱动力不足</strong>。资金锚是一把支撑性多于驱动性的锚。"
+      },
+      support: [
+        { lbl: "PE (TTM)",     val: "20.35", unit: "×",  note: "五年前 40×+" },
+        { lbl: "分红占比",     val: "79",    unit: "%",  note: "同比 +4pct" },
+        { lbl: "集团增持金额", val: "~30",   unit: "亿", note: "207.14 万股" },
+        { lbl: "股息率",       val: "~1.6",  unit: "%",  note: "险资友好" }
+      ]
+    },
+    {
+      id: "sentiment",
+      numeral: "叁",
+      index: 3,
+      name: "情绪锚",
+      nameEn: "Sentiment Anchor",
+      status: "cold",
+      statusLabel: "偏冷",
+      headline: "市场共识已从极致乐观回到中性偏悲观，预期本身已下修——反而为潜在「低预期被超越」留出了空间。",
+      points: [
+        {
+          body: "市场叙事从「永远涨的核心资产」转为<span class='takeaway'>「白酒降速、消费疲软」</span>。",
+          takeaway: ""
+        },
+        {
+          body: "2021 年以来估值已从 <span class='num'>70×</span> PE 回落到 <span class='num'>20×</span> PE。",
+          takeaway: "共识从极致乐观回到中性偏悲观。"
+        },
+        {
+          body: "机构一致预期：券商预测 2025-2027 年归母净利分别为 <span class='num'>901</span> / <span class='num'>901</span> / <span class='num'>940</span> 亿元。",
+          takeaway: "预期本身已下修，留出了潜在「低预期被超越」的空间。"
+        }
+      ],
+      verdict: {
+        title: "预期低位 · 反转势能积累",
+        body: "情绪锚处于 <strong>共识阶段 2（悲观区）</strong>附近。这类低共识位置的好处是：任何一点正面超预期都可能形成非线性的情绪反弹，构成估值修复的触发器。"
+      },
+      support: [
+        { lbl: "估值高点 PE", val: "~70", unit: "×",  note: "2021 核心资产高峰" },
+        { lbl: "估值现值 PE", val: "20.35", unit: "×", note: "历史低位" },
+        { lbl: "2026E 净利",  val: "901", unit: "亿", note: "券商一致预期" },
+        { lbl: "2027E 净利",  val: "940", unit: "亿", note: "CAGR 较低" }
+      ]
+    },
+    {
+      id: "chips",
+      numeral: "肆",
+      index: 4,
+      name: "筹码锚",
+      nameEn: "Holdings Anchor",
+      status: "strong",
+      statusLabel: "稳定",
+      headline: "万亿流通盘 + 长线机构锁仓 + 注销式回购——筹码端是当下最「硬」的一把锚，构成估值保护垫。",
+      points: [
+        {
+          body: "流通盘极大（市值 <span class='num'>2</span> 万亿）。",
+          takeaway: "筹码不可能被资金推动。"
+        },
+        {
+          body: "2025 年内实施了 <span class='num'>两轮</span>注销式回购，直接减少总股本。",
+          takeaway: "主动优化筹码结构。"
+        },
+        {
+          body: "机构持股 + 社保 + 外资构成<span class='takeaway'>稳定锁仓</span>，散户占比低。",
+          takeaway: ""
+        },
+        {
+          body: "几乎不存在筹码博弈风险。",
+          takeaway: ""
+        }
+      ],
+      verdict: {
+        title: "供给端锁死 · 保护垫已就位",
+        body: "盈利锚动摇时，<strong>稳定的筹码锚</strong>会形成天然的估值缓冲。这也是茅台区别于一般白酒股的核心原因：即使利润下滑，筹码结构不会先行崩溃。"
+      },
+      support: [
+        { lbl: "总市值",     val: "~2",  unit: "万亿", note: "超大流通盘" },
+        { lbl: "年内回购",   val: "2",   unit: "轮",  note: "注销式 · 减股本" },
+        { lbl: "机构持仓",   val: "高",  unit: "",     note: "长线锁仓为主" },
+        { lbl: "散户占比",   val: "低",  unit: "",     note: "博弈风险极小" }
+      ]
+    }
+  ],
+  synthesis: {
+    eyebrow: "Synthesis · 综合评估",
+    headline: "盈利锚动摇但未崩 · 估值处低位 · <span class='em'>情绪偏冷</span> · 筹码稳定",
+    sig: "a divergent resonance — downgraded earnings, stabilized holdings.",
+    blocks: [
+      {
+        num: "01",
+        name: "逻辑框架",
+        nameEn: "Logic",
+        body: "典型的<strong>「盈利锚降级」中的白马</strong>。若 2026 年业绩能够企稳，即是预期差修复的机会；若继续下滑，估值仍可能进一步下压。"
+      },
+      {
+        num: "02",
+        name: "最大风险",
+        nameEn: "Risk",
+        body: "消费降级、商务场景萎缩如果是<strong>结构性变化</strong>而非周期性变化，盈利锚将会继续下移——这也是区分「估值底」与「价值中枢下移」的关键。"
+      },
+      {
+        num: "03",
+        name: "关键观察点",
+        nameEn: "Watch",
+        body: "2026 年<strong>中报营收</strong>是否企稳；<strong>飞天茅台批价</strong>走势；<strong>系列酒</strong>能否恢复增长。"
+      }
+    ]
+  }
+};
+
+/* ==========================================================
+   RENDERERS
+   ========================================================== */
+
+// --- Stock header ---
+function renderStockHeader() {
+  const s = data.stock;
+  const el = document.getElementById('stockHeader');
+  el.innerHTML = `
+    <div class="stock-crumbs">
+      <span>个股终端</span>
+      <span class="sep">/</span>
+      <span>四锚框架</span>
+      <span class="sep">/</span>
+      <span class="tag">${s.classification}</span>
+    </div>
+
+    <div class="stock-title-row">
+      <div class="stock-identity">
+        <h1 class="stock-name">${s.name}</h1>
+        <span class="stock-code">${s.code}</span>
+        <span class="stock-exchange">${s.exchange} · ${s.exchangeFull}</span>
+      </div>
+    </div>
+    <div class="stock-thesis-en">${s.thesisEn}</div>
+
+    <div class="metrics-strip">
+      ${data.metrics.map(m => `
+        <div class="metric">
+          <div class="metric-lbl">${m.lbl}</div>
+          <div class="metric-val">${m.val}<span class="unit">${m.unit}</span></div>
+          <div class="metric-delta ${m.direction}">
+            ${m.direction === 'down' ? '<span class="arrow">▼</span>' : m.direction === 'up' ? '<span class="arrow">▲</span>' : ''}
+            ${m.delta}
+          </div>
+        </div>
+      `).join('')}
+    </div>
+  `;
+}
+
+// --- Anchor tabs ---
+function renderAnchorNav() {
+  const el = document.getElementById('anchorNav');
+  const anchorTabs = data.anchors.map((a, i) => `
+    <button class="anchor-tab ${i === 0 ? 'active' : ''}" role="tab" data-target="${a.id}">
+      <span class="anchor-tab-numeral">${a.numeral}</span>
+      <span class="anchor-tab-body">
+        <span class="anchor-tab-name">${a.name}</span>
+        <span class="anchor-tab-status">
+          <span class="status-dot ${a.status}"></span>
+          <span>${a.statusLabel}</span>
+        </span>
+      </span>
+    </button>
+  `).join('');
+  const synthesisTab = `
+    <button class="anchor-tab synthesis" role="tab" data-target="synthesis">
+      <span class="anchor-tab-numeral">§</span>
+      <span class="anchor-tab-body">
+        <span class="anchor-tab-name">综合评估</span>
+        <span class="anchor-tab-status">
+          <span class="status-dot" style="background:var(--amber); box-shadow:0 0 6px var(--amber);"></span>
+          <span>Synthesis</span>
+        </span>
+      </span>
+    </button>
+  `;
+  el.innerHTML = anchorTabs + synthesisTab;
+}
+
+// --- Single anchor panel ---
+function renderAnchorPanel(anchor) {
+  const ladderHtml = anchor.verdict.ladder ? `
+    <div class="grade-ladder">
+      <div class="grade-ladder-label">Grade · 定级</div>
+      <div class="grade-track">
+        ${anchor.verdict.ladder.map(g => `
+          <div class="grade-step ${g.state}">
+            ${g.letter}
+            <span class="cn">${g.cn}</span>
+          </div>
+        `).join('')}
+      </div>
+      <div class="grade-arrow">← 正在过渡 →</div>
+    </div>
+  ` : '';
+
+  return `
+    <div class="panel active" data-panel="${anchor.id}">
+      <div class="anchor-hero">
+        <div>
+          <div class="anchor-eyebrow">Anchor · ${anchor.numeral} · ${anchor.nameEn}</div>
+          <h2 class="anchor-title">
+            ${anchor.name}
+            <span class="anchor-title-en">${anchor.nameEn}</span>
+          </h2>
+          <p class="anchor-headline">${anchor.headline}</p>
+        </div>
+        <div class="status-chip ${anchor.status}">
+          <span class="dot"></span>
+          ${anchor.statusLabel}
+        </div>
+      </div>
+
+      <div class="anchor-body">
+        <div class="points-block">
+          <div class="points-title-row">
+            <div class="points-title">分析要点</div>
+            <div class="points-title-en">Key Points · ${anchor.points.length} items</div>
+          </div>
+          <ul class="points-list">
+            ${anchor.points.map((p, i) => `
+              <li data-idx="${String(i+1).padStart(2, '0')}">
+                ${p.body}
+                ${p.takeaway ? `<span class='arrow'>→</span><span class='takeaway'>${p.takeaway}</span>` : ''}
+              </li>
+            `).join('')}
+          </ul>
+        </div>
+
+        <div class="verdict-block">
+          <div class="verdict-label">Key Judgment · 关键判定</div>
+          <div class="verdict-title">${anchor.verdict.title}</div>
+          <div class="verdict-body">${anchor.verdict.body}</div>
+          ${ladderHtml}
+        </div>
+      </div>
+
+      <div class="support-row">
+        ${anchor.support.map(s => `
+          <div class="support-cell">
+            <div class="support-lbl">${s.lbl}</div>
+            <div class="support-val">${s.val}<span class="unit">${s.unit}</span></div>
+            <div class="support-note">${s.note}</div>
+          </div>
+        `).join('')}
+      </div>
+    </div>
+  `;
+}
+
+// --- Synthesis panel ---
+function renderSynthesisPanel() {
+  const s = data.synthesis;
+  return `
+    <div class="panel active" data-panel="synthesis">
+      <div class="synth-hero">
+        <div class="synth-eyebrow">${s.eyebrow}</div>
+        <div class="synth-headline">${s.headline}</div>
+        <div class="synth-sig">— ${s.sig}</div>
+      </div>
+      <div class="synth-blocks">
+        ${s.blocks.map(b => `
+          <div class="synth-block">
+            <div class="synth-block-head">
+              <div class="synth-block-num">${b.num}</div>
+              <div>
+                <div class="synth-block-name">${b.name}</div>
+                <span class="synth-block-en">${b.nameEn}</span>
+              </div>
+            </div>
+            <div class="synth-block-body">${b.body}</div>
+          </div>
+        `).join('')}
+      </div>
+    </div>
+  `;
+}
+
+// --- Bottom nav ---
+function renderBottomNav(currentIndex, total) {
+  const el = document.getElementById('bottomNav');
+  const allIds = [...data.anchors.map(a => a.id), 'synthesis'];
+  const prevIdx = currentIndex - 1;
+  const nextIdx = currentIndex + 1;
+
+  const prevLabel = prevIdx >= 0
+    ? (prevIdx < data.anchors.length
+      ? `<span class="nav-btn-numeral">${data.anchors[prevIdx].numeral}</span> ${data.anchors[prevIdx].name}`
+      : `<span class="nav-btn-numeral">§</span> 综合评估`)
+    : '— 首项 —';
+
+  const nextLabel = nextIdx < total
+    ? (nextIdx < data.anchors.length
+      ? `${data.anchors[nextIdx].name} <span class="nav-btn-numeral">${data.anchors[nextIdx].numeral}</span>`
+      : `综合评估 <span class="nav-btn-numeral">§</span>`)
+    : '— 末项 —';
+
+  const dots = allIds.map((id, i) => {
+    if (i < currentIndex) return '<span class="pd done"></span>';
+    if (i === currentIndex) return '<span class="pd now"></span>';
+    return '<span class="pd"></span>';
+  }).join('');
+
+  el.innerHTML = `
+    <button class="nav-btn prev" ${prevIdx < 0 ? 'disabled' : ''} data-nav="prev">
+      <div class="nav-btn-direction">← Prev · 上一锚</div>
+      <div class="nav-btn-label">${prevLabel}</div>
+    </button>
+
+    <div class="nav-progress">
+      <span>${String(currentIndex + 1).padStart(2, '0')} / ${String(total).padStart(2, '0')}</span>
+      <div class="dots">${dots}</div>
+    </div>
+
+    <button class="nav-btn next" ${nextIdx >= total ? 'disabled' : ''} data-nav="next">
+      <div class="nav-btn-direction">Next · 下一锚 →</div>
+      <div class="nav-btn-label">${nextLabel}</div>
+    </button>
+  `;
+}
+
+// --- Main renderer / state ---
+const STATE = {
+  currentId: data.anchors[0].id,
+};
+
+function getCurrentIndex() {
+  const ids = [...data.anchors.map(a => a.id), 'synthesis'];
+  return ids.indexOf(STATE.currentId);
+}
+
+function renderStage() {
+  const stage = document.getElementById('anchorStage');
+  const idx = getCurrentIndex();
+  const ids = [...data.anchors.map(a => a.id), 'synthesis'];
+
+  if (STATE.currentId === 'synthesis') {
+    stage.innerHTML = renderSynthesisPanel();
+  } else {
+    const anchor = data.anchors.find(a => a.id === STATE.currentId);
+    stage.innerHTML = renderAnchorPanel(anchor);
+  }
+  renderBottomNav(idx, ids.length);
+
+  // update active tab
+  document.querySelectorAll('.anchor-tab').forEach(tab => {
+    tab.classList.toggle('active', tab.getAttribute('data-target') === STATE.currentId);
+  });
+}
+
+function go(id) {
+  STATE.currentId = id;
+  renderStage();
+  // scroll the anchor nav into view softly if scrolled down
+  const nav = document.querySelector('.anchor-nav');
+  if (nav) {
+    const rect = nav.getBoundingClientRect();
+    if (rect.top < 0) {
+      window.scrollTo({ top: nav.offsetTop - 50, behavior: 'smooth' });
+    }
+  }
+}
+
+// --- Init ---
+document.addEventListener('DOMContentLoaded', () => {
+  renderStockHeader();
+  renderAnchorNav();
+  renderStage();
+
+  // tab clicks (delegated)
+  document.getElementById('anchorNav').addEventListener('click', e => {
+    const tab = e.target.closest('.anchor-tab');
+    if (!tab) return;
+    go(tab.getAttribute('data-target'));
+  });
+
+  // prev/next (delegated — buttons re-rendered each time)
+  document.getElementById('bottomNav').addEventListener('click', e => {
+    const btn = e.target.closest('.nav-btn');
+    if (!btn || btn.disabled) return;
+    const ids = [...data.anchors.map(a => a.id), 'synthesis'];
+    const idx = getCurrentIndex();
+    const dir = btn.getAttribute('data-nav');
+    if (dir === 'prev' && idx > 0) go(ids[idx - 1]);
+    if (dir === 'next' && idx < ids.length - 1) go(ids[idx + 1]);
+  });
+
+  // keyboard navigation
+  document.addEventListener('keydown', e => {
+    const ids = [...data.anchors.map(a => a.id), 'synthesis'];
+    const idx = getCurrentIndex();
+    if (e.key === 'ArrowLeft' && idx > 0) go(ids[idx - 1]);
+    if (e.key === 'ArrowRight' && idx < ids.length - 1) go(ids[idx + 1]);
+  });
+
+  // display as-of date (formatted)
+  const asOf = data.meta.asOf.replace(/-/g, '·');
+  document.getElementById('asofDate').textContent = asOf;
+});
+</script>
+
+</body>
+</html>

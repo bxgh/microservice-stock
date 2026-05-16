@@ -1,0 +1,536 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>01. 体系架构总览 (System Architecture Blueprint)</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Noto+Serif+SC:wght@400;700;900&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    
+    <!-- Libraries -->
+    <script src="https://lib.baomitu.com/marked/11.1.1/marked.min.js"></script>
+    <link rel="stylesheet" href="https://lib.baomitu.com/github-markdown-css/5.5.0/github-markdown-dark.min.css">
+    <script src="https://lib.baomitu.com/mermaid/10.9.0/mermaid.min.js"></script>
+    
+    <!-- Syntax Highlighting -->
+    <link rel="stylesheet" href="https://lib.baomitu.com/highlight.js/11.9.0/styles/tokyo-night-dark.min.css">
+    <script src="https://lib.baomitu.com/highlight.js/11.9.0/highlight.min.js"></script>
+    
+    <style>
+        :root {
+            --bg: #0a0a0a;
+            --surface: #121212;
+            --surface-hover: #1a1a1a;
+            --border: #222222;
+            --accent: #eab308;
+            --accent-glow: rgba(234, 179, 8, 0.1);
+            --text-primary: #f1f5f9;
+            --text-secondary: #94a3b8;
+            --text-muted: #64748b;
+            --font-sans: 'Outfit', 'Noto Sans SC', -apple-system, sans-serif;
+            --font-serif: 'Noto Serif SC', serif;
+            --font-mono: 'JetBrains Mono', monospace;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background-color: var(--bg);
+            color: var(--text-primary);
+            font-family: var(--font-sans);
+            line-height: 1.7;
+            -webkit-font-smoothing: antialiased;
+            overflow-x: hidden;
+        }
+
+        /* Subtle background glow */
+        body::after {
+            content: '';
+            position: fixed;
+            top: 0;
+            right: 0;
+            width: 40vw;
+            height: 40vh;
+            background: radial-gradient(circle, var(--accent-glow) 0%, transparent 70%);
+            z-index: -1;
+            filter: blur(100px);
+            pointer-events: none;
+        }
+
+        .sidebar {
+            width: 260px;
+            height: 100vh;
+            position: fixed;
+            left: 0;
+            top: 0;
+            border-right: 1px solid var(--border);
+            background: var(--bg);
+            padding: 1.5rem;
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+            overflow-y: auto;
+            z-index: 100;
+        }
+
+        .nav-link {
+            color: var(--text-muted);
+            text-decoration: none;
+            font-size: 0.85rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            transition: color 0.2s;
+            padding: 0.5rem;
+            border-radius: 6px;
+        }
+        .nav-link:hover { color: var(--accent); background: var(--surface); }
+
+        .toc-title {
+            font-family: var(--font-serif);
+            font-size: 1rem;
+            color: var(--text-primary);
+            margin-bottom: 0.8rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding-left: 0.5rem;
+        }
+        .toc-title::before {
+            content: '';
+            width: 3px;
+            height: 1rem;
+            background: var(--accent);
+            border-radius: 2px;
+        }
+
+        .toc-list {
+            list-style: none;
+            display: flex;
+            flex-direction: column;
+            gap: 0.4rem;
+        }
+        .toc-item {
+            font-size: 0.8rem;
+            line-height: 1.3;
+        }
+        .toc-item a {
+            color: var(--text-muted);
+            text-decoration: none;
+            transition: all 0.2s;
+            display: block;
+            padding: 0.4rem 0.5rem;
+            border-radius: 4px;
+        }
+        .toc-item a:hover { color: var(--accent); background: var(--surface); }
+        .toc-item.level-3 { margin-left: 0.8rem; border-left: 1px solid var(--border); }
+
+        .container {
+            max-width: 860px;
+            margin: 0 auto 0 260px;
+            padding: 3rem 4rem;
+            animation: fadeIn 0.6s ease-out;
+        }
+
+        @media (max-width: 1024px) {
+            .sidebar { width: 220px; padding: 1rem; }
+            .container { margin-left: 220px; padding: 2rem; }
+        }
+
+        @media (max-width: 800px) {
+            .sidebar { position: static; width: 100%; height: auto; border-right: none; border-bottom: 1px solid var(--border); }
+            .container { margin-left: 0; padding: 1.5rem; }
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(5px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        header {
+            margin-bottom: 3rem;
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 1.5rem;
+        }
+
+        .meta {
+            font-family: var(--font-mono);
+            font-size: 0.75rem;
+            color: var(--accent);
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            margin-bottom: 0.8rem;
+            display: flex;
+            align-items: center;
+            gap: 0.8rem;
+        }
+
+        .meta::before {
+            content: '';
+            width: 20px;
+            height: 1px;
+            background-color: var(--accent);
+        }
+
+        h1 {
+            font-family: var(--font-serif);
+            font-size: 2.2rem;
+            font-weight: 900;
+            line-height: 1.2;
+            margin-bottom: 1rem;
+            color: var(--text-primary);
+        }
+
+        .markdown-body {
+            background: transparent !important;
+            color: var(--text-primary) !important;
+            font-family: var(--font-sans) !important;
+            font-size: 0.95rem !important;
+        }
+
+        .markdown-body h2 {
+            font-family: var(--font-serif);
+            font-size: 1.5rem !important;
+            color: var(--accent) !important;
+            border-bottom: 1px solid var(--border) !important;
+            padding-bottom: 0.5rem !important;
+            margin-top: 2.5rem !important;
+            scroll-margin-top: 1rem;
+        }
+
+        .markdown-body h3 {
+            font-family: var(--font-serif);
+            font-size: 1.25rem !important;
+            color: var(--text-primary) !important;
+            margin-top: 2rem !important;
+            scroll-margin-top: 1rem;
+        }
+
+        .markdown-body p, .markdown-body li {
+            font-size: 0.95rem !important;
+            color: var(--text-primary) !important;
+        }
+        
+        .markdown-body pre {
+            background-color: #1a1b26 !important; /* Match Tokyo Night Dark */
+            border: 1px solid var(--border);
+            border-radius: 8px !important;
+            padding: 0 !important; /* Code internal handles padding */
+            margin: 1.2rem 0 !important;
+            overflow: hidden;
+        }
+
+        .markdown-body pre code {
+            background-color: transparent !important;
+            padding: 1.2rem !important;
+            display: block;
+            font-family: var(--font-mono) !important;
+            font-size: 0.85rem !important;
+            line-height: 1.5;
+        }
+
+        .markdown-body blockquote {
+            border-left: 3px solid var(--accent) !important;
+            background: var(--surface);
+            padding: 0.8rem 1.2rem;
+            color: var(--text-secondary) !important;
+            margin: 1.2rem 0 !important;
+        }
+
+        .markdown-body table {
+            background: var(--surface);
+            font-size: 0.85rem !important;
+            margin: 1.2rem 0 !important;
+        }
+
+        footer {
+            margin-top: 4rem;
+            padding-top: 1.5rem;
+            border-top: 1px solid var(--border);
+            color: var(--text-muted);
+            font-size: 0.8rem;
+            text-align: center;
+        }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar { width: 5px; }
+        ::-webkit-scrollbar-track { background: var(--bg); }
+        ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+    </style>
+</head>
+<body>
+    <aside class="sidebar">
+        <a href="index.html" class="nav-link">
+            <span>←</span> 返回目录门户
+        </a>
+        
+        <div class="toc-container">
+            <h3 class="toc-title">文档导航</h3>
+            <ul class="toc-list" id="toc">
+                <!-- TOC items will be injected here -->
+            </ul>
+        </div>
+    </aside>
+
+    <div class="container">
+        <header>
+            <div class="meta">GLOBAL | 2026-05-16 19:06</div>
+            <h1>01. 体系架构总览 (System Architecture Blueprint)</h1>
+        </header>
+
+        <article id="content" class="markdown-body">
+            <!-- Loading indicator -->
+            <p style="color: var(--text-muted)">正在解析文档内容...</p>
+        </article>
+
+        <footer>
+            &copy; 2026 MicroStock Project Docs | Generated by Antigravity
+        </footer>
+    </div>
+
+    <script id="markdown-raw" type="text/markdown"># 01. 体系架构总览 (System Architecture Blueprint)
+
+> **版本**: 2.1 (Multi-Modal & Requirements Aligned)
+> **状态**: 已对齐用户硬件现状与业务需求
+
+## 1. 用户需求与约束分析 (User Requirements)
+
+文档基于以下用户明确指定的硬性需求构建：
+
+### 1.1 硬件资源现状 (Hardware Context)
+*   **云端服务器**: 
+- 腾讯云 MySQL (CDB) —— *核心主存储*。1、云服务配置：CPU 2核 内存 4GB系统盘 SSD云硬盘 70GB 流量包 600GB/月（带宽 6Mbps）。
+*   **云数据库**:
+-  mysql服务器: 基础型-CPU 1核,内存 1000MB, 最大 IOPS 2400 计费模式 包年包月
+*   **内网服务器**: 本地 Ubuntu (10核 64G 160G HDD) —— *高性能计算节点*。
+
+### 1.2 角色与功能定义 (Roles)
+1.  **云端职责**: 必须提供统一 API 入口 (`Cloud-API`)，负责公网流量接入。
+2.  **内网职责**: 专注于策略计算 (`Strategy Analysis`)，不直接对外服务。
+3.  **前端形态**: 支持微信小程序 (移动端监控) 与 桌面 Web 网页 (深度复盘)。
+
+### 1.3 关键技术约束 (Constraints)
+*   **网络限制**: 内网服务器可通过 `Squid Proxy` 访问国内公网，但 **AkShare/BaoStock 等金融数据源访问受限**，因此数据采集必须强制下放到云端执行。
+*   **存储加速**: 用户主动提出引入 **ClickHouse** 以解决 MySQL 回测慢的问题。
+*   **数据多样性**: 必须处理 Tick 高频数据、财务报表等多种非 K 线数据类型。
+
+---
+
+## 2. 核心架构理念
+
+本系统遵循 **"IO 上云，计算下沉，存储分层"** 的设计哲学，旨在低成本下实现机构级的量化投研能力。
+
+*   **IO 上云 (Cloud Ingestion)**: 利用云服务器的高可用和公网 IP，24小时不间断采集数据，并在公网提供 API 服务。
+*   **计算下沉 (Local Compute)**: 利用内网服务器的低成本算力（10核64G），处理回测、因子计算与模型训练等重负载任务。
+*   **存储分层 (Tiered Storage)**:
+    *   **Hot**: Redis (实时信号/任务状态)
+    *   **Warm**: 云端 MySQL (业务主数据/T+0行情)
+    *   **Cold/Analytics**: 内网 ClickHouse (海量历史数据/T-1归档)
+
+---
+
+## 2. 全局拓扑架构图
+
+```mermaid
+graph TB
+    subgraph Clients ["💻 前端交互层"]
+        Mini[微信小程序<br/>(Taro + ECharts)]
+        Web[桌面Web端<br/>(React + AntD)]
+    end
+
+    subgraph Cloud ["☁️ 腾讯云 (2C 4G 80G SSD)"]
+        direction TB
+        Nginx[Nginx Gateway<br/>80/443 (SSL)]
+        
+        subgraph Services ["微服务集群 (Docker)"]
+            CloudAPI[Cloud-API<br/>(:8000 聚合/鉴权)]
+            Redis[Redis 7.0<br/>(:6379 Cache/Queue)]
+            
+            subgraph DataPool ["采集器 (Limit: 256MB)"]
+                AkShare[akshare-api]
+                BaoStock[baostock-api]
+                PyWencai[pywencai-api]
+            end
+        end
+    end
+
+    subgraph TencentDB ["🗄️ 云数据库"]
+        MySQL[(TencentDB MySQL 5.7<br/>Port: 26300)]
+    end
+
+    subgraph Home ["🏠 内网算力中心 (10C 64G 160G HDD)"]
+        direction TB
+        
+        subgraph Storage ["内网加速层"]
+            CH[(ClickHouse 23.x<br/>Port: 8123)]
+            Parquet[Local Parquet<br/>(Cold Backup)]
+        end
+        
+        subgraph Engines ["计算引擎"]
+            Sync[Sync Service<br/>(T+1 ETL)]
+            Strategy[Strategy Worker<br/>(Backtrader)]
+            Factor[Factor Calc<br/>(Pandas/Numpy)]
+        end
+    end
+
+    %% 外部访问流
+    Clients -->|HTTPS/WSS| Nginx
+    Nginx --> CloudAPI
+    
+    %% 云端内部流
+    CloudAPI <-->|RPC/HTTP| DataPool
+    CloudAPI <-->|Hot Data| Redis
+    CloudAPI <-->|CRUD| MySQL
+    DataPool -->|Ingest| MySQL
+    
+    %% 混合云通信流 (关键路径)
+    Sync -->|1. Pull T+1| MySQL
+    Sync -->|2. Bulk Insert| CH
+    
+    Strategy -->|3. Fetch Params| Redis
+    Strategy -->|4. Query History| CH
+    Strategy -->|5. Write Result| MySQL
+    
+    %% 样式
+    style Cloud fill:#e3f2fd,stroke:#2196f3
+    style Home fill:#f3e5f5,stroke:#9c27b0
+    style CH fill:#fff3e0,stroke:#ff9800,stroke-width:2px
+```
+
+---
+
+## 3. 资源规划与配置清单
+
+### 3.1 节点配置明细
+
+| 节点 (Node) | 规格 (Spec) | 成本 (Cost) | 角色定义 | 关键配置约束 |
+|:---|:---|:---|:---|:---|
+| **Cloud Server** | 2 vCPU / 4GB RAM / 80GB SSD | ~¥60/mo | **流量入口 & 调度中心** | `vm.swappiness=10`<br/>Docker Limit: 3GB Total |
+| **Cloud DB** | MySQL 5.7 / 1GB / 50GB | Pay-as-you-go | **主数据源 (SSZT)** | `max_connections=500` |
+| **Home Server** | 10 vCPU / 64GB RAM / 160GB HDD | ¥0 (Sunk Cost) | **重计算 & 历史仓库** | ClickHouse 堆外内存: 16GB |
+
+### 3.2 端口与网络规划
+
+> **安全准则**: 内网服务器**完全不暴露公网端口**，所有通信由内网主动发起（Outbound Only）。
+
+| 组件 | 监听地址 | 端口 | 访问源 | 用途 |
+|:---|:---|:---|:---|:---|
+| **Nginx** | `0.0.0.0` | 80, 443 | 🌏 Any | 公网流量入口 |
+| **MySQL (Cloud)** | `0.0.0.0` | 26300 | ☁️ Cloud, 🏠 Home | 核心数据存取 |
+| **Redis (Cloud)** | `172.17.0.x` | 6379 | ☁️ Cloud | **不对外** (防攻击) |
+| **ClickHouse** | `127.0.0.1` | 8123 | 🏠 Home Only | 回测数据加速 |
+
+*注: 内网连接 Redis 建议通过 Cloud-API 代理，或仅在调试时通过 SSH Tunnel 连接，避免 Redis 直接暴露公网。*
+
+---
+
+## 4. 技术栈选型 (已固化)
+
+| 层级 | 技术 | 版本 | 选型理由 |
+|:---|:---|:---|:---|
+| **Language** | Python | 3.12 (Slim) | 性能与生态的最佳平衡点 |
+| **Web Framework** | FastAPI | 0.109+ | 异步高并发，自动生成 OpenAPI |
+| **API Server** | Uvicorn | Standard | ASGI 标准性能最好 |
+| **Gateway** | Nginx | Alpine | 只有 10MB 的高性能网关 |
+| **OLTP DB** | MySQL | 5.7 | 为了兼容旧版云数据库设施 |
+| **OLAP DB** | ClickHouse | 23.8 LTS | 列式存储，**回测速度提升 13 倍** |
+| **Queue** | Redis | 7.0 | 轻量级，兼做 Cache 和 Broker |
+| **Strategy** | Backtrader | - | 经典的事件驱动回测框架 |
+
+---
+
+---
+
+## 5. 核心数据流转图谱 (Data Flow Pipeline)
+
+### 5.1 全景数据采集矩阵 (Data Acquisition Matrix)
+
+针对不同数据类型的更新频率与网络要求，执行严格的**分而治之**策略：
+
+| | 来源 (Provider) | 协议/库 | 采集节点 | 入库路径 | 备注 |
+|:---|:---|:---|:---|:---|:---|:---|
+| **深度行情** | **L1 Tick 快照** | **Mootdx** | TCP (7709) | **内网 (Home)** | `Mootdx` -> `ClickHouse` | **直连**，流量不走云端，速度最快 |
+| **深度行情** | 分时成交 (Transaction) | Mootdx | TCP (7709) | **内网 (Home)** | `Mootdx` -> `ClickHouse` | 同上，盘后补全模式 |
+| **基础K线** | 日/周/月线 (前复权) | BaoStock | TCP (Block) | 云端 (Cloud) | `Cloud MySQL` -> `Sync` -> `CH` | 每日16:30定时任务 |
+| **基础K线** | **复权因子 / 停复牌** | BaoStock | TCP | 云端 (Cloud) | `Cloud MySQL` -> `CH` | 计算真实收益率必需 |
+| **基本面** | **季报/年报 (主表)** | AkShare | HTTP (Eastmoney) | 云端 (Cloud) | `Cloud MySQL` -> `Sync` -> `CH` | 字段多，结构易变，需JSON宽表 |
+| **基本面** | 指数成分股权重 | AkShare | HTTP | 云端 (Cloud) | `Cloud MySQL` -> `Redis` | 用于计算Alpha策略基准 |
+| **另类数据** | 问财选股 (NLP) | PyWencai | HTTP (Cookie) | 云端 (Cloud) | `Redis` (Cache Only) | 结果不入库，仅做实时过滤 |
+
+### 5.2 差异化流转 Pipeline
+
+#### A. 极速通道 (Tick/Quote)
+*   **场景**: 盘中监控、高频因子落地。
+*   **链路**: `通达信服务器` ==(内网专线)==> `Home Server (Mootdx)` ==> `ClickHouse Buffer`。
+*   **时延**: < 500ms，完全绕过云端数据库瓶颈。
+
+#### B. 标准通道 (K-Line/Finance)
+*   **场景**: 历史数据归档、每日收盘作业。
+*   **链路**: `外部数据源` --> `Cloud Server (Ingestion)` --(Write)--> `Cloud MySQL` --(T+1 Sync)--> `Home Server (ClickHouse)`。
+*   **优势**: 利用云端稳定的公网环境处理爬虫/API的不稳定性，清洗后再回传内网。
+
+
+---
+
+> **下一章**: [02_云端服务与API.md](./02_云端服务与API.md) 将详细规范云端 Nginx 配置与 API 接口定义。
+</script>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', async () => {
+            const rawMd = document.getElementById('markdown-raw').textContent;
+            const contentEl = document.getElementById('content');
+            const tocEl = document.getElementById('toc');
+            
+            // Set options for marked
+            marked.setOptions({
+                gfm: true,
+                breaks: true,
+                headerIds: true,
+                mangle: false,
+                highlight: function(code, lang) {
+                    const language = hljs.getLanguage(lang) ? lang : 'plaintext';
+                    return hljs.highlight(code, { language }).value;
+                }
+            });
+
+            // Parse Markdown
+            contentEl.innerHTML = marked.parse(rawMd);
+            
+            // Generate TOC
+            const headings = contentEl.querySelectorAll('h2, h3');
+            headings.forEach((h, index) => {
+                if (!h.id) h.id = 'heading-' + index;
+                
+                const li = document.createElement('li');
+                li.className = 'toc-item level-' + h.tagName.toLowerCase().charAt(1);
+                
+                const a = document.createElement('a');
+                a.href = '#' + h.id;
+                a.textContent = h.textContent;
+                
+                li.appendChild(a);
+                tocEl.appendChild(li);
+            });
+
+            // Handle Mermaid
+            if (window.mermaid) {
+                mermaid.initialize({ startOnLoad: false, theme: 'dark', useWorker: false });
+                document.querySelectorAll('pre code.language-mermaid').forEach(el => {
+                    const pre = el.parentElement;
+                    const div = document.createElement('div');
+                    div.className = 'mermaid';
+                    div.textContent = el.textContent;
+                    pre.parentElement.replaceChild(div, pre);
+                });
+                mermaid.run();
+            }
+        });
+    </script>
+</body>
+</html>

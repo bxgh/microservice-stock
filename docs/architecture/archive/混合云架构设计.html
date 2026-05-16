@@ -1,0 +1,782 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>混合云量化交易系统架构设计</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Noto+Serif+SC:wght@400;700;900&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    
+    <!-- Libraries -->
+    <script src="https://lib.baomitu.com/marked/11.1.1/marked.min.js"></script>
+    <link rel="stylesheet" href="https://lib.baomitu.com/github-markdown-css/5.5.0/github-markdown-dark.min.css">
+    <script src="https://lib.baomitu.com/mermaid/10.9.0/mermaid.min.js"></script>
+    
+    <!-- Syntax Highlighting -->
+    <link rel="stylesheet" href="https://lib.baomitu.com/highlight.js/11.9.0/styles/tokyo-night-dark.min.css">
+    <script src="https://lib.baomitu.com/highlight.js/11.9.0/highlight.min.js"></script>
+    
+    <style>
+        :root {
+            --bg: #0a0a0a;
+            --surface: #121212;
+            --surface-hover: #1a1a1a;
+            --border: #222222;
+            --accent: #eab308;
+            --accent-glow: rgba(234, 179, 8, 0.1);
+            --text-primary: #f1f5f9;
+            --text-secondary: #94a3b8;
+            --text-muted: #64748b;
+            --font-sans: 'Outfit', 'Noto Sans SC', -apple-system, sans-serif;
+            --font-serif: 'Noto Serif SC', serif;
+            --font-mono: 'JetBrains Mono', monospace;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background-color: var(--bg);
+            color: var(--text-primary);
+            font-family: var(--font-sans);
+            line-height: 1.7;
+            -webkit-font-smoothing: antialiased;
+            overflow-x: hidden;
+        }
+
+        /* Subtle background glow */
+        body::after {
+            content: '';
+            position: fixed;
+            top: 0;
+            right: 0;
+            width: 40vw;
+            height: 40vh;
+            background: radial-gradient(circle, var(--accent-glow) 0%, transparent 70%);
+            z-index: -1;
+            filter: blur(100px);
+            pointer-events: none;
+        }
+
+        .sidebar {
+            width: 260px;
+            height: 100vh;
+            position: fixed;
+            left: 0;
+            top: 0;
+            border-right: 1px solid var(--border);
+            background: var(--bg);
+            padding: 1.5rem;
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+            overflow-y: auto;
+            z-index: 100;
+        }
+
+        .nav-link {
+            color: var(--text-muted);
+            text-decoration: none;
+            font-size: 0.85rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            transition: color 0.2s;
+            padding: 0.5rem;
+            border-radius: 6px;
+        }
+        .nav-link:hover { color: var(--accent); background: var(--surface); }
+
+        .toc-title {
+            font-family: var(--font-serif);
+            font-size: 1rem;
+            color: var(--text-primary);
+            margin-bottom: 0.8rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding-left: 0.5rem;
+        }
+        .toc-title::before {
+            content: '';
+            width: 3px;
+            height: 1rem;
+            background: var(--accent);
+            border-radius: 2px;
+        }
+
+        .toc-list {
+            list-style: none;
+            display: flex;
+            flex-direction: column;
+            gap: 0.4rem;
+        }
+        .toc-item {
+            font-size: 0.8rem;
+            line-height: 1.3;
+        }
+        .toc-item a {
+            color: var(--text-muted);
+            text-decoration: none;
+            transition: all 0.2s;
+            display: block;
+            padding: 0.4rem 0.5rem;
+            border-radius: 4px;
+        }
+        .toc-item a:hover { color: var(--accent); background: var(--surface); }
+        .toc-item.level-3 { margin-left: 0.8rem; border-left: 1px solid var(--border); }
+
+        .container {
+            max-width: 860px;
+            margin: 0 auto 0 260px;
+            padding: 3rem 4rem;
+            animation: fadeIn 0.6s ease-out;
+        }
+
+        @media (max-width: 1024px) {
+            .sidebar { width: 220px; padding: 1rem; }
+            .container { margin-left: 220px; padding: 2rem; }
+        }
+
+        @media (max-width: 800px) {
+            .sidebar { position: static; width: 100%; height: auto; border-right: none; border-bottom: 1px solid var(--border); }
+            .container { margin-left: 0; padding: 1.5rem; }
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(5px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        header {
+            margin-bottom: 3rem;
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 1.5rem;
+        }
+
+        .meta {
+            font-family: var(--font-mono);
+            font-size: 0.75rem;
+            color: var(--accent);
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            margin-bottom: 0.8rem;
+            display: flex;
+            align-items: center;
+            gap: 0.8rem;
+        }
+
+        .meta::before {
+            content: '';
+            width: 20px;
+            height: 1px;
+            background-color: var(--accent);
+        }
+
+        h1 {
+            font-family: var(--font-serif);
+            font-size: 2.2rem;
+            font-weight: 900;
+            line-height: 1.2;
+            margin-bottom: 1rem;
+            color: var(--text-primary);
+        }
+
+        .markdown-body {
+            background: transparent !important;
+            color: var(--text-primary) !important;
+            font-family: var(--font-sans) !important;
+            font-size: 0.95rem !important;
+        }
+
+        .markdown-body h2 {
+            font-family: var(--font-serif);
+            font-size: 1.5rem !important;
+            color: var(--accent) !important;
+            border-bottom: 1px solid var(--border) !important;
+            padding-bottom: 0.5rem !important;
+            margin-top: 2.5rem !important;
+            scroll-margin-top: 1rem;
+        }
+
+        .markdown-body h3 {
+            font-family: var(--font-serif);
+            font-size: 1.25rem !important;
+            color: var(--text-primary) !important;
+            margin-top: 2rem !important;
+            scroll-margin-top: 1rem;
+        }
+
+        .markdown-body p, .markdown-body li {
+            font-size: 0.95rem !important;
+            color: var(--text-primary) !important;
+        }
+        
+        .markdown-body pre {
+            background-color: #1a1b26 !important; /* Match Tokyo Night Dark */
+            border: 1px solid var(--border);
+            border-radius: 8px !important;
+            padding: 0 !important; /* Code internal handles padding */
+            margin: 1.2rem 0 !important;
+            overflow: hidden;
+        }
+
+        .markdown-body pre code {
+            background-color: transparent !important;
+            padding: 1.2rem !important;
+            display: block;
+            font-family: var(--font-mono) !important;
+            font-size: 0.85rem !important;
+            line-height: 1.5;
+        }
+
+        .markdown-body blockquote {
+            border-left: 3px solid var(--accent) !important;
+            background: var(--surface);
+            padding: 0.8rem 1.2rem;
+            color: var(--text-secondary) !important;
+            margin: 1.2rem 0 !important;
+        }
+
+        .markdown-body table {
+            background: var(--surface);
+            font-size: 0.85rem !important;
+            margin: 1.2rem 0 !important;
+        }
+
+        footer {
+            margin-top: 4rem;
+            padding-top: 1.5rem;
+            border-top: 1px solid var(--border);
+            color: var(--text-muted);
+            font-size: 0.8rem;
+            text-align: center;
+        }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar { width: 5px; }
+        ::-webkit-scrollbar-track { background: var(--bg); }
+        ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+    </style>
+</head>
+<body>
+    <aside class="sidebar">
+        <a href="index.html" class="nav-link">
+            <span>←</span> 返回目录门户
+        </a>
+        
+        <div class="toc-container">
+            <h3 class="toc-title">文档导航</h3>
+            <ul class="toc-list" id="toc">
+                <!-- TOC items will be injected here -->
+            </ul>
+        </div>
+    </aside>
+
+    <div class="container">
+        <header>
+            <div class="meta">GLOBAL | 2026-05-16 19:06</div>
+            <h1>混合云量化交易系统架构设计</h1>
+        </header>
+
+        <article id="content" class="markdown-body">
+            <!-- Loading indicator -->
+            <p style="color: var(--text-muted)">正在解析文档内容...</p>
+        </article>
+
+        <footer>
+            &copy; 2026 MicroStock Project Docs | Generated by Antigravity
+        </footer>
+    </div>
+
+    <script id="markdown-raw" type="text/markdown"># 混合云量化交易系统架构设计
+
+## 1. 资源现状与分配策略
+
+### 1.1 硬件资源清单
+
+| 节点名称 | 硬件配置 | 网络环境 | 部署位置 | 成本/月 |
+|---------|---------|---------|---------|---------|
+| **腾讯云轻量服务器** | 2核 4G 80G SSD | 公网IP (124.221.80.250) | 腾讯云机房 | ~¥50-100 |
+| **腾讯云MySQL 5.7** | CDB实例 (配置待确认) | 内网访问/公网IP | 腾讯云机房 | 按量计费 |
+| **内网Ubuntu服务器** | 10核 64G 160G HDD | NAT出网/无公网IP | 本地机房/家庭 | 电费 |
+
+### 1.2 网络环境限制（关键约束）
+
+| 连接路径 | 状态 | 影响 |
+|---------|------|------|
+| 内网 → 外部数据源 (Baostock/AkShare) | ❌ **受限** | 数据采集必须在云端完成 |
+| 内网 → 云端MySQL jdbc:mysql://sh-cdb-h7flpxu4.sql.tencentcdb.com:26300/alwaysup | ✅ **通畅** |  |
+| 内网 → 云端Redis (6379) | ⚠️ **待测试** | 影响消息队列架构选型 |
+| 内网 → 云端HTTP (80/443) | ✅ **通畅** | 兜底方案：通过API中转 |
+
+### 1.3 已有软件资产
+
+| 组件 | 技术栈 | 当前状态 | 代码位置 |
+|------|--------|---------|---------|
+| **akshare-api** | FastAPI + AkShare | ✅ 已开发 | `/akshare-api` |
+| **baostock-api** | FastAPI + BaoStock + MySQL同步 | ✅ 已开发 | `/baostock-api` |
+| **pywencai-api** | FastAPI + PyWencai | ✅ 已开发 | `/pywencai-api` |
+| **Docker编排** | docker-compose.yml | ✅ 单机版本 | `/docker-compose.yml` |
+| **MySQL Schema** | K线表/用户表/同步进度表 | ✅ 已创建 | 云端MySQL |
+
+### 1.4 角色分配策略
+
+基于上述资源现状和网络限制，采用 **"云端采集+数据中转 + 内网计算 + ClickHouse加速"** 模式：
+
+| 节点 | 角色定义 | 关键组件 | CPU占用 | 内存占用 |
+|------|----------|----------|---------|---------|
+| **云端服务器** | **数据采集中心 + API网关** | Nginx, akshare/baostock/pywencai-api, Cloud-API, Redis | 50-70% | 3.5G/4G |
+| **内网服务器** | **策略计算引擎 + 查询加速** | ClickHouse(16G), Backtrader回测, 因子计算, AI训练 | 按需弹性 | 16G(CH) + 20G(回测) |
+| **云端MySQL** | **中央数据仓库（主库）** | 历史K线, 财务数据, 用户/策略配置 | - | - |
+| **前端** | **用户交互层** | 微信小程序(监控), Web端(深度分析) | - | - |
+
+**内网资源详细分配**（64GB总内存）:
+- ClickHouse: 16GB（查询加速层）
+- Backtrader回测引擎: 20GB（2个并发任务）
+- 因子计算/AI训练: 10GB
+- 系统预留: 18GB
+
+---
+
+## 2. 优化后系统架构拓扑图（含ClickHouse加速层）
+
+```mermaid
+graph TB
+    subgraph Client ["前端层"]
+        Mini[微信小程序]
+        Web[桌面Web]
+    end
+
+    subgraph Cloud ["☁️ 腾讯云 (2C 4G) - 数据采集 + API网关"]
+        Nginx[Nginx Gateway<br/>80/443]
+        
+        subgraph DataSources ["数据采集微服务"]
+            AkShare[akshare-api:8003]
+            BaoStock[baostock-api:8001]
+            PyWencai[pywencai-api:8002]
+        end
+        
+        CloudAPI[cloud-api:8000<br/>业务聚合/鉴权]
+        Redis[Redis:6379<br/>Cache/Queue]
+    end
+
+    subgraph TencentDB ["☁️ 腾讯云MySQL"]
+        MySQL[(sh-cdb-h7flpxu4:26300<br/>alwaysup<br/>主数据源)]
+    end
+
+    subgraph Home ["🏠 内网服务器 (10C 64G) - 计算引擎"]
+        ClickHouse[(ClickHouse<br/>🚀查询加速层<br/>30倍压缩)]
+        
+        DataSync[数据同步服务<br/>T+1增量同步]
+        StrategyEngine[策略回测引擎<br/>Backtrader]
+        FactorCalc[因子计算服务]
+        MLTraining[AI模型训练]
+        TaskWorker[任务Worker]
+    end
+
+    %% 用户访问
+    Mini & Web -->|HTTPS| Nginx
+    Nginx --> CloudAPI
+    
+    %% 云端内部调用
+    CloudAPI -->|聚合调用| DataSources
+    CloudAPI -->|写入/读取| MySQL
+    CloudAPI -->|读写| Redis
+    
+    %% 数据采集写入（主库）
+    DataSources -->|实时同步| MySQL
+    
+    %% 内网数据同步（T+1）
+    DataSync -->|每日拉取增量| MySQL
+    DataSync -->|批量导入| ClickHouse
+    
+    %% 内网高性能查询通路
+    TaskWorker -.->|监听任务| Redis
+    TaskWorker -.->|备选:HTTP轮询| Nginx
+    
+    StrategyEngine -->|🚀秒级查询| ClickHouse
+    FactorCalc -->|🚀列式聚合| ClickHouse
+    MLTraining -->|批量特征提取| ClickHouse
+    
+    StrategyEngine -->|回写结果| MySQL
+    
+    style ClickHouse fill:#ffa,stroke:#f66,stroke-width:4px
+    style MySQL fill:#f96,stroke:#333,stroke-width:3px
+    style StrategyEngine fill:#9f6,stroke:#333,stroke-width:2px
+```
+
+### 架构优化说明
+
+#### ✅ 三层存储架构
+
+| 层级 | 组件 | 角色 | 性能 |
+|------|------|------|------|
+| **L1: 云端MySQL** | 主数据源 | 实时写入、事务保证 | 写入 <10ms |
+| **L2: 内网ClickHouse** | 查询加速层 | 只读、列式存储、压缩 | 查询 <15ms（比MySQL快13倍） |
+| **L3: 内存计算** | Pandas/NumPy | 热数据缓存 | 查询 <1ms |
+
+#### ✅ 关键性能优化点
+
+1. **ClickHouse列式存储优势**：
+   - 回测仅需 `date, close, volume` 3列，无需加载全部20+字段
+   - 查询性能：MySQL 200ms → ClickHouse 15ms
+   - 压缩比：原始2GB → 压缩后60MB（节省磁盘空间）
+
+2. **内网直连MySQL（写入）+ ClickHouse（查询）**：
+   - 云端数据采集 → MySQL（保证实时性和一致性）
+   - 内网T+1同步 → ClickHouse（历史数据查询加速）
+   - 回测结果 → MySQL（保证数据安全）
+
+3. **数据同步策略**：
+   - 每日16:00收盘后，从MySQL拉取当日新增K线
+   - 批量导入ClickHouse（单次同步耗时 <1分钟）
+   - 历史数据查询无延迟，实时数据允许T+1延迟
+
+---
+
+## 3. 核心设计方案
+
+### 3.1 网络通信架构
+
+基于内网可直连MySQL的确认，通信架构大幅简化：
+
+| 通信路径 | 协议 | 用途 | 性能 |
+|---------|------|------|------|
+| **内网 → MySQL** | **TCP:26300** | **策略回测数据读取**（主要） | **< 50ms** |
+| 内网 → Redis | TCP:6379 (待测) | 任务队列、实时缓存 | < 10ms |
+| 内网 → Cloud API | HTTPS:443 (备选) | 任务提交/状态查询 | ~100ms |
+| 云端微服务 → MySQL | TCP:26300 | 数据采集写入 | < 10ms (同机房) |
+
+#### 通信模式设计
+
+**方案A：Redis队列模式**（如果Redis连通 ⚠️待测）
+```python
+# 云端：任务派发
+redis.lpush("task:backtest", json.dumps({
+    "task_id": "uuid",
+    "strategy": "MA_CROSS",
+    "params": {"stock": "600519", "start": "2021-01-01"}
+}))
+
+# 内网：Worker拉取任务
+task = redis.brpop("task:backtest", timeout=30)
+# 直接查询MySQL执行回测
+result = backtest_engine.run(task)
+# 结果写回MySQL
+mysql.execute("INSERT INTO backtest_results ...")
+```
+
+**方案B：HTTP轮询模式**（兜底方案）
+```python
+# 内网：定时轮询云端API
+while True:
+    tasks = requests.get("https://cloud/api/tasks/pending")
+    for task in tasks:
+        result = backtest_engine.run(task)
+        requests.post("https://cloud/api/tasks/complete", json=result)
+    time.sleep(5)
+```
+
+### 3.2 服务拆分详述
+
+#### A. 云端 (2C 4G) - "采集+网关"
+*   **akshare-api, baostock-api, pywencai-api**：独立容器，各限制256MB
+*   **cloud-api**：业务聚合层，800MB（处理用户请求、聚合数据源）
+*   **nginx**：静态资源+反向代理，128MB
+*   **redis**：任务队列+缓存，1.5GB
+
+#### B. 内网 (10C 64G) - "计算中心"
+*   **策略回测引擎**：
+    - Backtrader框架，单次回测可占用 5-20GB 内存（加载全市场数据）
+    - 并发度：建议同时运行 2-3 个回测任务
+*   **因子计算服务**：
+    - Pandas批量计算技术指标
+    - 直接从MySQL读取原始K线 → 计算因子 → 写入 `factor_data` 表
+*   **AI模型训练**（可选）：
+    - 使用scikit-learn/XGBoost训练选股模型
+    - 64G内存足够支撑中等规模深度学习
+
+#### C. 数据层 - MySQL + ClickHouse混合架构
+
+**双数据库职责分工**：
+
+| 数据库 | 角色 | 读写模式 | 适用场景 |
+|--------|------|---------|---------|
+| **MySQL（云端）** | 主数据源 | 读写 | 实时数据采集、事务处理、用户数据 |
+| **ClickHouse（内网）** | 查询加速 | 只读 | 回测查询、因子计算、大规模聚合 |
+
+**MySQL表结构（保持现有设计）**：
+
+```sql
+-- 核心K线表（支持快速范围查询）
+CREATE TABLE kline_day (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    code VARCHAR(10) NOT NULL,
+    trade_date DATE NOT NULL,
+    open DECIMAL(10,2),
+    high DECIMAL(10,2),
+    low DECIMAL(10,2),
+    close DECIMAL(10,2),
+    volume BIGINT,
+    INDEX idx_code_date (code, trade_date)
+) ENGINE=InnoDB;
+
+-- 回测结果表
+CREATE TABLE backtest_results (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    task_id VARCHAR(36) UNIQUE,
+    strategy_name VARCHAR(50),
+    total_return DECIMAL(10,4),
+    sharpe_ratio DECIMAL(10,4),
+    max_drawdown DECIMAL(10,4),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    equity_curve JSON
+) ENGINE=InnoDB;
+```
+
+**ClickHouse表结构（内网查询加速）**：
+
+```sql
+-- 采用MergeTree引擎，按月分区
+CREATE TABLE kline_day
+(
+    code String,
+    trade_date Date,
+    open Float32,
+    high Float32,
+    low Float32,
+    close Float32,
+    volume UInt64,
+    amount Float64,
+    turnover Float32,
+    pct_chg Float32
+)
+ENGINE = MergeTree()
+PARTITION BY toYYYYMM(trade_date)  -- 按月分区，加速历史查询
+ORDER BY (code, trade_date)
+SETTINGS index_granularity = 8192;
+
+-- 性能对比：
+-- 查询600519三年数据（~750条）
+-- MySQL: SELECT * FROM kline_day WHERE code='600519' AND trade_date >= '2021-01-01'  → 200ms
+-- ClickHouse: 同样查询 → 15ms（快13倍）
+```
+
+**数据同步机制**：
+
+```python
+# 内网：每日定时任务（16:05执行）
+import clickhouse_driver
+import pymysql
+from datetime import date
+
+def sync_daily_kline():
+    # 1. 连接云端MySQL
+    mysql_conn = pymysql.connect(
+        host='sh-cdb-h7flpxu4.sql.tencentcdb.com',
+        port=26300,
+        user='xxx',
+        password='xxx',
+        database='alwaysup'
+    )
+    
+    # 2. 获取今日新增数据
+    today = date.today()
+    cursor = mysql_conn.cursor()
+    cursor.execute("""
+        SELECT code, trade_date, open, high, low, close, volume, amount
+        FROM kline_day
+        WHERE trade_date = %s
+    """, (today,))
+    new_data = cursor.fetchall()
+    
+    # 3. 批量插入ClickHouse
+    ch_client = clickhouse_driver.Client('localhost')
+    ch_client.execute(
+        "INSERT INTO kline_day VALUES",
+        new_data
+    )
+    
+    print(f"✅ 同步完成：{len(new_data)} 条K线数据")
+
+# Cron: 0 16 * * 1-5  /usr/bin/python3 /path/to/sync_daily_kline.py
+```
+
+---
+
+## 4. 业务流程设计
+
+### 场景一：用户查看"自选股实时行情"（小程序）
+
+```mermaid
+sequenceDiagram
+    participant User as 用户
+    participant Mini as 微信小程序
+    participant Nginx as Nginx网关
+    participant API as Cloud-API
+    participant Redis as Redis缓存
+    participant MySQL as MySQL
+
+    User->>Mini: 打开自选股页面
+    Mini->>Nginx: GET /api/stocks/watchlist
+    Nginx->>API: 转发请求
+    
+    API->>Redis: GET watchlist:{user_id}
+    alt 缓存命中
+        Redis-->>API: 返回股票列表
+    else 缓存未命中
+        API->>MySQL: SELECT code FROM watchlist
+        MySQL-->>API: 返回股票列表
+        API->>Redis: SET watchlist:{user_id}
+    end
+    
+    API->>AkShare: 批量获取实时价格
+    AkShare-->>API: 返回行情数据
+    API-->>Mini: JSON响应
+    Mini-->>User: 展示实时行情
+```
+
+**性能指标**：端到端延迟 < 300ms
+
+---
+
+### 场景二：用户提交策略回测任务（Web端）
+
+```mermaid
+sequenceDiagram
+    participant User as 用户
+    participant Web as Web前端
+    participant API as Cloud-API
+    participant Redis as Redis队列
+    participant Worker as 内网Worker
+    participant MySQL as MySQL
+
+    User->>Web: 配置策略参数<br/>MA5/MA20, 600519, 2021-2024
+    Web->>API: POST /api/backtest/submit
+    API->>MySQL: INSERT INTO tasks (status='pending')
+    API->>Redis: LPUSH task:backtest {task_id, params}
+    API-->>Web: {task_id: "xxx"}
+    
+    Note over Worker,Redis: 内网Worker监听队列
+    Worker->>Redis: BRPOP task:backtest
+    Redis-->>Worker: 返回任务
+    
+    Worker->>MySQL: SELECT * FROM kline_day<br/>WHERE code='600519'<br/>AND date BETWEEN '2021-01-01' AND '2024-12-31'
+    MySQL-->>Worker: 返回~1000条K线数据
+    
+    Note over Worker: Backtrader回测引擎<br/>执行策略，耗时5-30秒
+    
+    Worker->>MySQL: INSERT INTO backtest_results<br/>(task_id, total_return=0.45, sharpe=1.8, ...)
+    Worker->>MySQL: UPDATE tasks SET status='completed'
+    
+    Note over Web,API: 前端轮询或WebSocket接收通知
+    Web->>API: GET /api/backtest/{task_id}
+    API->>MySQL: SELECT * FROM backtest_results
+    MySQL-->>API: 返回回测详情
+    API-->>Web: JSON结果
+    Web-->>User: 展示收益曲线
+```
+
+**关键优化点**：
+- ✅ 内网直连MySQL读取K线，避免传输100MB+ JSON数据
+- ✅ 回测结果直接写入MySQL，无需HTTP序列化
+- ✅ 云端API仅负责任务派发和状态查询，不参与数据传输
+
+---
+
+## 5. 前端架构建议
+
+| 端 | 技术选型 | 关注点 |
+|----|----------|--------|
+| **微信小程序** | Taro 或 Uni-app | **轻量化**。仅展示核心看板、个股详情、策略信号预警。使用 ECharts 为小程序优化的版本。 |
+| **桌面 Web** | React + Ant Design | **专业性**。提供K线复盘（Lightweight-charts高性能）、策略代码编辑器、复杂表单配置。 |
+
+---
+
+## 6. 实施路线图
+
+1.  **基础设施联通 (Day 1-2)**:
+    *   [云端] 安装 Redis，配置防火墙允许内网IP访问。
+    *   [内网] 编写简单的 Python 脚本测试连接云端 MySQL 和 Redis。
+
+2.  **数据同步服务 (Day 3-5)**:
+    *   迁移现有的 `akshare/baostock` 服务到 **内网服务器** (因为内网算力强，且抓取任务无需公网IP暴露)。
+    *   内网配置定时任务，每日收盘后抓取数据 -> 写入云端 MySQL。
+
+3.  **API 网关开发 (Day 6-10)**:
+    *   在云端部署 FastAPI。
+    *   实现 `/auth` (登录) 和 `/market` (读库) 接口。
+
+4.  **计算微服务化 (Day 11-15)**:
+    *   利用 `Celery` + `Redis` 搭建异步任务框架。
+    *   将策略代码封装为 Worker 函数，部署在内网。
+
+---
+
+## 7. 潜在风险与对策
+
+*   **风险**: 内网服务器断电/断网。
+    *   **对策**: 云端API需实现"降级处理"，检测到Worker离线时，提示用户"回测服务暂不可用"，但不影响基础行情查看。
+*   **风险**: 云数据库流量费。
+    *   **对策**: 尽量在内网缓存历史数据，减少对云端MySQL的全量读取；回测结果仅上传摘要数据，不上传详单。
+</script>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', async () => {
+            const rawMd = document.getElementById('markdown-raw').textContent;
+            const contentEl = document.getElementById('content');
+            const tocEl = document.getElementById('toc');
+            
+            // Set options for marked
+            marked.setOptions({
+                gfm: true,
+                breaks: true,
+                headerIds: true,
+                mangle: false,
+                highlight: function(code, lang) {
+                    const language = hljs.getLanguage(lang) ? lang : 'plaintext';
+                    return hljs.highlight(code, { language }).value;
+                }
+            });
+
+            // Parse Markdown
+            contentEl.innerHTML = marked.parse(rawMd);
+            
+            // Generate TOC
+            const headings = contentEl.querySelectorAll('h2, h3');
+            headings.forEach((h, index) => {
+                if (!h.id) h.id = 'heading-' + index;
+                
+                const li = document.createElement('li');
+                li.className = 'toc-item level-' + h.tagName.toLowerCase().charAt(1);
+                
+                const a = document.createElement('a');
+                a.href = '#' + h.id;
+                a.textContent = h.textContent;
+                
+                li.appendChild(a);
+                tocEl.appendChild(li);
+            });
+
+            // Handle Mermaid
+            if (window.mermaid) {
+                mermaid.initialize({ startOnLoad: false, theme: 'dark', useWorker: false });
+                document.querySelectorAll('pre code.language-mermaid').forEach(el => {
+                    const pre = el.parentElement;
+                    const div = document.createElement('div');
+                    div.className = 'mermaid';
+                    div.textContent = el.textContent;
+                    pre.parentElement.replaceChild(div, pre);
+                });
+                mermaid.run();
+            }
+        });
+    </script>
+</body>
+</html>

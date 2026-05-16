@@ -1,0 +1,2095 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>第XI册 · A股相变监测体系</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;0,700;1,500&family=Noto+Serif+SC:wght@400;500;600;700;900&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0a0906;
+  --bg-elev:#13100b;
+  --bg-deep:#1a1610;
+  --bg-inner:#1f1a12;
+  --ink:#f2ead8;
+  --ink-dim:#c9bfa8;
+  --ink-soft:#8d8575;
+  --muted:#5c564a;
+  --accent:#d65d43;
+  --accent-2:#7fbba3;
+  --gold:#e0b663;
+  --blue:#6fa8d0;
+  --purple:#b88cd0;
+  --line:#332d22;
+  --line-soft:#241f17;
+  --grid:rgba(242,234,216,.08);
+
+  --layer-1:#d65d43;
+  --layer-2:#e0b663;
+  --layer-3:#7fbba3;
+  --layer-4:#6fa8d0;
+  --layer-5:#b88cd0;
+  --layer-6:#8d8575;
+
+  --danger:#e87060;
+  --warn:#e0b663;
+  --good:#7fbba3;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{
+  font-family:"Noto Serif SC",serif;
+  background:var(--bg);
+  color:var(--ink);
+  line-height:1.6;
+  overflow-x:hidden;
+  min-height:100vh;
+}
+body::before{
+  content:"";
+  position:fixed;inset:0;
+  background-image:
+    radial-gradient(circle at 15% 20%,rgba(224,182,99,.05) 0%,transparent 45%),
+    radial-gradient(circle at 85% 70%,rgba(214,93,67,.04) 0%,transparent 55%),
+    radial-gradient(circle at 50% 90%,rgba(111,168,208,.03) 0%,transparent 50%);
+  pointer-events:none;
+  z-index:0;
+}
+
+/* ============ 布局框架 ============ */
+.layout{
+  display:flex;
+  min-height:100vh;
+  position:relative;
+  z-index:1;
+}
+
+/* ============ 左侧导航 ============ */
+.sidebar{
+  width:240px;
+  min-width:240px;
+  background:var(--bg-elev);
+  border-right:1px solid var(--line);
+  padding:24px 0;
+  position:sticky;
+  top:0;
+  height:100vh;
+  overflow-y:auto;
+  transition:width .3s ease, min-width .3s ease, padding .3s ease;
+  z-index:10;
+}
+.sidebar.collapsed{
+  width:56px;
+  min-width:56px;
+}
+.sidebar-header{
+  padding:0 24px 24px;
+  border-bottom:1px solid var(--line);
+  margin-bottom:20px;
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:10px;
+}
+.sidebar.collapsed .sidebar-header{padding:0 12px 20px}
+.sidebar-brand{
+  font-family:"Cormorant Garamond",serif;
+  font-style:italic;
+  font-size:36px;
+  color:var(--accent);
+  line-height:1;
+  font-weight:600;
+  letter-spacing:-.02em;
+  text-shadow:0 0 20px rgba(214,93,67,.3);
+  flex:1;
+  overflow:hidden;
+  white-space:nowrap;
+}
+.sidebar.collapsed .sidebar-brand{font-size:22px;text-align:center}
+.sidebar-brand small{
+  display:block;
+  font-family:"JetBrains Mono",monospace;
+  font-style:normal;
+  font-size:10px;
+  color:var(--ink-soft);
+  letter-spacing:.2em;
+  margin-top:4px;
+}
+.sidebar.collapsed .sidebar-brand small{display:none}
+.toggle-btn{
+  background:var(--bg-deep);
+  border:1px solid var(--line);
+  color:var(--ink-dim);
+  width:28px;
+  height:28px;
+  border-radius:3px;
+  cursor:pointer;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-size:14px;
+  transition:all .2s;
+  flex-shrink:0;
+}
+.toggle-btn:hover{background:var(--line);color:var(--gold)}
+
+.nav-section{
+  padding:16px 24px 4px;
+  font-family:"JetBrains Mono",monospace;
+  font-size:9px;
+  letter-spacing:.2em;
+  color:var(--ink-soft);
+  text-transform:uppercase;
+  font-weight:600;
+}
+.sidebar.collapsed .nav-section{display:none}
+.nav-item{
+  display:flex;
+  align-items:center;
+  gap:12px;
+  padding:10px 24px;
+  color:var(--ink-dim);
+  text-decoration:none;
+  font-size:13px;
+  border-left:2px solid transparent;
+  transition:all .2s;
+  cursor:pointer;
+}
+.nav-item:hover{
+  background:var(--bg-deep);
+  color:var(--gold);
+  border-left-color:var(--gold);
+}
+.nav-item.active{
+  background:var(--bg-deep);
+  color:var(--gold);
+  border-left-color:var(--accent);
+}
+.sidebar.collapsed .nav-item{padding:10px 0;justify-content:center}
+.sidebar.collapsed .nav-item .nav-label{display:none}
+.nav-icon{
+  width:20px;
+  height:20px;
+  flex-shrink:0;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-family:"Cormorant Garamond",serif;
+  font-style:italic;
+  font-weight:600;
+  color:var(--accent);
+  font-size:16px;
+}
+
+/* ============ 主内容区 ============ */
+.main{
+  flex:1;
+  padding:32px 44px 60px;
+  max-width:1400px;
+  min-width:0;
+}
+
+/* ============ 顶部标题栏 ============ */
+.top-header{
+  display:flex;
+  justify-content:space-between;
+  align-items:flex-end;
+  padding-bottom:20px;
+  border-bottom:2px solid var(--ink-dim);
+  margin-bottom:28px;
+}
+.title-group{flex:1}
+.main-title{
+  font-size:38px;
+  font-weight:900;
+  color:var(--ink);
+  line-height:1.1;
+  letter-spacing:-.01em;
+}
+.main-title span{
+  color:var(--accent);
+  font-style:italic;
+  font-family:"Cormorant Garamond",serif;
+  font-weight:600;
+}
+.main-subtitle{
+  font-family:"Cormorant Garamond",serif;
+  font-style:italic;
+  font-size:17px;
+  color:var(--ink-dim);
+  margin-top:6px;
+}
+.top-meta{
+  text-align:right;
+  font-family:"JetBrains Mono",monospace;
+  font-size:10px;
+  color:var(--ink-soft);
+  letter-spacing:.15em;
+  text-transform:uppercase;
+  line-height:1.7;
+}
+.meta-badge{
+  display:inline-block;
+  background:var(--accent);
+  color:var(--bg);
+  padding:3px 10px;
+  font-weight:700;
+  margin-top:6px;
+  letter-spacing:.2em;
+}
+
+/* ============ 章节 ============ */
+.section{
+  margin-bottom:40px;
+  scroll-margin-top:20px;
+}
+.sec-head{
+  display:flex;
+  align-items:baseline;
+  gap:16px;
+  margin-bottom:18px;
+  padding-bottom:10px;
+  border-bottom:1px solid var(--line);
+}
+.sec-num{
+  font-family:"Cormorant Garamond",serif;
+  font-style:italic;
+  font-size:44px;
+  font-weight:600;
+  color:var(--accent);
+  line-height:.9;
+}
+.sec-title{
+  font-size:24px;
+  font-weight:700;
+  color:var(--ink);
+}
+.sec-sub{
+  font-family:"Cormorant Garamond",serif;
+  font-style:italic;
+  font-size:14px;
+  color:var(--ink-dim);
+  margin-top:2px;
+}
+
+/* ============ 通用网格 ============ */
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+.grid-3{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+.grid-4{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}
+.grid-6{display:grid;grid-template-columns:repeat(6,1fr);gap:10px}
+.grid-12{display:grid;grid-template-columns:repeat(12,1fr);gap:12px}
+
+/* ============ 卡片基础 ============ */
+.card{
+  background:var(--bg-elev);
+  border:1px solid var(--line);
+  padding:16px 18px;
+  position:relative;
+}
+.card-lg{padding:22px 24px}
+.card-title{
+  font-size:14px;
+  font-weight:700;
+  color:var(--ink);
+  margin-bottom:6px;
+  display:flex;
+  align-items:center;
+  gap:10px;
+}
+.card-title .tag-mini{
+  font-family:"JetBrains Mono",monospace;
+  font-size:9px;
+  letter-spacing:.1em;
+  padding:2px 7px;
+  background:var(--line);
+  color:var(--gold);
+  font-weight:600;
+  border-radius:2px;
+}
+.card-sub{
+  font-family:"JetBrains Mono",monospace;
+  font-size:10px;
+  color:var(--ink-soft);
+  letter-spacing:.1em;
+  margin-bottom:12px;
+  text-transform:uppercase;
+}
+.card-body{font-size:13px;line-height:1.7;color:var(--ink-dim)}
+.card-body strong{color:var(--gold);font-weight:600}
+.card-body em{color:var(--accent-2);font-style:italic}
+
+/* ============ 数据卡 (小仪表盘) ============ */
+.stat-card{
+  background:var(--bg-elev);
+  border:1px solid var(--line);
+  padding:14px 16px;
+  border-left:3px solid var(--accent);
+  position:relative;
+}
+.stat-label{
+  font-family:"JetBrains Mono",monospace;
+  font-size:9px;
+  color:var(--ink-soft);
+  letter-spacing:.15em;
+  text-transform:uppercase;
+  margin-bottom:4px;
+}
+.stat-value{
+  font-family:"JetBrains Mono",monospace;
+  font-size:22px;
+  font-weight:700;
+  color:var(--ink);
+  line-height:1.1;
+}
+.stat-unit{
+  font-size:11px;
+  color:var(--ink-soft);
+  font-weight:400;
+}
+.stat-foot{
+  font-size:11px;
+  color:var(--ink-dim);
+  margin-top:4px;
+}
+
+/* ============ 六层塔 ============ */
+.pyramid{
+  display:flex;
+  flex-direction:column;
+  gap:3px;
+  margin:14px 0;
+}
+.pyramid-row{
+  display:grid;
+  grid-template-columns:90px 1fr 140px 100px;
+  gap:14px;
+  padding:11px 16px;
+  border-left:4px solid var(--layer-1);
+  background:var(--bg-elev);
+  align-items:center;
+  position:relative;
+  transition:all .2s;
+}
+.pyramid-row:hover{background:var(--bg-deep)}
+.pyramid-row.L1{border-left-color:var(--layer-1);margin-left:0}
+.pyramid-row.L2{border-left-color:var(--layer-2);margin-left:20px}
+.pyramid-row.L3{border-left-color:var(--layer-3);margin-left:40px}
+.pyramid-row.L4{border-left-color:var(--layer-4);margin-left:60px}
+.pyramid-row.L5{border-left-color:var(--layer-5);margin-left:80px}
+.pyramid-row.L6{border-left-color:var(--layer-6);margin-left:100px}
+.py-level{
+  font-family:"Cormorant Garamond",serif;
+  font-style:italic;
+  font-size:22px;
+  font-weight:700;
+  color:var(--ink);
+}
+.py-level small{
+  display:block;
+  font-family:"Noto Serif SC";
+  font-style:normal;
+  font-size:11px;
+  color:var(--ink-dim);
+  margin-top:2px;
+  font-weight:500;
+}
+.py-desc{
+  font-size:12px;
+  color:var(--ink-dim);
+  line-height:1.6;
+}
+.py-desc strong{color:var(--gold);font-weight:600}
+.py-indicator{
+  font-family:"JetBrains Mono",monospace;
+  font-size:10px;
+  color:var(--ink);
+  background:var(--bg-deep);
+  padding:5px 9px;
+  border-radius:2px;
+  text-align:center;
+  border:1px solid var(--line);
+}
+.py-freq{
+  font-family:"JetBrains Mono",monospace;
+  font-size:11px;
+  color:var(--accent);
+  font-weight:700;
+  text-align:right;
+}
+
+/* ============ 临界带环形图示 ============ */
+.critical-gauge-wrap{
+  display:grid;
+  grid-template-columns:280px 1fr;
+  gap:24px;
+  align-items:center;
+}
+.critical-legend{display:flex;flex-direction:column;gap:10px}
+.legend-item{
+  display:grid;
+  grid-template-columns:14px 1fr auto;
+  gap:10px;
+  align-items:center;
+  padding:9px 12px;
+  background:var(--bg-elev);
+  border:1px solid var(--line);
+  font-size:12px;
+  color:var(--ink);
+}
+.legend-dot{
+  width:12px;
+  height:12px;
+  border-radius:50%;
+}
+.legend-val{
+  font-family:"JetBrains Mono",monospace;
+  font-size:11px;
+  color:var(--ink-soft);
+}
+
+/* ============ 信号卡 ============ */
+.signal-card{
+  background:var(--bg-elev);
+  border:1px solid var(--line);
+  border-top:3px solid var(--accent);
+  padding:16px 18px;
+}
+.signal-card.s1{border-top-color:#d65d43}
+.signal-card.s2{border-top-color:#e0b663}
+.signal-card.s3{border-top-color:#7fbba3}
+.signal-card.s4{border-top-color:#6fa8d0}
+.signal-header{
+  display:flex;
+  justify-content:space-between;
+  align-items:flex-start;
+  margin-bottom:8px;
+}
+.signal-num{
+  font-family:"Cormorant Garamond",serif;
+  font-style:italic;
+  font-size:32px;
+  font-weight:700;
+  color:var(--accent);
+  line-height:1;
+}
+.signal-tag{
+  font-family:"JetBrains Mono",monospace;
+  font-size:9px;
+  padding:3px 8px;
+  letter-spacing:.15em;
+  background:var(--line);
+  color:var(--gold);
+  font-weight:700;
+}
+.signal-name{
+  font-size:15px;
+  font-weight:700;
+  color:var(--ink);
+  margin:6px 0 4px;
+}
+.signal-en{
+  font-family:"Cormorant Garamond",serif;
+  font-style:italic;
+  font-size:11px;
+  color:var(--ink-soft);
+  margin-bottom:10px;
+}
+.signal-body{
+  font-size:12px;
+  line-height:1.65;
+  color:var(--ink-dim);
+}
+.signal-body strong{color:var(--gold);font-weight:600}
+.signal-metric{
+  margin-top:10px;
+  padding:8px 10px;
+  background:var(--bg-deep);
+  border-left:2px solid var(--accent-2);
+  font-family:"JetBrains Mono",monospace;
+  font-size:11px;
+  color:var(--ink);
+}
+
+/* ============ CCI 公式 ============ */
+.formula-block{
+  background:linear-gradient(135deg,var(--bg-deep) 0%,var(--bg-elev) 100%);
+  border:1px solid var(--gold);
+  padding:22px 28px;
+  margin:16px 0;
+  text-align:center;
+  position:relative;
+  overflow:hidden;
+}
+.formula-block::before{
+  content:"";
+  position:absolute;
+  inset:0;
+  background:radial-gradient(circle at center,rgba(224,182,99,.08) 0%,transparent 70%);
+  pointer-events:none;
+}
+.formula-label{
+  font-family:"JetBrains Mono",monospace;
+  font-size:10px;
+  color:var(--gold);
+  letter-spacing:.25em;
+  text-transform:uppercase;
+  margin-bottom:10px;
+  position:relative;
+}
+.formula-eq{
+  font-family:"JetBrains Mono",monospace;
+  font-size:16px;
+  color:var(--ink);
+  line-height:1.8;
+  position:relative;
+  font-weight:500;
+}
+.formula-eq .v{color:var(--gold);font-weight:700}
+.formula-eq .coef{color:var(--accent)}
+.formula-eq .op{color:var(--ink-soft)}
+
+/* ============ 三阶预警 ============ */
+.alert-bar{
+  display:grid;
+  grid-template-columns:1fr 1fr 1fr;
+  gap:4px;
+  margin:14px 0;
+}
+.alert-step{
+  padding:14px 16px;
+  color:var(--ink);
+  position:relative;
+}
+.alert-step.level1{background:rgba(224,182,99,.15);border-top:3px solid var(--gold)}
+.alert-step.level2{background:rgba(214,93,67,.15);border-top:3px solid var(--accent)}
+.alert-step.level3{background:rgba(232,112,96,.25);border-top:3px solid var(--danger)}
+.alert-emoji{
+  font-family:"Cormorant Garamond",serif;
+  font-style:italic;
+  font-size:28px;
+  font-weight:700;
+  line-height:1;
+}
+.alert-step.level1 .alert-emoji{color:var(--gold)}
+.alert-step.level2 .alert-emoji{color:var(--accent)}
+.alert-step.level3 .alert-emoji{color:var(--danger)}
+.alert-title{
+  font-size:14px;
+  font-weight:700;
+  margin:6px 0 4px;
+  color:var(--ink);
+}
+.alert-cond{
+  font-family:"JetBrains Mono",monospace;
+  font-size:10px;
+  color:var(--ink-dim);
+  margin-bottom:6px;
+  line-height:1.5;
+}
+.alert-action{
+  font-size:12px;
+  color:var(--ink);
+  line-height:1.5;
+}
+
+/* ============ 表格 ============ */
+.tbl{
+  width:100%;
+  border-collapse:collapse;
+  font-size:12px;
+  margin:10px 0;
+}
+.tbl th{
+  font-family:"JetBrains Mono",monospace;
+  font-size:9px;
+  letter-spacing:.12em;
+  text-transform:uppercase;
+  padding:10px 8px;
+  text-align:left;
+  color:var(--ink-soft);
+  font-weight:700;
+  background:var(--bg-deep);
+  border-top:1px solid var(--ink-dim);
+  border-bottom:1px solid var(--line);
+}
+.tbl td{
+  padding:9px 8px;
+  border-bottom:1px solid var(--line);
+  color:var(--ink);
+  vertical-align:top;
+}
+.tbl tr:hover td{background:var(--bg-elev)}
+.tbl .num{font-family:"JetBrains Mono",monospace;font-weight:600;text-align:right}
+.tbl .mono{font-family:"JetBrains Mono",monospace}
+.tbl .bold{font-weight:700}
+.tbl .hot{color:var(--danger)}
+.tbl .warm{color:var(--accent)}
+.tbl .neutral{color:var(--gold)}
+.tbl .cool{color:var(--accent-2)}
+
+/* ============ 错位信号矩阵 ============ */
+.dislocation-grid{
+  display:grid;
+  grid-template-columns:repeat(2,1fr);
+  gap:12px;
+  margin:14px 0;
+}
+.disloc-card{
+  background:var(--bg-elev);
+  border:1px solid var(--line);
+  border-left:4px solid var(--accent);
+  padding:14px 16px;
+}
+.disloc-card.critical{border-left-color:var(--danger);background:rgba(232,112,96,.06)}
+.disloc-card.warning{border-left-color:var(--accent)}
+.disloc-card.neutral{border-left-color:var(--gold)}
+.disloc-card.safe{border-left-color:var(--accent-2)}
+.disloc-title{
+  font-size:13px;
+  font-weight:700;
+  color:var(--ink);
+  margin-bottom:6px;
+  display:flex;
+  align-items:center;
+  gap:10px;
+}
+.disloc-title .icon{
+  font-family:"Cormorant Garamond",serif;
+  font-style:italic;
+  font-size:22px;
+  color:var(--accent);
+}
+.disloc-card.critical .disloc-title .icon{color:var(--danger)}
+.disloc-card.neutral .disloc-title .icon{color:var(--gold)}
+.disloc-card.safe .disloc-title .icon{color:var(--accent-2)}
+.disloc-pattern{
+  font-family:"JetBrains Mono",monospace;
+  font-size:11px;
+  color:var(--ink-dim);
+  margin-bottom:6px;
+  line-height:1.5;
+}
+.disloc-mean{
+  font-size:12px;
+  color:var(--ink);
+  line-height:1.6;
+}
+
+/* ============ 进度条式指标 ============ */
+.bar-indicator{
+  margin:8px 0;
+}
+.bar-header{
+  display:flex;
+  justify-content:space-between;
+  font-size:11px;
+  margin-bottom:4px;
+}
+.bar-label{color:var(--ink-dim)}
+.bar-val{
+  font-family:"JetBrains Mono",monospace;
+  color:var(--ink);
+  font-weight:700;
+}
+.bar-track{
+  height:6px;
+  background:var(--bg-deep);
+  border-radius:3px;
+  overflow:hidden;
+  border:1px solid var(--line);
+  position:relative;
+}
+.bar-fill{
+  height:100%;
+  background:linear-gradient(90deg,var(--accent-2) 0%,var(--gold) 60%,var(--accent) 85%,var(--danger) 100%);
+  border-radius:3px;
+}
+.bar-marker{
+  position:absolute;
+  top:-2px;
+  width:2px;
+  height:10px;
+  background:var(--ink);
+}
+
+/* ============ 引用块 ============ */
+.quote{
+  background:var(--bg-deep);
+  border-left:3px solid var(--gold);
+  padding:14px 18px;
+  margin:14px 0;
+  font-family:"Cormorant Garamond",serif;
+  font-style:italic;
+  font-size:15px;
+  color:var(--ink);
+  line-height:1.7;
+}
+.quote strong{color:var(--gold);font-style:normal;font-weight:700;font-family:"Noto Serif SC"}
+.quote-author{
+  display:block;
+  font-family:"Noto Serif SC";
+  font-style:normal;
+  font-size:11px;
+  color:var(--ink-soft);
+  margin-top:8px;
+  letter-spacing:.05em;
+}
+
+/* ============ 径向图例 ============ */
+.radial-card{
+  background:var(--bg-elev);
+  border:1px solid var(--line);
+  padding:18px;
+  text-align:center;
+}
+.radial-num{
+  font-family:"Cormorant Garamond",serif;
+  font-style:italic;
+  font-size:42px;
+  font-weight:700;
+  color:var(--accent);
+  line-height:1;
+}
+.radial-label{
+  font-size:12px;
+  color:var(--ink-dim);
+  margin-top:8px;
+}
+
+/* ============ 流程节点 ============ */
+.flow-chain{
+  display:flex;
+  gap:6px;
+  margin:14px 0;
+  overflow-x:auto;
+  padding-bottom:8px;
+}
+.flow-node{
+  min-width:140px;
+  background:var(--bg-elev);
+  border:1px solid var(--line);
+  border-top:3px solid var(--gold);
+  padding:12px 14px;
+  position:relative;
+  flex:1;
+}
+.flow-node::after{
+  content:"→";
+  position:absolute;
+  right:-16px;
+  top:50%;
+  transform:translateY(-50%);
+  color:var(--ink-soft);
+  font-family:"Cormorant Garamond";
+  font-style:italic;
+  font-size:20px;
+  z-index:2;
+}
+.flow-node:last-child::after{display:none}
+.flow-step{
+  font-family:"JetBrains Mono",monospace;
+  font-size:9px;
+  letter-spacing:.2em;
+  color:var(--gold);
+  text-transform:uppercase;
+  font-weight:700;
+}
+.flow-title{
+  font-size:13px;
+  font-weight:700;
+  color:var(--ink);
+  margin:4px 0;
+}
+.flow-desc{
+  font-size:11px;
+  color:var(--ink-dim);
+  line-height:1.5;
+}
+
+/* ============ 底部结语 ============ */
+.colophon{
+  margin-top:50px;
+  padding:30px 0 0;
+  border-top:2px solid var(--ink-dim);
+  display:grid;
+  grid-template-columns:2fr 1fr;
+  gap:40px;
+  align-items:end;
+}
+.colophon-motto{
+  font-family:"Cormorant Garamond",serif;
+  font-style:italic;
+  font-size:24px;
+  line-height:1.5;
+  color:var(--ink);
+  letter-spacing:.01em;
+}
+.colophon-motto span{color:var(--gold)}
+.colophon-meta{
+  font-family:"JetBrains Mono",monospace;
+  font-size:10px;
+  color:var(--ink-soft);
+  letter-spacing:.12em;
+  line-height:1.9;
+  text-align:right;
+}
+
+/* ============ SVG 统一样式 ============ */
+svg{display:block;width:100%;height:auto}
+svg text{fill:var(--ink-dim);font-family:"JetBrains Mono",monospace}
+
+/* ============ 滚动条 ============ */
+::-webkit-scrollbar{width:8px;height:8px}
+::-webkit-scrollbar-track{background:var(--bg)}
+::-webkit-scrollbar-thumb{background:var(--line);border-radius:4px}
+::-webkit-scrollbar-thumb:hover{background:var(--ink-soft)}
+
+/* ============ 响应式 ============ */
+@media (max-width:1100px){
+  .grid-3{grid-template-columns:1fr 1fr}
+  .grid-4{grid-template-columns:1fr 1fr}
+  .critical-gauge-wrap{grid-template-columns:1fr}
+  .dislocation-grid{grid-template-columns:1fr}
+}
+@media (max-width:800px){
+  .sidebar{position:fixed;transform:translateX(-100%)}
+  .sidebar.mobile-open{transform:translateX(0)}
+  .main{padding:20px 18px 40px}
+  .grid-2,.grid-3,.grid-4{grid-template-columns:1fr}
+  .pyramid-row{grid-template-columns:1fr}
+  .pyramid-row{margin-left:0 !important}
+  .alert-bar{grid-template-columns:1fr}
+  .colophon{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+
+<div class="layout">
+
+  <!-- ============ 左侧导航 ============ -->
+  <nav class="sidebar" id="sidebar">
+    <div class="sidebar-header">
+      <div class="sidebar-brand">
+        XI
+        <small>Vol · XI</small>
+      </div>
+      <button class="toggle-btn" onclick="toggleSidebar()" title="切换导航">≡</button>
+    </div>
+
+    <div class="nav-section">研究框架</div>
+    <a class="nav-item" onclick="navTo('s-abstract',this)">
+      <span class="nav-icon">§</span>
+      <span class="nav-label">摘要与核心结论</span>
+    </a>
+    <a class="nav-item" onclick="navTo('s-theory',this)">
+      <span class="nav-icon">I</span>
+      <span class="nav-label">理论基础</span>
+    </a>
+    <a class="nav-item" onclick="navTo('s-critical',this)">
+      <span class="nav-icon">II</span>
+      <span class="nav-label">临界点定义</span>
+    </a>
+
+    <div class="nav-section">监测体系</div>
+    <a class="nav-item" onclick="navTo('s-signals',this)">
+      <span class="nav-icon">III</span>
+      <span class="nav-label">四条预警信号</span>
+    </a>
+    <a class="nav-item" onclick="navTo('s-cci',this)">
+      <span class="nav-icon">IV</span>
+      <span class="nav-label">CCI 合成指数</span>
+    </a>
+    <a class="nav-item" onclick="navTo('s-layers',this)">
+      <span class="nav-icon">V</span>
+      <span class="nav-label">六层分层架构</span>
+    </a>
+    <a class="nav-item" onclick="navTo('s-dislocation',this)">
+      <span class="nav-icon">VI</span>
+      <span class="nav-label">层级错位信号</span>
+    </a>
+
+    <div class="nav-section">实战部署</div>
+    <a class="nav-item" onclick="navTo('s-3tier',this)">
+      <span class="nav-icon">VII</span>
+      <span class="nav-label">三层精简版</span>
+    </a>
+    <a class="nav-item" onclick="navTo('s-cases',this)">
+      <span class="nav-icon">VIII</span>
+      <span class="nav-label">历史案例回测</span>
+    </a>
+    <a class="nav-item" onclick="navTo('s-workflow',this)">
+      <span class="nav-icon">IX</span>
+      <span class="nav-label">日常工作流</span>
+    </a>
+
+    <div class="nav-section">附录</div>
+    <a class="nav-item" onclick="navTo('s-limits',this)">
+      <span class="nav-icon">X</span>
+      <span class="nav-label">局限与未解问题</span>
+    </a>
+    <a class="nav-item" onclick="navTo('s-colophon',this)">
+      <span class="nav-icon">⊕</span>
+      <span class="nav-label">体系索引</span>
+    </a>
+  </nav>
+
+  <!-- ============ 主内容 ============ -->
+  <main class="main">
+
+    <div class="top-header">
+      <div class="title-group">
+        <h1 class="main-title">A 股 <span>相变监测</span> 体系</h1>
+        <div class="main-subtitle">From Critical Slowing Down to Multi-Layer Surveillance — Volume XI</div>
+      </div>
+      <div class="top-meta">
+        A股资金博弈研究体系<br>
+        承接 Vol.X · 资金波浪定量验证<br>
+        <span class="meta-badge">DEPLOY READY</span>
+      </div>
+    </div>
+
+    <!-- ============ 摘要 ============ -->
+    <section class="section" id="s-abstract">
+      <div class="sec-head">
+        <div class="sec-num">§</div>
+        <div>
+          <div class="sec-title">摘要与核心结论</div>
+          <div class="sec-sub">Abstract & Key Findings</div>
+        </div>
+      </div>
+
+      <div class="grid-2">
+        <div class="card card-lg">
+          <div class="card-title">本册的一句话</div>
+          <div class="card-body" style="font-size:15px;line-height:1.8">
+            基于<strong>临界慢化理论</strong>(Critical Slowing Down),将A股市场的相变预警拆解为<em>四条独立信号 · 三阶预警响应 · 六层监测架构</em>,形成一套可部署的、覆盖从日度到年度时间尺度的风险监测体系。
+          </div>
+        </div>
+
+        <div class="card card-lg">
+          <div class="card-title">三条最稳健的结论</div>
+          <div class="card-body">
+            ① <strong>横截面相关性</strong> ρ̄ 是A股临界预警中<em>最敏感</em>的单一信号<br>
+            ② <strong>层级错位</strong>(上层平静+下层异常)比单层异常更高置信度<br>
+            ③ <strong>温和高位持续</strong>比急剧飙升更危险(Minsky 稳定性悖论)
+          </div>
+        </div>
+      </div>
+
+      <div class="grid-4" style="margin-top:14px">
+        <div class="stat-card" style="border-left-color:var(--accent)">
+          <div class="stat-label">监测层级</div>
+          <div class="stat-value">6 <span class="stat-unit">层</span></div>
+          <div class="stat-foot">全市场 → 个股</div>
+        </div>
+        <div class="stat-card" style="border-left-color:var(--gold)">
+          <div class="stat-label">预警信号</div>
+          <div class="stat-value">4 <span class="stat-unit">条</span></div>
+          <div class="stat-foot">方差·自相关·偏度·横截面</div>
+        </div>
+        <div class="stat-card" style="border-left-color:var(--accent-2)">
+          <div class="stat-label">响应阶段</div>
+          <div class="stat-value">3 <span class="stat-unit">阶</span></div>
+          <div class="stat-foot">关注·警戒·临界</div>
+        </div>
+        <div class="stat-card" style="border-left-color:var(--blue)">
+          <div class="stat-label">时间尺度</div>
+          <div class="stat-value">3 <span class="stat-unit">层</span></div>
+          <div class="stat-foot">日度·月度·季度</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ I 理论基础 ============ -->
+    <section class="section" id="s-theory">
+      <div class="sec-head">
+        <div class="sec-num">I</div>
+        <div>
+          <div class="sec-title">理论基础 · 临界慢化</div>
+          <div class="sec-sub">Why Complex Systems Announce Their Own Transitions</div>
+        </div>
+      </div>
+
+      <div class="quote">
+        在接近临界点时,复杂系统的<strong>恢复弹性</strong>会系统性下降,表现为"扰动衰减变慢 / 波动方差上升 / 自相关性增强"。这一规律在生态崩溃、气候突变、癫痫发作、金融危机前均有观察到。
+        <span class="quote-author">— Marten Scheffer, Nature 2009</span>
+      </div>
+
+      <div class="grid-3">
+        <div class="card">
+          <div class="card-title">① 非线性反馈</div>
+          <div class="card-body">
+            金融市场具有强烈的正反馈循环(杠杆、情绪、量化模型的共振),这是相变存在的<strong>数学前提</strong>。
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-title">② 多稳态</div>
+          <div class="card-body">
+            市场可处于<em>牛/熊/震荡</em>多个稳态之间,相变是从一个稳态跳到另一个稳态,中间不存在"缓慢演化"。
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-title">③ 参与者异质性</div>
+          <div class="card-body">
+            九类资金的独立目标函数构成了多样性缓冲。<strong>异质性下降</strong>即介质同质化即相变前夜。
+          </div>
+        </div>
+      </div>
+
+      <!-- 临界慢化示意图 -->
+      <div class="card-lg" style="margin-top:14px">
+        <div class="card-title">图 I.1 · 临界慢化的可视化直觉</div>
+        <div class="card-sub">Ball-in-Potential-Well Analogy</div>
+        <svg viewBox="0 0 900 260" xmlns="http://www.w3.org/2000/svg">
+          <!-- 三个势能井,从深到浅 -->
+          <!-- 井 1: 远离临界 -->
+          <g transform="translate(0,0)">
+            <path d="M 30 80 Q 100 80 130 170 Q 160 250 190 170 Q 220 80 290 80" fill="none" stroke="#e0b663" stroke-width="2.5"/>
+            <circle cx="160" cy="168" r="9" fill="#d65d43"/>
+            <text x="160" y="30" text-anchor="middle" font-size="12" fill="#f2ead8" font-weight="700">远离临界</text>
+            <text x="160" y="48" text-anchor="middle" font-size="10" fill="#c9bfa8">深井 · 恢复快</text>
+            <!-- 恢复轨迹 -->
+            <path d="M 190 140 Q 175 155 165 168" fill="none" stroke="#7fbba3" stroke-width="1.5" stroke-dasharray="3,2"/>
+            <text x="160" y="215" text-anchor="middle" font-size="10" fill="#7fbba3" font-style="italic">弹性高</text>
+          </g>
+          <!-- 井 2: 接近临界 -->
+          <g transform="translate(300,0)">
+            <path d="M 30 110 Q 100 110 130 170 Q 160 220 190 170 Q 220 110 290 110" fill="none" stroke="#e0b663" stroke-width="2.5"/>
+            <circle cx="160" cy="168" r="9" fill="#d65d43"/>
+            <text x="160" y="30" text-anchor="middle" font-size="12" fill="#f2ead8" font-weight="700">接近临界</text>
+            <text x="160" y="48" text-anchor="middle" font-size="10" fill="#c9bfa8">浅井 · 恢复慢</text>
+            <!-- 更大的扰动幅度 -->
+            <path d="M 210 140 Q 180 158 163 168" fill="none" stroke="#e0b663" stroke-width="1.5" stroke-dasharray="3,2"/>
+            <text x="160" y="215" text-anchor="middle" font-size="10" fill="#e0b663" font-style="italic">方差↑自相关↑</text>
+          </g>
+          <!-- 井 3: 临界点 -->
+          <g transform="translate(600,0)">
+            <path d="M 30 130 Q 100 130 130 170 Q 160 200 190 170 Q 220 130 290 130" fill="none" stroke="#d65d43" stroke-width="2.5"/>
+            <circle cx="160" cy="168" r="9" fill="#d65d43"/>
+            <!-- 穿越箭头 -->
+            <path d="M 180 168 L 245 135" fill="none" stroke="#e87060" stroke-width="2" marker-end="url(#arrow)"/>
+            <text x="160" y="30" text-anchor="middle" font-size="12" fill="#e87060" font-weight="700">穿越临界</text>
+            <text x="160" y="48" text-anchor="middle" font-size="10" fill="#c9bfa8">相变发生</text>
+            <text x="160" y="215" text-anchor="middle" font-size="10" fill="#e87060" font-style="italic">不可逆</text>
+          </g>
+          <defs>
+            <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+              <path d="M 0 0 L 10 5 L 0 10 Z" fill="#e87060"/>
+            </marker>
+          </defs>
+        </svg>
+        <div style="font-size:11px;color:var(--ink-soft);margin-top:8px;font-family:JetBrains Mono">
+          直觉:球在势能井中的稳定性随井的深度变化。井越浅,小扰动就能让球越过井壁(相变)。<em>井的深度不可见,但球的振荡幅度和恢复速度可以测量</em> — 这就是预警信号的根基。
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ II 临界点定义 ============ -->
+    <section class="section" id="s-critical">
+      <div class="sec-head">
+        <div class="sec-num">II</div>
+        <div>
+          <div class="sec-title">临界点定义 · 临界带而非临界点</div>
+          <div class="sec-sub">From Point to Band — Probabilistic Redefinition</div>
+        </div>
+      </div>
+
+      <div class="grid-2">
+        <div class="card card-lg">
+          <div class="card-title">放弃"精确阈值"的三个理由</div>
+          <div class="card-body">
+            <strong>① 数据挖掘偏差</strong> · 用历史数据反推阈值再用同一数据验证,是循环论证<br>
+            <strong>② 幸存者偏差</strong> · 只看"临界点后真的相变"的案例,忽略假警报率<br>
+            <strong>③ 过度精确</strong> · 给出"T=0.3127"这种虚假精度违反统计直觉
+          </div>
+        </div>
+        <div class="card card-lg">
+          <div class="card-title">临界带的四个设计原则</div>
+          <div class="card-body">
+            <strong>① 多重确认</strong> · 单信号噪声大,共振才是真警报<br>
+            <strong>② 上升沿优先</strong> · 危险的不是"高水平"而是"快速变化"<br>
+            <strong>③ 非对称阈值</strong> · 底部相变慢/顶部相变急,阈值应不同<br>
+            <strong>④ 自适应校准</strong> · 用滚动基准而非固定阈值
+          </div>
+        </div>
+      </div>
+
+      <!-- 临界带 gauge -->
+      <div class="critical-gauge-wrap" style="margin-top:14px">
+        <div>
+          <svg viewBox="0 0 280 200" xmlns="http://www.w3.org/2000/svg">
+            <!-- 半圆仪表盘 -->
+            <defs>
+              <linearGradient id="gaugeGrad" x1="0" x2="1" y1="0" y2="0">
+                <stop offset="0%" stop-color="#7fbba3"/>
+                <stop offset="50%" stop-color="#e0b663"/>
+                <stop offset="80%" stop-color="#d65d43"/>
+                <stop offset="100%" stop-color="#e87060"/>
+              </linearGradient>
+            </defs>
+            <!-- 背景弧 -->
+            <path d="M 40 160 A 100 100 0 0 1 240 160" fill="none" stroke="url(#gaugeGrad)" stroke-width="20" stroke-linecap="round"/>
+            <!-- 刻度 -->
+            <g font-size="10" fill="#c9bfa8">
+              <text x="40" y="180" text-anchor="middle">安全</text>
+              <text x="90" y="90" text-anchor="middle">关注</text>
+              <text x="140" y="55" text-anchor="middle">警戒</text>
+              <text x="190" y="90" text-anchor="middle">临界</text>
+              <text x="240" y="180" text-anchor="middle">相变</text>
+            </g>
+            <!-- 指针 -->
+            <g>
+              <line x1="140" y1="160" x2="190" y2="85" stroke="#f2ead8" stroke-width="3" stroke-linecap="round"/>
+              <circle cx="140" cy="160" r="10" fill="#d65d43" stroke="#f2ead8" stroke-width="2"/>
+            </g>
+            <!-- 中心标签 -->
+            <text x="140" y="190" text-anchor="middle" font-size="11" fill="#e0b663" font-weight="700">CRITICAL ZONE</text>
+          </svg>
+        </div>
+        <div class="critical-legend">
+          <div class="legend-item">
+            <span class="legend-dot" style="background:#7fbba3"></span>
+            <span><strong style="color:var(--ink)">安全区</strong> · 无警报,常态运行</span>
+            <span class="legend-val">CCI &lt; 0.7</span>
+          </div>
+          <div class="legend-item">
+            <span class="legend-dot" style="background:#e0b663"></span>
+            <span><strong style="color:var(--ink)">一阶关注</strong> · 启动日度监测,暂停加杠杆</span>
+            <span class="legend-val">0.7–1.0</span>
+          </div>
+          <div class="legend-item">
+            <span class="legend-dot" style="background:#d65d43"></span>
+            <span><strong style="color:var(--ink)">二阶警戒</strong> · 开始减仓,重估敞口</span>
+            <span class="legend-val">1.0–1.3</span>
+          </div>
+          <div class="legend-item">
+            <span class="legend-dot" style="background:#e87060"></span>
+            <span><strong style="color:var(--ink)">三阶临界</strong> · 相变随时发生,防御优先</span>
+            <span class="legend-val">CCI &gt; 1.3</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ III 四条信号 ============ -->
+    <section class="section" id="s-signals">
+      <div class="sec-head">
+        <div class="sec-num">III</div>
+        <div>
+          <div class="sec-title">四条独立预警信号</div>
+          <div class="sec-sub">Four Independent Channels of Critical Detection</div>
+        </div>
+      </div>
+
+      <div class="grid-4">
+        <div class="signal-card s1">
+          <div class="signal-header">
+            <div class="signal-num">①</div>
+            <div class="signal-tag">VARIANCE</div>
+          </div>
+          <div class="signal-name">波动率方差上升</div>
+          <div class="signal-en">Variance Rise</div>
+          <div class="signal-body">
+            接近临界时,系统对扰动的<strong>恢复变慢</strong>,相同幅度的外力激起更大振幅。
+          </div>
+          <div class="signal-metric">
+            测:σ₂₀ / σ₆₀<br>
+            阈:>1.5 × 5日
+          </div>
+        </div>
+
+        <div class="signal-card s2">
+          <div class="signal-header">
+            <div class="signal-num">②</div>
+            <div class="signal-tag">AR(1)</div>
+          </div>
+          <div class="signal-name">自相关性上升</div>
+          <div class="signal-en">Autocorrelation Rise</div>
+          <div class="signal-body">
+            今日价格更依赖昨日,<strong>随机性下降</strong>。临界慢化的数学直接推论。
+          </div>
+          <div class="signal-metric">
+            测:AR(1) 滚动60日<br>
+            阈:>0.15
+          </div>
+        </div>
+
+        <div class="signal-card s3">
+          <div class="signal-header">
+            <div class="signal-num">③</div>
+            <div class="signal-tag">SKEW</div>
+          </div>
+          <div class="signal-name">偏度急剧变化</div>
+          <div class="signal-en">Skewness Flip</div>
+          <div class="signal-body">
+            健康市场偏度≈0。方向翻转意味<strong>买卖力量结构破</strong>。
+          </div>
+          <div class="signal-metric">
+            测:Skew(60日收益)<br>
+            阈:|S|>1.0 或翻转>1.5
+          </div>
+        </div>
+
+        <div class="signal-card s4">
+          <div class="signal-header">
+            <div class="signal-num">④</div>
+            <div class="signal-tag">CROSS-ρ̄</div>
+          </div>
+          <div class="signal-name">横截面相关性</div>
+          <div class="signal-en">Cross-Sectional Correlation</div>
+          <div class="signal-body">
+            A股最敏感的信号。个股<strong>独立定价失效</strong>即介质同质化即相变前夜。
+          </div>
+          <div class="signal-metric">
+            测:500股票两两ρ̄<br>
+            阈:>0.45 关注 / >0.55 警戒
+          </div>
+        </div>
+      </div>
+
+      <!-- 信号 4 详解 -->
+      <div class="card-lg" style="margin-top:18px">
+        <div class="card-title">深入 · 信号 ④ 的三种形态 <span class="tag-mini">A股核心体温计</span></div>
+        <div class="card-sub">Cross-Sectional Correlation Patterns</div>
+        <svg viewBox="0 0 900 220" xmlns="http://www.w3.org/2000/svg">
+          <!-- 形态 A: 齐涨 -->
+          <g transform="translate(0,0)">
+            <rect x="10" y="10" width="280" height="200" fill="none" stroke="#7fbba3" stroke-width="1" stroke-dasharray="2,2" opacity=".5"/>
+            <text x="150" y="30" text-anchor="middle" font-size="12" fill="#7fbba3" font-weight="700">形态 A · 齐涨型</text>
+            <text x="150" y="46" text-anchor="middle" font-size="10" fill="#c9bfa8">Healthy Rise · 介质变深</text>
+            <!-- 模拟股票线 -->
+            <g transform="translate(30,60)">
+              <polyline points="0,100 30,85 60,70 90,50 120,40 150,30 180,20 210,15 240,10" fill="none" stroke="#7fbba3" stroke-width="1.2" opacity=".5"/>
+              <polyline points="0,95 30,90 60,75 90,55 120,45 150,35 180,25 210,20 240,12" fill="none" stroke="#7fbba3" stroke-width="1.2" opacity=".5"/>
+              <polyline points="0,110 30,95 60,80 90,60 120,50 150,40 180,30 210,22 240,15" fill="none" stroke="#7fbba3" stroke-width="1.2" opacity=".5"/>
+              <polyline points="0,105 30,88 60,72 90,52 120,42 150,32 180,22 210,18 240,13" fill="none" stroke="#7fbba3" stroke-width="1.5"/>
+              <polyline points="0,115 30,100 60,85 90,65 120,55 150,45 180,32 210,25 240,17" fill="none" stroke="#7fbba3" stroke-width="1.2" opacity=".5"/>
+              <text x="120" y="135" text-anchor="middle" font-size="10" fill="#7fbba3">ρ̄↑ + 价↑ + 量↑ = 机会</text>
+            </g>
+          </g>
+          <!-- 形态 B: 齐跌 -->
+          <g transform="translate(310,0)">
+            <rect x="10" y="10" width="280" height="200" fill="none" stroke="#e87060" stroke-width="1" stroke-dasharray="2,2" opacity=".5"/>
+            <text x="150" y="30" text-anchor="middle" font-size="12" fill="#e87060" font-weight="700">形态 B · 齐跌型</text>
+            <text x="150" y="46" text-anchor="middle" font-size="10" fill="#c9bfa8">Panic Dump · 相变警报</text>
+            <g transform="translate(30,60)">
+              <polyline points="0,30 30,40 60,60 90,85 120,100 150,110 180,115 210,118 240,125" fill="none" stroke="#e87060" stroke-width="1.2" opacity=".5"/>
+              <polyline points="0,25 30,35 60,55 90,80 120,95 150,108 180,113 210,117 240,122" fill="none" stroke="#e87060" stroke-width="1.2" opacity=".5"/>
+              <polyline points="0,35 30,45 60,65 90,90 120,105 150,115 180,120 210,123 240,128" fill="none" stroke="#e87060" stroke-width="1.5"/>
+              <polyline points="0,28 30,38 60,58 90,82 120,97 150,112 180,117 210,120 240,124" fill="none" stroke="#e87060" stroke-width="1.2" opacity=".5"/>
+              <polyline points="0,32 30,42 60,62 90,88 120,102 150,113 180,118 210,121 240,126" fill="none" stroke="#e87060" stroke-width="1.2" opacity=".5"/>
+              <text x="120" y="160" text-anchor="middle" font-size="10" fill="#e87060">ρ̄↑ + 价↓ + 量异 = 灾难</text>
+            </g>
+          </g>
+          <!-- 形态 C: 齐震 -->
+          <g transform="translate(620,0)">
+            <rect x="10" y="10" width="280" height="200" fill="none" stroke="#e0b663" stroke-width="1" stroke-dasharray="2,2" opacity=".5"/>
+            <text x="150" y="30" text-anchor="middle" font-size="12" fill="#e0b663" font-weight="700">形态 C · 齐震型</text>
+            <text x="150" y="46" text-anchor="middle" font-size="10" fill="#c9bfa8">Silent Crowding · 拥挤警报</text>
+            <g transform="translate(30,60)">
+              <polyline points="0,60 30,70 60,55 90,75 120,60 150,78 180,55 210,72 240,62" fill="none" stroke="#e0b663" stroke-width="1.2" opacity=".5"/>
+              <polyline points="0,62 30,72 60,57 90,77 120,62 150,80 180,57 210,74 240,64" fill="none" stroke="#e0b663" stroke-width="1.2" opacity=".5"/>
+              <polyline points="0,58 30,68 60,53 90,73 120,58 150,76 180,53 210,70 240,60" fill="none" stroke="#e0b663" stroke-width="1.5"/>
+              <polyline points="0,64 30,74 60,59 90,79 120,64 150,82 180,59 210,76 240,66" fill="none" stroke="#e0b663" stroke-width="1.2" opacity=".5"/>
+              <polyline points="0,56 30,66 60,51 90,71 120,56 150,74 180,51 210,68 240,58" fill="none" stroke="#e0b663" stroke-width="1.2" opacity=".5"/>
+              <text x="120" y="140" text-anchor="middle" font-size="10" fill="#e0b663">ρ̄↑ + 价平 + 量平 = 定时炸弹</text>
+            </g>
+          </g>
+        </svg>
+        <div style="margin-top:10px;font-size:12px;color:var(--ink);line-height:1.7">
+          <strong style="color:var(--gold)">关键洞察:</strong> 同样 ρ̄=0.55,在形态 A 是机会,在形态 B 是灾难,在形态 C 是定时炸弹。
+          <em>形态 C 最隐蔽</em> — 没有价格配合,表面平静但个股独立性已消失。这是整个监测体系的核心价值所在。
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ IV CCI 指数 ============ -->
+    <section class="section" id="s-cci">
+      <div class="sec-head">
+        <div class="sec-num">IV</div>
+        <div>
+          <div class="sec-title">CCI 合成指数</div>
+          <div class="sec-sub">Crowding-Correlation Composite Index</div>
+        </div>
+      </div>
+
+      <div class="formula-block">
+        <div class="formula-label">Crowding-Correlation Index</div>
+        <div class="formula-eq">
+          <span class="v">CCI</span> <span class="op">=</span>
+          <span class="coef">0.4</span> <span class="op">·</span> (ρ̄<sub>市</sub>/<span class="coef">0.5</span>) <span class="op">+</span>
+          <span class="coef">0.3</span> <span class="op">·</span> max(ρ̄<sub>共振</sub>/ρ̄<sub>深水</sub>, <span class="coef">1</span>) <span class="op">+</span>
+          <span class="coef">0.2</span> <span class="op">·</span> max(Δρ̄/<span class="coef">0.15</span>, <span class="coef">0</span>) <span class="op">+</span>
+          <span class="coef">0.1</span> <span class="op">·</span> max(ρ̄<sub>跌</sub>/ρ̄<sub>涨</sub>, <span class="coef">1</span>)
+        </div>
+      </div>
+
+      <div class="grid-4" style="margin-top:14px">
+        <div class="card">
+          <div class="card-title" style="color:var(--accent)">分量 α · 市场级相关性</div>
+          <div class="card-sub">Market-wide ρ̄</div>
+          <div class="card-body">
+            500只活跃股两两相关均值<br>
+            基准 0.25-0.35<br>
+            <strong>权重 40%</strong>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-title" style="color:var(--gold)">分量 β · 介质反转</div>
+          <div class="card-sub">Medium Inversion</div>
+          <div class="card-body">
+            ρ̄<sub>共振</sub>/ρ̄<sub>深水</sub>正常<1<br>
+            反转>1 = 微盘被接管<br>
+            <strong>权重 30%</strong>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-title" style="color:var(--accent-2)">分量 γ · 斜率变化</div>
+          <div class="card-sub">Slope Acceleration</div>
+          <div class="card-body">
+            Δρ̄ = 今日 - 20日前<br>
+            捕捉"急剧变化"<br>
+            <strong>权重 20%</strong>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-title" style="color:var(--blue)">分量 δ · 方向分解</div>
+          <div class="card-sub">Directional Split</div>
+          <div class="card-body">
+            ρ̄<sub>跌日</sub>/ρ̄<sub>涨日</sub><br>
+            区分形态 A vs B<br>
+            <strong>权重 10%</strong>
+          </div>
+        </div>
+      </div>
+
+      <!-- 三阶预警 -->
+      <div class="alert-bar">
+        <div class="alert-step level1">
+          <div class="alert-emoji">I</div>
+          <div class="alert-title">一阶关注 · CCI 0.7 – 1.0</div>
+          <div class="alert-cond">任一信号触发阈值</div>
+          <div class="alert-action">启动日度监测,暂停加杠杆,复核仓位结构</div>
+        </div>
+        <div class="alert-step level2">
+          <div class="alert-emoji">II</div>
+          <div class="alert-title">二阶警戒 · CCI 1.0 – 1.3</div>
+          <div class="alert-cond">任意两个信号同时触发</div>
+          <div class="alert-action">开始减仓,重新评估敞口,重仓股优先保护</div>
+        </div>
+        <div class="alert-step level3">
+          <div class="alert-emoji">III</div>
+          <div class="alert-title">三阶临界 · CCI &gt; 1.3</div>
+          <div class="alert-cond">三个及以上信号同时触发</div>
+          <div class="alert-action">相变随时触发,防御优先于收益,现金为王</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ V 六层架构 ============ -->
+    <section class="section" id="s-layers">
+      <div class="sec-head">
+        <div class="sec-num">V</div>
+        <div>
+          <div class="sec-title">六层监测架构</div>
+          <div class="sec-sub">Six-Layer Surveillance Pyramid</div>
+        </div>
+      </div>
+
+      <div class="quote">
+        A股过去5年发生的相变事件中,<strong>超过60%不是全市场级</strong>而是板块级或风格级。仅监测全市场会漏掉大多数预警机会。
+      </div>
+
+      <!-- 六层塔状图 -->
+      <div class="pyramid">
+        <div class="pyramid-row L1">
+          <div class="py-level">L1 <small>全市场</small></div>
+          <div class="py-desc">万得全A、中证全指。监测<strong>系统性相变</strong>、政策冲击、流动性危机。相变周期:季度-年度。</div>
+          <div class="py-indicator">广度指标 · 涨跌家数比 · 上涨股占比</div>
+          <div class="py-freq">日度</div>
+        </div>
+        <div class="pyramid-row L2">
+          <div class="py-level">L2 <small>风格</small></div>
+          <div class="py-desc">沪深300/中证2000/微盘、中证红利。监测<strong>风格切换</strong>、介质类型迁移。相变周期:月度-季度。</div>
+          <div class="py-indicator">相对强弱 · 风格内ρ̄ · 成交占比</div>
+          <div class="py-freq">周度</div>
+        </div>
+        <div class="pyramid-row L3">
+          <div class="py-level">L3 <small>行业</small></div>
+          <div class="py-desc">申万一级31行业。监测<strong>景气拐点</strong>、主导资金轮动。相变周期:月度。</div>
+          <div class="py-indicator">行业内ρ̄ · 资金净流入 · 估值-景气匹配</div>
+          <div class="py-freq">周度</div>
+        </div>
+        <div class="pyramid-row L4">
+          <div class="py-level">L4 <small>主题</small></div>
+          <div class="py-desc">AI、机器人、消费电子、半导体等活跃概念。监测<strong>题材发酵</strong>、反身性共振、概念破裂。相变周期:周度-月度。</div>
+          <div class="py-indicator">概念内ρ̄ · 成交集中度 · 日内波动率</div>
+          <div class="py-freq">日度</div>
+        </div>
+        <div class="pyramid-row L5">
+          <div class="py-level">L5 <small>龙头尾部</small></div>
+          <div class="py-desc">板块内龙头3-5只 vs 尾部股票。监测<strong>龙头失守</strong>、补涨结束、资金接力断裂。相变周期:周度。</div>
+          <div class="py-indicator">龙头-尾部相对涨跌 · β结构 · 换手异动</div>
+          <div class="py-freq">周度</div>
+        </div>
+        <div class="pyramid-row L6">
+          <div class="py-level">L6 <small>个股</small></div>
+          <div class="py-desc">自选股或重仓股。监测<strong>个股异常</strong>、产业资本信号、关键技术位。相变周期:日度。</div>
+          <div class="py-indicator">换手率 · 主力资金 · 龙虎榜 · 回购减持</div>
+          <div class="py-freq">日度</div>
+        </div>
+      </div>
+
+      <div class="grid-3" style="margin-top:14px">
+        <div class="card">
+          <div class="card-title" style="color:var(--accent-2)">最可靠层级</div>
+          <div class="card-body">
+            <strong>L2 风格级 · L3 行业级</strong><br>
+            有明确基准、数据质量高、相变事件多发。实战中的<em>主监测层</em>。
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-title" style="color:var(--gold)">中等可靠层级</div>
+          <div class="card-body">
+            <strong>L1 全市场 · L4 主题</strong><br>
+            数据好但信号噪声大。主题级尤其依赖<em>反身性判断</em>。
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-title" style="color:var(--accent)">最不可靠层级</div>
+          <div class="card-body">
+            <strong>L5 龙头 · L6 个股</strong><br>
+            容易被个股特殊事件干扰。仅作<em>辅助确认</em>,不单独触发警报。
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ VI 错位信号 ============ -->
+    <section class="section" id="s-dislocation">
+      <div class="sec-head">
+        <div class="sec-num">VI</div>
+        <div>
+          <div class="sec-title">层级错位信号</div>
+          <div class="sec-sub">Cross-Layer Dislocation — The Strongest Alerts</div>
+        </div>
+      </div>
+
+      <div class="quote">
+        真正强的预警信号,不是某一层级的异常,而是<strong>不同层级之间的错位</strong>。这是本体系最精华的判断逻辑。
+      </div>
+
+      <div class="dislocation-grid">
+        <div class="disloc-card critical">
+          <div class="disloc-title">
+            <span class="icon">①</span>
+            冰山信号 · 最高置信度
+          </div>
+          <div class="disloc-pattern">上层平静 + 下层异常</div>
+          <div class="disloc-mean">
+            全市场CCI正常,但某个板块或主题内ρ̄快速上升。<strong>即将发生板块级相变</strong>,且因为全市场尚未感知,此时进场资金最紧张。
+          </div>
+        </div>
+
+        <div class="disloc-card neutral">
+          <div class="disloc-title">
+            <span class="icon">②</span>
+            假警报 · 可忽略
+          </div>
+          <div class="disloc-pattern">上层警报 + 下层正常</div>
+          <div class="disloc-mean">
+            全市场CCI触发但所有风格和行业层相关性正常。<em>大概率是指数级技术回调,非真实相变</em>。降级处理。
+          </div>
+        </div>
+
+        <div class="disloc-card critical">
+          <div class="disloc-title">
+            <span class="icon">③</span>
+            层级反转 · 极度危险
+          </div>
+          <div class="disloc-pattern">全市场ρ̄ &gt; 概念ρ̄</div>
+          <div class="disloc-mean">
+            正常情况:概念ρ̄&gt;行业ρ̄&gt;风格ρ̄&gt;全市场ρ̄。反转意味市场已陷入系统性无差别联动,<strong>通常出现在大崩盘前夜</strong>。
+          </div>
+        </div>
+
+        <div class="disloc-card warning">
+          <div class="disloc-title">
+            <span class="icon">④</span>
+            龙头-尾部背离
+          </div>
+          <div class="disloc-pattern">龙头ρ̄↓ + 尾部ρ̄↑</div>
+          <div class="disloc-mean">
+            龙头抱团瓦解,尾部补涨同步 = <strong>顶部先兆</strong>。反过来,龙头ρ̄↑+尾部ρ̄↓ = 主升浪中段。
+          </div>
+        </div>
+      </div>
+
+      <!-- 层级错位的 ρ̄ 排序图 -->
+      <div class="card-lg" style="margin-top:14px">
+        <div class="card-title">图 VI.1 · 正常 vs 异常的层级 ρ̄ 结构</div>
+        <div class="card-sub">Normal vs Abnormal Layer ρ̄ Structure</div>
+        <svg viewBox="0 0 900 200" xmlns="http://www.w3.org/2000/svg">
+          <!-- 左:正常结构 -->
+          <g transform="translate(40,20)">
+            <text x="180" y="10" text-anchor="middle" font-size="13" fill="#7fbba3" font-weight="700">✓ 正常结构 · 上层低 下层高</text>
+            <!-- Y轴 -->
+            <line x1="40" y1="30" x2="40" y2="150" stroke="#5c564a"/>
+            <text x="35" y="35" text-anchor="end" font-size="9" fill="#8d8575">0.7</text>
+            <text x="35" y="70" text-anchor="end" font-size="9" fill="#8d8575">0.5</text>
+            <text x="35" y="110" text-anchor="end" font-size="9" fill="#8d8575">0.3</text>
+            <text x="35" y="150" text-anchor="end" font-size="9" fill="#8d8575">0.1</text>
+            <!-- 柱子 -->
+            <rect x="55" y="115" width="40" height="35" fill="#d65d43"/>
+            <text x="75" y="175" text-anchor="middle" font-size="10" fill="#f2ead8">L1 市</text>
+            <text x="75" y="110" text-anchor="middle" font-size="9" fill="#d65d43" font-weight="700">0.28</text>
+            <rect x="110" y="95" width="40" height="55" fill="#e0b663"/>
+            <text x="130" y="175" text-anchor="middle" font-size="10" fill="#f2ead8">L2 风</text>
+            <text x="130" y="90" text-anchor="middle" font-size="9" fill="#e0b663" font-weight="700">0.38</text>
+            <rect x="165" y="75" width="40" height="75" fill="#7fbba3"/>
+            <text x="185" y="175" text-anchor="middle" font-size="10" fill="#f2ead8">L3 行</text>
+            <text x="185" y="70" text-anchor="middle" font-size="9" fill="#7fbba3" font-weight="700">0.48</text>
+            <rect x="220" y="50" width="40" height="100" fill="#6fa8d0"/>
+            <text x="240" y="175" text-anchor="middle" font-size="10" fill="#f2ead8">L4 主</text>
+            <text x="240" y="45" text-anchor="middle" font-size="9" fill="#6fa8d0" font-weight="700">0.60</text>
+            <!-- 趋势线 -->
+            <path d="M 75 115 L 130 95 L 185 75 L 240 50" fill="none" stroke="#7fbba3" stroke-width="1.5" stroke-dasharray="3,2" opacity=".6"/>
+          </g>
+          <!-- 分隔线 -->
+          <line x1="450" y1="30" x2="450" y2="180" stroke="#332d22" stroke-dasharray="4,4"/>
+          <!-- 右:异常结构 -->
+          <g transform="translate(500,20)">
+            <text x="180" y="10" text-anchor="middle" font-size="13" fill="#e87060" font-weight="700">✗ 异常结构 · 层级反转警报</text>
+            <line x1="40" y1="30" x2="40" y2="150" stroke="#5c564a"/>
+            <text x="35" y="35" text-anchor="end" font-size="9" fill="#8d8575">0.7</text>
+            <text x="35" y="70" text-anchor="end" font-size="9" fill="#8d8575">0.5</text>
+            <text x="35" y="110" text-anchor="end" font-size="9" fill="#8d8575">0.3</text>
+            <text x="35" y="150" text-anchor="end" font-size="9" fill="#8d8575">0.1</text>
+            <rect x="55" y="45" width="40" height="105" fill="#e87060"/>
+            <text x="75" y="175" text-anchor="middle" font-size="10" fill="#f2ead8">L1 市</text>
+            <text x="75" y="40" text-anchor="middle" font-size="9" fill="#e87060" font-weight="700">0.62</text>
+            <rect x="110" y="55" width="40" height="95" fill="#d65d43"/>
+            <text x="130" y="175" text-anchor="middle" font-size="10" fill="#f2ead8">L2 风</text>
+            <text x="130" y="50" text-anchor="middle" font-size="9" fill="#d65d43" font-weight="700">0.58</text>
+            <rect x="165" y="65" width="40" height="85" fill="#e0b663"/>
+            <text x="185" y="175" text-anchor="middle" font-size="10" fill="#f2ead8">L3 行</text>
+            <text x="185" y="60" text-anchor="middle" font-size="9" fill="#e0b663" font-weight="700">0.55</text>
+            <rect x="220" y="70" width="40" height="80" fill="#6fa8d0"/>
+            <text x="240" y="175" text-anchor="middle" font-size="10" fill="#f2ead8">L4 主</text>
+            <text x="240" y="65" text-anchor="middle" font-size="9" fill="#6fa8d0" font-weight="700">0.52</text>
+            <path d="M 75 45 L 130 55 L 185 65 L 240 70" fill="none" stroke="#e87060" stroke-width="1.5" stroke-dasharray="3,2" opacity=".6"/>
+          </g>
+        </svg>
+        <div style="margin-top:6px;font-size:12px;color:var(--ink);line-height:1.6">
+          <strong style="color:var(--gold)">诊断口诀:</strong>
+          正常市场 ρ̄ 应从L1到L4递增(像阶梯向上);
+          一旦出现"倒挂"(如L1&gt;L4),即系统性风险已扩散到所有个股独立定价失效,<em>这是临界状态最可靠的先兆</em>。
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ VII 三层精简版 ============ -->
+    <section class="section" id="s-3tier">
+      <div class="sec-head">
+        <div class="sec-num">VII</div>
+        <div>
+          <div class="sec-title">三层精简版 · 实战配置</div>
+          <div class="sec-sub">Three-Tier Simplified Deployment</div>
+        </div>
+      </div>
+
+      <div class="quote">
+        一个能每日运行的<strong>简化系统</strong>,比一个永远搭不起来的完整系统,价值高一个数量级。
+      </div>
+
+      <!-- 三层简化流程 -->
+      <div class="flow-chain">
+        <div class="flow-node" style="border-top-color:var(--accent)">
+          <div class="flow-step">TIER A</div>
+          <div class="flow-title">全市场 CCI</div>
+          <div class="flow-desc">
+            指标:L1全市场<br>
+            频率:每日一次<br>
+            重点:系统性风险
+          </div>
+        </div>
+        <div class="flow-node" style="border-top-color:var(--gold)">
+          <div class="flow-step">TIER B</div>
+          <div class="flow-title">风格×行业矩阵</div>
+          <div class="flow-desc">
+            指标:L2+L3 融合<br>
+            频率:每周一次<br>
+            重点:结构性机会
+          </div>
+        </div>
+        <div class="flow-node" style="border-top-color:var(--accent-2)">
+          <div class="flow-step">TIER C</div>
+          <div class="flow-title">自选主题/龙头</div>
+          <div class="flow-desc">
+            指标:L4+L5+L6 融合<br>
+            频率:每日一次<br>
+            重点:持仓风险
+          </div>
+        </div>
+      </div>
+
+      <table class="tbl" style="margin-top:14px">
+        <thead>
+          <tr>
+            <th>精简层</th>
+            <th>对应完整层</th>
+            <th>核心指标</th>
+            <th>观察数</th>
+            <th>每日耗时</th>
+            <th>决策价值</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="bold hot">精简 A · 全市场</td>
+            <td class="mono">L1</td>
+            <td>CCI四分量 · 涨跌家数比</td>
+            <td class="num">1</td>
+            <td class="num">5分钟</td>
+            <td>仓位总调</td>
+          </tr>
+          <tr>
+            <td class="bold warm">精简 B · 风格×行业</td>
+            <td class="mono">L2 + L3</td>
+            <td>3风格 × 31行业 · 选10核心</td>
+            <td class="num">10</td>
+            <td class="num">20分钟</td>
+            <td>板块切换</td>
+          </tr>
+          <tr>
+            <td class="bold cool">精简 C · 持仓</td>
+            <td class="mono">L4 + L5 + L6</td>
+            <td>自选股 · 主题 · 龙头</td>
+            <td class="num">5-10</td>
+            <td class="num">10分钟</td>
+            <td>个股操作</td>
+          </tr>
+          <tr>
+            <td class="bold" style="color:var(--gold)">合计</td>
+            <td class="mono">三层</td>
+            <td>约15-20个观察点</td>
+            <td class="num">~20</td>
+            <td class="num">35分钟</td>
+            <td class="bold">全流程可控</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <!-- ============ VIII 历史案例 ============ -->
+    <section class="section" id="s-cases">
+      <div class="sec-head">
+        <div class="sec-num">VIII</div>
+        <div>
+          <div class="sec-title">历史案例回测</div>
+          <div class="sec-sub">Historical Event Validation</div>
+        </div>
+      </div>
+
+      <!-- 案例时间线 -->
+      <div class="card-lg">
+        <div class="card-title">图 VIII.1 · 四次关键事件的 CCI 走势重构</div>
+        <div class="card-sub">Qualitative Reconstruction · 2024.01 – 2026.04</div>
+        <svg viewBox="0 0 1100 280" xmlns="http://www.w3.org/2000/svg">
+          <!-- 背景网格 -->
+          <defs>
+            <pattern id="gridbg" width="50" height="40" patternUnits="userSpaceOnUse">
+              <path d="M 50 0 L 0 0 0 40" fill="none" stroke="rgba(242,234,216,.04)"/>
+            </pattern>
+          </defs>
+          <rect width="1100" height="280" fill="url(#gridbg)"/>
+          
+          <!-- Y轴 CCI -->
+          <line x1="60" y1="30" x2="60" y2="220" stroke="#8d8575"/>
+          <text x="55" y="35" text-anchor="end" font-size="10" fill="#c9bfa8" font-weight="600">2.0</text>
+          <text x="55" y="77" text-anchor="end" font-size="10" fill="#c9bfa8" font-weight="600">1.5</text>
+          <text x="55" y="120" text-anchor="end" font-size="10" fill="#c9bfa8" font-weight="600">1.0</text>
+          <text x="55" y="162" text-anchor="end" font-size="10" fill="#c9bfa8" font-weight="600">0.7</text>
+          <text x="55" y="220" text-anchor="end" font-size="10" fill="#c9bfa8" font-weight="600">0</text>
+          
+          <!-- X轴 -->
+          <line x1="60" y1="220" x2="1060" y2="220" stroke="#8d8575"/>
+          <text x="160" y="240" text-anchor="middle" font-size="10" fill="#c9bfa8">2024.01</text>
+          <text x="360" y="240" text-anchor="middle" font-size="10" fill="#c9bfa8">2024.09</text>
+          <text x="560" y="240" text-anchor="middle" font-size="10" fill="#c9bfa8">2025.01</text>
+          <text x="760" y="240" text-anchor="middle" font-size="10" fill="#c9bfa8">2025.Q3</text>
+          <text x="960" y="240" text-anchor="middle" font-size="10" fill="#c9bfa8">2026.02</text>
+
+          <!-- 阈值线 -->
+          <line x1="60" y1="77" x2="1060" y2="77" stroke="#e87060" stroke-dasharray="4,3" opacity=".4"/>
+          <text x="1065" y="80" font-size="9" fill="#e87060">临界</text>
+          <line x1="60" y1="120" x2="1060" y2="120" stroke="#d65d43" stroke-dasharray="4,3" opacity=".4"/>
+          <text x="1065" y="123" font-size="9" fill="#d65d43">警戒</text>
+          <line x1="60" y1="162" x2="1060" y2="162" stroke="#e0b663" stroke-dasharray="4,3" opacity=".4"/>
+          <text x="1065" y="165" font-size="9" fill="#e0b663">关注</text>
+
+          <!-- CCI 曲线 -->
+          <polyline points="80,170 120,155 160,60 200,100 240,140 280,175 320,185 360,180 400,155 440,145 480,150 520,160 560,120 600,110 640,115 680,130 720,135 760,140 800,145 840,150 880,145 920,140 960,50 1000,60 1040,80" fill="none" stroke="#d65d43" stroke-width="2.5"/>
+          
+          <!-- 事件标记 -->
+          <!-- 微盘崩 -->
+          <circle cx="160" cy="60" r="6" fill="#e87060"/>
+          <line x1="160" y1="60" x2="160" y2="40" stroke="#e87060" stroke-width="1"/>
+          <text x="160" y="30" text-anchor="middle" font-size="10" fill="#e87060" font-weight="700">微盘崩盘</text>
+          <text x="160" y="18" text-anchor="middle" font-size="8" fill="#c9bfa8">CCI 1.8</text>
+          
+          <!-- 924 -->
+          <circle cx="360" cy="180" r="6" fill="#7fbba3"/>
+          <line x1="360" y1="180" x2="360" y2="200" stroke="#7fbba3" stroke-width="1"/>
+          <text x="360" y="200" text-anchor="middle" font-size="10" fill="#7fbba3" font-weight="700">924 齐涨型</text>
+          <text x="360" y="212" text-anchor="middle" font-size="8" fill="#c9bfa8">形态A · 健康</text>
+          
+          <!-- DeepSeek -->
+          <circle cx="560" cy="120" r="6" fill="#e0b663"/>
+          <line x1="560" y1="120" x2="560" y2="105" stroke="#e0b663" stroke-width="1"/>
+          <text x="560" y="100" text-anchor="middle" font-size="10" fill="#e0b663" font-weight="700">DeepSeek</text>
+          <text x="560" y="88" text-anchor="middle" font-size="8" fill="#c9bfa8">CCI 1.1 · 主题</text>
+
+          <!-- 有色 -->
+          <circle cx="760" cy="140" r="5" fill="#e0b663"/>
+          <text x="760" y="158" text-anchor="middle" font-size="9" fill="#e0b663" font-weight="700">有色板块</text>
+          <text x="760" y="170" text-anchor="middle" font-size="8" fill="#c9bfa8">行业ρ̄↑全市场正常</text>
+          
+          <!-- 2026.02 -->
+          <circle cx="960" cy="50" r="7" fill="#e87060"/>
+          <line x1="960" y1="50" x2="960" y2="30" stroke="#e87060" stroke-width="1"/>
+          <text x="960" y="22" text-anchor="middle" font-size="10" fill="#e87060" font-weight="700">小微盘崩塌</text>
+          <text x="960" y="12" text-anchor="middle" font-size="8" fill="#c9bfa8">CCI 1.9</text>
+        </svg>
+      </div>
+
+      <table class="tbl" style="margin-top:14px">
+        <thead>
+          <tr>
+            <th>事件</th>
+            <th>时间</th>
+            <th>峰值 CCI</th>
+            <th>形态</th>
+            <th>预警有效性</th>
+            <th>诊断结论</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="bold">微盘股雪崩</td>
+            <td class="mono">2024.01</td>
+            <td class="num hot">~1.8</td>
+            <td>形态 C → B</td>
+            <td class="warm">提前 2 周</td>
+            <td>L4 概念级 ρ̄ 异常先行,L1 后续确认</td>
+          </tr>
+          <tr>
+            <td class="bold">924 政策反弹</td>
+            <td class="mono">2024.09</td>
+            <td class="num cool">~0.9</td>
+            <td>形态 A</td>
+            <td class="cool">正确识别</td>
+            <td>齐涨型高相关,介质转深,非警报</td>
+          </tr>
+          <tr>
+            <td class="bold">DeepSeek 行情</td>
+            <td class="mono">2025.01</td>
+            <td class="num neutral">~1.1</td>
+            <td>主题级</td>
+            <td class="neutral">局部触发</td>
+            <td>L4 主题级警报,L1 未触发,板块型</td>
+          </tr>
+          <tr>
+            <td class="bold">有色板块行情</td>
+            <td class="mono">2025.Q2-Q3</td>
+            <td class="num neutral">~1.0</td>
+            <td>行业集中</td>
+            <td class="neutral">局部触发</td>
+            <td>L3 行业级,全市场 ρ̄ 正常,非危险</td>
+          </tr>
+          <tr>
+            <td class="bold">小微盘下跌 -19.56%</td>
+            <td class="mono">2026.01-02</td>
+            <td class="num hot">~1.9</td>
+            <td>形态 B</td>
+            <td class="warm">提前 3 周</td>
+            <td>Δρ̄ 急升 + 层级反转 + ρ̄<sub>跌</sub>>>ρ̄<sub>涨</sub></td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div style="margin-top:10px;font-size:11px;color:var(--ink-soft);font-family:JetBrains Mono;letter-spacing:.05em">
+        * 以上 CCI 数值为基于公开数据的<em style="color:var(--accent)">定性回溯重构</em>,非实时计算结果。严谨验证需要 Python + Wind 终端回测。
+      </div>
+    </section>
+
+    <!-- ============ IX 日常工作流 ============ -->
+    <section class="section" id="s-workflow">
+      <div class="sec-head">
+        <div class="sec-num">IX</div>
+        <div>
+          <div class="sec-title">日常工作流</div>
+          <div class="sec-sub">Daily / Weekly / Monthly Workflow</div>
+        </div>
+      </div>
+
+      <div class="grid-3">
+        <div class="card card-lg">
+          <div class="card-title" style="color:var(--accent)">每日例行 · 开盘前 15 分钟</div>
+          <div class="card-sub">Daily Routine · 15min</div>
+          <div class="card-body">
+            <strong>① 记录</strong>昨日收盘的涨跌家数比、涨停/跌停数<br>
+            <strong>② 估算</strong>全市场 ρ̄ 代理值(涨跌幅中位数 vs 指数涨跌)<br>
+            <strong>③ 检查</strong>持仓股票的换手率异动<br>
+            <strong>④ 对比</strong>自选主题/龙头内部分化<br>
+            <strong>⑤ 判定</strong>CCI 等级(安全/关注/警戒/临界)
+          </div>
+        </div>
+
+        <div class="card card-lg">
+          <div class="card-title" style="color:var(--gold)">每周复盘 · 周末 1 小时</div>
+          <div class="card-sub">Weekly Review · 1hr</div>
+          <div class="card-body">
+            <strong>① 拉取</strong>3风格指数收盘数据,计算相对强弱<br>
+            <strong>② 更新</strong>31行业涨跌幅排名与集中度<br>
+            <strong>③ 识别</strong>资金在风格/行业间的轮动方向<br>
+            <strong>④ 检查</strong>是否出现层级错位信号<br>
+            <strong>⑤ 调整</strong>下周仓位结构与观察名单
+          </div>
+        </div>
+
+        <div class="card card-lg">
+          <div class="card-title" style="color:var(--accent-2)">每月深研 · 月末半日</div>
+          <div class="card-sub">Monthly Deep Dive · Half Day</div>
+          <div class="card-body">
+            <strong>① 回看</strong>本月所有触发的一阶/二阶警报<br>
+            <strong>② 评估</strong>警报的精确率(真/假警报比)<br>
+            <strong>③ 分析</strong>漏报事件,找系统盲点<br>
+            <strong>④ 校准</strong>CCI 阈值参数<br>
+            <strong>⑤ 更新</strong>持仓介质类型归属
+          </div>
+        </div>
+      </div>
+
+      <!-- 决策树 -->
+      <div class="card-lg" style="margin-top:14px">
+        <div class="card-title">图 IX.1 · 每日决策流程图</div>
+        <div class="card-sub">Daily Decision Tree</div>
+        <svg viewBox="0 0 1000 260" xmlns="http://www.w3.org/2000/svg">
+          <!-- 起始节点 -->
+          <rect x="10" y="110" width="140" height="50" rx="4" fill="#1a1610" stroke="#e0b663" stroke-width="1.5"/>
+          <text x="80" y="130" text-anchor="middle" font-size="11" fill="#f2ead8" font-weight="700">开盘前 15 分钟</text>
+          <text x="80" y="146" text-anchor="middle" font-size="10" fill="#c9bfa8">例行检查</text>
+          <!-- 箭头 -->
+          <path d="M 150 135 L 190 135" stroke="#8d8575" stroke-width="1.5" marker-end="url(#arr)"/>
+
+          <!-- 判定节点 -->
+          <polygon points="200,135 250,105 310,135 250,165" fill="#1a1610" stroke="#e0b663" stroke-width="1.5"/>
+          <text x="255" y="140" text-anchor="middle" font-size="10" fill="#f2ead8" font-weight="700">CCI 等级?</text>
+
+          <!-- 四个分支 -->
+          <!-- 安全 -->
+          <path d="M 250 105 L 390 50" stroke="#7fbba3" stroke-width="1.5" marker-end="url(#arr)"/>
+          <text x="310" y="68" font-size="9" fill="#7fbba3">&lt;0.7</text>
+          <rect x="400" y="25" width="180" height="45" rx="4" fill="rgba(127,187,163,.1)" stroke="#7fbba3" stroke-width="1.5"/>
+          <text x="490" y="45" text-anchor="middle" font-size="11" fill="#7fbba3" font-weight="700">安全</text>
+          <text x="490" y="60" text-anchor="middle" font-size="9" fill="#c9bfa8">常规操作 · 关注机会</text>
+
+          <!-- 关注 -->
+          <path d="M 310 125 L 390 105" stroke="#e0b663" stroke-width="1.5" marker-end="url(#arr)"/>
+          <text x="340" y="108" font-size="9" fill="#e0b663">0.7-1.0</text>
+          <rect x="400" y="85" width="180" height="45" rx="4" fill="rgba(224,182,99,.1)" stroke="#e0b663" stroke-width="1.5"/>
+          <text x="490" y="105" text-anchor="middle" font-size="11" fill="#e0b663" font-weight="700">一阶关注</text>
+          <text x="490" y="120" text-anchor="middle" font-size="9" fill="#c9bfa8">暂停加杠杆 · 日度监测</text>
+
+          <!-- 警戒 -->
+          <path d="M 310 145 L 390 165" stroke="#d65d43" stroke-width="1.5" marker-end="url(#arr)"/>
+          <text x="340" y="160" font-size="9" fill="#d65d43">1.0-1.3</text>
+          <rect x="400" y="145" width="180" height="45" rx="4" fill="rgba(214,93,67,.1)" stroke="#d65d43" stroke-width="1.5"/>
+          <text x="490" y="165" text-anchor="middle" font-size="11" fill="#d65d43" font-weight="700">二阶警戒</text>
+          <text x="490" y="180" text-anchor="middle" font-size="9" fill="#c9bfa8">减仓 · 重估敞口</text>
+
+          <!-- 临界 -->
+          <path d="M 250 165 L 390 225" stroke="#e87060" stroke-width="1.5" marker-end="url(#arr)"/>
+          <text x="310" y="210" font-size="9" fill="#e87060">&gt;1.3</text>
+          <rect x="400" y="205" width="180" height="45" rx="4" fill="rgba(232,112,96,.15)" stroke="#e87060" stroke-width="1.5"/>
+          <text x="490" y="225" text-anchor="middle" font-size="11" fill="#e87060" font-weight="700">三阶临界</text>
+          <text x="490" y="240" text-anchor="middle" font-size="9" fill="#c9bfa8">防御优先 · 现金为王</text>
+
+          <!-- 右侧判断 -->
+          <path d="M 580 135 L 620 135" stroke="#8d8575" stroke-width="1.5" marker-end="url(#arr)"/>
+          <polygon points="630,135 680,105 740,135 680,165" fill="#1a1610" stroke="#e0b663" stroke-width="1.5"/>
+          <text x="685" y="135" text-anchor="middle" font-size="10" fill="#f2ead8" font-weight="700">层级错位?</text>
+          <text x="685" y="150" text-anchor="middle" font-size="9" fill="#c9bfa8">冰山/反转?</text>
+
+          <!-- 是否分支 -->
+          <path d="M 740 135 L 790 85" stroke="#e87060" stroke-width="1.5" marker-end="url(#arr)"/>
+          <text x="760" y="100" font-size="9" fill="#e87060">是</text>
+          <rect x="800" y="55" width="180" height="45" rx="4" fill="rgba(232,112,96,.15)" stroke="#e87060" stroke-width="1.5"/>
+          <text x="890" y="75" text-anchor="middle" font-size="11" fill="#e87060" font-weight="700">升级一阶</text>
+          <text x="890" y="90" text-anchor="middle" font-size="9" fill="#c9bfa8">即使 CCI 未到阈值</text>
+
+          <path d="M 740 135 L 790 185" stroke="#7fbba3" stroke-width="1.5" marker-end="url(#arr)"/>
+          <text x="760" y="180" font-size="9" fill="#7fbba3">否</text>
+          <rect x="800" y="175" width="180" height="45" rx="4" fill="rgba(127,187,163,.1)" stroke="#7fbba3" stroke-width="1.5"/>
+          <text x="890" y="195" text-anchor="middle" font-size="11" fill="#7fbba3" font-weight="700">维持原等级</text>
+          <text x="890" y="210" text-anchor="middle" font-size="9" fill="#c9bfa8">按 CCI 原评估执行</text>
+
+          <defs>
+            <marker id="arr" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5" markerHeight="5" orient="auto">
+              <path d="M 0 0 L 10 5 L 0 10 Z" fill="#8d8575"/>
+            </marker>
+          </defs>
+        </svg>
+      </div>
+    </section>
+
+    <!-- ============ X 局限 ============ -->
+    <section class="section" id="s-limits">
+      <div class="sec-head">
+        <div class="sec-num">X</div>
+        <div>
+          <div class="sec-title">局限与未解问题</div>
+          <div class="sec-sub">Honest Limitations</div>
+        </div>
+      </div>
+
+      <div class="grid-2">
+        <div class="card card-lg">
+          <div class="card-title" style="color:var(--accent)">本体系的"不能"</div>
+          <div class="card-body">
+            <strong>① 不能预测方向</strong> · 预警告诉你"接近相变",但不告诉你是崩塌还是暴涨。需结合基本面综合判断<br>
+            <strong>② 不能消除假警报</strong> · 四信号全触发仍有 20-30% 不发生实际相变。敏感度/精确度权衡无法消除<br>
+            <strong>③ 不能应对黑天鹅</strong> · 突发政治事件、交易所故障等违反"系统先发信号"假设
+          </div>
+        </div>
+        <div class="card card-lg">
+          <div class="card-title" style="color:var(--gold)">未解的深层问题</div>
+          <div class="card-body">
+            <strong>① 反身性倍数量化</strong> · 振幅公式中的反身性项仍是黑箱,需二阶微分方程建模<br>
+            <strong>② 介质相变的连续性</strong> · 真实相变可能是连续变形而非离散跳跃,分类有模糊性<br>
+            <strong>③ 预警的反身性悖论</strong> · 好的预警系统会通过触发防御行为改变自身预测
+          </div>
+        </div>
+      </div>
+
+      <div class="quote" style="margin-top:14px">
+        临界点预警系统的真正价值,<strong>不在于"预测相变",而在于"触发行为修正从而避免相变"</strong>。最好的预警系统是那些让自己的预测失效的系统。
+      </div>
+
+      <!-- 下一步 -->
+      <div class="card-lg" style="margin-top:14px">
+        <div class="card-title">下一步:从文档到系统</div>
+        <div class="card-sub">Research Agenda</div>
+        <div class="grid-4" style="gap:10px;margin-top:6px">
+          <div class="card" style="padding:12px 14px">
+            <div style="font-family:'Cormorant Garamond';font-style:italic;font-size:28px;color:var(--accent);font-weight:700">①</div>
+            <div style="font-size:12px;color:var(--ink);font-weight:700;margin-top:4px">数据层</div>
+            <div style="font-size:11px;color:var(--ink-dim);margin-top:3px;line-height:1.5">Tushare Pro / Wind 获取日度价量</div>
+          </div>
+          <div class="card" style="padding:12px 14px">
+            <div style="font-family:'Cormorant Garamond';font-style:italic;font-size:28px;color:var(--gold);font-weight:700">②</div>
+            <div style="font-size:12px;color:var(--ink);font-weight:700;margin-top:4px">计算层</div>
+            <div style="font-size:11px;color:var(--ink-dim);margin-top:3px;line-height:1.5">Python 滚动相关矩阵 / CCI</div>
+          </div>
+          <div class="card" style="padding:12px 14px">
+            <div style="font-family:'Cormorant Garamond';font-style:italic;font-size:28px;color:var(--accent-2);font-weight:700">③</div>
+            <div style="font-size:12px;color:var(--ink);font-weight:700;margin-top:4px">回测层</div>
+            <div style="font-size:11px;color:var(--ink-dim);margin-top:3px;line-height:1.5">近10年20+相变事件标定</div>
+          </div>
+          <div class="card" style="padding:12px 14px">
+            <div style="font-family:'Cormorant Garamond';font-style:italic;font-size:28px;color:var(--blue);font-weight:700">④</div>
+            <div style="font-size:12px;color:var(--ink);font-weight:700;margin-top:4px">部署层</div>
+            <div style="font-size:11px;color:var(--ink-dim);margin-top:3px;line-height:1.5">每日推送 CCI 日报到手机</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ 体系索引 ============ -->
+    <section class="section" id="s-colophon">
+      <div class="sec-head">
+        <div class="sec-num">⊕</div>
+        <div>
+          <div class="sec-title">体系索引 · 全系列地图</div>
+          <div class="sec-sub">Full Series Index</div>
+        </div>
+      </div>
+
+      <table class="tbl">
+        <thead>
+          <tr>
+            <th>册号</th>
+            <th>标题</th>
+            <th>方法论定位</th>
+            <th>关系</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td class="mono bold">I–V</td><td>监测体系 / 资金视角 / 图谱 / 元研究 / 实战</td><td>九类资金框架建立</td><td>基础层</td></tr>
+          <tr><td class="mono bold">A</td><td>工程附录 · 计算手册</td><td>可操作化</td><td>工具层</td></tr>
+          <tr><td class="mono bold">B1-B2</td><td>宁德 / 迈瑞案例</td><td>五棒接力实证</td><td>案例层</td></tr>
+          <tr><td class="mono bold">C</td><td>综合速查卡</td><td>单页实战</td><td>工具层</td></tr>
+          <tr style="background:rgba(224,182,99,.05)"><td class="mono bold neutral">X</td><td>资金波浪定量验证</td><td>从分类到定量</td><td>升级层</td></tr>
+          <tr style="background:rgba(224,182,99,.05)"><td class="mono bold neutral">X.C</td><td>资金波浪速查卡</td><td>X的单页版</td><td>工具层</td></tr>
+          <tr style="background:rgba(214,93,67,.08)"><td class="mono bold hot">XI</td><td>A股相变监测体系</td><td>从诊断到预警</td><td>部署层</td></tr>
+          <tr><td class="mono" style="color:var(--ink-soft)">XII?</td><td>多频资金波浪叠加模型(预留)</td><td>从单频到多频</td><td>前沿层</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <!-- ============ 结语 ============ -->
+    <div class="colophon">
+      <div class="colophon-motto">
+        外力决定是否有波 ·<br>
+        介质决定波有多大 ·<br>
+        <span>临界点决定波何时断</span>
+      </div>
+      <div class="colophon-meta">
+        VOLUME XI<br>
+        CRITICAL TRANSITION SURVEILLANCE<br>
+        v 2026.04 · DEPLOY READY<br>
+        <br>
+        A股资金博弈研究体系<br>
+        承接 Vol.X · 承前启后
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<script>
+function toggleSidebar(){
+  document.getElementById('sidebar').classList.toggle('collapsed');
+}
+function navTo(id, el){
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+  if(el) el.classList.add('active');
+  document.getElementById(id).scrollIntoView({behavior:'smooth',block:'start'});
+}
+// 默认激活第一项
+document.querySelectorAll('.nav-item')[0]?.classList.add('active');
+// 滚动时更新高亮
+const sections = document.querySelectorAll('.section');
+const navItems = document.querySelectorAll('.nav-item');
+window.addEventListener('scroll', () => {
+  let current = '';
+  sections.forEach(sec => {
+    const top = sec.getBoundingClientRect().top;
+    if(top < 120) current = sec.id;
+  });
+  if(current){
+    navItems.forEach((item, idx) => {
+      item.classList.remove('active');
+      const onclickStr = item.getAttribute('onclick') || '';
+      if(onclickStr.includes(current)) item.classList.add('active');
+    });
+  }
+});
+</script>
+
+</body>
+</html>

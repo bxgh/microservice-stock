@@ -14,8 +14,10 @@ def format_content(text):
     # 处理代码块: ```lang\ncode\n```
     # 使用 <div> 包装以便于样式控制和添加语言标签
     def replace_code(m):
-        lang = m.group(1).strip() if m.group(1) else "txt"
+        lang = m.group(1).strip().lower() if m.group(1) else "txt"
         code = m.group(2).strip()
+        if lang == "mermaid":
+            return f'<div class="block-mermaid"><div class="mermaid">{code}</div></div>'
         return f'<div class="code-wrapper" data-lang="{lang}"><pre><code class="language-{lang}">{code}</code></pre><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>'
     
     # 更加宽松的正则，不强制要求结尾有换行

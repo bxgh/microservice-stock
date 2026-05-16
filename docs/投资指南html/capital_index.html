@@ -1,0 +1,1063 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>综合参考手册 · 九类资金行为特征速查卡</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;500;700;900&family=JetBrains+Mono:wght@300;400;500;600;700&family=Bodoni+Moda:ital,wght@0,400;0,700;0,900;1,400&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg-deep:#0a0e14;--bg-card:#11161f;--bg-elevated:#1a212d;
+  --border:#2a3441;--border-bright:#3d4a5c;
+  --text-primary:#e8eaed;--text-secondary:#9ba7b8;--text-muted:#5a6779;
+  --amber:#ffb547;--amber-bright:#ffc875;--amber-dim:#8a6027;
+  --cyan:#4dd0e1;--red:#ff5252;--green:#66bb6a;--purple:#b794f4;--rose:#f48fb1;
+  --grid-line:rgba(255,181,71,0.06);
+  --c-national:#ff5252;--c-nb-alloc:#4dd0e1;--c-nb-trade:#b794f4;--c-mutual:#66bb6a;
+  --c-quant:#ff79c6;--c-insurance:#ffb547;--c-hot:#ff9248;--c-retail:#50fa7b;--c-industrial:#f48fb1;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{font-family:'Noto Serif SC',serif;background:var(--bg-deep);color:var(--text-primary);line-height:1.7;background-image:linear-gradient(var(--grid-line) 1px,transparent 1px),linear-gradient(90deg,var(--grid-line) 1px,transparent 1px);background-size:60px 60px;background-attachment:fixed}
+
+/* Header */
+.header{position:relative;padding:100px 60px 80px;border-bottom:1px solid var(--border);overflow:hidden}
+.header::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,var(--amber),transparent)}
+.header::after{content:'INDEX';position:absolute;font-family:'Bodoni Moda',serif;font-weight:900;font-style:italic;font-size:360px;color:rgba(255,181,71,0.025);bottom:-120px;right:-40px;letter-spacing:-14px;pointer-events:none;line-height:.8}
+.header-meta{display:flex;justify-content:space-between;font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text-muted);letter-spacing:2px;text-transform:uppercase;margin-bottom:60px}
+.header-meta .dot{display:inline-block;width:8px;height:8px;background:var(--amber);border-radius:50%;margin-right:8px;box-shadow:0 0 12px var(--amber);animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+.title-tag{font-family:'Bodoni Moda',serif;font-style:italic;font-size:22px;color:var(--amber);margin-bottom:20px;position:relative;z-index:1}
+.title-zh{font-family:'Noto Serif SC',serif;font-size:76px;font-weight:900;line-height:1.05;letter-spacing:-2px;margin-bottom:24px;position:relative;z-index:1}
+.title-zh .accent{color:var(--amber);font-family:'Bodoni Moda',serif;font-style:italic}
+.title-en{font-family:'Bodoni Moda',serif;font-style:italic;font-size:24px;color:var(--text-secondary);margin-bottom:40px;letter-spacing:1px;position:relative;z-index:1}
+.subtitle{font-size:17px;color:var(--text-secondary);max-width:880px;border-left:2px solid var(--amber);padding-left:24px;line-height:1.8;position:relative;z-index:1}
+.subtitle strong{color:var(--amber)}
+
+/* Nav */
+.nav{position:sticky;top:0;z-index:100;background:rgba(10,14,20,.95);backdrop-filter:blur(10px);border-bottom:1px solid var(--border);padding:16px 60px;font-family:'JetBrains Mono',monospace;font-size:11px;text-transform:uppercase;letter-spacing:1.5px}
+.nav ul{display:flex;gap:28px;list-style:none;flex-wrap:wrap}
+.nav a{color:var(--text-secondary);text-decoration:none;transition:color .3s;position:relative;padding-bottom:4px}
+.nav a:hover{color:var(--amber)}
+.nav a::after{content:'';position:absolute;bottom:0;left:0;width:0;height:1px;background:var(--amber);transition:width .3s}
+.nav a:hover::after{width:100%}
+
+/* Section */
+.section{padding:100px 60px;border-bottom:1px solid var(--border);position:relative}
+.section-header{display:flex;align-items:baseline;gap:30px;margin-bottom:60px;padding-bottom:30px;border-bottom:1px dashed var(--border)}
+.section-num{font-family:'Bodoni Moda',serif;font-size:96px;font-weight:900;color:transparent;-webkit-text-stroke:1px var(--amber);line-height:.8;font-style:italic}
+.section-title{font-size:40px;font-weight:700;margin-bottom:8px;letter-spacing:-1px;line-height:1.2}
+.section-subtitle{font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--text-muted);text-transform:uppercase;letter-spacing:2px}
+.lead{font-size:16px;color:var(--text-secondary);line-height:1.9;max-width:880px;margin-bottom:40px}
+.lead strong{color:var(--amber-bright);font-weight:500}
+
+/* 维度对比说明 */
+.dim-intro{display:grid;grid-template-columns:1fr 60px 1fr;gap:20px;align-items:stretch;margin-top:40px}
+.dim-side{background:var(--bg-card);border:1px solid var(--border);padding:32px 36px;border-top:3px solid}
+.dim-side.stock{border-top-color:var(--cyan)}
+.dim-side.sector{border-top-color:var(--amber)}
+.dim-label{font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:2px;margin-bottom:14px}
+.dim-side.stock .dim-label{color:var(--cyan)}
+.dim-side.sector .dim-label{color:var(--amber)}
+.dim-name{font-size:24px;font-weight:700;margin-bottom:14px}
+.dim-desc{font-size:14px;color:var(--text-secondary);line-height:1.85}
+.dim-desc strong{color:var(--amber-bright)}
+.dim-vs{text-align:center;font-family:'Bodoni Moda',serif;font-style:italic;font-size:40px;color:var(--text-muted);align-self:center}
+
+/* 资金卡片导航 */
+.capital-nav{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--border);border:1px solid var(--border);margin:50px 0}
+.cap-nav-item{background:var(--bg-card);padding:20px 18px;cursor:pointer;transition:background .3s;text-decoration:none;display:block;border-left:3px solid}
+.cap-nav-item:hover{background:var(--bg-elevated)}
+.cap-nav-item[data-color="national"]{border-left-color:var(--c-national)}
+.cap-nav-item[data-color="nb-alloc"]{border-left-color:var(--c-nb-alloc)}
+.cap-nav-item[data-color="nb-trade"]{border-left-color:var(--c-nb-trade)}
+.cap-nav-item[data-color="mutual"]{border-left-color:var(--c-mutual)}
+.cap-nav-item[data-color="quant"]{border-left-color:var(--c-quant)}
+.cap-nav-item[data-color="insurance"]{border-left-color:var(--c-insurance)}
+.cap-nav-item[data-color="hot"]{border-left-color:var(--c-hot)}
+.cap-nav-item[data-color="retail"]{border-left-color:var(--c-retail)}
+.cap-nav-item[data-color="industrial"]{border-left-color:var(--c-industrial)}
+.cap-nav-num{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--text-muted);letter-spacing:1.5px;margin-bottom:6px}
+.cap-nav-name{font-size:16px;font-weight:700;color:var(--text-primary);margin-bottom:4px}
+.cap-nav-tag{font-family:'Bodoni Moda',serif;font-style:italic;font-size:11px;color:var(--amber)}
+
+/* 资金详细卡片 */
+.capital-card{background:var(--bg-card);border:1px solid var(--border);margin-bottom:40px;overflow:hidden;border-left:4px solid}
+.capital-card[data-color="national"]{border-left-color:var(--c-national)}
+.capital-card[data-color="nb-alloc"]{border-left-color:var(--c-nb-alloc)}
+.capital-card[data-color="nb-trade"]{border-left-color:var(--c-nb-trade)}
+.capital-card[data-color="mutual"]{border-left-color:var(--c-mutual)}
+.capital-card[data-color="quant"]{border-left-color:var(--c-quant)}
+.capital-card[data-color="insurance"]{border-left-color:var(--c-insurance)}
+.capital-card[data-color="hot"]{border-left-color:var(--c-hot)}
+.capital-card[data-color="retail"]{border-left-color:var(--c-retail)}
+.capital-card[data-color="industrial"]{border-left-color:var(--c-industrial)}
+
+.cc-header{padding:32px 40px;background:var(--bg-elevated);border-bottom:1px solid var(--border);display:grid;grid-template-columns:80px 1fr auto;gap:24px;align-items:center}
+.cc-num{font-family:'Bodoni Moda',serif;font-style:italic;font-weight:900;font-size:64px;line-height:.8;text-align:center;opacity:.6}
+.capital-card[data-color="national"] .cc-num{color:var(--c-national)}
+.capital-card[data-color="nb-alloc"] .cc-num{color:var(--c-nb-alloc)}
+.capital-card[data-color="nb-trade"] .cc-num{color:var(--c-nb-trade)}
+.capital-card[data-color="mutual"] .cc-num{color:var(--c-mutual)}
+.capital-card[data-color="quant"] .cc-num{color:var(--c-quant)}
+.capital-card[data-color="insurance"] .cc-num{color:var(--c-insurance)}
+.capital-card[data-color="hot"] .cc-num{color:var(--c-hot)}
+.capital-card[data-color="retail"] .cc-num{color:var(--c-retail)}
+.capital-card[data-color="industrial"] .cc-num{color:var(--c-industrial)}
+
+.cc-title-group h3{font-size:28px;font-weight:700;margin-bottom:4px}
+.cc-en{font-family:'Bodoni Moda',serif;font-style:italic;font-size:14px;color:var(--text-muted)}
+.cc-tag{font-family:'JetBrains Mono',monospace;font-size:10px;padding:6px 14px;letter-spacing:1.5px;border:1px solid var(--amber-dim);color:var(--amber);background:rgba(255,181,71,0.04)}
+
+.cc-body{padding:36px 40px}
+.cc-split{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--border);border:1px solid var(--border);margin-bottom:30px}
+.cc-section{background:var(--bg-deep);padding:28px 30px}
+.cc-section-label{font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:1.8px;margin-bottom:6px;text-transform:uppercase}
+.cc-section.stock .cc-section-label{color:var(--cyan)}
+.cc-section.sector .cc-section-label{color:var(--amber)}
+.cc-section-title{font-size:16px;font-weight:700;margin-bottom:18px;padding-bottom:12px;border-bottom:1px solid var(--border)}
+.cc-section.stock .cc-section-title{color:var(--cyan)}
+.cc-section.sector .cc-section-title{color:var(--amber)}
+.cc-features{list-style:none}
+.cc-features li{padding:10px 0;border-bottom:1px dashed rgba(42,52,65,.5);font-size:13px;color:var(--text-secondary);line-height:1.75}
+.cc-features li:last-child{border-bottom:none}
+.cc-features li strong{color:var(--text-primary);font-weight:500;display:block;margin-bottom:4px}
+
+.cc-insight{background:linear-gradient(135deg,rgba(255,181,71,.05),rgba(255,181,71,.01));border:1px solid var(--amber-dim);padding:22px 28px;border-left:3px solid var(--amber)}
+.cc-insight-label{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--amber);letter-spacing:2px;margin-bottom:10px}
+.cc-insight-text{font-size:14px;color:var(--text-primary);line-height:1.8}
+.cc-insight-text strong{color:var(--amber)}
+
+/* 综合对比表 */
+.summary-table{width:100%;border-collapse:collapse;font-size:12px;margin-top:30px;background:var(--bg-card)}
+.summary-table th{background:var(--bg-elevated);padding:14px 16px;text-align:left;font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--amber);letter-spacing:1.2px;text-transform:uppercase;border:1px solid var(--border);font-weight:500;position:sticky;top:56px;z-index:5}
+.summary-table td{padding:14px 16px;border:1px solid var(--border);color:var(--text-secondary);vertical-align:top;line-height:1.7}
+.summary-table .col-key{color:var(--text-primary);font-weight:600;font-size:13px}
+.summary-table .col-icon{text-align:center;width:40px}
+.summary-table .color-dot{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:6px;vertical-align:middle}
+.summary-table .dot-national{background:var(--c-national);box-shadow:0 0 6px var(--c-national)}
+.summary-table .dot-nb-alloc{background:var(--c-nb-alloc);box-shadow:0 0 6px var(--c-nb-alloc)}
+.summary-table .dot-nb-trade{background:var(--c-nb-trade);box-shadow:0 0 6px var(--c-nb-trade)}
+.summary-table .dot-mutual{background:var(--c-mutual);box-shadow:0 0 6px var(--c-mutual)}
+.summary-table .dot-quant{background:var(--c-quant);box-shadow:0 0 6px var(--c-quant)}
+.summary-table .dot-insurance{background:var(--c-insurance);box-shadow:0 0 6px var(--c-insurance)}
+.summary-table .dot-hot{background:var(--c-hot);box-shadow:0 0 6px var(--c-hot)}
+.summary-table .dot-retail{background:var(--c-retail);box-shadow:0 0 6px var(--c-retail)}
+.summary-table .dot-industrial{background:var(--c-industrial);box-shadow:0 0 6px var(--c-industrial)}
+
+/* 场景卡片 */
+.scenarios{display:grid;gap:24px;margin-top:40px}
+.scenario{background:var(--bg-card);border:1px solid var(--border);padding:36px 40px;position:relative;overflow:hidden}
+.scenario::before{content:'';position:absolute;top:0;left:0;right:0;height:3px}
+.scenario.bull::before{background:var(--green)}
+.scenario.bear::before{background:var(--red)}
+.scenario.left::before{background:var(--cyan)}
+.scenario.warning::before{background:var(--amber)}
+.scenario.danger::before{background:var(--purple)}
+
+.sc-header{display:grid;grid-template-columns:60px 1fr auto;gap:24px;margin-bottom:24px;padding-bottom:20px;border-bottom:1px dashed var(--border)}
+.sc-letter{font-family:'Bodoni Moda',serif;font-style:italic;font-weight:900;font-size:52px;line-height:.8;text-align:center}
+.scenario.bull .sc-letter{color:var(--green)}
+.scenario.bear .sc-letter{color:var(--red)}
+.scenario.left .sc-letter{color:var(--cyan)}
+.scenario.warning .sc-letter{color:var(--amber)}
+.scenario.danger .sc-letter{color:var(--purple)}
+
+.sc-title{font-size:22px;font-weight:700;margin-bottom:4px}
+.sc-subtitle{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text-muted);letter-spacing:1.5px}
+.sc-action{font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:1.5px;padding:8px 14px;border:1px solid}
+.scenario.bull .sc-action{color:var(--green);border-color:var(--green);background:rgba(102,187,106,.05)}
+.scenario.bear .sc-action{color:var(--red);border-color:var(--red);background:rgba(255,82,82,.05)}
+.scenario.left .sc-action{color:var(--cyan);border-color:var(--cyan);background:rgba(77,208,225,.05)}
+.scenario.warning .sc-action{color:var(--amber);border-color:var(--amber);background:rgba(255,181,71,.05)}
+.scenario.danger .sc-action{color:var(--purple);border-color:var(--purple);background:rgba(183,148,244,.05)}
+
+.sc-body{display:grid;grid-template-columns:1.5fr 1fr;gap:30px}
+.sc-combo-label{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--amber);letter-spacing:1.5px;margin-bottom:12px;text-transform:uppercase}
+.sc-combo{display:flex;flex-direction:column;gap:10px}
+.sc-combo-row{display:grid;grid-template-columns:20px 1fr;gap:12px;align-items:center;font-size:13px;color:var(--text-secondary);padding:10px 14px;background:var(--bg-elevated);border-left:2px solid}
+.scenario.bull .sc-combo-row{border-left-color:var(--green)}
+.scenario.bear .sc-combo-row{border-left-color:var(--red)}
+.scenario.left .sc-combo-row{border-left-color:var(--cyan)}
+.scenario.warning .sc-combo-row{border-left-color:var(--amber)}
+.scenario.danger .sc-combo-row{border-left-color:var(--purple)}
+.sc-combo-dot{width:10px;height:10px;border-radius:50%}
+.sc-combo-row strong{color:var(--text-primary);font-weight:600;margin-right:8px}
+
+.sc-meta{background:var(--bg-elevated);padding:20px 24px;border-top:2px solid var(--border-bright)}
+.sc-meta-item{margin-bottom:14px;padding-bottom:14px;border-bottom:1px dashed var(--border)}
+.sc-meta-item:last-child{margin-bottom:0;padding-bottom:0;border-bottom:none}
+.sc-meta-label{font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--text-muted);letter-spacing:1.5px;margin-bottom:6px;text-transform:uppercase}
+.sc-meta-val{font-size:13px;color:var(--text-primary);line-height:1.6}
+
+/* Footer */
+.ultimate{padding:140px 60px;text-align:center;border-top:1px solid var(--border);background:radial-gradient(ellipse at center top,rgba(255,181,71,.1) 0%,transparent 60%),var(--bg-deep);position:relative}
+.ultimate-tag{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--amber);letter-spacing:3px;margin-bottom:30px}
+.ultimate-quote{font-family:'Noto Serif SC',serif;font-weight:700;font-size:36px;color:var(--text-primary);max-width:950px;margin:0 auto 30px;line-height:1.5;letter-spacing:-.5px}
+.ultimate-quote .highlight{color:var(--amber);font-family:'Bodoni Moda',serif;font-style:italic}
+.ultimate-final{font-family:'Bodoni Moda',serif;font-style:italic;font-size:22px;color:var(--amber);max-width:720px;margin:0 auto 60px;line-height:1.7}
+
+.series-info{display:flex;justify-content:center;gap:16px;padding-top:50px;border-top:1px solid var(--border);max-width:1300px;margin:40px auto 0;flex-wrap:wrap}
+.series-item{font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--text-muted);letter-spacing:1.2px;text-transform:uppercase;text-align:center;flex:1;min-width:100px}
+.series-item.current{color:var(--amber)}
+.series-item .num{font-family:'Bodoni Moda',serif;font-style:italic;font-size:20px;display:block;margin-bottom:4px;font-weight:700}
+
+@media(max-width:968px){
+  .header{padding:60px 30px 40px}
+  .header::after{font-size:180px}
+  .title-zh{font-size:44px}
+  .title-en{font-size:18px}
+  .nav{padding:16px 30px}
+  .nav ul{gap:14px}
+  .section{padding:60px 30px}
+  .section-num{font-size:64px}
+  .section-title{font-size:28px}
+  .dim-intro{grid-template-columns:1fr}
+  .dim-vs{display:none}
+  .capital-nav{grid-template-columns:1fr}
+  .cc-header{grid-template-columns:1fr;gap:12px}
+  .cc-split{grid-template-columns:1fr}
+  .summary-table{font-size:11px}
+  .summary-table th,.summary-table td{padding:10px 12px}
+  .sc-header{grid-template-columns:1fr;gap:12px}
+  .sc-body{grid-template-columns:1fr}
+  .ultimate{padding:60px 30px}
+  .ultimate-quote{font-size:24px}
+}
+</style>
+</head>
+<body>
+
+<header class="header">
+  <div class="header-meta">
+    <div><span class="dot"></span>MASTER REFERENCE · DESKTOP QUICK GUIDE</div>
+    <div>SERIES FINALE · CAPITAL BEHAVIOR INDEX</div>
+  </div>
+  <div class="title-tag">— The Complete Index of Capital Behaviors —</div>
+  <h1 class="title-zh">综合参考手册<br><span class="accent">九类资金行为特征速查卡</span></h1>
+  <div class="title-en">Master Reference · Stock-Level & Sector-Level Behaviors of All Nine Capital Types</div>
+  <p class="subtitle">
+    这是系列的收官之作。前面所有的理论、方法、工程、案例,都在这份手册中被压缩为<strong>可以随时查阅的桌面速查卡</strong>。看到一个行情,立刻能查到"哪类资金在推动";看到一类资金在动,立刻能查到"它在个股和板块上的典型特征"。
+  </p>
+</header>
+
+<nav class="nav">
+  <ul>
+    <li><a href="#why">01 · 为什么区分维度</a></li>
+    <li><a href="#index">02 · 九类资金索引</a></li>
+    <li><a href="#detail">03 · 详细特征卡片</a></li>
+    <li><a href="#summary">04 · 综合对比表</a></li>
+    <li><a href="#scenarios">05 · 五大协同场景</a></li>
+  </ul>
+</nav>
+
+<!-- ========== 01 ========== -->
+<section class="section" id="why">
+  <div class="section-header">
+    <div class="section-num">01</div>
+    <div>
+      <h2 class="section-title">为什么要区分"个股"和"板块"两个维度</h2>
+      <div class="section-subtitle">Why Two Dimensions Matter</div>
+    </div>
+  </div>
+
+  <p class="lead">
+    这是一个经常被忽视的关键区别。同一类资金在<strong>个股层面</strong>和<strong>板块层面</strong>的行为模式完全不同。两个层面的信息都要读懂,才能理解资金的完整行为。
+  </p>
+
+  <div class="dim-intro">
+    <div class="dim-side stock">
+      <div class="dim-label">— DIMENSION 1 · STOCK LEVEL —</div>
+      <div class="dim-name">个股层面 · 具体选择</div>
+      <div class="dim-desc">
+        反映的是这类资金的<strong>选股标准、持仓集中度、买卖节奏、换手率</strong>。比如北向配置盘在个股层面呈现"集中+稳定+逆向"的特征。个股层面是<strong>战术层</strong>的信号。
+      </div>
+    </div>
+    <div class="dim-vs">vs</div>
+    <div class="dim-side sector">
+      <div class="dim-label">— DIMENSION 2 · SECTOR LEVEL —</div>
+      <div class="dim-name">板块层面 · 集体偏好</div>
+      <div class="dim-desc">
+        反映的是这类资金的<strong>风险偏好、行业认知、宏观判断、调仓周期</strong>。比如公募基金在板块层面呈现"景气度轮动+2-3年周期"的特征。板块层面是<strong>战略层</strong>的信号。
+      </div>
+    </div>
+  </div>
+
+  <p style="margin-top:40px;font-size:15px;color:var(--text-secondary);line-height:1.9;max-width:880px;">
+    举例:公募基金在板块层面可能是"低配医药",但在个股层面却"重仓迈瑞医疗"——两个信号看似矛盾,实则都真实。<strong style="color:var(--amber)">只有同时读懂板块和个股两个维度,才能读懂公募的完整行为</strong>。
+  </p>
+</section>
+
+<!-- ========== 02 索引 ========== -->
+<section class="section" id="index">
+  <div class="section-header">
+    <div class="section-num">02</div>
+    <div>
+      <h2 class="section-title">九类资金索引</h2>
+      <div class="section-subtitle">The Nine Capital Types · Quick Navigation</div>
+    </div>
+  </div>
+
+  <p class="lead">
+    每一类资金都有独特的颜色标识、目标函数和典型场景。点击下方卡片,快速跳转到对应的详细特征分析。
+  </p>
+
+  <div class="capital-nav">
+    <a href="#c-national" class="cap-nav-item" data-color="national">
+      <div class="cap-nav-num">— I —</div>
+      <div class="cap-nav-name">国家队</div>
+      <div class="cap-nav-tag">The Stabilizer</div>
+    </a>
+    <a href="#c-nb-alloc" class="cap-nav-item" data-color="nb-alloc">
+      <div class="cap-nav-num">— II —</div>
+      <div class="cap-nav-name">北向配置盘</div>
+      <div class="cap-nav-tag">Long-term Allocator</div>
+    </a>
+    <a href="#c-nb-trade" class="cap-nav-item" data-color="nb-trade">
+      <div class="cap-nav-num">— III —</div>
+      <div class="cap-nav-name">北向交易盘</div>
+      <div class="cap-nav-tag">Noise Amplifier</div>
+    </a>
+    <a href="#c-mutual" class="cap-nav-item" data-color="mutual">
+      <div class="cap-nav-num">— IV —</div>
+      <div class="cap-nav-name">公募基金</div>
+      <div class="cap-nav-tag">The Herding Machine</div>
+    </a>
+    <a href="#c-quant" class="cap-nav-item" data-color="quant">
+      <div class="cap-nav-num">— V —</div>
+      <div class="cap-nav-name">量化基金</div>
+      <div class="cap-nav-tag">Micro-cap Pricer</div>
+    </a>
+    <a href="#c-insurance" class="cap-nav-item" data-color="insurance">
+      <div class="cap-nav-num">— VI —</div>
+      <div class="cap-nav-name">险资</div>
+      <div class="cap-nav-tag">Dividend Anchor</div>
+    </a>
+    <a href="#c-hot" class="cap-nav-item" data-color="hot">
+      <div class="cap-nav-num">— VII —</div>
+      <div class="cap-nav-name">游资</div>
+      <div class="cap-nav-tag">Sentiment Igniter</div>
+    </a>
+    <a href="#c-retail" class="cap-nav-item" data-color="retail">
+      <div class="cap-nav-num">— VIII —</div>
+      <div class="cap-nav-name">散户</div>
+      <div class="cap-nav-tag">Emotion Extremizer</div>
+    </a>
+    <a href="#c-industrial" class="cap-nav-item" data-color="industrial">
+      <div class="cap-nav-num">— IX —</div>
+      <div class="cap-nav-name">产业资本</div>
+      <div class="cap-nav-tag">True Insider</div>
+    </a>
+  </div>
+</section>
+
+<!-- ========== 03 详细卡片 ========== -->
+<section class="section" id="detail">
+  <div class="section-header">
+    <div class="section-num">03</div>
+    <div>
+      <h2 class="section-title">详细特征卡片</h2>
+      <div class="section-subtitle">Detailed Profile Cards for All Nine Capital Types</div>
+    </div>
+  </div>
+
+  <!-- I 国家队 -->
+  <div class="capital-card" data-color="national" id="c-national">
+    <div class="cc-header">
+      <div class="cc-num">I</div>
+      <div class="cc-title-group">
+        <h3>国家队 · 市场稳定器</h3>
+        <div class="cc-en">The National Team · Systemic Risk Backstop</div>
+      </div>
+      <div class="cc-tag">LOW FREQ · HIGH SIGNAL</div>
+    </div>
+    <div class="cc-body">
+      <div class="cc-split">
+        <div class="cc-section sector">
+          <div class="cc-section-label">— SECTOR LEVEL · 板块特征 —</div>
+          <div class="cc-section-title">只进宽基,不做行业</div>
+          <ul class="cc-features">
+            <li><strong>工具单一:</strong>主要通过沪深300ETF、上证50ETF、中证500/1000ETF入场</li>
+            <li><strong>入场时点高度集中:</strong>2015年7月、2018年Q4、2024年1-2月、2024年9月</li>
+            <li><strong>共同特征:</strong>市场恐慌+估值历史低位=入场条件</li>
+            <li><strong>退出极慢:</strong>持仓可维持数年,形成ETF份额单边上升</li>
+          </ul>
+        </div>
+        <div class="cc-section stock">
+          <div class="cc-section-label">— STOCK LEVEL · 个股特征 —</div>
+          <div class="cc-section-title">通过ETF间接持有蓝筹</div>
+          <ul class="cc-features">
+            <li><strong>直接持仓:</strong>四大行、两桶油、中国平安、贵州茅台等超大市值</li>
+            <li><strong>持仓高度稳定:</strong>核心持仓多年不变</li>
+            <li><strong>对个股信号的误读:</strong>"持有国家队数量增加"往往是被纳入重要指数的结果</li>
+            <li><strong>不参与:</strong>中小盘、题材股、新股完全不碰</li>
+          </ul>
+        </div>
+      </div>
+      <div class="cc-insight">
+        <div class="cc-insight-label">▸ 实战信号价值</div>
+        <div class="cc-insight-text">
+          国家队是<strong>系统性底部的确认信号,不是个股买入信号</strong>。看到国家队入场,应该增加大盘宽基配置,减少对黑天鹅的恐惧——但不要指望立刻上涨。它的目标是稳住,而不是反转。用"在不在场"而不是"买了多少"来解读信号。
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- II 北向配置盘 -->
+  <div class="capital-card" data-color="nb-alloc" id="c-nb-alloc">
+    <div class="cc-header">
+      <div class="cc-num">II</div>
+      <div class="cc-title-group">
+        <h3>北向配置盘 · 长期定价权的隐形掌控者</h3>
+        <div class="cc-en">Northbound Allocation Pool · The Long-term Price Anchor</div>
+      </div>
+      <div class="cc-tag">HIGH CONVICTION · SLOW MOVING</div>
+    </div>
+    <div class="cc-body">
+      <div class="cc-split">
+        <div class="cc-section sector">
+          <div class="cc-section-label">— SECTOR LEVEL · 板块特征 —</div>
+          <div class="cc-section-title">偏好"全球可对比的核心资产"</div>
+          <ul class="cc-features">
+            <li><strong>长期超配板块:</strong>白酒、白电、医药器械、新能源制造、优质股份行</li>
+            <li><strong>系统性低配:</strong>纯内需强周期、题材驱动小盘、依赖补贴行业</li>
+            <li><strong>调仓周期:</strong>季度到年度级,对应全球资产配置再平衡</li>
+            <li><strong>经典案例:</strong>2024-2025年电力设备+电子持仓增加超1600亿</li>
+          </ul>
+        </div>
+        <div class="cc-section stock">
+          <div class="cc-section-label">— STOCK LEVEL · 个股特征 —</div>
+          <div class="cc-section-title">集中 · 稳定 · 逆向</div>
+          <ul class="cc-features">
+            <li><strong>80/20集中:</strong>宁德时代单只就超2500亿,占北向持仓8%+</li>
+            <li><strong>稳定性极高:</strong>前十大持仓常常维持多年不变</li>
+            <li><strong>逆向操作:</strong>大跌时加仓、大涨时减仓,展现"估值纪律"</li>
+            <li><strong>完全回避:</strong>新股、题材股、科创板次新股</li>
+          </ul>
+        </div>
+      </div>
+      <div class="cc-insight">
+        <div class="cc-insight-label">▸ 实战信号价值</div>
+        <div class="cc-insight-text">
+          <strong>北向配置盘持续加仓某行业,是行业中长期基本面改善的可靠信号</strong>。个股层面,"连续多个季度被北向增持"比"单季度大幅买入"更有价值。宁德时代北向持股比例连续7个季度增加,是其基本面改善的最早期信号之一。
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- III 北向交易盘 -->
+  <div class="capital-card" data-color="nb-trade" id="c-nb-trade">
+    <div class="cc-header">
+      <div class="cc-num">III</div>
+      <div class="cc-title-group">
+        <h3>北向交易盘 · 市场噪音的放大器</h3>
+        <div class="cc-en">Northbound Trading Pool · The Market Noise Amplifier</div>
+      </div>
+      <div class="cc-tag">HIGH FREQ · EVENT DRIVEN</div>
+    </div>
+    <div class="cc-body">
+      <div class="cc-split">
+        <div class="cc-section sector">
+          <div class="cc-section-label">— SECTOR LEVEL · 板块特征 —</div>
+          <div class="cc-section-title">对宏观事件反应最快</div>
+          <ul class="cc-features">
+            <li><strong>反应速度:</strong>美联储议息、降息降准、重要会议当天就有动作</li>
+            <li><strong>板块切换速度:</strong>一周内可能完成一次切换</li>
+            <li><strong>偏好流动性:</strong>主要在中证500和沪深300成分股</li>
+            <li><strong>少涉及小盘:</strong>快进快出需要流动性保障</li>
+          </ul>
+        </div>
+        <div class="cc-section stock">
+          <div class="cc-section-label">— STOCK LEVEL · 个股特征 —</div>
+          <div class="cc-section-title">博弈事件驱动</div>
+          <ul class="cc-features">
+            <li><strong>事件驱动:</strong>业绩超预期、并购、政策、分红激励都是触发器</li>
+            <li><strong>换手率极高:</strong>单只个股持有期几周到几月</li>
+            <li><strong>容易被误读为"聪明钱":</strong>实际上只是短期博弈</li>
+            <li><strong>关键洞察:</strong>必须拆分配置盘和交易盘,信号价值完全不同</li>
+          </ul>
+        </div>
+      </div>
+      <div class="cc-insight">
+        <div class="cc-insight-label">▸ 实战信号价值</div>
+        <div class="cc-insight-text">
+          不要把交易盘动作当中长期信号。真正有价值的信号出现在<strong>交易盘和配置盘背离</strong>时:配置盘买入+交易盘卖出=短期波动中的底部布局(机会);配置盘卖出+交易盘买入=博弈反弹但长期资金已撤(风险)。
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- IV 公募基金 -->
+  <div class="capital-card" data-color="mutual" id="c-mutual">
+    <div class="cc-header">
+      <div class="cc-num">IV</div>
+      <div class="cc-title-group">
+        <h3>公募基金 · 抱团的正反馈机器</h3>
+        <div class="cc-en">Mutual Funds · The Herding Positive-Feedback Machine</div>
+      </div>
+      <div class="cc-tag">RANKING-DRIVEN · TREND FOLLOWER</div>
+    </div>
+    <div class="cc-body">
+      <div class="cc-split">
+        <div class="cc-section sector">
+          <div class="cc-section-label">— SECTOR LEVEL · 板块特征 —</div>
+          <div class="cc-section-title">景气度轮动 · 2-3年周期</div>
+          <ul class="cc-features">
+            <li><strong>2019-2021:</strong>白酒+新能源+医药(核心资产)</li>
+            <li><strong>2022-2023:</strong>煤炭+石油(中特估+红利)</li>
+            <li><strong>2023-2024:</strong>AI+机器人(科技新主线)</li>
+            <li><strong>2024-2025:</strong>电力设备回归+电子+银行高股息</li>
+            <li><strong>周期规律:</strong>超配到低配约2-3年切换</li>
+          </ul>
+        </div>
+        <div class="cc-section stock">
+          <div class="cc-section-label">— STOCK LEVEL · 个股特征 —</div>
+          <div class="cc-section-title">抱团正反馈 · 龙头+赛道</div>
+          <ul class="cc-features">
+            <li><strong>集中度极高:</strong>宁德2024Q4被2044只基金重仓,茅台1500+</li>
+            <li><strong>群体同向:</strong>龙头公募减持带动整个群体减持</li>
+            <li><strong>龙头+赛道:</strong>每赛道前2-3只龙头获得估值溢价</li>
+            <li><strong>季报后传染:</strong>披露后2-4周出现跟随调仓</li>
+          </ul>
+        </div>
+      </div>
+      <div class="cc-insight">
+        <div class="cc-insight-label">▸ 实战信号价值</div>
+        <div class="cc-insight-text">
+          跟踪行业配置变化比看个股更重要。<strong>"持有基金数量"比"持仓市值"更有信号价值</strong>——持股基金从500只到1500只,说明抱团正在形成;从1500只到500只,说明抱团在瓦解。持仓市值可能被股价推高,但基金数量反映的是"真实共识"。
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- V 量化基金 -->
+  <div class="capital-card" data-color="quant" id="c-quant">
+    <div class="cc-header">
+      <div class="cc-num">V</div>
+      <div class="cc-title-group">
+        <h3>量化基金 · 小盘股的流动性定价者</h3>
+        <div class="cc-en">Quantitative Funds · The Micro-cap Liquidity Pricer</div>
+      </div>
+      <div class="cc-tag">FACTOR-DRIVEN · SELF-REFLEXIVE</div>
+    </div>
+    <div class="cc-body">
+      <div class="cc-split">
+        <div class="cc-section sector">
+          <div class="cc-section-label">— SECTOR LEVEL · 板块特征 —</div>
+          <div class="cc-section-title">不做板块,但塑造小盘风格</div>
+          <ul class="cc-features">
+            <li><strong>不主动择时:</strong>因子模型分散全市场</li>
+            <li><strong>被动塑造小盘行情:</strong>小市值因子偏好自然推高小盘</li>
+            <li><strong>行业集中度低:</strong>持仓覆盖数百上千只</li>
+            <li><strong>风格集中度高:</strong>市值、动量、估值因子高度一致</li>
+          </ul>
+        </div>
+        <div class="cc-section stock">
+          <div class="cc-section-label">— STOCK LEVEL · 个股特征 —</div>
+          <div class="cc-section-title">散点式持仓 · 极高换手</div>
+          <ul class="cc-features">
+            <li><strong>单股金额小:</strong>但覆盖股票极多</li>
+            <li><strong>换手率极高:</strong>日度甚至盘中调仓</li>
+            <li><strong>隐形抱团:</strong>相同因子模型导致同一股被同时买入</li>
+            <li><strong>流动性风险:</strong>2024年1月小微盘踩踏是经典案例</li>
+          </ul>
+        </div>
+      </div>
+      <div class="cc-insight">
+        <div class="cc-insight-label">▸ 实战信号价值</div>
+        <div class="cc-insight-text">
+          监测量化不能看单股,要看"小微盘vs中大盘"的相对强度。<strong>量化的真正风险不是"买什么",而是"拥挤度多高"</strong>。当指增超额持续走高+小微盘相对强度达到历史高位=拥挤度警报,应主动降低小盘暴露,而不是追随量化。
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- VI 险资 -->
+  <div class="capital-card" data-color="insurance" id="c-insurance">
+    <div class="cc-header">
+      <div class="cc-num">VI</div>
+      <div class="cc-title-group">
+        <h3>险资 · 红利风格的压舱石</h3>
+        <div class="cc-en">Insurance Capital · The Dividend Style Anchor</div>
+      </div>
+      <div class="cc-tag">LONG DURATION · DIVIDEND-FOCUSED</div>
+    </div>
+    <div class="cc-body">
+      <div class="cc-split">
+        <div class="cc-section sector">
+          <div class="cc-section-label">— SECTOR LEVEL · 板块特征 —</div>
+          <div class="cc-section-title">红利低波 · 以年为单位</div>
+          <ul class="cc-features">
+            <li><strong>长期偏好:</strong>银行、公用事业、煤炭石油、运营商、保险自身</li>
+            <li><strong>2023-2024红利行情主导者:</strong>当市场在AI博弈时,险资持续加仓红利</li>
+            <li><strong>调整周期以"年"计:</strong>一旦确定可维持5年以上</li>
+            <li><strong>负债端决定投资端:</strong>资金久期长,投资久期也长</li>
+          </ul>
+        </div>
+        <div class="cc-section stock">
+          <div class="cc-section-label">— STOCK LEVEL · 个股特征 —</div>
+          <div class="cc-section-title">举牌 · 超长期持有</div>
+          <ul class="cc-features">
+            <li><strong>举牌最具信号价值:</strong>估值低位+股息率高+现金流稳定</li>
+            <li><strong>历史举牌潮:</strong>2015、2020、2024年都是板块底部</li>
+            <li><strong>持仓年限:</strong>核心持仓可维持10年以上</li>
+            <li><strong>完全回避:</strong>新股、题材股、概念炒作</li>
+          </ul>
+        </div>
+      </div>
+      <div class="cc-insight">
+        <div class="cc-insight-label">▸ 实战信号价值</div>
+        <div class="cc-insight-text">
+          <strong>险资举牌是板块底部的重要信号</strong>。连续出现险资举牌,通常意味着行业估值低估+股息率吸引力足+长线资金开始布局。2024年银行股举牌潮是典型案例。持有红利风格股票时,险资的"不退出"是最可靠的持有信心来源。
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- VII 游资 -->
+  <div class="capital-card" data-color="hot" id="c-hot">
+    <div class="cc-header">
+      <div class="cc-num">VII</div>
+      <div class="cc-title-group">
+        <h3>游资 · 题材行情的情绪引爆器</h3>
+        <div class="cc-en">Hot Money · The Theme Rally Igniter</div>
+      </div>
+      <div class="cc-tag">EMOTIONAL · POLICY-RESPONSIVE</div>
+    </div>
+    <div class="cc-body">
+      <div class="cc-split">
+        <div class="cc-section sector">
+          <div class="cc-section-label">— SECTOR LEVEL · 板块特征 —</div>
+          <div class="cc-section-title">政策催化反应最快</div>
+          <ul class="cc-features">
+            <li><strong>首日布局:</strong>发改委、工信部政策当日开始介入</li>
+            <li><strong>近期引爆案例:</strong>低空经济、机器人、商业航天</li>
+            <li><strong>无法维持板块:</strong>需公募和北向接棒,否则一日游</li>
+            <li><strong>切换以"周"计:</strong>炒几天后迅速切换到下一板块</li>
+          </ul>
+        </div>
+        <div class="cc-section stock">
+          <div class="cc-section-label">— STOCK LEVEL · 个股特征 —</div>
+          <div class="cc-section-title">中小盘 · 连板高度为王</div>
+          <ul class="cc-features">
+            <li><strong>偏好市值:</strong>30-100亿流通市值最佳</li>
+            <li><strong>选股逻辑:</strong>题材+流通盘+筹码结构,几乎不看基本面</li>
+            <li><strong>关键指标:</strong>连板高度>涨停数量</li>
+            <li><strong>席位动向:</strong>知名游资席位活跃度是情绪温度计</li>
+          </ul>
+        </div>
+      </div>
+      <div class="cc-insight">
+        <div class="cc-insight-label">▸ 实战信号价值</div>
+        <div class="cc-insight-text">
+          游资行情的顶部标志是<strong>"接力断裂"</strong>——高度龙头炸板、次日高开低走、涨停数量下降。永远不要在题材被公众讨论时追高游资股——出现在央视、抖音热搜、公众号头条时,说明游资已出货,接下来是散户接盘尾声。
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- VIII 散户 -->
+  <div class="capital-card" data-color="retail" id="c-retail">
+    <div class="cc-header">
+      <div class="cc-num">VIII</div>
+      <div class="cc-title-group">
+        <h3>散户 · 市场情绪的最终放大器</h3>
+        <div class="cc-en">Retail Investors · The Ultimate Emotion Amplifier</div>
+      </div>
+      <div class="cc-tag">HETEROGENEOUS · HERD AT EXTREMES</div>
+    </div>
+    <div class="cc-body">
+      <div class="cc-split">
+        <div class="cc-section sector">
+          <div class="cc-section-label">— SECTOR LEVEL · 板块特征 —</div>
+          <div class="cc-section-title">对"看得懂"的板块偏好明显</div>
+          <ul class="cc-features">
+            <li><strong>偏好板块:</strong>白酒、新能源、医药、AI、机器人(故事驱动)</li>
+            <li><strong>回避板块:</strong>复杂金融衍生品、工业软件、基础化工</li>
+            <li><strong>个体异质+群体羊群:</strong>个人差异大,但集体呈现追涨杀跌</li>
+            <li><strong>关键指标:</strong>新增开户数是入场的直接指标</li>
+          </ul>
+        </div>
+        <div class="cc-section stock">
+          <div class="cc-section-label">— STOCK LEVEL · 个股特征 —</div>
+          <div class="cc-section-title">低价+话题+热门</div>
+          <ul class="cc-features">
+            <li><strong>选股偏好:</strong>绝对股价低、媒体讨论多、话题性强</li>
+            <li><strong>持仓分散换手高:</strong>组合可能几十只股票,但频繁买卖</li>
+            <li><strong>尾声追高龙头:</strong>2021年白酒、2024年末AI是典型</li>
+            <li><strong>两融映射情绪:</strong>余额快速攀升=市场过热</li>
+          </ul>
+        </div>
+      </div>
+      <div class="cc-insight">
+        <div class="cc-insight-label">▸ 实战信号价值</div>
+        <div class="cc-insight-text">
+          <strong>散户的极端情绪是最可靠的反向指标</strong>。新增开户+两融+搜索指数达到历史高位=接近顶部;跌至历史低位=接近底部。这不是说散户"笨",而是说散户整体行为反映了情绪极值。看"散户避开什么"往往比"散户买什么"更有价值。
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- IX 产业资本 -->
+  <div class="capital-card" data-color="industrial" id="c-industrial">
+    <div class="cc-header">
+      <div class="cc-num">IX</div>
+      <div class="cc-title-group">
+        <h3>产业资本 · 信息优势的最真实体现</h3>
+        <div class="cc-en">Industrial Capital · The Truest Insider Signal</div>
+      </div>
+      <div class="cc-tag">INFO-ADVANTAGED · LEADING INDICATOR</div>
+    </div>
+    <div class="cc-body">
+      <div class="cc-split">
+        <div class="cc-section sector">
+          <div class="cc-section-label">— SECTOR LEVEL · 板块特征 —</div>
+          <div class="cc-section-title">行业拐点的最早预警者</div>
+          <ul class="cc-features">
+            <li><strong>密集增持=行业改善信号:</strong>领先公募加仓3-6月</li>
+            <li><strong>回购潮板块分布有意义:</strong>2024-2025央企回购=中特估</li>
+            <li><strong>减持潮=基本面预警:</strong>行业内多家减持要警惕</li>
+            <li><strong>解禁影响:</strong>创业板/科创板被动减持需关注</li>
+          </ul>
+        </div>
+        <div class="cc-section stock">
+          <div class="cc-section-label">— STOCK LEVEL · 个股特征 —</div>
+          <div class="cc-section-title">最真实的内部判断</div>
+          <ul class="cc-features">
+            <li><strong>回购+增持=最强底部:</strong>宁德2024年1月¥133回购</li>
+            <li><strong>减持+降分红=顶部警示:</strong>宁德2026年4月港股配售</li>
+            <li><strong>股权激励行权价=估值锚:</strong>管理层长期合理估值</li>
+            <li><strong>大宗交易折溢价:</strong>折价=被迫减持,溢价=战略接盘</li>
+          </ul>
+        </div>
+      </div>
+      <div class="cc-insight">
+        <div class="cc-insight-label">▸ 实战信号价值</div>
+        <div class="cc-insight-text">
+          <strong>产业资本是A股中"信息最真实"的资金群体</strong>。既不像机构被考核约束,也不像散户被情绪驱动。连续多家公司大股东增持某行业,是行业拐点的最佳领先指标——领先公募加仓3-6个月,领先股价上涨1-2个季度。
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ========== 04 综合对比表 ========== -->
+<section class="section" id="summary">
+  <div class="section-header">
+    <div class="section-num">04</div>
+    <div>
+      <h2 class="section-title">九类资金综合对比表</h2>
+      <div class="section-subtitle">Master Comparison Table · All Nine Capital Types</div>
+    </div>
+  </div>
+
+  <p class="lead">
+    一张表横向对比所有九类资金在"板块层面+个股层面+信号价值"三个维度的核心特征。这是整个手册的<strong>桌面速查卡</strong>。
+  </p>
+
+  <table class="summary-table">
+    <thead>
+      <tr>
+        <th style="width:140px">资金类别</th>
+        <th>板块层面核心特征</th>
+        <th>个股层面核心特征</th>
+        <th>实战信号价值</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td class="col-key"><span class="color-dot dot-national"></span>国家队</td>
+        <td>只进宽基,不做行业择时;入场集中在系统性恐慌时刻</td>
+        <td>通过ETF间接持有蓝筹;直接持仓集中于超大市值</td>
+        <td>系统性底部<strong style="color:var(--c-national)">确认信号</strong>,非买入信号</td>
+      </tr>
+      <tr>
+        <td class="col-key"><span class="color-dot dot-nb-alloc"></span>北向配置盘</td>
+        <td>偏好全球可对比核心资产;调仓周期季度到年度</td>
+        <td>集中+稳定+逆向;完全回避新股题材</td>
+        <td>中长期<strong style="color:var(--c-nb-alloc)">基本面改善</strong>可靠信号</td>
+      </tr>
+      <tr>
+        <td class="col-key"><span class="color-dot dot-nb-trade"></span>北向交易盘</td>
+        <td>对宏观事件反应最快;板块切换以周计</td>
+        <td>高换手博弈事件;易被误读为"聪明钱"</td>
+        <td><strong style="color:var(--c-nb-trade)">短期情绪</strong>放大器,与配置盘背离最有价值</td>
+      </tr>
+      <tr>
+        <td class="col-key"><span class="color-dot dot-mutual"></span>公募基金</td>
+        <td>景气度轮动;超配到低配2-3年周期</td>
+        <td>抱团正反馈;龙头+赛道;群体同向</td>
+        <td><strong style="color:var(--c-mutual)">中期趋势</strong>信号;基金数量比市值更准</td>
+      </tr>
+      <tr>
+        <td class="col-key"><span class="color-dot dot-quant"></span>量化基金</td>
+        <td>不主动做板块,但被动塑造小盘行情</td>
+        <td>散点式+极高换手;隐形抱团</td>
+        <td><strong style="color:var(--c-quant)">流动性拥挤</strong>警报;不是方向信号</td>
+      </tr>
+      <tr>
+        <td class="col-key"><span class="color-dot dot-insurance"></span>险资</td>
+        <td>红利低波长期主导;周期以年计</td>
+        <td>举牌信号+超长期持有;回避题材</td>
+        <td><strong style="color:var(--c-insurance)">估值底部</strong>确认;举牌潮=板块底部</td>
+      </tr>
+      <tr>
+        <td class="col-key"><span class="color-dot dot-hot"></span>游资</td>
+        <td>政策催化反应最快;无法维持板块</td>
+        <td>30-100亿中小盘;连板高度为核心指标</td>
+        <td><strong style="color:var(--c-hot)">情绪温度</strong>监测;接力断裂=顶部</td>
+      </tr>
+      <tr>
+        <td class="col-key"><span class="color-dot dot-retail"></span>散户</td>
+        <td>偏好"看得懂"的热门板块;开户数为情绪温度</td>
+        <td>低价+话题;分散+高换手;尾声追龙头</td>
+        <td><strong style="color:var(--c-retail)">反向极值</strong>信号;极致情绪=反向操作</td>
+      </tr>
+      <tr>
+        <td class="col-key"><span class="color-dot dot-industrial"></span>产业资本</td>
+        <td>行业拐点最早预警者;回购潮有板块意义</td>
+        <td>回购增持=底部;减持降分红=顶部</td>
+        <td><strong style="color:var(--c-industrial)">基本面真实</strong>信号;领先公募3-6月</td>
+      </tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- ========== 05 五大协同场景 ========== -->
+<section class="section" id="scenarios">
+  <div class="section-header">
+    <div class="section-num">05</div>
+    <div>
+      <h2 class="section-title">五大协同与背离场景</h2>
+      <div class="section-subtitle">Five Key Coordination & Divergence Scenarios</div>
+    </div>
+  </div>
+
+  <p class="lead">
+    最实用的维度,也是最高阶的维度:<strong>不同资金的协同和背离构成了最可靠的实战信号</strong>。下面是五个典型场景——看到这些组合出现,几乎可以直接决定操作方向。
+  </p>
+
+  <div class="scenarios">
+
+    <!-- 场景A -->
+    <div class="scenario bull">
+      <div class="sc-header">
+        <div class="sc-letter">α</div>
+        <div>
+          <div class="sc-title">场景A · 多类资金协同买入</div>
+          <div class="sc-subtitle">SCENARIO A · TREND LAUNCH · 趋势行情启动</div>
+        </div>
+        <div class="sc-action">BUILD LONG POSITION</div>
+      </div>
+      <div class="sc-body">
+        <div>
+          <div class="sc-combo-label">— 资金组合 · CAPITAL SIGNATURE —</div>
+          <div class="sc-combo">
+            <div class="sc-combo-row"><div class="sc-combo-dot" style="background:var(--c-industrial)"></div><div><strong>产业资本</strong>回购</div></div>
+            <div class="sc-combo-row"><div class="sc-combo-dot" style="background:var(--c-nb-alloc)"></div><div><strong>北向配置盘</strong>加仓</div></div>
+            <div class="sc-combo-row"><div class="sc-combo-dot" style="background:var(--c-mutual)"></div><div><strong>公募</strong>开始回补</div></div>
+            <div class="sc-combo-row"><div class="sc-combo-dot" style="background:var(--c-retail)"></div><div><strong>散户</strong>情绪冷淡</div></div>
+          </div>
+        </div>
+        <div class="sc-meta">
+          <div class="sc-meta-item">
+            <div class="sc-meta-label">含义</div>
+            <div class="sc-meta-val">接力赛第1-2棒启动,<strong>左侧布局窗口</strong></div>
+          </div>
+          <div class="sc-meta-item">
+            <div class="sc-meta-label">经典案例</div>
+            <div class="sc-meta-val">宁德时代2024年1-5月</div>
+          </div>
+          <div class="sc-meta-item">
+            <div class="sc-meta-label">操作策略</div>
+            <div class="sc-meta-val">分批建仓,持有期以季度计</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 场景B -->
+    <div class="scenario bear">
+      <div class="sc-header">
+        <div class="sc-letter">β</div>
+        <div>
+          <div class="sc-title">场景B · 多类资金协同卖出</div>
+          <div class="sc-subtitle">SCENARIO B · TREND EXHAUSTION · 趋势行情终结</div>
+        </div>
+        <div class="sc-action">REDUCE / EXIT</div>
+      </div>
+      <div class="sc-body">
+        <div>
+          <div class="sc-combo-label">— 资金组合 · CAPITAL SIGNATURE —</div>
+          <div class="sc-combo">
+            <div class="sc-combo-row"><div class="sc-combo-dot" style="background:var(--c-industrial)"></div><div><strong>产业资本</strong>减持+配售</div></div>
+            <div class="sc-combo-row"><div class="sc-combo-dot" style="background:var(--c-nb-alloc)"></div><div><strong>北向配置盘</strong>小幅减仓</div></div>
+            <div class="sc-combo-row"><div class="sc-combo-dot" style="background:var(--c-mutual)"></div><div><strong>公募</strong>仓位见顶</div></div>
+            <div class="sc-combo-row"><div class="sc-combo-dot" style="background:var(--c-retail)"></div><div><strong>散户</strong>情绪亢奋</div></div>
+          </div>
+        </div>
+        <div class="sc-meta">
+          <div class="sc-meta-item">
+            <div class="sc-meta-label">含义</div>
+            <div class="sc-meta-val">接力赛<strong>第5棒</strong>,出货期</div>
+          </div>
+          <div class="sc-meta-item">
+            <div class="sc-meta-label">经典案例</div>
+            <div class="sc-meta-val">宁德时代2026年4月创新高</div>
+          </div>
+          <div class="sc-meta-item">
+            <div class="sc-meta-label">操作策略</div>
+            <div class="sc-meta-val">减仓或止盈,绝不追高</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 场景C -->
+    <div class="scenario left">
+      <div class="sc-header">
+        <div class="sc-letter">γ</div>
+        <div>
+          <div class="sc-title">场景C · 长线资金坚守+短线资金撤退</div>
+          <div class="sc-subtitle">SCENARIO C · LEFT-SIDE BOTTOM · 底部整理</div>
+        </div>
+        <div class="sc-action">LEFT-SIDE ACCUMULATE</div>
+      </div>
+      <div class="sc-body">
+        <div>
+          <div class="sc-combo-label">— 资金组合 · CAPITAL SIGNATURE —</div>
+          <div class="sc-combo">
+            <div class="sc-combo-row"><div class="sc-combo-dot" style="background:var(--c-nb-alloc)"></div><div><strong>北向配置盘</strong>不减</div></div>
+            <div class="sc-combo-row"><div class="sc-combo-dot" style="background:var(--c-insurance)"></div><div><strong>险资</strong>举牌</div></div>
+            <div class="sc-combo-row"><div class="sc-combo-dot" style="background:var(--c-mutual)"></div><div><strong>公募</strong>减持</div></div>
+            <div class="sc-combo-row"><div class="sc-combo-dot" style="background:var(--c-retail)"></div><div><strong>散户</strong>绝望</div></div>
+          </div>
+        </div>
+        <div class="sc-meta">
+          <div class="sc-meta-item">
+            <div class="sc-meta-label">含义</div>
+            <div class="sc-meta-val"><strong>底部特征累积</strong>,拐点等待</div>
+          </div>
+          <div class="sc-meta-item">
+            <div class="sc-meta-label">经典案例</div>
+            <div class="sc-meta-val">迈瑞医疗2025年全年</div>
+          </div>
+          <div class="sc-meta-item">
+            <div class="sc-meta-label">操作策略</div>
+            <div class="sc-meta-val">左侧布局,小仓位+长时间</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 场景D -->
+    <div class="scenario warning">
+      <div class="sc-header">
+        <div class="sc-letter">δ</div>
+        <div>
+          <div class="sc-title">场景D · 短线资金亢奋+长线资金撤退</div>
+          <div class="sc-subtitle">SCENARIO D · TOP WARNING · 顶部警示</div>
+        </div>
+        <div class="sc-action">REDUCE + STOP LOSS</div>
+      </div>
+      <div class="sc-body">
+        <div>
+          <div class="sc-combo-label">— 资金组合 · CAPITAL SIGNATURE —</div>
+          <div class="sc-combo">
+            <div class="sc-combo-row"><div class="sc-combo-dot" style="background:var(--c-hot)"></div><div><strong>游资</strong>情绪高涨</div></div>
+            <div class="sc-combo-row"><div class="sc-combo-dot" style="background:var(--c-retail)"></div><div><strong>两融</strong>快速攀升</div></div>
+            <div class="sc-combo-row"><div class="sc-combo-dot" style="background:var(--c-nb-trade)"></div><div><strong>北向交易盘</strong>流出</div></div>
+            <div class="sc-combo-row"><div class="sc-combo-dot" style="background:var(--c-industrial)"></div><div><strong>产业资本</strong>减持</div></div>
+          </div>
+        </div>
+        <div class="sc-meta">
+          <div class="sc-meta-item">
+            <div class="sc-meta-label">含义</div>
+            <div class="sc-meta-val"><strong>情绪泡沫接近极致</strong>,反转风险高</div>
+          </div>
+          <div class="sc-meta-item">
+            <div class="sc-meta-label">经典案例</div>
+            <div class="sc-meta-val">2021年初白酒顶部<br>2021年底新能源顶部</div>
+          </div>
+          <div class="sc-meta-item">
+            <div class="sc-meta-label">操作策略</div>
+            <div class="sc-meta-val">减仓并设置止损</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 场景E -->
+    <div class="scenario danger">
+      <div class="sc-header">
+        <div class="sc-letter">ε</div>
+        <div>
+          <div class="sc-title">场景E · 量化独大+其他资金观望</div>
+          <div class="sc-subtitle">SCENARIO E · CROWDING ALERT · 拥挤度警报</div>
+        </div>
+        <div class="sc-action">REDUCE SMALL-CAP EXPOSURE</div>
+      </div>
+      <div class="sc-body">
+        <div>
+          <div class="sc-combo-label">— 资金组合 · CAPITAL SIGNATURE —</div>
+          <div class="sc-combo">
+            <div class="sc-combo-row"><div class="sc-combo-dot" style="background:var(--c-quant)"></div><div><strong>小微盘</strong>相对强度新高</div></div>
+            <div class="sc-combo-row"><div class="sc-combo-dot" style="background:var(--c-quant)"></div><div><strong>量化规模</strong>扩张</div></div>
+            <div class="sc-combo-row"><div class="sc-combo-dot" style="background:var(--c-quant)"></div><div><strong>指增超额</strong>持续走高</div></div>
+            <div class="sc-combo-row"><div class="sc-combo-dot" style="background:var(--text-muted)"></div><div><strong>其他资金</strong>未参与</div></div>
+          </div>
+        </div>
+        <div class="sc-meta">
+          <div class="sc-meta-item">
+            <div class="sc-meta-label">含义</div>
+            <div class="sc-meta-val"><strong>量化因子拥挤</strong>,流动性风险累积</div>
+          </div>
+          <div class="sc-meta-item">
+            <div class="sc-meta-label">经典案例</div>
+            <div class="sc-meta-val">2024年1月小微盘危机前</div>
+          </div>
+          <div class="sc-meta-item">
+            <div class="sc-meta-label">操作策略</div>
+            <div class="sc-meta-val">主动降低小盘暴露,避免被动踩踏</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<!-- ========== Footer ========== -->
+<section class="ultimate">
+  <div class="ultimate-tag">— SERIES FINALE · THE CLOSING WORD —</div>
+
+  <h2 class="ultimate-quote">
+    当你能从一只股票的涨跌中,<br>
+    看出<span class="highlight">九类资金</span>的博弈结构,<br>
+    你就不再是市场的<span class="highlight">观察者</span>,<br>
+    而是它的<span class="highlight">同行者</span>。
+  </h2>
+
+  <p style="font-size:17px;color:var(--text-secondary);max-width:750px;margin:0 auto 30px;line-height:1.9;">
+    理解各类资金的行为特征,本质上不是为了"预测市场",而是为了<strong style="color:var(--amber)">读懂市场</strong>。当你看到K线时,你不再只看到价格,而是能看到背后哪一类资金在推动、哪一类资金在退出、这个资金结构意味着什么阶段。
+  </p>
+
+  <p class="ultimate-final">
+    这就是"研究研究股票的人"最终的落地——读懂人,才读懂价格。
+  </p>
+
+  <div class="series-info">
+    <div class="series-item"><div class="num">I</div>监测体系</div>
+    <div class="series-item"><div class="num">II</div>方法论</div>
+    <div class="series-item"><div class="num">III</div>资金图谱</div>
+    <div class="series-item"><div class="num">IV</div>研究的研究</div>
+    <div class="series-item"><div class="num">V</div>实战篇</div>
+    <div class="series-item"><div class="num">A</div>工程附录</div>
+    <div class="series-item"><div class="num">B1</div>宁德案例</div>
+    <div class="series-item"><div class="num">B2</div>迈瑞案例</div>
+    <div class="series-item current"><div class="num">C</div>速查卡 · NOW</div>
+  </div>
+</section>
+
+</body>
+</html>

@@ -313,7 +313,7 @@ html,body{background:var(--bg);color:var(--ink);font-family:var(--sans);font-siz
 <script defer src="https://npm.elemecdn.com/katex@0.16.9/dist/katex.min.js"></script>
 <script defer src="https://npm.elemecdn.com/katex@0.16.9/dist/contrib/auto-render.min.js"
   onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
-<script defer src="https://npm.elemecdn.com/mermaid@10.9.0/dist/mermaid.min.js"></script>
+<script defer src="https://lib.baomitu.com/mermaid/10.9.0/mermaid.min.js"></script>
 <script>
 // ============================================================
 // PROMPT
@@ -565,7 +565,12 @@ function loadDoc(raw){
   document.getElementById('tb-date').textContent = DOC.date||'';
   renderAll();
   // Init mermaid after render
-  setTimeout(()=>{ if(window.mermaid) mermaid.init(undefined, document.querySelectorAll('.mermaid')); }, 200);
+  setTimeout(()=>{ 
+    if(window.mermaid) {
+      mermaid.initialize({ startOnLoad: false, theme: 'dark', useWorker: false });
+      mermaid.init(undefined, document.querySelectorAll('.mermaid')); 
+    }
+  }, 200);
   // Re-render KaTeX
   setTimeout(()=>{ if(window.renderMathInElement) renderMathInElement(document.getElementById('main-content'),{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]}); }, 300);
 }
@@ -687,9 +692,10 @@ function renderBlock(b){
         <tbody>${body.map(r=>`<tr>${r.map(c=>`<td>${c}</td>`).join('')}</tr>`).join('')}</tbody>
       </table></div>`;
     case 'code':
-      const lang = b.lang||'';
+      const lang = (b.lang || '').toLowerCase();
+      if (lang === 'mermaid') return `<div class="block-mermaid"><div class="mermaid">${b.content || ''}</div></div>`;
       return `<div class="code-wrapper" data-lang="${lang}">
-        <pre><code class="language-${lang}">${escHtml(b.content||'')}</code></pre>
+        <pre><code class="language-${lang}">${escHtml(b.content || '')}</code></pre>
         <button class="copy-btn" onclick="copyCode(this)">Copy</button>
       </div>`;
     default:

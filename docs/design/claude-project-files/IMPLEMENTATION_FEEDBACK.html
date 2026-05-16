@@ -1,0 +1,578 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>实施反馈日志</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Noto+Serif+SC:wght@400;700;900&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    
+    <!-- Libraries -->
+    <script src="https://lib.baomitu.com/marked/11.1.1/marked.min.js"></script>
+    <link rel="stylesheet" href="https://lib.baomitu.com/github-markdown-css/5.5.0/github-markdown-dark.min.css">
+    <script src="https://lib.baomitu.com/mermaid/10.9.0/mermaid.min.js"></script>
+    
+    <!-- Syntax Highlighting -->
+    <link rel="stylesheet" href="https://lib.baomitu.com/highlight.js/11.9.0/styles/tokyo-night-dark.min.css">
+    <script src="https://lib.baomitu.com/highlight.js/11.9.0/highlight.min.js"></script>
+    
+    <style>
+        :root {
+            --bg: #0a0a0a;
+            --surface: #121212;
+            --surface-hover: #1a1a1a;
+            --border: #222222;
+            --accent: #eab308;
+            --accent-glow: rgba(234, 179, 8, 0.1);
+            --text-primary: #f1f5f9;
+            --text-secondary: #94a3b8;
+            --text-muted: #64748b;
+            --font-sans: 'Outfit', 'Noto Sans SC', -apple-system, sans-serif;
+            --font-serif: 'Noto Serif SC', serif;
+            --font-mono: 'JetBrains Mono', monospace;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background-color: var(--bg);
+            color: var(--text-primary);
+            font-family: var(--font-sans);
+            line-height: 1.7;
+            -webkit-font-smoothing: antialiased;
+            overflow-x: hidden;
+        }
+
+        /* Subtle background glow */
+        body::after {
+            content: '';
+            position: fixed;
+            top: 0;
+            right: 0;
+            width: 40vw;
+            height: 40vh;
+            background: radial-gradient(circle, var(--accent-glow) 0%, transparent 70%);
+            z-index: -1;
+            filter: blur(100px);
+            pointer-events: none;
+        }
+
+        .sidebar {
+            width: 260px;
+            height: 100vh;
+            position: fixed;
+            left: 0;
+            top: 0;
+            border-right: 1px solid var(--border);
+            background: var(--bg);
+            padding: 1.5rem;
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+            overflow-y: auto;
+            z-index: 100;
+        }
+
+        .nav-link {
+            color: var(--text-muted);
+            text-decoration: none;
+            font-size: 0.85rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            transition: color 0.2s;
+            padding: 0.5rem;
+            border-radius: 6px;
+        }
+        .nav-link:hover { color: var(--accent); background: var(--surface); }
+
+        .toc-title {
+            font-family: var(--font-serif);
+            font-size: 1rem;
+            color: var(--text-primary);
+            margin-bottom: 0.8rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding-left: 0.5rem;
+        }
+        .toc-title::before {
+            content: '';
+            width: 3px;
+            height: 1rem;
+            background: var(--accent);
+            border-radius: 2px;
+        }
+
+        .toc-list {
+            list-style: none;
+            display: flex;
+            flex-direction: column;
+            gap: 0.4rem;
+        }
+        .toc-item {
+            font-size: 0.8rem;
+            line-height: 1.3;
+        }
+        .toc-item a {
+            color: var(--text-muted);
+            text-decoration: none;
+            transition: all 0.2s;
+            display: block;
+            padding: 0.4rem 0.5rem;
+            border-radius: 4px;
+        }
+        .toc-item a:hover { color: var(--accent); background: var(--surface); }
+        .toc-item.level-3 { margin-left: 0.8rem; border-left: 1px solid var(--border); }
+
+        .container {
+            max-width: 860px;
+            margin: 0 auto 0 260px;
+            padding: 3rem 4rem;
+            animation: fadeIn 0.6s ease-out;
+        }
+
+        @media (max-width: 1024px) {
+            .sidebar { width: 220px; padding: 1rem; }
+            .container { margin-left: 220px; padding: 2rem; }
+        }
+
+        @media (max-width: 800px) {
+            .sidebar { position: static; width: 100%; height: auto; border-right: none; border-bottom: 1px solid var(--border); }
+            .container { margin-left: 0; padding: 1.5rem; }
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(5px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        header {
+            margin-bottom: 3rem;
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 1.5rem;
+        }
+
+        .meta {
+            font-family: var(--font-mono);
+            font-size: 0.75rem;
+            color: var(--accent);
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            margin-bottom: 0.8rem;
+            display: flex;
+            align-items: center;
+            gap: 0.8rem;
+        }
+
+        .meta::before {
+            content: '';
+            width: 20px;
+            height: 1px;
+            background-color: var(--accent);
+        }
+
+        h1 {
+            font-family: var(--font-serif);
+            font-size: 2.2rem;
+            font-weight: 900;
+            line-height: 1.2;
+            margin-bottom: 1rem;
+            color: var(--text-primary);
+        }
+
+        .markdown-body {
+            background: transparent !important;
+            color: var(--text-primary) !important;
+            font-family: var(--font-sans) !important;
+            font-size: 0.95rem !important;
+        }
+
+        .markdown-body h2 {
+            font-family: var(--font-serif);
+            font-size: 1.5rem !important;
+            color: var(--accent) !important;
+            border-bottom: 1px solid var(--border) !important;
+            padding-bottom: 0.5rem !important;
+            margin-top: 2.5rem !important;
+            scroll-margin-top: 1rem;
+        }
+
+        .markdown-body h3 {
+            font-family: var(--font-serif);
+            font-size: 1.25rem !important;
+            color: var(--text-primary) !important;
+            margin-top: 2rem !important;
+            scroll-margin-top: 1rem;
+        }
+
+        .markdown-body p, .markdown-body li {
+            font-size: 0.95rem !important;
+            color: var(--text-primary) !important;
+        }
+        
+        .markdown-body pre {
+            background-color: #1a1b26 !important; /* Match Tokyo Night Dark */
+            border: 1px solid var(--border);
+            border-radius: 8px !important;
+            padding: 0 !important; /* Code internal handles padding */
+            margin: 1.2rem 0 !important;
+            overflow: hidden;
+        }
+
+        .markdown-body pre code {
+            background-color: transparent !important;
+            padding: 1.2rem !important;
+            display: block;
+            font-family: var(--font-mono) !important;
+            font-size: 0.85rem !important;
+            line-height: 1.5;
+        }
+
+        .markdown-body blockquote {
+            border-left: 3px solid var(--accent) !important;
+            background: var(--surface);
+            padding: 0.8rem 1.2rem;
+            color: var(--text-secondary) !important;
+            margin: 1.2rem 0 !important;
+        }
+
+        .markdown-body table {
+            background: var(--surface);
+            font-size: 0.85rem !important;
+            margin: 1.2rem 0 !important;
+        }
+
+        footer {
+            margin-top: 4rem;
+            padding-top: 1.5rem;
+            border-top: 1px solid var(--border);
+            color: var(--text-muted);
+            font-size: 0.8rem;
+            text-align: center;
+        }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar { width: 5px; }
+        ::-webkit-scrollbar-track { background: var(--bg); }
+        ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+    </style>
+</head>
+<body>
+    <aside class="sidebar">
+        <a href="index.html" class="nav-link">
+            <span>←</span> 返回目录门户
+        </a>
+        
+        <div class="toc-container">
+            <h3 class="toc-title">文档导航</h3>
+            <ul class="toc-list" id="toc">
+                <!-- TOC items will be injected here -->
+            </ul>
+        </div>
+    </aside>
+
+    <div class="container">
+        <header>
+            <div class="meta">GLOBAL | 2026-05-16 19:06</div>
+            <h1>实施反馈日志</h1>
+        </header>
+
+        <article id="content" class="markdown-body">
+            <!-- Loading indicator -->
+            <p style="color: var(--text-muted)">正在解析文档内容...</p>
+        </article>
+
+        <footer>
+            &copy; 2026 MicroStock Project Docs | Generated by Antigravity
+        </footer>
+    </div>
+
+    <script id="markdown-raw" type="text/markdown"># 实施反馈日志
+
+> **本文件用途**：记录设计文档落地后的实际偏差、性能数据、卡点。是 Claude（设计侧）和 Gemini/团队（实施侧）的反馈通道。
+> **维护原则**：每章实施完成后必须补条目；卡点超过 3 天未解决必须升级到设计层 review。
+
+---
+
+## 模板：每条反馈的标准结构
+
+```markdown
+## [YYYY-MM-DD] 第 N 章 / 模块名 实施反馈
+
+### 已落地
+- 表 X 已建,N 行数据回补完成
+- 计算 SQL 跑通,T+1 出数
+
+### 偏差与修正
+- 原设计 A，实际 B → 已改 / 待改
+- （引用具体章节字段或 task ID，便于关联设计文档）
+
+### 性能数据
+- 单日跑批 Xs（目标 < Ys）
+- 历史回算 X 分钟（N 个交易日）
+- 资源占用：内存 X GB / CPU X%
+
+### 卡点 / 待 Claude 协助
+- 描述具体问题、已尝试的方案、需要什么帮助
+- 标 P0/P1/P2
+
+### 下一章前置条件
+- 列出本章稳定运行 N 天后才能开下一章的判定条件
+```
+
+---
+
+# 待补反馈（按章顺序，初次填写时按此结构）
+
+## 第 1 章 · L1 市场全景
+
+**实施状态**：已完成
+
+### 已落地
+- [x] `index_basic` 维表已同步，7900+ 条记录，10 个核心宽基齐全
+- [x] `ods_index_daily` 历史回补完成，覆盖 10000+ 交易日数据
+- [x] `ods_event_limit_pool` 涨跌停池跑通，3300+ 记录，pool_type 4 类齐全
+- [x] `ods_market_breadth_daily` 涨跌家数每日入库正常
+- [x] `ads_l1_market_overview` 17:30 前出数正常
+
+### 偏差与修正
+（待填）
+
+### 性能数据
+（待填）
+
+### 卡点 / 待 Claude 协助
+（待填）
+
+### 下一章前置条件
+- L1 稳定运行 ≥ 5 个交易日，无人工介入
+- 涨跌停池跨周末/长假数据连续
+
+---
+
+## 第 2 章 · L2 行业风格
+
+**实施状态**：已完成
+
+### 已落地
+- [x] `ods_sw_index_daily` 申万 l1/l2 已同步，530+ 记录
+- [x] `ads_l2_industry_daily` 31 个行业指标齐全
+- [x] `ads_l2_concept_daily` 概念板块 L2 指标已跑通
+- [x] `ads_l2_style_factor` 4 因子（大小盘、价值成长、股息微盘、北向）已落地
+
+### 偏差与修正（已确认的）
+- 漏跑 5/20 日排名 UPDATE 步骤 → 已修复，rank_5d/rank_20d 非空
+- 风格因子 4 行齐全（万得微盘股 fallback 时 3 行）
+- 行业领涨股完整，top_stock_name / rank_5d / rank_diff_5d 非空
+
+### 性能数据
+（待填）
+
+### 卡点
+- [ ] **微盘代码 TBD**：阻塞 dividend_vs_micro 因子
+- [ ] 概念表数据来源最终确认
+
+### 下一章前置条件
+- L2 行业 + 概念 + 风格因子全部当日 17:30 前出数
+- 31 行业 + ≥ 350 概念 + 4（或 3）因子，连续 ≥ 5 日
+
+---
+
+## 第 3 章 · L4 情绪与连板
+
+**实施状态**：实施中
+
+### 已落地
+- [x] `monitor_indicators_history` 2.4万+ 记录，ERP/国债收益率数据就绪
+- [ ] `ads_l4_sentiment` 连板梯队每日统计（计算引擎待完善）
+（待填）
+
+特别关注：
+- `cn_gov_yield` 接口名是否确认
+- ERP 计算 10 年分位数样本是否充足
+
+---
+
+## 第 4 章 · L3 资金流
+
+**实施状态**：实施中
+
+### 已落地
+- [x] `stock_north_funds_daily` / `north_capital_daily` 北向资金落地
+- [x] `stock_lhb_daily` 龙虎榜数据采集正常
+- [x] `stock_block_trade` 大宗交易数据齐全
+- [ ] `dim_yz_seat` 游资席位人工录入中（进度 60%）
+（待填）
+
+特别关注：
+- dim_yz_seat 首批 50-100 席位录入进度
+- 龙虎榜营业部别名命中率（目标 > 90%）
+- ETF 申赎口径是否正确（亿份 → 元转换）
+
+---
+
+## 第 5 章 · L8 个股异动池 + v1.1 部署方案
+
+**实施状态**：实施中
+
+### 已落地
+- [x] `ads_l8_unified_signal` 表结构已建
+- [x] `ads_stock_derived_metrics` 派生指标表已建
+- [x] v1.1 异动管线部署方案确认（16核 64G 规格）
+- [x] Redis / ClickHouse 基础设施已部署
+- ⚠️ anomaly_score 分布偏态，Top 50 集中在 90+，跨板块归一未做
+- ⚠️ 评分权重 0.3/0.3/0.2/0.2 缺乏理论依据，待回测校准
+
+### 卡点（异动管线 v1.1 高优先级 TBD）
+- [ ] 业务方对 21:00 出结果延迟的最终确认
+- [ ] 内网服务器规格（假设 8 核 16G+）
+- [ ] Redis 是否已部署（前置）
+
+### 阶段进度
+- [ ] 阶段一 CalendarService + 装饰器 + 邮件告警（2 工作日）
+- [ ] 阶段二 数据就绪契约
+- [ ] 阶段三 任务状态机
+- [ ] 阶段四 跨网同步
+- [ ] 阶段五 异动管线主体
+
+---
+
+## 第 6/7 章
+
+**实施状态**：[待填]
+
+### 关注点
+- 解禁市值快照价的免责说明（前端文案）
+- 公告事件 direction 二元判定的视觉克制（避免误导）
+- `app_daily_brief` LLM 成本上限（建议 5 元/日）
+
+---
+
+## 第 8 章 · 认知训练系统
+
+**实施状态**：待开发
+
+### 设计已锁定
+- 元数据驱动架构（dim_training_field）
+- 4 个训练动作 + 3 档版本
+- 校验方法：threshold_mapping / json_intersection / manual_review / outcome_inference
+
+### 待开发里程碑（D 表示设计冻结后第 D 天）
+- [ ] D+1 dim_training_field 表 + 入门 5 项 + 进阶 3 项 + 完整 4 项配置
+- [ ] D+3 train_prediction_main / item + 校验引擎
+- [ ] D+5 晨间预判页
+- [ ] D+7 train_journal_daily + 日记页
+- [ ] D+10 train_decision_main / item + 决策日志页 + T+5 push
+- [ ] D+14 4 象限自动判定 + T+20 反思
+- [ ] D+17 train_weekly_review + 周末复盘
+- [ ] D+21 认知画像基础版
+- [ ] D+28 校准曲线 + 月度报告
+- [ ] D+35 个人避坑清单实时拦截
+
+---
+
+## 第 9 章 · 行情追溯与假设验证
+
+**实施状态**：设计已交付，待开发
+
+### 待办
+（待填）
+
+---
+
+# 全局风险跟踪
+
+## 已发生的问题（保留历史，不删除）
+
+### [模板] 问题 #001
+- **日期**：YYYY-MM-DD
+- **章节**：第 N 章
+- **现象**：
+- **根因**：
+- **处置**：
+- **是否回流到设计**：是 / 否（如否，原因）
+
+---
+
+## 给 Claude 的对话索引
+
+下次开对话时，按以下顺序提供上下文：
+
+1. 「先看 PROJECT_OVERVIEW.md」
+2. 「再看 IMPLEMENTATION_FEEDBACK.md 最近 N 条」
+3. 「具体章节问题查 [章节文档名].md」
+
+如果是新功能/新章节设计，提示 Claude：
+- 当前已交付到第 N 章
+- 实施进度详见反馈日志
+- 本次想讨论的是 [明确边界]
+
+---
+
+**变更记录**
+
+| 日期 | 版本 | 变更 | 作者 |
+|---|---|---|---|
+| 2026-05-05 | v0.1 | 初稿模板，待用户首次填写 | Claude 协助 |
+</script>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', async () => {
+            const rawMd = document.getElementById('markdown-raw').textContent;
+            const contentEl = document.getElementById('content');
+            const tocEl = document.getElementById('toc');
+            
+            // Set options for marked
+            marked.setOptions({
+                gfm: true,
+                breaks: true,
+                headerIds: true,
+                mangle: false,
+                highlight: function(code, lang) {
+                    const language = hljs.getLanguage(lang) ? lang : 'plaintext';
+                    return hljs.highlight(code, { language }).value;
+                }
+            });
+
+            // Parse Markdown
+            contentEl.innerHTML = marked.parse(rawMd);
+            
+            // Generate TOC
+            const headings = contentEl.querySelectorAll('h2, h3');
+            headings.forEach((h, index) => {
+                if (!h.id) h.id = 'heading-' + index;
+                
+                const li = document.createElement('li');
+                li.className = 'toc-item level-' + h.tagName.toLowerCase().charAt(1);
+                
+                const a = document.createElement('a');
+                a.href = '#' + h.id;
+                a.textContent = h.textContent;
+                
+                li.appendChild(a);
+                tocEl.appendChild(li);
+            });
+
+            // Handle Mermaid
+            if (window.mermaid) {
+                mermaid.initialize({ startOnLoad: false, theme: 'dark', useWorker: false });
+                document.querySelectorAll('pre code.language-mermaid').forEach(el => {
+                    const pre = el.parentElement;
+                    const div = document.createElement('div');
+                    div.className = 'mermaid';
+                    div.textContent = el.textContent;
+                    pre.parentElement.replaceChild(div, pre);
+                });
+                mermaid.run();
+            }
+        });
+    </script>
+</body>
+</html>

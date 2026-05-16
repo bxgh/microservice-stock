@@ -1,0 +1,573 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>03. 内网计算引擎 (Core Engine Specification)</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Noto+Serif+SC:wght@400;700;900&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    
+    <!-- Libraries -->
+    <script src="https://lib.baomitu.com/marked/11.1.1/marked.min.js"></script>
+    <link rel="stylesheet" href="https://lib.baomitu.com/github-markdown-css/5.5.0/github-markdown-dark.min.css">
+    <script src="https://lib.baomitu.com/mermaid/10.9.0/mermaid.min.js"></script>
+    
+    <!-- Syntax Highlighting -->
+    <link rel="stylesheet" href="https://lib.baomitu.com/highlight.js/11.9.0/styles/tokyo-night-dark.min.css">
+    <script src="https://lib.baomitu.com/highlight.js/11.9.0/highlight.min.js"></script>
+    
+    <style>
+        :root {
+            --bg: #0a0a0a;
+            --surface: #121212;
+            --surface-hover: #1a1a1a;
+            --border: #222222;
+            --accent: #eab308;
+            --accent-glow: rgba(234, 179, 8, 0.1);
+            --text-primary: #f1f5f9;
+            --text-secondary: #94a3b8;
+            --text-muted: #64748b;
+            --font-sans: 'Outfit', 'Noto Sans SC', -apple-system, sans-serif;
+            --font-serif: 'Noto Serif SC', serif;
+            --font-mono: 'JetBrains Mono', monospace;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background-color: var(--bg);
+            color: var(--text-primary);
+            font-family: var(--font-sans);
+            line-height: 1.7;
+            -webkit-font-smoothing: antialiased;
+            overflow-x: hidden;
+        }
+
+        /* Subtle background glow */
+        body::after {
+            content: '';
+            position: fixed;
+            top: 0;
+            right: 0;
+            width: 40vw;
+            height: 40vh;
+            background: radial-gradient(circle, var(--accent-glow) 0%, transparent 70%);
+            z-index: -1;
+            filter: blur(100px);
+            pointer-events: none;
+        }
+
+        .sidebar {
+            width: 260px;
+            height: 100vh;
+            position: fixed;
+            left: 0;
+            top: 0;
+            border-right: 1px solid var(--border);
+            background: var(--bg);
+            padding: 1.5rem;
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+            overflow-y: auto;
+            z-index: 100;
+        }
+
+        .nav-link {
+            color: var(--text-muted);
+            text-decoration: none;
+            font-size: 0.85rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            transition: color 0.2s;
+            padding: 0.5rem;
+            border-radius: 6px;
+        }
+        .nav-link:hover { color: var(--accent); background: var(--surface); }
+
+        .toc-title {
+            font-family: var(--font-serif);
+            font-size: 1rem;
+            color: var(--text-primary);
+            margin-bottom: 0.8rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding-left: 0.5rem;
+        }
+        .toc-title::before {
+            content: '';
+            width: 3px;
+            height: 1rem;
+            background: var(--accent);
+            border-radius: 2px;
+        }
+
+        .toc-list {
+            list-style: none;
+            display: flex;
+            flex-direction: column;
+            gap: 0.4rem;
+        }
+        .toc-item {
+            font-size: 0.8rem;
+            line-height: 1.3;
+        }
+        .toc-item a {
+            color: var(--text-muted);
+            text-decoration: none;
+            transition: all 0.2s;
+            display: block;
+            padding: 0.4rem 0.5rem;
+            border-radius: 4px;
+        }
+        .toc-item a:hover { color: var(--accent); background: var(--surface); }
+        .toc-item.level-3 { margin-left: 0.8rem; border-left: 1px solid var(--border); }
+
+        .container {
+            max-width: 860px;
+            margin: 0 auto 0 260px;
+            padding: 3rem 4rem;
+            animation: fadeIn 0.6s ease-out;
+        }
+
+        @media (max-width: 1024px) {
+            .sidebar { width: 220px; padding: 1rem; }
+            .container { margin-left: 220px; padding: 2rem; }
+        }
+
+        @media (max-width: 800px) {
+            .sidebar { position: static; width: 100%; height: auto; border-right: none; border-bottom: 1px solid var(--border); }
+            .container { margin-left: 0; padding: 1.5rem; }
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(5px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        header {
+            margin-bottom: 3rem;
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 1.5rem;
+        }
+
+        .meta {
+            font-family: var(--font-mono);
+            font-size: 0.75rem;
+            color: var(--accent);
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            margin-bottom: 0.8rem;
+            display: flex;
+            align-items: center;
+            gap: 0.8rem;
+        }
+
+        .meta::before {
+            content: '';
+            width: 20px;
+            height: 1px;
+            background-color: var(--accent);
+        }
+
+        h1 {
+            font-family: var(--font-serif);
+            font-size: 2.2rem;
+            font-weight: 900;
+            line-height: 1.2;
+            margin-bottom: 1rem;
+            color: var(--text-primary);
+        }
+
+        .markdown-body {
+            background: transparent !important;
+            color: var(--text-primary) !important;
+            font-family: var(--font-sans) !important;
+            font-size: 0.95rem !important;
+        }
+
+        .markdown-body h2 {
+            font-family: var(--font-serif);
+            font-size: 1.5rem !important;
+            color: var(--accent) !important;
+            border-bottom: 1px solid var(--border) !important;
+            padding-bottom: 0.5rem !important;
+            margin-top: 2.5rem !important;
+            scroll-margin-top: 1rem;
+        }
+
+        .markdown-body h3 {
+            font-family: var(--font-serif);
+            font-size: 1.25rem !important;
+            color: var(--text-primary) !important;
+            margin-top: 2rem !important;
+            scroll-margin-top: 1rem;
+        }
+
+        .markdown-body p, .markdown-body li {
+            font-size: 0.95rem !important;
+            color: var(--text-primary) !important;
+        }
+        
+        .markdown-body pre {
+            background-color: #1a1b26 !important; /* Match Tokyo Night Dark */
+            border: 1px solid var(--border);
+            border-radius: 8px !important;
+            padding: 0 !important; /* Code internal handles padding */
+            margin: 1.2rem 0 !important;
+            overflow: hidden;
+        }
+
+        .markdown-body pre code {
+            background-color: transparent !important;
+            padding: 1.2rem !important;
+            display: block;
+            font-family: var(--font-mono) !important;
+            font-size: 0.85rem !important;
+            line-height: 1.5;
+        }
+
+        .markdown-body blockquote {
+            border-left: 3px solid var(--accent) !important;
+            background: var(--surface);
+            padding: 0.8rem 1.2rem;
+            color: var(--text-secondary) !important;
+            margin: 1.2rem 0 !important;
+        }
+
+        .markdown-body table {
+            background: var(--surface);
+            font-size: 0.85rem !important;
+            margin: 1.2rem 0 !important;
+        }
+
+        footer {
+            margin-top: 4rem;
+            padding-top: 1.5rem;
+            border-top: 1px solid var(--border);
+            color: var(--text-muted);
+            font-size: 0.8rem;
+            text-align: center;
+        }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar { width: 5px; }
+        ::-webkit-scrollbar-track { background: var(--bg); }
+        ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+    </style>
+</head>
+<body>
+    <aside class="sidebar">
+        <a href="index.html" class="nav-link">
+            <span>←</span> 返回目录门户
+        </a>
+        
+        <div class="toc-container">
+            <h3 class="toc-title">文档导航</h3>
+            <ul class="toc-list" id="toc">
+                <!-- TOC items will be injected here -->
+            </ul>
+        </div>
+    </aside>
+
+    <div class="container">
+        <header>
+            <div class="meta">GLOBAL | 2026-05-16 19:06</div>
+            <h1>03. 内网计算引擎 (Core Engine Specification)</h1>
+        </header>
+
+        <article id="content" class="markdown-body">
+            <!-- Loading indicator -->
+            <p style="color: var(--text-muted)">正在解析文档内容...</p>
+        </article>
+
+        <footer>
+            &copy; 2026 MicroStock Project Docs | Generated by Antigravity
+        </footer>
+    </div>
+
+    <script id="markdown-raw" type="text/markdown"># 03. 内网计算引擎 (Core Engine Specification)
+
+> **核心职责**: 历史数据存储加速、策略回测计算、因子挖掘。
+> **部署位置**: 内网高性能服务器 (10C 64G)
+
+## 1. ClickHouse 存储加速层架构
+
+ClickHouse 是本系统的**性能倍增器**。通过 T+1 的同步机制，将云端 MySQL 的行式数据转换为列式数据，供回测引擎高速读取。
+
+### 1.1 核心数据模型设计 (Schemas)
+
+真正的量化系统需要通过不同的存储策略来处理不同特性的数据。
+
+#### A. 标准行情: `kline_day` (日/周/月线)
+*   **特性**: 结构固定，查询频率极高。
+*   **策略**: **MergeTree**。
+
+```sql
+CREATE TABLE stock_dw.kline_day
+(
+    `code` String CODEC(ZSTD(1)),
+    `trade_date` Date CODEC(Delta, ZSTD),
+    `open` Float32 CODEC(ZSTD),
+    `high` Float32 CODEC(ZSTD),
+    `low` Float32 CODEC(ZSTD),
+    `close` Float32 CODEC(ZSTD),
+    `volume` UInt64 CODEC(ZSTD),
+    `amount` Float64 CODEC(ZSTD),
+    `turnover` Float32,
+    `pct_chg` Float32
+)
+ENGINE = MergeTree()
+PARTITION BY toYYYYMM(trade_date)
+ORDER BY (code, trade_date)
+SETTINGS index_granularity = 8192;
+```
+
+#### B. 高频数据: `tick_snapshot` (分笔/快照)
+*   **特性**: 数据量极大 (每天亿级)，写多读少。
+*   **优化**: 使用 `LowCardinality` 优化字符串，使用 `Delta` 压缩时间戳。**严禁存入 MySQL**。
+
+```sql
+CREATE TABLE stock_dw.tick_snapshot
+(
+    `code` LowCardinality(String),
+    `created_at` DateTime64(3) CODEC(Delta, ZSTD), -- 精确到毫秒
+    `price` Float32,
+    `vol` UInt64,
+    `ask1` Float32, `bid1` Float32,
+    `ask1_vol` UInt64, `bid1_vol` UInt64,
+    -- ... ask2-5, bid2-5 省略 ...
+    `type` Enum8('买盘'=1, '卖盘'=2, '中性'=0)
+)
+ENGINE = MergeTree()
+PARTITION BY toYYYYMMDD(created_at) -- 按日分区，方便过期删除
+ORDER BY (code, created_at)
+TTL created_at + INTERVAL 6 MONTH;  -- 只保留6个月的一级数据
+```
+
+#### C. 基本面数据: `finance_report` (季报)
+*   **特性**: 字段超多 (100+)，更新低频，常有 Text 备注。
+*   **策略**: 使用 `ReplacingMergeTree` 自动去重（修正财报时覆盖旧版）。
+
+```sql
+CREATE TABLE stock_dw.finance_report
+(
+    `code` String,
+    `report_date` Date,      -- 报告期 (2023-09-30)
+    `pub_date` Date,         -- 发布日 (2023-10-25)
+    
+    -- 核心财务指标
+    `eps` Float32,           -- 每股收益
+    `nav_ps` Float32,        -- 每股净资产
+    `roic_yearly` Float32,   -- 年化ROIC
+    `net_profit_yoy` Float32,-- 净利同比
+    
+    -- 扩展字段 (留存复杂JSON)
+    `raw_json` String CODEC(ZSTD(3))
+)
+ENGINE = ReplacingMergeTree(pub_date) -- 以后发布的数据为准
+PARTITION BY toYYYY(report_date)
+ORDER BY (code, report_date);
+```
+
+#### D. 因子库: `factor_daily` (宽表)
+*   **特性**: 列数随策略增加动态扩张。
+*   **策略**: 垂直切分，不同类别的因子存不同表，或使用 `Map` 类型。
+
+```sql
+CREATE TABLE stock_dw.factor_daily
+(
+    `code` String,
+    `trade_date` Date,
+    `factors` Map(String, Float32) -- 灵活存储 {'ma5': 10.2, 'rsi': 60.5}
+)
+ENGINE = MergeTree()
+PARTITION BY toYYYYMM(trade_date)
+ORDER BY (code, trade_date);
+```
+
+### 1.2 性能基准 (Benchmark)
+
+| 查询场景 (Scope) | 涉及行数 (Rows) | MySQL 耗时 | ClickHouse 耗时 | 加速比 |
+|:---|:---|:---|:---|:---|
+| 单股全历史 (All History) | ~5,000 | ~150 ms | **3 ms** | 50x |
+| 全市场某日快照 (Snapshot) | ~5,000 | ~200 ms | **10 ms** | 20x |
+| **三年全市场回测数据加载** | **~3,000,000** | **~25 s** | **~0.8 s** | **30x** |
+
+---
+
+## 2. 数据同步服务 (MySQL -> ClickHouse)
+
+这是一个仅在内网运行的**ETL Worker**。
+
+### 2.1 同步逻辑 (Python Snippet)
+
+```python
+def sync_increment_data(target_date: str):
+    """T+1 增量同步逻辑"""
+    
+    # 1. 提取 (Extract) from MySQL
+    # 使用流式游标 (SSCursor) 防止内存溢出
+    mysql_cursor.execute(
+        "SELECT code, trade_date, open, ... FROM kline_day WHERE trade_date = %s",
+        (target_date,)
+    )
+    
+    # 2. 转换 (Transform)
+    batch_data = []
+    while True:
+        rows = mysql_cursor.fetchmany(10000)
+        if not rows: break
+        # 这里可以加入简单的数据清洗清洗逻辑 DQC
+        batch_data.extend(rows)
+    
+    # 3. 加载 (Load) to ClickHouse
+    if batch_data:
+        client.execute(
+            "INSERT INTO stock_dw.kline_day VALUES",
+            batch_data,
+            types_check=True
+        )
+        print(f"Synced {len(batch_data)} rows for {target_date}")
+```
+
+### 2.2 任务调度
+使用 Linux Crontab 管理：
+```bash
+# 每天 16:30 (收盘后) 执行同步脚本
+30 16 * * 1-5 /usr/bin/docker exec sync-worker python scripts/sync_T1.py
+```
+
+---
+
+## 3. 策略引擎集成 (Backtrader + ClickHouse)
+
+为了利用 ClickHouse 的速度，我们需要重写 Backtrader 的数据加载器。
+
+### 3.1 `ClickHouseDataFeed` 实现
+
+```python
+import backtrader as bt
+import pandas as pd
+from clickhouse_driver import Client
+
+class ClickHouseData(bt.feeds.PandasData):
+    """
+    直接从 ClickHouse 加载 Pandas DataFrame
+    """
+    params = (
+        ('datetime', 'trade_date'),
+        ('open', 'open'),
+        ('high', 'high'),
+        ('low', 'low'),
+        ('close', 'close'),
+        ('volume', 'volume'),
+        ('openinterest', -1),
+    )
+
+def load_data_from_ch(code, start_date, end_date):
+    client = Client('localhost')
+    query = f"""
+    SELECT trade_date, open, high, low, close, volume 
+    FROM stock_dw.kline_day 
+    WHERE code = '{code}' 
+      AND trade_date BETWEEN '{start_date}' AND '{end_date}'
+    ORDER BY trade_date
+    """
+    # 直接转为 DataFrame，速度极快
+    df = client.query_dataframe(query)
+    df['trade_date'] = pd.to_datetime(df['trade_date'])
+    df.set_index('trade_date', inplace=True)
+    return df
+```
+
+---
+
+## 4. 资源隔离：Ephemeral Docker Worker
+
+为了防止策略内存泄漏，采用**"用完即焚"**的容器策略。
+
+### 4.1 启动指令 (Run Command)
+
+当 Redis 收到回测任务时，内网的主控进程 (Dispatcher) 会执行：
+
+```bash
+docker run \
+  --rm \                                # 任务结束自动删除容器
+  --name strategy-task-${TASK_ID} \     # 唯一容器名
+  --network host \                      # 使用 Host 网络直连 ClickHouse
+  --memory 4g --memory-swap 4g \        # 强制内存封顶 4G，防泄漏
+  -v /data/logs:/app/logs \             # 挂载日志目录
+  -e TASK_PARAMS='{...}' \              # 注入策略参数
+  stock-strategy-runner:latest \        # 镜像名
+  python run_backtest.py
+```
+
+此方案确保了：即使用户写了一个死循环 `while True: list.append(...)`，也只会 OOM 杀掉该临时容器，**绝不会影响内网服务器的主体稳定性**。
+
+---
+
+> **下一章**: [04_风险治理与优化.md](./04_风险治理与优化.md) 将介绍 DQC 数据清洗和 Lambda 实时架构。
+</script>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', async () => {
+            const rawMd = document.getElementById('markdown-raw').textContent;
+            const contentEl = document.getElementById('content');
+            const tocEl = document.getElementById('toc');
+            
+            // Set options for marked
+            marked.setOptions({
+                gfm: true,
+                breaks: true,
+                headerIds: true,
+                mangle: false,
+                highlight: function(code, lang) {
+                    const language = hljs.getLanguage(lang) ? lang : 'plaintext';
+                    return hljs.highlight(code, { language }).value;
+                }
+            });
+
+            // Parse Markdown
+            contentEl.innerHTML = marked.parse(rawMd);
+            
+            // Generate TOC
+            const headings = contentEl.querySelectorAll('h2, h3');
+            headings.forEach((h, index) => {
+                if (!h.id) h.id = 'heading-' + index;
+                
+                const li = document.createElement('li');
+                li.className = 'toc-item level-' + h.tagName.toLowerCase().charAt(1);
+                
+                const a = document.createElement('a');
+                a.href = '#' + h.id;
+                a.textContent = h.textContent;
+                
+                li.appendChild(a);
+                tocEl.appendChild(li);
+            });
+
+            // Handle Mermaid
+            if (window.mermaid) {
+                mermaid.initialize({ startOnLoad: false, theme: 'dark', useWorker: false });
+                document.querySelectorAll('pre code.language-mermaid').forEach(el => {
+                    const pre = el.parentElement;
+                    const div = document.createElement('div');
+                    div.className = 'mermaid';
+                    div.textContent = el.textContent;
+                    pre.parentElement.replaceChild(div, pre);
+                });
+                mermaid.run();
+            }
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,2679 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>工程附录 · 状态屏指标计算手册</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;500;700;900&family=JetBrains+Mono:wght@300;400;500;600;700&family=Bodoni+Moda:ital,wght@0,400;0,700;0,900;1,400&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg-deep: #0a0e14;
+  --bg-card: #11161f;
+  --bg-elevated: #1a212d;
+  --bg-code: #0d1219;
+  --border: #2a3441;
+  --border-bright: #3d4a5c;
+  --text-primary: #e8eaed;
+  --text-secondary: #9ba7b8;
+  --text-muted: #5a6779;
+  --amber: #ffb547;
+  --amber-bright: #ffc875;
+  --amber-dim: #8a6027;
+  --cyan: #4dd0e1;
+  --cyan-bright: #7eecff;
+  --red: #ff5252;
+  --green: #66bb6a;
+  --purple: #b794f4;
+  --rose: #f48fb1;
+  --code-keyword: #ff79c6;
+  --code-string: #50fa7b;
+  --code-number: #bd93f9;
+  --code-comment: #6272a4;
+  --grid-line: rgba(255, 181, 71, 0.06);
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+
+body {
+  font-family: 'Noto Serif SC', serif;
+  background: var(--bg-deep);
+  color: var(--text-primary);
+  line-height: 1.7;
+  background-image: 
+    linear-gradient(var(--grid-line) 1px, transparent 1px),
+    linear-gradient(90deg, var(--grid-line) 1px, transparent 1px);
+  background-size: 60px 60px;
+  background-attachment: fixed;
+}
+
+/* ========== HEADER ========== */
+.header {
+  position: relative;
+  padding: 100px 60px 80px;
+  border-bottom: 1px solid var(--border);
+  overflow: hidden;
+}
+
+.header::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--amber), transparent);
+}
+
+.header::after {
+  content: '< / >';
+  position: absolute;
+  font-family: 'JetBrains Mono', monospace;
+  font-weight: 700;
+  font-size: 320px;
+  color: rgba(255, 181, 71, 0.025);
+  bottom: -80px;
+  right: 0;
+  letter-spacing: -10px;
+  pointer-events: none;
+  line-height: 0.8;
+}
+
+.header-meta {
+  display: flex;
+  justify-content: space-between;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  color: var(--text-muted);
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  margin-bottom: 60px;
+}
+
+.header-meta .dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  background: var(--amber);
+  border-radius: 50%;
+  margin-right: 8px;
+  box-shadow: 0 0 12px var(--amber);
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+
+.title-tag {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 14px;
+  color: var(--amber);
+  margin-bottom: 20px;
+  letter-spacing: 2px;
+  position: relative;
+  z-index: 1;
+}
+
+.title-zh {
+  font-family: 'Noto Serif SC', serif;
+  font-size: 76px;
+  font-weight: 900;
+  line-height: 1.05;
+  letter-spacing: -2px;
+  margin-bottom: 24px;
+  position: relative;
+  z-index: 1;
+}
+
+.title-zh .accent {
+  color: var(--amber);
+  font-family: 'JetBrains Mono', monospace;
+  font-weight: 700;
+}
+
+.title-en {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 22px;
+  color: var(--text-secondary);
+  margin-bottom: 40px;
+  letter-spacing: 1px;
+  position: relative;
+  z-index: 1;
+}
+
+.subtitle {
+  font-size: 17px;
+  color: var(--text-secondary);
+  max-width: 850px;
+  border-left: 2px solid var(--amber);
+  padding-left: 24px;
+  line-height: 1.8;
+  position: relative;
+  z-index: 1;
+}
+
+.subtitle strong { color: var(--amber); }
+
+/* 头部三个统计 */
+.header-stats {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1px;
+  margin-top: 60px;
+  background: var(--border);
+  border: 1px solid var(--border);
+  position: relative;
+  z-index: 1;
+}
+
+.stat-cell {
+  background: var(--bg-deep);
+  padding: 24px 20px;
+}
+
+.stat-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  margin-bottom: 8px;
+}
+
+.stat-value {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 36px;
+  font-weight: 700;
+  color: var(--amber);
+}
+
+.stat-unit {
+  font-size: 13px;
+  color: var(--text-secondary);
+  margin-left: 4px;
+  font-family: 'Noto Serif SC', serif;
+}
+
+/* ========== NAV ========== */
+.nav {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  background: rgba(10, 14, 20, 0.95);
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid var(--border);
+  padding: 16px 60px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+}
+
+.nav ul {
+  display: flex;
+  gap: 30px;
+  list-style: none;
+  flex-wrap: wrap;
+}
+
+.nav a {
+  color: var(--text-secondary);
+  text-decoration: none;
+  transition: color 0.3s;
+  position: relative;
+  padding-bottom: 4px;
+}
+
+.nav a:hover { color: var(--amber); }
+
+.nav a::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 0;
+  height: 1px;
+  background: var(--amber);
+  transition: width 0.3s;
+}
+
+.nav a:hover::after { width: 100%; }
+
+/* ========== SECTION ========== */
+.section {
+  padding: 100px 60px;
+  border-bottom: 1px solid var(--border);
+  position: relative;
+}
+
+.section-header {
+  display: flex;
+  align-items: baseline;
+  gap: 30px;
+  margin-bottom: 60px;
+  padding-bottom: 30px;
+  border-bottom: 1px dashed var(--border);
+}
+
+.section-num {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 80px;
+  font-weight: 700;
+  color: transparent;
+  -webkit-text-stroke: 1px var(--amber);
+  line-height: 0.8;
+}
+
+.section-title {
+  font-size: 38px;
+  font-weight: 700;
+  margin-bottom: 8px;
+  letter-spacing: -1px;
+  line-height: 1.2;
+}
+
+.section-subtitle {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 2px;
+}
+
+.lead {
+  font-size: 16px;
+  color: var(--text-secondary);
+  line-height: 1.9;
+  max-width: 880px;
+  margin-bottom: 40px;
+}
+
+.lead strong {
+  color: var(--amber-bright);
+  font-weight: 500;
+}
+
+/* ========== 指标地图 ========== */
+.indicator-map {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  padding: 40px;
+  margin-top: 30px;
+}
+
+.map-zone {
+  margin-bottom: 30px;
+}
+
+.map-zone:last-child { margin-bottom: 0; }
+
+.zone-header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 16px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--border);
+}
+
+.zone-num {
+  font-family: 'JetBrains Mono', monospace;
+  font-weight: 700;
+  font-size: 14px;
+  color: var(--amber);
+  background: var(--bg-elevated);
+  padding: 4px 10px;
+  border: 1px solid var(--amber-dim);
+}
+
+.zone-title {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.zone-count {
+  margin-left: auto;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  color: var(--text-muted);
+  letter-spacing: 1px;
+}
+
+.indicator-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.ind-tag {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  padding: 6px 12px;
+  background: var(--bg-elevated);
+  color: var(--text-secondary);
+  border: 1px solid var(--border-bright);
+  letter-spacing: 0.5px;
+}
+
+/* ========== 指标卡片 ========== */
+.indicator-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  margin-bottom: 32px;
+  overflow: hidden;
+}
+
+.ind-header {
+  padding: 28px 36px;
+  background: var(--bg-elevated);
+  border-bottom: 1px solid var(--border);
+  display: grid;
+  grid-template-columns: 80px 1fr auto;
+  gap: 24px;
+  align-items: center;
+}
+
+.ind-num-mark {
+  font-family: 'JetBrains Mono', monospace;
+  font-weight: 700;
+  font-size: 32px;
+  color: var(--amber);
+  text-align: center;
+  border: 2px solid var(--amber);
+  padding: 8px 0;
+  background: rgba(255, 181, 71, 0.05);
+}
+
+.ind-title-group h3 {
+  font-size: 22px;
+  font-weight: 700;
+  margin-bottom: 4px;
+}
+
+.ind-title-en {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  color: var(--text-muted);
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+}
+
+.ind-tags {
+  display: flex;
+  gap: 8px;
+}
+
+.diff-tag {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 9px;
+  padding: 4px 10px;
+  letter-spacing: 1px;
+}
+
+.diff-easy { background: rgba(102, 187, 106, 0.1); color: var(--green); border: 1px solid var(--green); }
+.diff-medium { background: rgba(255, 181, 71, 0.1); color: var(--amber); border: 1px solid var(--amber); }
+.diff-hard { background: rgba(255, 82, 82, 0.1); color: var(--red); border: 1px solid var(--red); }
+
+.ind-body {
+  padding: 36px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 32px;
+}
+
+.ind-body-full {
+  grid-template-columns: 1fr;
+}
+
+/* 子区块 */
+.sub-block {
+  margin-bottom: 24px;
+}
+
+.sub-block:last-child { margin-bottom: 0; }
+
+.sub-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  color: var(--amber);
+  letter-spacing: 1.5px;
+  margin-bottom: 12px;
+  text-transform: uppercase;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.sub-label::before {
+  content: '';
+  width: 16px;
+  height: 1px;
+  background: var(--amber);
+}
+
+.sub-content {
+  font-size: 13px;
+  color: var(--text-secondary);
+  line-height: 1.8;
+}
+
+.sub-content strong {
+  color: var(--amber-bright);
+}
+
+.sub-content ul {
+  list-style: none;
+  margin-top: 8px;
+}
+
+.sub-content li {
+  padding: 4px 0;
+  padding-left: 16px;
+  position: relative;
+  font-size: 12px;
+}
+
+.sub-content li::before {
+  content: '·';
+  position: absolute;
+  left: 4px;
+  color: var(--amber);
+  font-weight: 700;
+}
+
+/* 代码块 */
+.code-block {
+  background: var(--bg-code);
+  border: 1px solid var(--border);
+  padding: 20px 24px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  line-height: 1.8;
+  color: var(--text-secondary);
+  overflow-x: auto;
+  border-left: 3px solid var(--amber);
+}
+
+.code-block .keyword { color: var(--code-keyword); }
+.code-block .string { color: var(--code-string); }
+.code-block .number { color: var(--code-number); }
+.code-block .comment { color: var(--code-comment); font-style: italic; }
+.code-block .accent { color: var(--amber); font-weight: 700; }
+.code-block .func { color: var(--cyan); }
+
+/* 公式块 */
+.formula-block {
+  background: linear-gradient(135deg, rgba(255, 181, 71, 0.04), rgba(255, 181, 71, 0.01));
+  border: 1px solid var(--amber-dim);
+  padding: 24px 28px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 13px;
+  line-height: 2;
+  color: var(--text-primary);
+  margin: 12px 0;
+}
+
+.formula-block .var {
+  color: var(--cyan);
+  font-weight: 600;
+}
+
+.formula-block .op {
+  color: var(--amber);
+  font-weight: 700;
+  margin: 0 6px;
+}
+
+.formula-block .const {
+  color: var(--code-number);
+}
+
+/* 数据源表 */
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 12px;
+  font-size: 12px;
+}
+
+.data-table th {
+  background: var(--bg-elevated);
+  padding: 12px 14px;
+  text-align: left;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  color: var(--amber);
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
+  border: 1px solid var(--border);
+  font-weight: 500;
+}
+
+.data-table td {
+  padding: 10px 14px;
+  border: 1px solid var(--border);
+  color: var(--text-secondary);
+  vertical-align: top;
+}
+
+.data-table .col-key {
+  color: var(--text-primary);
+  font-weight: 500;
+}
+
+.data-table .col-source {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  color: var(--cyan);
+}
+
+.data-table .col-freq {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  color: var(--amber);
+}
+
+/* 阈值 */
+.threshold-grid {
+  display: grid;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.threshold-row {
+  display: grid;
+  grid-template-columns: 80px 1fr;
+  align-items: center;
+  gap: 16px;
+  padding: 12px 18px;
+  background: var(--bg-elevated);
+  border-left: 3px solid;
+}
+
+.threshold-row.green { border-left-color: var(--green); }
+.threshold-row.yellow { border-left-color: var(--amber); }
+.threshold-row.red { border-left-color: var(--red); }
+.threshold-row.orange { border-left-color: #ff9248; }
+
+.threshold-light {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.threshold-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+}
+
+.threshold-row.green .threshold-dot { background: var(--green); box-shadow: 0 0 8px var(--green); }
+.threshold-row.yellow .threshold-dot { background: var(--amber); box-shadow: 0 0 8px var(--amber); }
+.threshold-row.red .threshold-dot { background: var(--red); box-shadow: 0 0 8px var(--red); }
+.threshold-row.orange .threshold-dot { background: #ff9248; box-shadow: 0 0 8px #ff9248; }
+
+.threshold-name {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+
+.threshold-row.green .threshold-name { color: var(--green); }
+.threshold-row.yellow .threshold-name { color: var(--amber); }
+.threshold-row.red .threshold-name { color: var(--red); }
+.threshold-row.orange .threshold-name { color: #ff9248; }
+
+.threshold-condition {
+  font-size: 12px;
+  color: var(--text-secondary);
+  line-height: 1.6;
+}
+
+.threshold-condition strong {
+  color: var(--text-primary);
+}
+
+/* 全宽指标(状态判定) */
+.state-rules {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px;
+  margin-top: 16px;
+}
+
+.state-rule {
+  background: var(--bg-elevated);
+  padding: 24px;
+  border-top: 3px solid;
+}
+
+.state-rule.A { border-top-color: var(--green); }
+.state-rule.B { border-top-color: var(--amber); }
+.state-rule.C { border-top-color: var(--purple); }
+.state-rule.D { border-top-color: var(--cyan); }
+
+.state-rule-name {
+  font-size: 16px;
+  font-weight: 700;
+  margin-bottom: 12px;
+}
+
+.state-rule.A .state-rule-name { color: var(--green); }
+.state-rule.B .state-rule-name { color: var(--amber); }
+.state-rule.C .state-rule-name { color: var(--purple); }
+.state-rule.D .state-rule-name { color: var(--cyan); }
+
+.weight-list {
+  display: grid;
+  gap: 6px;
+}
+
+.weight-item {
+  display: grid;
+  grid-template-columns: 60px 1fr;
+  gap: 12px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  align-items: center;
+}
+
+.weight-num {
+  color: var(--amber);
+  font-weight: 700;
+  text-align: right;
+}
+
+.weight-cond {
+  color: var(--text-secondary);
+}
+
+/* 北向背离表 */
+.divergence-matrix {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 16px;
+  font-size: 12px;
+}
+
+.divergence-matrix th, .divergence-matrix td {
+  padding: 14px 18px;
+  border: 1px solid var(--border);
+  text-align: center;
+}
+
+.divergence-matrix th {
+  background: var(--bg-elevated);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  color: var(--amber);
+  letter-spacing: 1px;
+}
+
+.divergence-matrix .signal-bull { color: var(--green); font-weight: 500; }
+.divergence-matrix .signal-bear { color: var(--red); font-weight: 500; }
+.divergence-matrix .signal-neutral { color: var(--text-muted); }
+.divergence-matrix .signal-bottom { color: var(--green); background: rgba(102, 187, 106, 0.06); font-weight: 500; }
+.divergence-matrix .signal-top { color: var(--red); background: rgba(255, 82, 82, 0.06); font-weight: 500; }
+
+/* 数据源分层 */
+.tier-comparison {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  margin-top: 30px;
+}
+
+.data-tier {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  padding: 28px 24px;
+  border-top: 3px solid;
+}
+
+.data-tier.t1 { border-top-color: var(--green); }
+.data-tier.t2 { border-top-color: var(--amber); }
+.data-tier.t3 { border-top-color: var(--red); }
+
+.tier-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 1.5px;
+  margin-bottom: 8px;
+}
+
+.data-tier.t1 .tier-label { color: var(--green); }
+.data-tier.t2 .tier-label { color: var(--amber); }
+.data-tier.t3 .tier-label { color: var(--red); }
+
+.tier-name {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: 6px;
+}
+
+.tier-cost {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-bottom: 16px;
+  letter-spacing: 1px;
+}
+
+.tier-list {
+  font-size: 12px;
+  color: var(--text-secondary);
+  line-height: 1.9;
+  border-top: 1px dashed var(--border);
+  padding-top: 14px;
+}
+
+.tier-list strong {
+  color: var(--text-primary);
+  display: block;
+  margin-top: 6px;
+}
+
+/* 实施路径 */
+.implementation-path {
+  margin-top: 30px;
+  position: relative;
+}
+
+.implementation-path::before {
+  content: '';
+  position: absolute;
+  left: 90px;
+  top: 30px;
+  bottom: 30px;
+  width: 1px;
+  background: var(--amber-dim);
+}
+
+.impl-step {
+  display: grid;
+  grid-template-columns: 90px 40px 1fr;
+  gap: 30px;
+  margin-bottom: 24px;
+  align-items: stretch;
+}
+
+.impl-week {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  color: var(--amber);
+  text-align: right;
+  padding-top: 28px;
+  letter-spacing: 1px;
+  font-weight: 600;
+}
+
+.impl-marker {
+  position: relative;
+  padding-top: 28px;
+}
+
+.impl-dot {
+  width: 14px;
+  height: 14px;
+  background: var(--bg-deep);
+  border: 2px solid var(--amber);
+  border-radius: 50%;
+  margin: 0 auto;
+  position: relative;
+  z-index: 1;
+  box-shadow: 0 0 0 4px var(--bg-deep);
+}
+
+.impl-content {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  padding: 24px 30px;
+}
+
+.impl-title {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: 12px;
+}
+
+.impl-desc {
+  font-size: 13px;
+  color: var(--text-secondary);
+  line-height: 1.85;
+  margin-bottom: 12px;
+}
+
+.impl-checklist {
+  list-style: none;
+}
+
+.impl-checklist li {
+  font-size: 12px;
+  color: var(--text-secondary);
+  padding: 4px 0;
+  padding-left: 22px;
+  position: relative;
+  line-height: 1.6;
+}
+
+.impl-checklist li::before {
+  content: '▸';
+  position: absolute;
+  left: 0;
+  color: var(--amber);
+  font-weight: 700;
+}
+
+/* 警告框 */
+.warning-box {
+  background: rgba(255, 82, 82, 0.05);
+  border: 1px solid rgba(255, 82, 82, 0.3);
+  border-left: 4px solid var(--red);
+  padding: 20px 24px;
+  margin: 20px 0;
+}
+
+.warning-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  color: var(--red);
+  letter-spacing: 2px;
+  margin-bottom: 8px;
+}
+
+.warning-text {
+  font-size: 13px;
+  color: var(--text-secondary);
+  line-height: 1.7;
+}
+
+.warning-text strong {
+  color: var(--text-primary);
+}
+
+/* 信息框 */
+.info-box {
+  background: rgba(77, 208, 225, 0.05);
+  border: 1px solid rgba(77, 208, 225, 0.3);
+  border-left: 4px solid var(--cyan);
+  padding: 20px 24px;
+  margin: 20px 0;
+}
+
+.info-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  color: var(--cyan);
+  letter-spacing: 2px;
+  margin-bottom: 8px;
+}
+
+.info-text {
+  font-size: 13px;
+  color: var(--text-secondary);
+  line-height: 1.7;
+}
+
+.info-text strong { color: var(--text-primary); }
+
+/* ========== Footer ========== */
+.ultimate {
+  padding: 120px 60px;
+  text-align: center;
+  border-top: 1px solid var(--border);
+  background: 
+    radial-gradient(ellipse at center top, rgba(255, 181, 71, 0.08) 0%, transparent 60%),
+    var(--bg-deep);
+  position: relative;
+  overflow: hidden;
+}
+
+.ultimate-tag {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  color: var(--amber);
+  letter-spacing: 3px;
+  margin-bottom: 30px;
+}
+
+.ultimate-quote {
+  font-family: 'Noto Serif SC', serif;
+  font-weight: 700;
+  font-size: 32px;
+  color: var(--text-primary);
+  max-width: 920px;
+  margin: 0 auto 30px;
+  line-height: 1.5;
+  letter-spacing: -0.5px;
+}
+
+.ultimate-quote .highlight {
+  color: var(--amber);
+  font-family: 'JetBrains Mono', monospace;
+}
+
+.ultimate-final {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 16px;
+  color: var(--amber);
+  max-width: 720px;
+  margin: 0 auto 60px;
+  line-height: 1.7;
+  letter-spacing: 0.5px;
+}
+
+.series-info {
+  display: flex;
+  justify-content: center;
+  gap: 20px;
+  padding-top: 40px;
+  border-top: 1px solid var(--border);
+  max-width: 1200px;
+  margin: 0 auto;
+  flex-wrap: wrap;
+}
+
+.series-item {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  color: var(--text-muted);
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
+  text-align: center;
+  flex: 1;
+  min-width: 130px;
+}
+
+.series-item.current {
+  color: var(--amber);
+}
+
+.series-item .num {
+  font-family: 'JetBrains Mono', monospace;
+  font-weight: 700;
+  font-size: 20px;
+  display: block;
+  margin-bottom: 6px;
+}
+
+/* Responsive */
+@media (max-width: 968px) {
+  .header { padding: 60px 30px 40px; }
+  .header::after { font-size: 160px; }
+  .title-zh { font-size: 40px; }
+  .title-en { font-size: 16px; }
+  .header-stats { grid-template-columns: 1fr 1fr; }
+  .nav { padding: 16px 30px; }
+  .nav ul { gap: 14px; }
+  .section { padding: 60px 30px; }
+  .section-num { font-size: 60px; }
+  .section-title { font-size: 26px; }
+  .ind-header { grid-template-columns: 1fr; gap: 12px; }
+  .ind-num-mark { width: 80px; }
+  .ind-body { grid-template-columns: 1fr; }
+  .state-rules { grid-template-columns: 1fr; }
+  .data-table { font-size: 11px; }
+  .data-table th, .data-table td { padding: 8px 10px; }
+  .tier-comparison { grid-template-columns: 1fr; }
+  .implementation-path::before { left: 8px; }
+  .impl-step { grid-template-columns: 1fr; gap: 12px; }
+  .impl-week { text-align: left; padding-top: 0; }
+  .impl-marker { display: none; }
+  .ultimate { padding: 60px 30px; }
+  .ultimate-quote { font-size: 22px; }
+}
+</style>
+</head>
+<body>
+
+<!-- ========== HEADER ========== -->
+<header class="header">
+  <div class="header-meta">
+    <div><span class="dot"></span>RESEARCH FRAMEWORK · ENGINEERING APPENDIX</div>
+    <div>APPENDIX · STATE SCREEN COMPUTATION MANUAL</div>
+  </div>
+  <div class="title-tag">/* IMPLEMENTATION HANDBOOK FOR DEVELOPERS */</div>
+  <h1 class="title-zh">状态屏指标<br><span class="accent">计算手册</span></h1>
+  <div class="title-en">state_screen.compute() · A Complete Engineering Reference</div>
+  <p class="subtitle">
+    状态屏是整个观测体系的入口,它的指标必须<strong>精确可计算、数据可获取、阈值可验证</strong>。本附录把状态屏的所有指标拆解到最底层,提供完整的<strong>计算公式、数据源、Z-score标准化方法、阈值设置和工程实施路径</strong>。
+  </p>
+
+  <div class="header-stats">
+    <div class="stat-cell">
+      <div class="stat-label">Total Indicators</div>
+      <div class="stat-value">19<span class="stat-unit">个指标</span></div>
+    </div>
+    <div class="stat-cell">
+      <div class="stat-label">Data Sources</div>
+      <div class="stat-value">12<span class="stat-unit">个数据源</span></div>
+    </div>
+    <div class="stat-cell">
+      <div class="stat-label">Update Tiers</div>
+      <div class="stat-value">04<span class="stat-unit">个频率层</span></div>
+    </div>
+    <div class="stat-cell">
+      <div class="stat-label">MVP Timeline</div>
+      <div class="stat-value">05<span class="stat-unit">周搭建</span></div>
+    </div>
+  </div>
+</header>
+
+<!-- ========== NAV ========== -->
+<nav class="nav">
+  <ul>
+    <li><a href="#map">00 · 指标地图</a></li>
+    <li><a href="#zone1">01 · 状态总览</a></li>
+    <li><a href="#zone2">02 · 资金温度计</a></li>
+    <li><a href="#zone3">03 · 警戒灯</a></li>
+    <li><a href="#engineering">04 · 工程实施</a></li>
+    <li><a href="#path">05 · 落地路径</a></li>
+  </ul>
+</nav>
+
+<!-- ========== 00 指标地图 ========== -->
+<section class="section" id="map">
+  <div class="section-header">
+    <div class="section-num">00</div>
+    <div>
+      <h2 class="section-title">状态屏指标地图</h2>
+      <div class="section-subtitle">Complete Indicator Inventory</div>
+    </div>
+  </div>
+
+  <p class="lead">
+    在深入每个指标之前,先建立完整的<strong>指标地图</strong>。状态屏由三个区组成,共19个核心指标,每一个都有明确的计算职责和数据归属。
+  </p>
+
+  <div class="indicator-map">
+    <div class="map-zone">
+      <div class="zone-header">
+        <div class="zone-num">ZONE 01</div>
+        <div class="zone-title">市场状态总览</div>
+        <div class="zone-count">04 INDICATORS</div>
+      </div>
+      <div class="indicator-tags">
+        <div class="ind-tag">当前主导资金</div>
+        <div class="ind-tag">市场状态(A/B/C/D)</div>
+        <div class="ind-tag">状态持续天数</div>
+        <div class="ind-tag">状态切换概率</div>
+      </div>
+    </div>
+
+    <div class="map-zone">
+      <div class="zone-header">
+        <div class="zone-num">ZONE 02</div>
+        <div class="zone-title">九类资金温度计</div>
+        <div class="zone-count">09 INDICATORS</div>
+      </div>
+      <div class="indicator-tags">
+        <div class="ind-tag">国家队</div>
+        <div class="ind-tag">北向配置盘</div>
+        <div class="ind-tag">北向交易盘</div>
+        <div class="ind-tag">公募基金</div>
+        <div class="ind-tag">量化基金</div>
+        <div class="ind-tag">险资</div>
+        <div class="ind-tag">游资</div>
+        <div class="ind-tag">散户</div>
+        <div class="ind-tag">产业资本</div>
+      </div>
+    </div>
+
+    <div class="map-zone">
+      <div class="zone-header">
+        <div class="zone-num">ZONE 03</div>
+        <div class="zone-title">六大警戒灯</div>
+        <div class="zone-count">06 INDICATORS</div>
+      </div>
+      <div class="indicator-tags">
+        <div class="ind-tag">流动性环境</div>
+        <div class="ind-tag">公募仓位</div>
+        <div class="ind-tag">量化拥挤度</div>
+        <div class="ind-tag">散户情绪</div>
+        <div class="ind-tag">北向背离</div>
+        <div class="ind-tag">政策密度</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ========== ZONE 1 · 状态总览 ========== -->
+<section class="section" id="zone1">
+  <div class="section-header">
+    <div class="section-num">01</div>
+    <div>
+      <h2 class="section-title">第一区 · 市场状态总览</h2>
+      <div class="section-subtitle">Zone 1 · Market State Overview</div>
+    </div>
+  </div>
+
+  <!-- 指标1.1 -->
+  <div class="indicator-card">
+    <div class="ind-header">
+      <div class="ind-num-mark">1.1</div>
+      <div class="ind-title-group">
+        <h3>当前主导资金识别</h3>
+        <div class="ind-title-en">dominant_capital_identification()</div>
+      </div>
+      <div class="ind-tags">
+        <div class="diff-tag diff-medium">MEDIUM</div>
+      </div>
+    </div>
+    <div class="ind-body">
+      <div>
+        <div class="sub-block">
+          <div class="sub-label">核心思路</div>
+          <div class="sub-content">
+            计算每一类资金的"活跃度评分",评分最高的就是<strong>当前主导资金</strong>。用Z-score标准化消除规模差异,加入持续性权重防止单日异动误判。
+          </div>
+        </div>
+
+        <div class="sub-block">
+          <div class="sub-label">计算公式</div>
+          <div class="formula-block">
+<span class="var">ActivityScore_i</span> <span class="op">=</span> <span class="var">Z(NetFlow_i, 20d)</span> <span class="op">×</span> <span class="var">Continuity_i</span>
+
+<span class="var">Z(NetFlow_i, 20d)</span> <span class="op">=</span>
+   (今日净流入 − <span class="const">20日均值</span>) / <span class="const">20日标准差</span>
+
+<span class="var">Continuity_i</span> <span class="op">=</span>
+   过去5日中同向流入的天数 / <span class="const">5</span>
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <div class="sub-block">
+          <div class="sub-label">输出规则</div>
+          <div class="sub-content">
+            <ul>
+              <li>取活跃度评分最高的资金类别作为"当前主导资金"</li>
+              <li>当评分最高的两类资金分数差距 <strong>< 0.3σ</strong> 时,显示为"双主导"</li>
+              <li>当所有资金活跃度都在 ±0.5σ 内时,显示为"过渡期"</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="sub-block">
+          <div class="sub-label">实现要点</div>
+          <div class="sub-content">
+            <ul>
+              <li>各类资金的具体净流入计算见<strong>第二区温度计</strong>章节</li>
+              <li>20日窗口平衡灵敏度与稳定性</li>
+              <li>持续性权重防止偶发异动误判</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 指标1.2 -->
+  <div class="indicator-card">
+    <div class="ind-header">
+      <div class="ind-num-mark">1.2</div>
+      <div class="ind-title-group">
+        <h3>市场状态(A/B/C/D)判定</h3>
+        <div class="ind-title-en">market_state_classifier()</div>
+      </div>
+      <div class="ind-tags">
+        <div class="diff-tag diff-hard">HARD</div>
+      </div>
+    </div>
+    <div class="ind-body ind-body-full">
+      <div class="sub-block">
+        <div class="sub-label">设计原则</div>
+        <div class="sub-content">
+          采用<strong>"加权得分制"</strong>而不是"硬规则触发制"。硬规则容易在边界值附近频繁切换,产生噪音信号。加权得分制更平滑,且每个指标的贡献度可精细调整。
+        </div>
+      </div>
+
+      <div class="sub-block">
+        <div class="sub-label">四种状态的权重规则</div>
+        <div class="state-rules">
+
+          <div class="state-rule A">
+            <div class="state-rule-name">State A · 机构趋势市</div>
+            <div class="weight-list">
+              <div class="weight-item"><div class="weight-num">0.25</div><div class="weight-cond">北向配置盘5日累计 > 50亿</div></div>
+              <div class="weight-item"><div class="weight-num">0.20</div><div class="weight-cond">80% < 公募仓位 < 88%</div></div>
+              <div class="weight-item"><div class="weight-num">0.15</div><div class="weight-cond">大盘相对小盘强度上行</div></div>
+              <div class="weight-item"><div class="weight-num">0.15</div><div class="weight-cond">行业轮动速度 < 0.5</div></div>
+              <div class="weight-item"><div class="weight-num">0.10</div><div class="weight-cond">DR007稳定 < 2.5%</div></div>
+              <div class="weight-item"><div class="weight-num">0.15</div><div class="weight-cond">量化拥挤度 < 60%分位</div></div>
+            </div>
+          </div>
+
+          <div class="state-rule B">
+            <div class="state-rule-name">State B · 游资题材市</div>
+            <div class="weight-list">
+              <div class="weight-item"><div class="weight-num">0.15</div><div class="weight-cond">两融占比 > 9%</div></div>
+              <div class="weight-item"><div class="weight-num">0.15</div><div class="weight-cond">中证1000相对沪深300上行</div></div>
+              <div class="weight-item"><div class="weight-num">0.20</div><div class="weight-cond">行业轮动速度 > 0.7</div></div>
+              <div class="weight-item"><div class="weight-num">0.20</div><div class="weight-cond">连板高度 ≥ 5板</div></div>
+              <div class="weight-item"><div class="weight-num">0.15</div><div class="weight-cond">炸板率 < 25%</div></div>
+              <div class="weight-item"><div class="weight-num">0.15</div><div class="weight-cond">游资席位活跃度 > 30家/日</div></div>
+            </div>
+          </div>
+
+          <div class="state-rule C">
+            <div class="state-rule-name">State C · 量化漂移(危险)</div>
+            <div class="weight-list">
+              <div class="weight-item"><div class="weight-num">0.25</div><div class="weight-cond">微盘股/中证1000 20日涨幅差 > 5%</div></div>
+              <div class="weight-item"><div class="weight-num">0.20</div><div class="weight-cond">指增超额20日 > 5%</div></div>
+              <div class="weight-item"><div class="weight-num">0.20</div><div class="weight-cond">IC/IM贴水年化 > 10%</div></div>
+              <div class="weight-item"><div class="weight-num">0.10</div><div class="weight-cond">行业轮动速度 > 0.8</div></div>
+              <div class="weight-item"><div class="weight-num">0.25</div><div class="weight-cond">量化拥挤度 > 85%分位</div></div>
+            </div>
+          </div>
+
+          <div class="state-rule D">
+            <div class="state-rule-name">State D · 避险防御市</div>
+            <div class="weight-list">
+              <div class="weight-item"><div class="weight-num">0.20</div><div class="weight-cond">北向连续3日净流出</div></div>
+              <div class="weight-item"><div class="weight-num">0.15</div><div class="weight-cond">公募仓位下降 > 2%</div></div>
+              <div class="weight-item"><div class="weight-num">0.15</div><div class="weight-cond">红利低波相对强度上行</div></div>
+              <div class="weight-item"><div class="weight-num">0.20</div><div class="weight-cond">DR007或美债快速上行</div></div>
+              <div class="weight-item"><div class="weight-num">0.15</div><div class="weight-cond">成交额 < 8000亿</div></div>
+              <div class="weight-item"><div class="weight-num">0.15</div><div class="weight-cond">50ETF期权PCR > 1.2</div></div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <div class="sub-block">
+        <div class="sub-label">输出与确认规则</div>
+        <div class="code-block">
+<span class="comment"># 计算所有四个状态得分</span>
+<span class="keyword">def</span> <span class="func">classify_market_state</span>(indicators):
+    scores = {
+        <span class="string">'A'</span>: <span class="func">compute_score_A</span>(indicators),
+        <span class="string">'B'</span>: <span class="func">compute_score_B</span>(indicators),
+        <span class="string">'C'</span>: <span class="func">compute_score_C</span>(indicators),
+        <span class="string">'D'</span>: <span class="func">compute_score_D</span>(indicators),
+    }
+    
+    <span class="comment"># 排序</span>
+    sorted_scores = <span class="func">sorted</span>(scores.items(), key=<span class="keyword">lambda</span> x: x[<span class="number">1</span>], reverse=<span class="keyword">True</span>)
+    top_state, top_score = sorted_scores[<span class="number">0</span>]
+    second_score = sorted_scores[<span class="number">1</span>][<span class="number">1</span>]
+    
+    <span class="comment"># 置信度判定</span>
+    <span class="keyword">if</span> top_score < <span class="accent">0.55</span>:
+        <span class="keyword">return</span> <span class="string">"未确定"</span>  <span class="comment"># 低置信度</span>
+    <span class="keyword">if</span> top_score - second_score < <span class="accent">0.15</span>:
+        <span class="keyword">return</span> <span class="string">f"过渡期({top_state}→?)"</span>  <span class="comment"># 双状态接近</span>
+    
+    <span class="keyword">return</span> top_state
+        </div>
+      </div>
+
+      <div class="warning-box">
+        <div class="warning-label">⚠ CALIBRATION REQUIRED</div>
+        <div class="warning-text">
+          所有<strong>权重和阈值都必须用过去3年历史数据回测校准</strong>,不能拍脑袋。建议人工标注关键时期的"正确状态"作为标签,然后用网格搜索找到最优参数。
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 指标1.3 -->
+  <div class="indicator-card">
+    <div class="ind-header">
+      <div class="ind-num-mark">1.3</div>
+      <div class="ind-title-group">
+        <h3>状态持续天数</h3>
+        <div class="ind-title-en">state_duration_counter()</div>
+      </div>
+      <div class="ind-tags">
+        <div class="diff-tag diff-easy">EASY</div>
+      </div>
+    </div>
+    <div class="ind-body">
+      <div>
+        <div class="sub-block">
+          <div class="sub-label">计算逻辑</div>
+          <div class="sub-content">
+            从<strong>最近一次状态切换日期</strong>开始,累计交易日天数。状态切换的判定要求"连续3个交易日确认",防止单日波动误切换。
+          </div>
+        </div>
+
+        <div class="sub-block">
+          <div class="sub-label">状态切换确认</div>
+          <div class="formula-block">
+<span class="var">switch_confirmed</span> <span class="op">=</span> 
+   (新状态得分 <span class="op">></span> 当前状态得分) 
+   <span class="op">∧</span> 持续 <span class="const">3</span> 个交易日
+   <span class="op">∧</span> 新状态得分 <span class="op">></span> <span class="const">0.55</span>
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <div class="sub-block">
+          <div class="sub-label">显示阈值</div>
+          <div class="threshold-grid">
+            <div class="threshold-row orange">
+              <div class="threshold-light"><div class="threshold-dot"></div><div class="threshold-name">0-5天</div></div>
+              <div class="threshold-condition">新状态未稳固</div>
+            </div>
+            <div class="threshold-row green">
+              <div class="threshold-light"><div class="threshold-dot"></div><div class="threshold-name">6-20天</div></div>
+              <div class="threshold-condition">稳定状态</div>
+            </div>
+            <div class="threshold-row yellow">
+              <div class="threshold-light"><div class="threshold-dot"></div><div class="threshold-name">21-45天</div></div>
+              <div class="threshold-condition">需要警觉,可能进入末期</div>
+            </div>
+            <div class="threshold-row red">
+              <div class="threshold-light"><div class="threshold-dot"></div><div class="threshold-name">46+天</div></div>
+              <div class="threshold-condition">状态过度延长,切换风险高</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 指标1.4 -->
+  <div class="indicator-card">
+    <div class="ind-header">
+      <div class="ind-num-mark">1.4</div>
+      <div class="ind-title-group">
+        <h3>状态切换概率</h3>
+        <div class="ind-title-en">state_switch_probability()</div>
+      </div>
+      <div class="ind-tags">
+        <div class="diff-tag diff-hard">HARD</div>
+      </div>
+    </div>
+    <div class="ind-body">
+      <div>
+        <div class="sub-block">
+          <div class="sub-label">简单版 · 历史频率法</div>
+          <div class="code-block">
+<span class="keyword">def</span> <span class="func">simple_switch_prob</span>(current_features):
+    <span class="comment"># 找出过去5年最相似的N=20个样本</span>
+    similar = <span class="func">find_nearest_neighbors</span>(
+        current_features,
+        history_data,
+        n=<span class="number">20</span>,
+        metric=<span class="string">'euclidean'</span>
+    )
+    
+    <span class="comment"># 统计这些样本5天内切换的比例</span>
+    switch_count = <span class="func">sum</span>(
+        <span class="number">1</span> <span class="keyword">for</span> s <span class="keyword">in</span> similar 
+        <span class="keyword">if</span> s.switched_within_5d
+    )
+    
+    <span class="keyword">return</span> switch_count / <span class="func">len</span>(similar)
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <div class="sub-block">
+          <div class="sub-label">进阶版 · Logistic回归</div>
+          <div class="sub-content">
+            用过去3年日度数据训练二分类模型,特征建议:
+            <ul>
+              <li>当前主导状态的得分</li>
+              <li>第二高状态的得分</li>
+              <li>关键警戒指标的Z-score</li>
+              <li>成交额20日变化率</li>
+              <li>北向资金近5日方向一致性</li>
+              <li>VIX(中国版波动率指数)的变化</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="sub-block">
+          <div class="sub-label">显示阈值</div>
+          <div class="threshold-grid">
+            <div class="threshold-row green">
+              <div class="threshold-light"><div class="threshold-dot"></div><div class="threshold-name">< 30%</div></div>
+              <div class="threshold-condition">状态稳定</div>
+            </div>
+            <div class="threshold-row yellow">
+              <div class="threshold-light"><div class="threshold-dot"></div><div class="threshold-name">30-50%</div></div>
+              <div class="threshold-condition">需要关注</div>
+            </div>
+            <div class="threshold-row orange">
+              <div class="threshold-light"><div class="threshold-dot"></div><div class="threshold-name">50-70%</div></div>
+              <div class="threshold-condition">显著切换风险</div>
+            </div>
+            <div class="threshold-row red">
+              <div class="threshold-light"><div class="threshold-dot"></div><div class="threshold-name">> 70%</div></div>
+              <div class="threshold-condition">准备切换</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ========== ZONE 2 · 资金温度计 ========== -->
+<section class="section" id="zone2">
+  <div class="section-header">
+    <div class="section-num">02</div>
+    <div>
+      <h2 class="section-title">第二区 · 九类资金温度计</h2>
+      <div class="section-subtitle">Zone 2 · Capital Thermometers</div>
+    </div>
+  </div>
+
+  <p class="lead">
+    每根温度计都是一类资金的<strong>标准化活跃度可视化</strong>。统一框架是<strong>Z-score标准化</strong>,但每一类资金的具体数据源和计算细节不同。下面是九类资金的完整实现规范。
+  </p>
+
+  <!-- 国家队 -->
+  <div class="indicator-card">
+    <div class="ind-header">
+      <div class="ind-num-mark">2.1</div>
+      <div class="ind-title-group">
+        <h3>温度计一 · 国家队</h3>
+        <div class="ind-title-en">national_team_thermometer()</div>
+      </div>
+      <div class="ind-tags">
+        <div class="diff-tag diff-easy">EASY</div>
+      </div>
+    </div>
+    <div class="ind-body">
+      <div>
+        <div class="sub-block">
+          <div class="sub-label">底层数据</div>
+          <div class="sub-content">五只汇金系ETF的<strong>日度份额变化</strong></div>
+        </div>
+
+        <div class="sub-block">
+          <div class="sub-label">重点ETF清单</div>
+          <table class="data-table">
+            <tr><td class="col-key">510300</td><td>华泰柏瑞沪深300ETF</td></tr>
+            <tr><td class="col-key">510310</td><td>易方达沪深300ETF</td></tr>
+            <tr><td class="col-key">510330</td><td>华夏沪深300ETF</td></tr>
+            <tr><td class="col-key">159919</td><td>嘉实沪深300ETF</td></tr>
+            <tr><td class="col-key">510050</td><td>华夏上证50ETF</td></tr>
+            <tr><td class="col-key">510500</td><td>南方中证500ETF</td></tr>
+            <tr><td class="col-key">159845</td><td>华夏中证1000ETF</td></tr>
+          </table>
+        </div>
+      </div>
+
+      <div>
+        <div class="sub-block">
+          <div class="sub-label">计算公式</div>
+          <div class="formula-block">
+<span class="var">NationalTeam_NetFlow</span> <span class="op">=</span>
+   <span class="op">Σ</span>(ETF_i份额变化 <span class="op">×</span> ETF_i单位净值)
+
+<span class="var">Score</span> <span class="op">=</span>
+   (今日NetFlow − <span class="const">60日均值</span>) / <span class="const">60日标准差</span>
+          </div>
+        </div>
+
+        <div class="sub-block">
+          <div class="sub-label">数据源</div>
+          <div class="sub-content">
+            <ul>
+              <li>akshare: <code style="color:var(--code-string)">fund_etf_fund_daily_em()</code></li>
+              <li>上交所/深交所ETF日报</li>
+              <li>Wind / Choice 商业接口</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="info-box">
+          <div class="info-label">▸ 特殊提示</div>
+          <div class="info-text">
+            国家队特点是<strong>"低频但巨大"</strong>。日常多数时候温度计在中性区域。当出现 <strong>>2σ</strong> 的正向流入时,系统应弹出醒目提示——通常是关键信号。
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 北向配置 + 交易 -->
+  <div class="indicator-card">
+    <div class="ind-header">
+      <div class="ind-num-mark">2.2/2.3</div>
+      <div class="ind-title-group">
+        <h3>温度计二三 · 北向配置盘 vs 交易盘</h3>
+        <div class="ind-title-en">northbound_dual_pool_thermometer()</div>
+      </div>
+      <div class="ind-tags">
+        <div class="diff-tag diff-hard">HARD</div>
+      </div>
+    </div>
+    <div class="ind-body ind-body-full">
+      <div class="info-box">
+        <div class="info-label">▸ 信息密度最高的指标</div>
+        <div class="info-text">
+          这两根温度计是状态屏中<strong>信息量最大</strong>的指标。两者的相对关系比绝对值更重要——它能识别出市场的"潜在底部"和"潜在顶部"。
+        </div>
+      </div>
+
+      <div class="ind-body">
+        <div>
+          <div class="sub-block">
+            <div class="sub-label">配置类托管行白名单</div>
+            <div class="sub-content">
+              <ul>
+                <li>HSBC Bank PLC</li>
+                <li>JP Morgan Chase Bank</li>
+                <li>Citibank N.A.</li>
+                <li>Standard Chartered Bank</li>
+                <li>Deutsche Bank AG</li>
+                <li>BNP Paribas Securities Services</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+
+        <div>
+          <div class="sub-block">
+            <div class="sub-label">交易类托管行白名单</div>
+            <div class="sub-content">
+              <ul>
+                <li>Goldman Sachs International</li>
+                <li>Morgan Stanley & Co International</li>
+                <li>UBS AG</li>
+                <li>Barclays Capital Securities</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="sub-block" style="margin-top: 24px;">
+        <div class="sub-label">计算公式</div>
+        <div class="formula-block">
+<span class="var">配置盘资金流</span> <span class="op">=</span> <span class="op">Σ</span>(配置类托管行_i 持股市值变化)
+<span class="var">配置盘Score</span> <span class="op">=</span> (今日配置盘资金流 − <span class="const">20日均值</span>) / <span class="const">20日标准差</span>
+
+<span class="var">交易盘资金流</span> <span class="op">=</span> <span class="op">Σ</span>(交易类托管行_i 持股市值变化)
+<span class="var">交易盘Score</span> <span class="op">=</span> (今日交易盘资金流 − <span class="const">20日均值</span>) / <span class="const">20日标准差</span>
+
+<span class="var">持股市值变化</span> <span class="op">=</span> (今日持股数 − 昨日持股数) <span class="op">×</span> 今日收盘价
+        </div>
+      </div>
+
+      <div class="sub-block">
+        <div class="sub-label">两者背离的信号矩阵 · CRITICAL</div>
+        <table class="divergence-matrix">
+          <thead>
+            <tr>
+              <th>配置盘</th>
+              <th>交易盘</th>
+              <th>市场含义</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="signal-bull">绿(+)</td>
+              <td class="signal-bull">绿(+)</td>
+              <td>共识看多,趋势强化</td>
+            </tr>
+            <tr class="signal-bottom">
+              <td class="signal-bull">绿(+)</td>
+              <td class="signal-bear">红(−)</td>
+              <td><strong>长线进场 vs 短线避险 — 潜在底部信号</strong></td>
+            </tr>
+            <tr class="signal-top">
+              <td class="signal-bear">红(−)</td>
+              <td class="signal-bull">绿(+)</td>
+              <td><strong>长线撤退 vs 短线博弈 — 潜在顶部信号</strong></td>
+            </tr>
+            <tr>
+              <td class="signal-bear">红(−)</td>
+              <td class="signal-bear">红(−)</td>
+              <td>共识看空,系统性下跌</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="sub-block">
+        <div class="sub-label">数据获取</div>
+        <div class="sub-content">
+          <ul>
+            <li>HKEX官网爬虫: <code style="color:var(--code-string)">https://www.hkexnews.hk/sdw/</code></li>
+            <li>Wind: "陆股通持股明细"</li>
+            <li>Choice: "沪深港通持股"</li>
+            <li>同花顺iFinD: 北向资金分托管行</li>
+          </ul>
+        </div>
+        <div class="warning-box">
+          <div class="warning-label">⚠ DATA CLEANING</div>
+          <div class="warning-text">
+            CCASS数据按"参与者+股票代码"明细发布,需要按托管行<strong>聚合并清洗</strong>(排除发起人持股、法人持股)。这部分工作量大,<strong>建议直接用商业数据源</strong>。
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 公募基金 -->
+  <div class="indicator-card">
+    <div class="ind-header">
+      <div class="ind-num-mark">2.4</div>
+      <div class="ind-title-group">
+        <h3>温度计四 · 公募基金</h3>
+        <div class="ind-title-en">mutual_fund_thermometer()</div>
+      </div>
+      <div class="ind-tags">
+        <div class="diff-tag diff-medium">MEDIUM</div>
+      </div>
+    </div>
+    <div class="ind-body ind-body-full">
+      <div class="warning-box">
+        <div class="warning-label">⚠ CHALLENGE</div>
+        <div class="warning-text">
+          九类资金中<strong>最难精确测量</strong>的。公募实际持仓只在季报披露(滞后约15天),日度估算需要用<strong>间接指标</strong>。
+        </div>
+      </div>
+
+      <div class="sub-block">
+        <div class="sub-label">三因子合成公式</div>
+        <div class="formula-block">
+<span class="var">公募活跃度</span> <span class="op">=</span> 
+   <span class="const">0.4</span> <span class="op">×</span> 仓位变化Score 
+   <span class="op">+</span> <span class="const">0.3</span> <span class="op">×</span> 新发申购Score 
+   <span class="op">+</span> <span class="const">0.3</span> <span class="op">×</span> ETF场内份额Score
+        </div>
+      </div>
+
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>因子</th>
+            <th>计算方法</th>
+            <th>数据源</th>
+            <th>更新</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="col-key">仓位变化Score</td>
+            <td>基于卖方仓位测算,前5日仓位变化标准化</td>
+            <td class="col-source">中信/兴业卖方研报</td>
+            <td class="col-freq">周</td>
+          </tr>
+          <tr>
+            <td class="col-key">新发申购Score</td>
+            <td>中基协月度新发数据,日度线性插值</td>
+            <td class="col-source">中基协 / Wind</td>
+            <td class="col-freq">月</td>
+          </tr>
+          <tr>
+            <td class="col-key">ETF场内份额Score</td>
+            <td>所有股票型ETF场内份额日变化</td>
+            <td class="col-source">akshare fund_etf_category_sina()</td>
+            <td class="col-freq">日</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div class="info-box">
+        <div class="info-label">▸ 校准机制</div>
+        <div class="info-text">
+          每季度公募季报披露后,用真实数据校准日度估算的偏差。如果发现某个因子的预测力衰减,<strong>调整权重</strong>。
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 量化基金 -->
+  <div class="indicator-card">
+    <div class="ind-header">
+      <div class="ind-num-mark">2.5</div>
+      <div class="ind-title-group">
+        <h3>温度计五 · 量化基金</h3>
+        <div class="ind-title-en">quant_fund_thermometer()</div>
+      </div>
+      <div class="ind-tags">
+        <div class="diff-tag diff-hard">HARD</div>
+      </div>
+    </div>
+    <div class="ind-body ind-body-full">
+      <div class="sub-block">
+        <div class="sub-label">四因子合成公式</div>
+        <div class="formula-block">
+<span class="var">量化活跃度</span> <span class="op">=</span> 
+   <span class="const">0.30</span> <span class="op">×</span> 指增超额Score 
+   <span class="op">+</span> <span class="const">0.25</span> <span class="op">×</span> 小微盘强度Score 
+   <span class="op">+</span> <span class="const">0.25</span> <span class="op">×</span> 期货贴水Score 
+   <span class="op">+</span> <span class="const">0.20</span> <span class="op">×</span> 成交集中度Score
+        </div>
+      </div>
+
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>因子</th>
+            <th>计算方法</th>
+            <th>数据源</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="col-key">指增超额Score</td>
+            <td>中证500/1000指增滚动20日超额收益</td>
+            <td class="col-source">好买基金 / 私募排排网</td>
+          </tr>
+          <tr>
+            <td class="col-key">小微盘强度Score</td>
+            <td>微盘股(8841431) / 中证1000(000852) 比值Z-score</td>
+            <td class="col-source">Wind / akshare</td>
+          </tr>
+          <tr>
+            <td class="col-key">期货贴水Score</td>
+            <td>IC/IM主力合约年化贴水率</td>
+            <td class="col-source">中金所 / Wind / Choice</td>
+          </tr>
+          <tr>
+            <td class="col-key">成交集中度Score</td>
+            <td>中证500+1000成分股占全A成交比例</td>
+            <td class="col-source">交易所成交数据</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div class="sub-block" style="margin-top: 20px;">
+        <div class="sub-label">期货贴水率计算</div>
+        <div class="formula-block">
+<span class="var">贴水率</span> <span class="op">=</span> 
+   (现货指数 − 期货价格) / 期货价格 <span class="op">×</span> (<span class="const">252</span> / 剩余天数)
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 险资 -->
+  <div class="indicator-card">
+    <div class="ind-header">
+      <div class="ind-num-mark">2.6</div>
+      <div class="ind-title-group">
+        <h3>温度计六 · 险资</h3>
+        <div class="ind-title-en">insurance_capital_thermometer()</div>
+      </div>
+      <div class="ind-tags">
+        <div class="diff-tag diff-medium">MEDIUM</div>
+      </div>
+    </div>
+    <div class="ind-body">
+      <div>
+        <div class="sub-block">
+          <div class="sub-label">数据特点</div>
+          <div class="sub-content">
+            高频数据极难获取,主要依赖<strong>月度披露 + 事件驱动</strong>更新。
+          </div>
+        </div>
+
+        <div class="sub-block">
+          <div class="sub-label">合成逻辑</div>
+          <div class="formula-block">
+<span class="var">日常温度</span> <span class="op">=</span>
+   月度险资增减仓 / <span class="const">22</span>交易日
+
+<span class="var">事件驱动</span> <span class="op">=</span>
+   险资举牌、大宗增减持(即时)
+
+<span class="var">温度计显示</span> <span class="op">=</span> 日常温度 <span class="op">+</span> 事件驱动加权
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <div class="sub-block">
+          <div class="sub-label">数据源</div>
+          <div class="sub-content">
+            <ul>
+              <li>国家金融监管总局月度数据</li>
+              <li>上市公司险资举牌公告</li>
+              <li>中保协人寿险投资数据</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="info-box">
+          <div class="info-label">▸ 特殊提示</div>
+          <div class="info-text">
+            险资温度计大部分时间显示<strong>"近中性"</strong>(月度数据高度平滑)。但出现<strong>险资举牌</strong>时,温度计应立即跳到强正值并附弹出说明。
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 游资 -->
+  <div class="indicator-card">
+    <div class="ind-header">
+      <div class="ind-num-mark">2.7</div>
+      <div class="ind-title-group">
+        <h3>温度计七 · 游资</h3>
+        <div class="ind-title-en">hot_money_thermometer()</div>
+      </div>
+      <div class="ind-tags">
+        <div class="diff-tag diff-hard">HARD</div>
+      </div>
+    </div>
+    <div class="ind-body ind-body-full">
+      <div class="sub-block">
+        <div class="sub-label">底层数据</div>
+        <div class="sub-content">
+          龙虎榜每日席位数据 + <strong>自维护的游资席位库</strong>(50-100个核心席位)。
+        </div>
+      </div>
+
+      <div class="sub-block">
+        <div class="sub-label">三因子合成公式</div>
+        <div class="formula-block">
+<span class="var">游资活跃度</span> <span class="op">=</span>
+   <span class="const">0.4</span> <span class="op">×</span> 上榜席位数Score
+   <span class="op">+</span> <span class="const">0.3</span> <span class="op">×</span> 净买入金额Score
+   <span class="op">+</span> <span class="const">0.3</span> <span class="op">×</span> 题材集中度Score
+        </div>
+      </div>
+
+      <div class="sub-block">
+        <div class="sub-label">游资席位库维护</div>
+        <div class="sub-content">
+          这是一个需要持续投入的<strong>"私有数据资产"</strong>:
+          <ul>
+            <li><strong>初始化</strong>:从知名财经网站收集50-100个核心游资席位</li>
+            <li><strong>维护</strong>:每月review上榜频次,新增活跃席位,移除沉寂席位</li>
+            <li><strong>标签</strong>:每个席位标注偏好题材、操作风格、典型规模</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="code-block">
+<span class="comment"># 席位档案结构示例</span>
+{
+    <span class="string">"seat_code"</span>: <span class="string">"XXXX"</span>,
+    <span class="string">"branch"</span>: <span class="string">"XX证券XX营业部"</span>,
+    <span class="string">"associated_trader"</span>: <span class="string">"章建平系"</span>,
+    <span class="string">"style_tags"</span>: [<span class="string">"中线打板"</span>, <span class="string">"题材龙头"</span>],
+    <span class="string">"preferred_themes"</span>: [<span class="string">"半导体"</span>, <span class="string">"机器人"</span>, <span class="string">"AI"</span>],
+    <span class="string">"market_cap_range"</span>: [<span class="number">5e9</span>, <span class="number">2e10</span>],
+    <span class="string">"typical_size"</span>: [<span class="number">3e7</span>, <span class="number">1e8</span>],
+    <span class="string">"activity_score"</span>: <span class="number">4.5</span>,
+    <span class="string">"last_active_date"</span>: <span class="string">"2026-04-10"</span>,
+    <span class="string">"historical_winrate"</span>: <span class="number">0.65</span>
+}
+      </div>
+    </div>
+  </div>
+
+  <!-- 散户 -->
+  <div class="indicator-card">
+    <div class="ind-header">
+      <div class="ind-num-mark">2.8</div>
+      <div class="ind-title-group">
+        <h3>温度计八 · 散户</h3>
+        <div class="ind-title-en">retail_sentiment_thermometer()</div>
+      </div>
+      <div class="ind-tags">
+        <div class="diff-tag diff-medium">MEDIUM</div>
+      </div>
+    </div>
+    <div class="ind-body ind-body-full">
+      <div class="sub-block">
+        <div class="sub-label">四因子合成公式</div>
+        <div class="formula-block">
+<span class="var">散户活跃度</span> <span class="op">=</span>
+   <span class="const">0.30</span> <span class="op">×</span> 两融Score
+   <span class="op">+</span> <span class="const">0.25</span> <span class="op">×</span> 小单占比Score
+   <span class="op">+</span> <span class="const">0.25</span> <span class="op">×</span> 新增开户Score
+   <span class="op">+</span> <span class="const">0.20</span> <span class="op">×</span> 搜索指数Score
+        </div>
+      </div>
+
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>因子</th>
+            <th>数据源</th>
+            <th>计算说明</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="col-key">两融Score</td>
+            <td class="col-source">沪深交易所</td>
+            <td>两融余额变化率Z-score</td>
+          </tr>
+          <tr>
+            <td class="col-key">小单占比</td>
+            <td class="col-source">Level-2数据 / iFinD</td>
+            <td>小单(<5万)成交占比Z-score</td>
+          </tr>
+          <tr>
+            <td class="col-key">新增开户</td>
+            <td class="col-source">中国证券登记结算</td>
+            <td>周度数据,12周均值标准化</td>
+          </tr>
+          <tr>
+            <td class="col-key">搜索指数</td>
+            <td class="col-source">百度指数(免费注册)</td>
+            <td>"股票"+"开户"+"炒股"加权</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div class="warning-box">
+        <div class="warning-label">⚠ REVERSE INDICATOR</div>
+        <div class="warning-text">
+          散户温度计的极值是<strong>反向指标</strong>:>+2σ通常对应市场顶部,<-2σ通常对应市场底部。系统应在散户温度计极端时<strong>弹出反向警示</strong>。
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 产业资本 -->
+  <div class="indicator-card">
+    <div class="ind-header">
+      <div class="ind-num-mark">2.9</div>
+      <div class="ind-title-group">
+        <h3>温度计九 · 产业资本</h3>
+        <div class="ind-title-en">industrial_capital_thermometer()</div>
+      </div>
+      <div class="ind-tags">
+        <div class="diff-tag diff-easy">EASY</div>
+      </div>
+    </div>
+    <div class="ind-body">
+      <div>
+        <div class="sub-block">
+          <div class="sub-label">底层数据</div>
+          <div class="sub-content">上市公司大股东和董监高的<strong>增减持公告</strong></div>
+        </div>
+
+        <div class="sub-block">
+          <div class="sub-label">计算公式</div>
+          <div class="formula-block">
+<span class="var">产业资本活跃度</span> <span class="op">=</span>
+   增持金额合计 − 减持金额合计
+
+<span class="var">净额Score</span> <span class="op">=</span>
+   (今日净额 − <span class="const">60日均值</span>) / <span class="const">60日标准差</span>
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <div class="sub-block">
+          <div class="sub-label">数据源</div>
+          <div class="sub-content">
+            <ul>
+              <li>上市公司"重大股东持股变动"公告</li>
+              <li>akshare: <code style="color:var(--code-string)">stock_em_dxsyl()</code></li>
+              <li>Choice: "大股东增减持"接口</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="info-box">
+          <div class="info-label">▸ 领先指标特性</div>
+          <div class="info-text">
+            产业资本信号往往是<strong>领先指标</strong>。当某行业出现连续多家公司大股东增持时,通常是该行业基本面拐点的早期信号。系统应按行业聚合显示<strong>"今日增持最多的3个行业"</strong>。
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ========== ZONE 3 · 警戒灯 ========== -->
+<section class="section" id="zone3">
+  <div class="section-header">
+    <div class="section-num">03</div>
+    <div>
+      <h2 class="section-title">第三区 · 六大警戒灯</h2>
+      <div class="section-subtitle">Zone 3 · Six Warning Lights</div>
+    </div>
+  </div>
+
+  <p class="lead">
+    警戒灯是状态屏中<strong>最具触发性</strong>的指标。每个灯都是一个二元判断:绿(正常)、黄(警觉)、红(危险)。任何一个灯变红,系统强制弹出说明窗口。
+  </p>
+
+  <!-- 警戒灯1: 流动性 -->
+  <div class="indicator-card">
+    <div class="ind-header">
+      <div class="ind-num-mark">3.1</div>
+      <div class="ind-title-group">
+        <h3>警戒灯一 · 流动性环境</h3>
+        <div class="ind-title-en">liquidity_environment_light()</div>
+      </div>
+      <div class="ind-tags">
+        <div class="diff-tag diff-easy">EASY</div>
+      </div>
+    </div>
+    <div class="ind-body">
+      <div>
+        <div class="sub-block">
+          <div class="sub-label">核心指标</div>
+          <div class="sub-content">
+            <strong>DR007</strong>(银行间7天质押式回购利率) + <strong>10年期国债收益率</strong>
+          </div>
+        </div>
+
+        <div class="sub-block">
+          <div class="sub-label">数据源</div>
+          <div class="sub-content">
+            <ul>
+              <li>DR007: 中国货币网</li>
+              <li>10年期国债: 中国债券信息网</li>
+              <li>M1: 国家统计局 / 人民银行</li>
+              <li>简化: Wind / Choice / Tushare</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <div class="sub-block">
+          <div class="sub-label">三色判定规则</div>
+          <div class="threshold-grid">
+            <div class="threshold-row green">
+              <div class="threshold-light"><div class="threshold-dot"></div><div class="threshold-name">绿灯</div></div>
+              <div class="threshold-condition">
+                <strong>全部满足:</strong> DR007 < 2.5% · 10Y国债 < 2.8% · M1同比 > 0% · 央行净投放
+              </div>
+            </div>
+            <div class="threshold-row yellow">
+              <div class="threshold-light"><div class="threshold-dot"></div><div class="threshold-name">黄灯</div></div>
+              <div class="threshold-condition">
+                <strong>任一满足:</strong> 2.5% < DR007 < 2.8% · 10Y国债20日上行>30bp · M1同比转负
+              </div>
+            </div>
+            <div class="threshold-row red">
+              <div class="threshold-light"><div class="threshold-dot"></div><div class="threshold-name">红灯</div></div>
+              <div class="threshold-condition">
+                <strong>任一满足:</strong> DR007 > 2.8% · 10Y国债20日上行>50bp · 央行连续大额回笼
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 警戒灯2: 公募仓位 -->
+  <div class="indicator-card">
+    <div class="ind-header">
+      <div class="ind-num-mark">3.2</div>
+      <div class="ind-title-group">
+        <h3>警戒灯二 · 公募仓位</h3>
+        <div class="ind-title-en">mutual_fund_position_light()</div>
+      </div>
+      <div class="ind-tags">
+        <div class="diff-tag diff-easy">EASY</div>
+      </div>
+    </div>
+    <div class="ind-body">
+      <div>
+        <div class="sub-block">
+          <div class="sub-label">核心指标</div>
+          <div class="sub-content">偏股混合型基金<strong>平均仓位</strong></div>
+        </div>
+
+        <div class="sub-block">
+          <div class="sub-label">数据源</div>
+          <div class="sub-content">
+            <ul>
+              <li>中信/兴业/招商每周一卖方研报</li>
+              <li>Wind: "基金仓位测算"</li>
+              <li>简化:追踪代表性基金净值反推</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <div class="sub-block">
+          <div class="sub-label">三色判定规则</div>
+          <div class="threshold-grid">
+            <div class="threshold-row green">
+              <div class="threshold-light"><div class="threshold-dot"></div><div class="threshold-name">绿灯</div></div>
+              <div class="threshold-condition">仓位 < 80%(<strong>还有加仓空间</strong>)</div>
+            </div>
+            <div class="threshold-row yellow">
+              <div class="threshold-light"><div class="threshold-dot"></div><div class="threshold-name">黄灯</div></div>
+              <div class="threshold-condition">80% ≤ 仓位 ≤ 88%(中性偏高)</div>
+            </div>
+            <div class="threshold-row red">
+              <div class="threshold-light"><div class="threshold-dot"></div><div class="threshold-name">红灯</div></div>
+              <div class="threshold-condition">仓位 > 88%(<strong>高位预警</strong>)</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="info-box">
+          <div class="info-label">▸ 二级触发</div>
+          <div class="info-text">
+            当公募仓位<strong>连续3周下降</strong>时,即使绝对值还在黄灯区,也应该弹出"机构调仓中"提示。
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 警戒灯3: 量化拥挤度 -->
+  <div class="indicator-card">
+    <div class="ind-header">
+      <div class="ind-num-mark">3.3</div>
+      <div class="ind-title-group">
+        <h3>警戒灯三 · 量化拥挤度</h3>
+        <div class="ind-title-en">quant_crowding_light()</div>
+      </div>
+      <div class="ind-tags">
+        <div class="diff-tag diff-medium">MEDIUM</div>
+      </div>
+    </div>
+    <div class="ind-body">
+      <div>
+        <div class="sub-block">
+          <div class="sub-label">三因子合成</div>
+          <div class="formula-block">
+<span class="var">拥挤度Score</span> <span class="op">=</span>
+   <span class="const">0.4</span> <span class="op">×</span> 指增超额z
+   <span class="op">+</span> <span class="const">0.3</span> <span class="op">×</span> 小微盘强度z
+   <span class="op">+</span> <span class="const">0.3</span> <span class="op">×</span> 期货贴水z
+          </div>
+        </div>
+
+        <div class="sub-block">
+          <div class="sub-label">分位数计算</div>
+          <div class="sub-content">
+            每个因子用<strong>过去3年</strong>数据计算分位数,综合得分用同样窗口确定分位。
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <div class="sub-block">
+          <div class="sub-label">三色判定规则</div>
+          <div class="threshold-grid">
+            <div class="threshold-row green">
+              <div class="threshold-light"><div class="threshold-dot"></div><div class="threshold-name">绿灯</div></div>
+              <div class="threshold-condition">综合分位 < 60%(拥挤度低)</div>
+            </div>
+            <div class="threshold-row yellow">
+              <div class="threshold-light"><div class="threshold-dot"></div><div class="threshold-name">黄灯</div></div>
+              <div class="threshold-condition">60% ≤ 综合分位 ≤ 85%(中度拥挤)</div>
+            </div>
+            <div class="threshold-row red">
+              <div class="threshold-light"><div class="threshold-dot"></div><div class="threshold-name">红灯</div></div>
+              <div class="threshold-condition">综合分位 > 85%(<strong>流动性危机风险</strong>)</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="warning-box">
+          <div class="warning-label">⚠ ESCALATED ALERT</div>
+          <div class="warning-text">
+            红灯持续超过<strong>5个交易日</strong>,系统应触发"<strong>小微盘流动性预警</strong>",建议减少小盘暴露。
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 警戒灯4: 散户情绪 -->
+  <div class="indicator-card">
+    <div class="ind-header">
+      <div class="ind-num-mark">3.4</div>
+      <div class="ind-title-group">
+        <h3>警戒灯四 · 散户情绪</h3>
+        <div class="ind-title-en">retail_emotion_light()</div>
+      </div>
+      <div class="ind-tags">
+        <div class="diff-tag diff-medium">MEDIUM</div>
+      </div>
+    </div>
+    <div class="ind-body">
+      <div>
+        <div class="sub-block">
+          <div class="sub-label">合成公式</div>
+          <div class="formula-block">
+<span class="var">散户情绪</span> <span class="op">=</span>
+   <span class="const">0.4</span> <span class="op">×</span> 两融余额z
+   <span class="op">+</span> <span class="const">0.3</span> <span class="op">×</span> 新增开户z
+   <span class="op">+</span> <span class="const">0.3</span> <span class="op">×</span> 搜索指数z
+          </div>
+        </div>
+
+        <div class="warning-box">
+          <div class="warning-label">⚠ INVERSE LOGIC</div>
+          <div class="warning-text">
+            散户情绪通常作为<strong>反向指标</strong>。极致高位 → 顶部风险;极致低位 → 底部机会。
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <div class="sub-block">
+          <div class="sub-label">反向判定规则</div>
+          <div class="threshold-grid">
+            <div class="threshold-row green">
+              <div class="threshold-light"><div class="threshold-dot"></div><div class="threshold-name">绿灯</div></div>
+              <div class="threshold-condition">综合Z 在 [−1, +1] (中性正常)</div>
+            </div>
+            <div class="threshold-row yellow">
+              <div class="threshold-light"><div class="threshold-dot"></div><div class="threshold-name">黄灯</div></div>
+              <div class="threshold-condition">综合Z 在 [−2, −1] 或 [+1, +2] (情绪偏离)</div>
+            </div>
+            <div class="threshold-row red">
+              <div class="threshold-light"><div class="threshold-dot"></div><div class="threshold-name">红灯</div></div>
+              <div class="threshold-condition">综合Z > +2 或 < −2 (<strong>极端情绪 → 反向风险</strong>)</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 警戒灯5: 北向背离 -->
+  <div class="indicator-card">
+    <div class="ind-header">
+      <div class="ind-num-mark">3.5</div>
+      <div class="ind-title-group">
+        <h3>警戒灯五 · 北向背离</h3>
+        <div class="ind-title-en">northbound_divergence_light()</div>
+      </div>
+      <div class="ind-tags">
+        <div class="diff-tag diff-medium">MEDIUM</div>
+      </div>
+    </div>
+    <div class="ind-body ind-body-full">
+      <div class="sub-block">
+        <div class="sub-label">判定逻辑</div>
+        <div class="sub-content">
+          计算<strong>配置盘和交易盘过去5日累计净流入</strong>,根据方向一致性判定。
+        </div>
+
+        <div class="threshold-grid" style="margin-top: 16px;">
+          <div class="threshold-row green">
+            <div class="threshold-light"><div class="threshold-dot"></div><div class="threshold-name">绿灯</div></div>
+            <div class="threshold-condition">配置盘和交易盘<strong>同方向</strong>(都正或都负)</div>
+          </div>
+          <div class="threshold-row yellow">
+            <div class="threshold-light"><div class="threshold-dot"></div><div class="threshold-name">黄灯</div></div>
+            <div class="threshold-condition">一方接近0,另一方明显</div>
+          </div>
+          <div class="threshold-row red">
+            <div class="threshold-light"><div class="threshold-dot"></div><div class="threshold-name">红灯</div></div>
+            <div class="threshold-condition"><strong>明显背离</strong>(方向相反且各自|金额| > 20亿)</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="sub-block" style="margin-top: 24px;">
+        <div class="sub-label">红灯的二级提示</div>
+        <table class="divergence-matrix">
+          <thead>
+            <tr>
+              <th>类型</th>
+              <th>配置盘 / 交易盘</th>
+              <th>含义与建议</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="signal-bull">类型A</td>
+              <td>+ / −</td>
+              <td class="signal-bottom">长线进场,短线避险 → <strong>潜在底部</strong>,可适度布局核心资产</td>
+            </tr>
+            <tr>
+              <td class="signal-bear">类型B</td>
+              <td>− / +</td>
+              <td class="signal-top">长线撤退,短线博弈反弹 → <strong>潜在顶部</strong>,警惕,准备防御</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- 警戒灯6: 政策密度 -->
+  <div class="indicator-card">
+    <div class="ind-header">
+      <div class="ind-num-mark">3.6</div>
+      <div class="ind-title-group">
+        <h3>警戒灯六 · 政策密度</h3>
+        <div class="ind-title-en">policy_density_light()</div>
+      </div>
+      <div class="ind-tags">
+        <div class="diff-tag diff-hard">HARD</div>
+      </div>
+    </div>
+    <div class="ind-body ind-body-full">
+      <div class="sub-block">
+        <div class="sub-label">实施步骤</div>
+        <div class="code-block">
+<span class="comment"># 1. 维护政策关键词库</span>
+keyword_lib = {
+    <span class="string">"产业政策"</span>: [<span class="string">"新质生产力"</span>, <span class="string">"低空经济"</span>, <span class="string">"AI"</span>, <span class="string">"机器人"</span>, ...],
+    <span class="string">"监管政策"</span>: [<span class="string">"并购重组"</span>, <span class="string">"市值管理"</span>, <span class="string">"退市"</span>, <span class="string">"IPO"</span>, ...],
+    <span class="string">"货币政策"</span>: [<span class="string">"降息"</span>, <span class="string">"降准"</span>, <span class="string">"MLF"</span>, ...],
+    <span class="string">"财政政策"</span>: [<span class="string">"特别国债"</span>, <span class="string">"专项债"</span>, <span class="string">"减税"</span>, ...]
+}
+
+<span class="comment"># 2. 每日爬取关键媒体</span>
+sources = [
+    <span class="string">"新华社"</span>, <span class="string">"人民日报"</span>, 
+    <span class="string">"发改委"</span>, <span class="string">"证监会"</span>, <span class="string">"金融监管总局"</span>,
+    <span class="string">"央行"</span>, <span class="string">"财政部"</span>, <span class="string">"工信部"</span>, <span class="string">"科技部"</span>
+]
+
+<span class="comment"># 3. 统计每日各关键词的提及次数</span>
+daily_count = <span class="func">count_keywords</span>(sources, keyword_lib)
+
+<span class="comment"># 4. 计算政策密度Score</span>
+density_score = (daily_count - <span class="func">mean_30d</span>(daily_count)) / <span class="func">std_30d</span>(daily_count)
+        </div>
+      </div>
+
+      <div class="sub-block">
+        <div class="sub-label">三色判定</div>
+        <div class="threshold-grid">
+          <div class="threshold-row green">
+            <div class="threshold-light"><div class="threshold-dot"></div><div class="threshold-name">绿灯</div></div>
+            <div class="threshold-condition">Score 在 [−1, +1] (政策正常)</div>
+          </div>
+          <div class="threshold-row yellow">
+            <div class="threshold-light"><div class="threshold-dot"></div><div class="threshold-name">黄灯</div></div>
+            <div class="threshold-condition">+1 < Score < +2 (政策密集)</div>
+          </div>
+          <div class="threshold-row red">
+            <div class="threshold-light"><div class="threshold-dot"></div><div class="threshold-name">红灯</div></div>
+            <div class="threshold-condition">Score > +2 (<strong>政策爆发,可能催化大行情</strong>)</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="info-box">
+        <div class="info-label">▸ 红灯特殊处理</div>
+        <div class="info-text">
+          红灯时按<strong>行业聚合</strong>显示,标注"<strong>今日政策催化最多的3个行业</strong>",方便快速定位题材。
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ========== 04 工程实施 ========== -->
+<section class="section" id="engineering">
+  <div class="section-header">
+    <div class="section-num">04</div>
+    <div>
+      <h2 class="section-title">数据获取的工程化建议</h2>
+      <div class="section-subtitle">Engineering Best Practices</div>
+    </div>
+  </div>
+
+  <p class="lead">
+    指标公式只是开始,真正的难度在<strong>工程实现</strong>。下面是数据源分层、更新频率调度、质量保障三个方面的工程建议。
+  </p>
+
+  <h3 style="font-size:24px;margin:40px 0 0;font-weight:700;color:var(--text-primary);">数据源三层架构 <span style="font-family:'JetBrains Mono',monospace;font-size:14px;color:var(--text-muted);font-weight:400;">// data_source_tiers</span></h3>
+
+  <div class="tier-comparison">
+    <div class="data-tier t1">
+      <div class="tier-label">— TIER 1 · FREE —</div>
+      <div class="tier-name">免费开源</div>
+      <div class="tier-cost">COST: 0 / year</div>
+      <div class="tier-list">
+        <strong>akshare</strong>覆盖90%基础数据
+        <strong>Tushare Pro</strong>(部分免费)
+        <strong>各交易所官网</strong>权威需爬虫
+        <strong>中国货币网</strong>利率数据
+        <strong>百度指数</strong>搜索数据
+      </div>
+    </div>
+
+    <div class="data-tier t2">
+      <div class="tier-label">— TIER 2 · COMMERCIAL —</div>
+      <div class="tier-name">商业付费</div>
+      <div class="tier-cost">COST: 1-3万 / year</div>
+      <div class="tier-list">
+        <strong>同花顺iFinD</strong>个人专业首选
+        <strong>东方财富Choice</strong>数据全面
+        <strong>好买基金网</strong>私募/量化数据
+        <strong>私募排排网</strong>策略业绩数据
+      </div>
+    </div>
+
+    <div class="data-tier t3">
+      <div class="tier-label">— TIER 3 · PROFESSIONAL —</div>
+      <div class="tier-name">专业终端</div>
+      <div class="tier-cost">COST: 5-10万 / year</div>
+      <div class="tier-list">
+        <strong>Wind金融终端</strong>机构标配
+        <strong>Bloomberg</strong>海外数据为主
+        <strong>BondConnect</strong>北向深度数据
+        <strong>CCASS专业服务</strong>港股资金
+      </div>
+    </div>
+  </div>
+
+  <div class="info-box" style="margin-top: 30px;">
+    <div class="info-label">▸ 推荐起步组合</div>
+    <div class="info-text">
+      个人开发者:<strong>akshare + Tushare Pro + 同花顺iFinD</strong>,可以以约 <strong>2-3万/年</strong> 的成本覆盖80%以上的需求。
+    </div>
+  </div>
+
+  <h3 style="font-size:24px;margin:60px 0 0;font-weight:700;color:var(--text-primary);">数据质量双源校验 <span style="font-family:'JetBrains Mono',monospace;font-size:14px;color:var(--text-muted);font-weight:400;">// dual_source_validation</span></h3>
+
+  <div class="warning-box" style="margin-top: 20px;">
+    <div class="warning-label">⚠ CORE PRINCIPLE</div>
+    <div class="warning-text">
+      <strong>任何关键指标必须双源校验</strong>。当某数据源失效或数据明显异常时,自动切换到备用数据源,标记数据为"待验证"状态,通过<strong>企业微信/Telegram推送告警</strong>。
+    </div>
+  </div>
+
+  <table class="data-table" style="margin-top: 20px;">
+    <thead>
+      <tr>
+        <th>关键指标</th>
+        <th>主数据源</th>
+        <th>校验数据源</th>
+        <th>告警阈值</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td class="col-key">北向资金</td>
+        <td class="col-source">akshare</td>
+        <td class="col-source">Wind</td>
+        <td>差异 > 5%</td>
+      </tr>
+      <tr>
+        <td class="col-key">公募仓位</td>
+        <td class="col-source">中信测算</td>
+        <td class="col-source">兴业测算</td>
+        <td>差异 > 3%</td>
+      </tr>
+      <tr>
+        <td class="col-key">涨停股数量</td>
+        <td class="col-source">东财数据</td>
+        <td class="col-source">同花顺</td>
+        <td>差异 > 2只</td>
+      </tr>
+      <tr>
+        <td class="col-key">DR007</td>
+        <td class="col-source">中国货币网</td>
+        <td class="col-source">Wind</td>
+        <td>差异 > 5bp</td>
+      </tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- ========== 05 落地路径 ========== -->
+<section class="section" id="path">
+  <div class="section-header">
+    <div class="section-num">05</div>
+    <div>
+      <h2 class="section-title">五周落地实施路径</h2>
+      <div class="section-subtitle">5-Week Implementation Roadmap</div>
+    </div>
+  </div>
+
+  <p class="lead">
+    从零开始实现状态屏的完整路径。<strong>不要试图一次性全部实现</strong>。从最关键的5个指标开始,跑顺了再加其他的。
+  </p>
+
+  <div class="implementation-path">
+
+    <div class="impl-step">
+      <div class="impl-week">WEEK 1</div>
+      <div class="impl-marker"><div class="impl-dot"></div></div>
+      <div class="impl-content">
+        <div class="impl-title">搭建数据底座</div>
+        <div class="impl-desc">
+          配置PostgreSQL,用akshare拉取过去3年的核心数据,验证数据完整性。
+        </div>
+        <ul class="impl-checklist">
+          <li>PostgreSQL环境配置</li>
+          <li>akshare拉取3年全A成交额、北向、两融、涨停统计</li>
+          <li>数据完整性校验</li>
+          <li>建立数据质量监控基础框架</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="impl-step">
+      <div class="impl-week">WEEK 2</div>
+      <div class="impl-marker"><div class="impl-dot"></div></div>
+      <div class="impl-content">
+        <div class="impl-title">实现温度计</div>
+        <div class="impl-desc">
+          实现九类资金的Z-score计算,用过去3年数据回测确认阈值合理性。
+        </div>
+        <ul class="impl-checklist">
+          <li>实现九类资金净流入计算</li>
+          <li>Z-score标准化框架</li>
+          <li>用3年历史数据回测,确认阈值</li>
+          <li>Streamlit初版温度计可视化</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="impl-step">
+      <div class="impl-week">WEEK 3</div>
+      <div class="impl-marker"><div class="impl-dot"></div></div>
+      <div class="impl-content">
+        <div class="impl-title">实现警戒灯</div>
+        <div class="impl-desc">
+          实现六大警戒灯的判定规则,设置告警推送机制。
+        </div>
+        <ul class="impl-checklist">
+          <li>六大警戒灯规则编码</li>
+          <li>告警推送配置(企业微信/Telegram/邮件)</li>
+          <li>历史关键事件回测验证</li>
+          <li>红灯触发的二级提示开发</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="impl-step">
+      <div class="impl-week">WEEK 4</div>
+      <div class="impl-marker"><div class="impl-dot"></div></div>
+      <div class="impl-content">
+        <div class="impl-title">实现状态判定</div>
+        <div class="impl-desc">
+          实现A/B/C/D状态的加权得分计算,人工标注校准阈值。
+        </div>
+        <ul class="impl-checklist">
+          <li>四种状态得分函数实现</li>
+          <li>状态分类器与置信度判定</li>
+          <li>人工标注3年关键时期"正确状态"</li>
+          <li>调整权重至回测准确率 > 75%</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="impl-step">
+      <div class="impl-week">WEEK 5+</div>
+      <div class="impl-marker"><div class="impl-dot"></div></div>
+      <div class="impl-content">
+        <div class="impl-title">迭代优化(持续)</div>
+        <div class="impl-desc">
+          根据实际使用反馈调整阈值,持续校准权重,扩展新数据源和指标。
+        </div>
+        <ul class="impl-checklist">
+          <li>实战反馈驱动的阈值调整</li>
+          <li>每季度权重重新校准</li>
+          <li>新数据源接入</li>
+          <li>新指标研究和加入</li>
+        </ul>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="warning-box" style="margin-top: 50px;">
+    <div class="warning-label">⚠ FINAL REMINDER</div>
+    <div class="warning-text">
+      记住第一册讲过的原则:<strong>70%准确率+持续运行,远胜于100%准确率+永远没上线</strong>。先让系统跑起来,再追求完美。
+    </div>
+  </div>
+</section>
+
+<!-- ========== 终极洞察 ========== -->
+<section class="ultimate">
+  <div class="ultimate-tag">— ENGINEERING APPENDIX · CLOSING NOTE —</div>
+
+  <h2 class="ultimate-quote">
+    再优雅的认知框架,<br>
+    没有<span class="highlight">可执行的代码</span>支撑,<br>
+    都只是<span class="highlight">书架上的装饰</span>。
+  </h2>
+
+  <p class="ultimate-final">
+    /* From idea to implementation, that's where research becomes capability. */
+  </p>
+
+  <div class="series-info">
+    <div class="series-item">
+      <div class="num">I</div>
+      监测体系全景
+    </div>
+    <div class="series-item">
+      <div class="num">II</div>
+      资金视角方法论
+    </div>
+    <div class="series-item">
+      <div class="num">III</div>
+      建立资金图谱
+    </div>
+    <div class="series-item">
+      <div class="num">IV</div>
+      研究研究股票的人
+    </div>
+    <div class="series-item">
+      <div class="num">V</div>
+      实战篇
+    </div>
+    <div class="series-item current">
+      <div class="num">A</div>
+      工程附录 · CURRENT
+    </div>
+  </div>
+</section>
+
+</body>
+</html>

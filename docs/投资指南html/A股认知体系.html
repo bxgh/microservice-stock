@@ -1,0 +1,1279 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>A股认知体系 · 从感性认识到信息系统</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;500;600;700&family=Noto+Sans+SC:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0e0d0b;
+    --bg-elev-1: #15130f;
+    --bg-elev-2: #1c1915;
+    --bg-elev-3: #221e18;
+    --ink: #ede3cc;
+    --ink-dim: #b5a98e;
+    --ink-mute: #776d58;
+    --ink-whisper: #4d4538;
+    --amber: #d4a23e;
+    --amber-bright: #f0c968;
+    --amber-soft: rgba(212, 162, 62, 0.18);
+    --amber-faint: rgba(212, 162, 62, 0.08);
+    --strong: #8ab573;
+    --neutral: #c99339;
+    --alert: #d97a3d;
+    --weak: #c85a4a;
+    --cold: #6b8ca8;
+    --rise: #e5644f;
+    --fall: #5ca478;
+    --hair: #2a2520;
+    --serif: 'Noto Serif SC', serif;
+    --sans: 'Noto Sans SC', sans-serif;
+    --mono: 'JetBrains Mono', monospace;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html, body {
+    background: var(--bg);
+    color: var(--ink);
+    font-family: var(--sans);
+    font-size: 14px;
+    line-height: 1.7;
+    font-weight: 300;
+    letter-spacing: 0.01em;
+  }
+
+  body {
+    background-image:
+      url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='100' height='100'><filter id='n'><feTurbulence baseFrequency='0.9'/><feColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0.04 0'/></filter><rect width='100' height='100' filter='url(%23n)'/></svg>");
+    min-height: 100vh;
+  }
+
+  .container {
+    max-width: 1340px;
+    margin: 0 auto;
+    padding: 60px 48px 80px;
+  }
+
+  /* ==================== 顶部 ==================== */
+  .doc-header {
+    border-top: 1px solid var(--amber);
+    border-bottom: 1px solid var(--hair);
+    padding: 28px 0 24px;
+    margin-bottom: 48px;
+    display: grid;
+    grid-template-columns: 1fr auto;
+    align-items: end;
+    gap: 32px;
+    position: relative;
+  }
+
+  .doc-header::before {
+    content: '';
+    position: absolute;
+    top: -1px; left: 0;
+    width: 80px; height: 3px;
+    background: var(--amber);
+  }
+
+  .doc-meta-top {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--ink-mute);
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    margin-bottom: 12px;
+  }
+
+  .doc-meta-top .amber { color: var(--amber); }
+
+  .doc-title {
+    font-family: var(--serif);
+    font-size: 38px;
+    font-weight: 600;
+    line-height: 1.25;
+    color: var(--ink);
+    margin-bottom: 8px;
+    letter-spacing: -0.01em;
+  }
+
+  .doc-subtitle {
+    font-family: var(--serif);
+    font-size: 16px;
+    color: var(--ink-dim);
+    font-weight: 400;
+  }
+
+  .doc-meta-right {
+    text-align: right;
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--ink-mute);
+    line-height: 1.8;
+  }
+
+  .doc-meta-right .label { color: var(--ink-whisper); }
+  .doc-meta-right .val { color: var(--amber); }
+
+  /* ==================== Section ==================== */
+  .section {
+    margin-bottom: 64px;
+    position: relative;
+  }
+
+  .section-header {
+    display: grid;
+    grid-template-columns: 60px 1fr auto;
+    align-items: baseline;
+    gap: 24px;
+    border-bottom: 1px solid var(--hair);
+    padding-bottom: 16px;
+    margin-bottom: 32px;
+  }
+
+  .section-num {
+    font-family: var(--mono);
+    font-size: 32px;
+    font-weight: 500;
+    color: var(--amber);
+    letter-spacing: -0.05em;
+    line-height: 1;
+  }
+
+  .section-title {
+    font-family: var(--serif);
+    font-size: 24px;
+    font-weight: 600;
+    color: var(--ink);
+    letter-spacing: 0.01em;
+  }
+
+  .section-subtitle {
+    font-size: 11px;
+    color: var(--ink-mute);
+    font-family: var(--mono);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+
+  /* ==================== 章节1 - 十大观点四层 ==================== */
+  .layer-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 1px;
+    background: var(--hair);
+    border: 1px solid var(--hair);
+  }
+
+  .layer-row {
+    display: grid;
+    grid-template-columns: 180px 1fr;
+    background: var(--bg-elev-1);
+    padding: 24px 28px;
+    gap: 32px;
+  }
+
+  .layer-tag {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .layer-tag .level {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--amber);
+    letter-spacing: 0.15em;
+  }
+
+  .layer-tag .name {
+    font-family: var(--serif);
+    font-size: 17px;
+    font-weight: 600;
+    color: var(--ink);
+  }
+
+  .layer-tag .feel {
+    font-size: 11px;
+    color: var(--ink-mute);
+    font-family: var(--mono);
+    margin-top: 4px;
+  }
+
+  .layer-items {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 20px;
+  }
+
+  .layer-item {
+    display: grid;
+    grid-template-columns: 28px 1fr;
+    gap: 12px;
+    align-items: start;
+  }
+
+  .item-num {
+    font-family: var(--mono);
+    font-size: 13px;
+    color: var(--amber);
+    font-weight: 500;
+    border-top: 1px solid var(--amber);
+    padding-top: 4px;
+  }
+
+  .item-content .item-title {
+    font-family: var(--sans);
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--ink);
+    margin-bottom: 4px;
+  }
+
+  .item-content .item-desc {
+    font-size: 12px;
+    color: var(--ink-dim);
+    line-height: 1.6;
+  }
+
+  /* ==================== 章节2 - 信息分层表 ==================== */
+  .info-table {
+    border: 1px solid var(--hair);
+    background: var(--bg-elev-1);
+  }
+
+  .info-table table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+
+  .info-table th {
+    background: var(--bg-elev-2);
+    padding: 14px 18px;
+    text-align: left;
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--amber);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    font-weight: 500;
+    border-bottom: 1px solid var(--amber-soft);
+  }
+
+  .info-table td {
+    padding: 16px 18px;
+    border-top: 1px solid var(--hair);
+    font-size: 13px;
+    color: var(--ink-dim);
+    vertical-align: top;
+  }
+
+  .info-table td:first-child {
+    font-family: var(--mono);
+    color: var(--amber);
+    font-weight: 500;
+    width: 100px;
+  }
+
+  .info-table td:nth-child(2) {
+    color: var(--ink);
+    width: 220px;
+    font-weight: 400;
+  }
+
+  .info-table td:nth-child(3) {
+    width: 140px;
+    font-family: var(--mono);
+    font-size: 12px;
+  }
+
+  .info-table tr:hover { background: var(--bg-elev-2); }
+
+  .speed-tag {
+    display: inline-block;
+    padding: 2px 8px;
+    border: 1px solid var(--amber-soft);
+    color: var(--amber);
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.05em;
+  }
+
+  /* ==================== 章节3 - 16层信息流转图 ==================== */
+  .pyramid-container {
+    display: grid;
+    grid-template-columns: 480px 1fr;
+    gap: 48px;
+    align-items: start;
+  }
+
+  .pyramid-svg-wrap {
+    position: relative;
+    background: var(--bg-elev-1);
+    border: 1px solid var(--hair);
+    padding: 28px;
+  }
+
+  .pyramid-svg-wrap::before, .pyramid-svg-wrap::after {
+    content: '';
+    position: absolute;
+    width: 12px; height: 12px;
+    border: 1px solid var(--amber);
+  }
+  .pyramid-svg-wrap::before { top: 8px; left: 8px; border-right: none; border-bottom: none; }
+  .pyramid-svg-wrap::after { bottom: 8px; right: 8px; border-left: none; border-top: none; }
+
+  .pyramid-detail {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+  }
+
+  .pd-row {
+    display: grid;
+    grid-template-columns: 32px 110px 1fr;
+    align-items: baseline;
+    padding: 14px 0;
+    border-bottom: 1px solid var(--hair);
+    gap: 16px;
+  }
+
+  .pd-row:last-child { border-bottom: none; }
+
+  .pd-num {
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--amber);
+  }
+
+  .pd-name {
+    font-family: var(--serif);
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--ink);
+  }
+
+  .pd-desc {
+    font-size: 12px;
+    color: var(--ink-dim);
+    line-height: 1.6;
+  }
+
+  .pd-stage {
+    grid-column: 1 / -1;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 0 8px;
+    margin-top: 8px;
+  }
+
+  .pd-stage:first-child { padding-top: 0; margin-top: 0; }
+
+  .pd-stage-name {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--amber);
+    letter-spacing: 0.15em;
+  }
+
+  .pd-stage-line {
+    flex: 1;
+    height: 1px;
+    background: var(--amber-soft);
+  }
+
+  /* ==================== 章节4 - 系统四象限 ==================== */
+  .system-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1px;
+    background: var(--hair);
+    border: 1px solid var(--hair);
+  }
+
+  .system-card {
+    background: var(--bg-elev-1);
+    padding: 28px;
+    position: relative;
+  }
+
+  .system-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0;
+    width: 2px; height: 40px;
+    background: var(--amber);
+  }
+
+  .sc-num {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--ink-mute);
+    letter-spacing: 0.15em;
+    margin-bottom: 8px;
+  }
+
+  .sc-title {
+    font-family: var(--serif);
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--ink);
+    margin-bottom: 6px;
+  }
+
+  .sc-tagline {
+    font-size: 12px;
+    color: var(--amber);
+    font-family: var(--mono);
+    margin-bottom: 16px;
+  }
+
+  .sc-list {
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .sc-list li {
+    font-size: 13px;
+    color: var(--ink-dim);
+    padding-left: 16px;
+    position: relative;
+    line-height: 1.6;
+  }
+
+  .sc-list li::before {
+    content: '◆';
+    position: absolute;
+    left: 0;
+    color: var(--amber);
+    font-size: 8px;
+    top: 6px;
+  }
+
+  .sc-list li strong {
+    color: var(--ink);
+    font-weight: 500;
+  }
+
+  /* ==================== 章节5 - 案例流转 ==================== */
+  .case-meta {
+    background: var(--bg-elev-2);
+    border-left: 2px solid var(--amber);
+    padding: 16px 20px;
+    margin-bottom: 32px;
+    font-family: var(--serif);
+    font-size: 14px;
+    color: var(--ink-dim);
+    line-height: 1.8;
+  }
+
+  .case-meta .quote-mark {
+    color: var(--amber);
+    font-size: 20px;
+    font-family: var(--mono);
+    margin-right: 8px;
+  }
+
+  .case-flow {
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    gap: 0;
+    border: 1px solid var(--hair);
+  }
+
+  .flow-stage {
+    background: var(--bg-elev-1);
+    padding: 20px 18px;
+    border-right: 1px solid var(--hair);
+    position: relative;
+  }
+
+  .flow-stage:last-child { border-right: none; }
+
+  .flow-stage::after {
+    content: '→';
+    position: absolute;
+    right: -8px; top: 50%;
+    transform: translateY(-50%);
+    color: var(--amber);
+    font-family: var(--mono);
+    font-size: 14px;
+    background: var(--bg);
+    width: 16px; height: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 2;
+  }
+
+  .flow-stage:last-child::after { display: none; }
+
+  .fs-stage-num {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--ink-mute);
+    letter-spacing: 0.1em;
+    margin-bottom: 8px;
+  }
+
+  .fs-stage-name {
+    font-family: var(--serif);
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--amber);
+    margin-bottom: 12px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--amber-soft);
+  }
+
+  .fs-content {
+    font-size: 11px;
+    color: var(--ink-dim);
+    line-height: 1.6;
+  }
+
+  .fs-content p { margin-bottom: 8px; }
+
+  .fs-content p:last-child { margin-bottom: 0; }
+
+  .fs-content .key {
+    color: var(--ink);
+    font-weight: 500;
+  }
+
+  .case-conclusion {
+    margin-top: 32px;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0;
+    border: 1px solid var(--hair);
+  }
+
+  .cc-block {
+    padding: 24px 28px;
+    background: var(--bg-elev-1);
+    border-right: 1px solid var(--hair);
+  }
+  .cc-block:last-child { border-right: none; }
+
+  .cc-label {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--ink-mute);
+    letter-spacing: 0.15em;
+    margin-bottom: 8px;
+  }
+
+  .cc-text {
+    font-family: var(--serif);
+    font-size: 14px;
+    color: var(--ink);
+    line-height: 1.7;
+  }
+
+  .cc-text .strike {
+    color: var(--ink-mute);
+    text-decoration: line-through;
+  }
+
+  .cc-text .amber-text {
+    color: var(--amber);
+    font-weight: 500;
+  }
+
+  /* ==================== 章节6 - 关键纪律 ==================== */
+  .discipline-banner {
+    border: 1px solid var(--amber);
+    padding: 32px 40px;
+    background:
+      linear-gradient(180deg, transparent 0%, var(--amber-faint) 100%),
+      var(--bg-elev-1);
+    text-align: center;
+    position: relative;
+  }
+
+  .discipline-banner::before, .discipline-banner::after {
+    content: '§';
+    position: absolute;
+    color: var(--amber);
+    font-family: var(--serif);
+    font-size: 18px;
+    top: 50%; transform: translateY(-50%);
+  }
+  .discipline-banner::before { left: 16px; }
+  .discipline-banner::after { right: 16px; }
+
+  .db-label {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--amber);
+    letter-spacing: 0.2em;
+    margin-bottom: 16px;
+  }
+
+  .db-text {
+    font-family: var(--serif);
+    font-size: 22px;
+    font-weight: 600;
+    color: var(--ink);
+    line-height: 1.5;
+    letter-spacing: 0.02em;
+  }
+
+  .db-text .amber-text {
+    color: var(--amber);
+  }
+
+  /* ==================== 底部 ==================== */
+  .doc-footer {
+    margin-top: 64px;
+    padding-top: 24px;
+    border-top: 1px solid var(--hair);
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 32px;
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--ink-whisper);
+    letter-spacing: 0.1em;
+  }
+
+  .doc-footer .center { text-align: center; }
+  .doc-footer .right { text-align: right; }
+  .doc-footer .amber { color: var(--amber); }
+
+  /* SVG Pyramid */
+  .pyramid-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    fill: var(--ink-dim);
+    letter-spacing: 0.1em;
+  }
+
+  .pyramid-stage {
+    font-family: 'Noto Serif SC', serif;
+    font-size: 12px;
+    fill: var(--ink);
+    font-weight: 500;
+  }
+
+  .pyramid-side {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+    fill: var(--amber);
+    letter-spacing: 0.05em;
+  }
+
+</style>
+</head>
+<body>
+
+<div class="container">
+
+  <!-- ==================== 文档头部 ==================== -->
+  <div class="doc-header">
+    <div>
+      <div class="doc-meta-top">
+        <span class="amber">A股 · 认知体系</span> &nbsp;|&nbsp; INVESTMENT EPISTEMOLOGY &nbsp;|&nbsp; INTERNAL RESEARCH NOTE
+      </div>
+      <h1 class="doc-title">从感性认识到信息系统</h1>
+      <div class="doc-subtitle">投资认知论的六层结构 · 信息流转的十六个层面 · 系统建立四要素</div>
+    </div>
+    <div class="doc-meta-right">
+      <div><span class="label">DATE</span> <span class="val">2026/04/25</span></div>
+      <div><span class="label">SCOPE</span> A股 · 港股 · 美股</div>
+      <div><span class="label">VERSION</span> v1.0</div>
+    </div>
+  </div>
+
+  <!-- ==================== Section 1: 十大观点 ==================== -->
+  <section class="section">
+    <div class="section-header">
+      <div class="section-num">01</div>
+      <div class="section-title">A股十大重点问题 · 按认知层次重组</div>
+      <div class="section-subtitle">FROM PHENOMENA TO PARADIGM</div>
+    </div>
+
+    <div class="layer-grid">
+
+      <div class="layer-row">
+        <div class="layer-tag">
+          <div class="level">第一层 · L1</div>
+          <div class="name">现象层</div>
+          <div class="feel">人人能感知 · 无需训练</div>
+        </div>
+        <div class="layer-items">
+          <div class="layer-item">
+            <div class="item-num">01</div>
+            <div class="item-content">
+              <div class="item-title">涨跌的不对称感</div>
+              <div class="item-desc">跌得快、跌得深、跌的时候没量;涨得慢、涨得磨叽。"跌易涨难"是最直接的体感。</div>
+            </div>
+          </div>
+          <div class="layer-item">
+            <div class="item-num">02</div>
+            <div class="item-content">
+              <div class="item-title">题材热度的潮汐感</div>
+              <div class="item-desc">AI、机器人、低空经济。一个词反复出现两周后又集体消失,最易感知的市场情绪。</div>
+            </div>
+          </div>
+          <div class="layer-item">
+            <div class="item-num">03</div>
+            <div class="item-content">
+              <div class="item-title">政策一出全场变天</div>
+              <div class="item-desc">周末一个文件,周一千股涨停或千股跌停。政策的分量远比基本面剧烈。</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="layer-row">
+        <div class="layer-tag">
+          <div class="level">第二层 · L2</div>
+          <div class="name">规律层</div>
+          <div class="feel">观察一段时间才会浮现</div>
+        </div>
+        <div class="layer-items">
+          <div class="layer-item">
+            <div class="item-num">04</div>
+            <div class="item-content">
+              <div class="item-title">业绩与股价的悖论</div>
+              <div class="item-desc">业绩好了反而跌、业绩差了反而涨。引出预期 vs 兑现、估值锚的概念。</div>
+            </div>
+          </div>
+          <div class="layer-item">
+            <div class="item-num">05</div>
+            <div class="item-content">
+              <div class="item-title">行业同步性</div>
+              <div class="item-desc">同行业公司走势高度同步。板块轮动、申万行业的存在感开始浮现。</div>
+            </div>
+          </div>
+          <div class="layer-item">
+            <div class="item-num">06</div>
+            <div class="item-content">
+              <div class="item-title">投资者结构的力量差</div>
+              <div class="item-desc">散户买的票总是套,机构重仓的票有韧性。筹码归属决定定价权。</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="layer-row">
+        <div class="layer-tag">
+          <div class="level">第三层 · L3</div>
+          <div class="name">结构层</div>
+          <div class="feel">付出代价后才真正理解</div>
+        </div>
+        <div class="layer-items">
+          <div class="layer-item">
+            <div class="item-num">07</div>
+            <div class="item-content">
+              <div class="item-title">注册制下的供给冲击</div>
+              <div class="item-desc">解禁、增发、IPO 一来,好票也扛不住。供需关系与壳价值的重塑。</div>
+            </div>
+          </div>
+          <div class="layer-item">
+            <div class="item-num">08</div>
+            <div class="item-content">
+              <div class="item-title">财报真实性与公司治理</div>
+              <div class="item-desc">商誉、应收、现金流背离、关联交易——A股信息不对称的核心风险源。</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="layer-row">
+        <div class="layer-tag">
+          <div class="level">第四层 · L4</div>
+          <div class="name">范式层</div>
+          <div class="feel">完整周期才看得见的慢变量</div>
+        </div>
+        <div class="layer-items">
+          <div class="layer-item">
+            <div class="item-num">09</div>
+            <div class="item-content">
+              <div class="item-title">居民资产再配置长周期</div>
+              <div class="item-desc">地产长周期下行、刚兑打破、人口结构变化驱动的资金搬家方向。</div>
+            </div>
+          </div>
+          <div class="layer-item">
+            <div class="item-num">10</div>
+            <div class="item-content">
+              <div class="item-title">中美博弈与产业链重估</div>
+              <div class="item-desc">自主可控、卡脖子、安全溢价对行业估值体系的重新定价。</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ==================== Section 2: 信息分层观察 ==================== -->
+  <section class="section">
+    <div class="section-header">
+      <div class="section-num">02</div>
+      <div class="section-title">信息分层与观察节奏</div>
+      <div class="section-subtitle">SIGNAL VS NOISE — TIME-SCALE STRATIFICATION</div>
+    </div>
+
+    <div class="info-table">
+      <table>
+        <thead>
+          <tr>
+            <th>层级</th>
+            <th>信息类型</th>
+            <th>变化速度</th>
+            <th>观察节奏 · 决策权重</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>L1 慢变量</td>
+            <td>人口、城镇化、居民资产配置、产业升级</td>
+            <td><span class="speed-tag">以年计</span></td>
+            <td>季度 / 半年回顾一次 · 决定方向</td>
+          </tr>
+          <tr>
+            <td>L2 中变量</td>
+            <td>国家政策、地缘格局、产业景气、货币周期</td>
+            <td><span class="speed-tag">月 / 季</span></td>
+            <td>每周 · 决定结构</td>
+          </tr>
+          <tr>
+            <td>L3 快变量</td>
+            <td>公司财报、行业数据、资金流向</td>
+            <td><span class="speed-tag">周 / 月</span></td>
+            <td>每周 / 每月 · 决定时点</td>
+          </tr>
+          <tr>
+            <td>L4 噪音层</td>
+            <td>日内行情、新闻热点、社交媒体情绪</td>
+            <td><span class="speed-tag">分 / 时</span></td>
+            <td>选择性扫一眼 · 反向参考</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div style="margin-top: 24px; padding: 20px 24px; border-left: 2px solid var(--amber); background: var(--bg-elev-2); font-family: var(--serif); font-size: 14px; color: var(--ink-dim); line-height: 1.8;">
+      <span style="color: var(--amber); font-family: var(--mono); font-size: 11px; letter-spacing: 0.1em;">关键认知</span>　
+      大多数人 80% 的时间花在 L4,但 L4 对长期收益的解释力不到 20%。
+      <span style="color: var(--ink);">慢变量定方向,中变量定结构,快变量定时点,噪音层只用来反向参考。</span>
+    </div>
+  </section>
+
+  <!-- ==================== Section 3: 16层信息流转 ==================== -->
+  <section class="section">
+    <div class="section-header">
+      <div class="section-num">03</div>
+      <div class="section-title">信息流转的十六层模型</div>
+      <div class="section-subtitle">FROM RAW INPUT TO META-COGNITION</div>
+    </div>
+
+    <div class="pyramid-container">
+      <div class="pyramid-svg-wrap">
+        <svg viewBox="0 0 420 540" xmlns="http://www.w3.org/2000/svg" style="width: 100%; height: auto;">
+          <!-- 阶段标签 + 横向阶梯 -->
+          <!-- 元认知 -->
+          <line x1="20" y1="60" x2="100" y2="60" stroke="#d4a23e" stroke-width="0.5"/>
+          <text x="105" y="64" class="pyramid-side">META</text>
+          <rect x="125" y="40" width="170" height="48" fill="none" stroke="#d4a23e" stroke-width="1"/>
+          <text x="210" y="62" text-anchor="middle" class="pyramid-stage">元认知层</text>
+          <text x="210" y="78" text-anchor="middle" class="pyramid-label">L15-L16</text>
+          <line x1="305" y1="60" x2="395" y2="60" stroke="#d4a23e" stroke-width="0.5"/>
+
+          <!-- 行动 -->
+          <rect x="105" y="108" width="210" height="48" fill="none" stroke="#776d58" stroke-width="1"/>
+          <text x="210" y="130" text-anchor="middle" class="pyramid-stage">行动端</text>
+          <text x="210" y="146" text-anchor="middle" class="pyramid-label">L13-L14</text>
+          <line x1="20" y1="132" x2="100" y2="132" stroke="#776d58" stroke-width="0.3"/>
+          <line x1="320" y1="132" x2="395" y2="132" stroke="#776d58" stroke-width="0.3"/>
+          <text x="105" y="135" class="pyramid-side" style="fill:#776d58;">ACTION</text>
+
+          <!-- 记忆 -->
+          <rect x="85" y="176" width="250" height="48" fill="none" stroke="#776d58" stroke-width="1"/>
+          <text x="210" y="198" text-anchor="middle" class="pyramid-stage">记忆端</text>
+          <text x="210" y="214" text-anchor="middle" class="pyramid-label">L11-L12</text>
+          <line x1="20" y1="200" x2="80" y2="200" stroke="#776d58" stroke-width="0.3"/>
+          <line x1="340" y1="200" x2="395" y2="200" stroke="#776d58" stroke-width="0.3"/>
+          <text x="40" y="203" class="pyramid-side" style="fill:#776d58;">MEMORY</text>
+
+          <!-- 解释 -->
+          <rect x="65" y="244" width="290" height="48" fill="none" stroke="#776d58" stroke-width="1"/>
+          <text x="210" y="266" text-anchor="middle" class="pyramid-stage">解释端</text>
+          <text x="210" y="282" text-anchor="middle" class="pyramid-label">L8-L10</text>
+          <line x1="20" y1="268" x2="60" y2="268" stroke="#776d58" stroke-width="0.3"/>
+          <line x1="360" y1="268" x2="395" y2="268" stroke="#776d58" stroke-width="0.3"/>
+          <text x="20" y="271" class="pyramid-side" style="fill:#776d58;">INTERP.</text>
+
+          <!-- 加工 -->
+          <rect x="45" y="312" width="330" height="48" fill="none" stroke="#776d58" stroke-width="1"/>
+          <text x="210" y="334" text-anchor="middle" class="pyramid-stage">加工端</text>
+          <text x="210" y="350" text-anchor="middle" class="pyramid-label">L4-L7</text>
+          <line x1="20" y1="336" x2="40" y2="336" stroke="#776d58" stroke-width="0.3"/>
+          <line x1="380" y1="336" x2="395" y2="336" stroke="#776d58" stroke-width="0.3"/>
+          <text x="380" y="339" class="pyramid-side" style="fill:#776d58;">PROC.</text>
+
+          <!-- 输入 -->
+          <rect x="25" y="380" width="370" height="48" fill="none" stroke="#776d58" stroke-width="1"/>
+          <text x="210" y="402" text-anchor="middle" class="pyramid-stage">输入端</text>
+          <text x="210" y="418" text-anchor="middle" class="pyramid-label">L1-L3</text>
+          <text x="380" y="407" class="pyramid-side" style="fill:#776d58;">INPUT</text>
+
+          <!-- 底部说明 -->
+          <line x1="20" y1="448" x2="395" y2="448" stroke="#2a2520" stroke-width="1"/>
+          <text x="20" y="468" class="pyramid-label" style="font-size:10px;">↑ 信息量递减</text>
+          <text x="395" y="468" class="pyramid-label" style="font-size:10px; text-anchor:end;">权重递增 ↑</text>
+
+          <text x="20" y="500" class="pyramid-label" style="font-size:9px; fill:#776d58;">大多数人停在 L1-L3</text>
+          <text x="20" y="516" class="pyramid-label" style="font-size:9px; fill:#776d58;">少数人能做到 L4-L7 加工</text>
+          <text x="20" y="532" class="pyramid-label" style="font-size:9px; fill:#d4a23e;">L15-L16 是分水岭</text>
+        </svg>
+      </div>
+
+      <div class="pyramid-detail">
+
+        <div class="pd-stage">
+          <div class="pd-stage-name">输入端 · INPUT</div>
+          <div class="pd-stage-line"></div>
+        </div>
+        <div class="pd-row">
+          <div class="pd-num">L1</div>
+          <div class="pd-name">看什么</div>
+          <div class="pd-desc">信息选择,主动定位需要的维度</div>
+        </div>
+        <div class="pd-row">
+          <div class="pd-num">L2</div>
+          <div class="pd-name">在哪里看</div>
+          <div class="pd-desc">信源分级,一手 &gt; 二手 &gt; 三手</div>
+        </div>
+        <div class="pd-row">
+          <div class="pd-num">L3</div>
+          <div class="pd-name">怎么看</div>
+          <div class="pd-desc">观察方法,先建框架再填信息</div>
+        </div>
+
+        <div class="pd-stage">
+          <div class="pd-stage-name">加工端 · PROCESSING</div>
+          <div class="pd-stage-line"></div>
+        </div>
+        <div class="pd-row">
+          <div class="pd-num">L4</div>
+          <div class="pd-name">可信度</div>
+          <div class="pd-desc">实名 vs 匿名 / 数据 vs 观点</div>
+        </div>
+        <div class="pd-row">
+          <div class="pd-num">L5</div>
+          <div class="pd-name">时效性</div>
+          <div class="pd-desc">信息折旧,这条信息现在还值多少</div>
+        </div>
+        <div class="pd-row">
+          <div class="pd-num">L6</div>
+          <div class="pd-name">完整性</div>
+          <div class="pd-desc">沉默的信息往往更重要</div>
+        </div>
+        <div class="pd-row">
+          <div class="pd-num">L7</div>
+          <div class="pd-name">语境</div>
+          <div class="pd-desc">脱离语境的信息等于错误信息</div>
+        </div>
+
+        <div class="pd-stage">
+          <div class="pd-stage-name">解释端 · INTERPRETATION</div>
+          <div class="pd-stage-line"></div>
+        </div>
+        <div class="pd-row">
+          <div class="pd-num">L8</div>
+          <div class="pd-name">因果与相关</div>
+          <div class="pd-desc">因果方向搞错,判断必错</div>
+        </div>
+        <div class="pd-row">
+          <div class="pd-num">L9</div>
+          <div class="pd-name">权重</div>
+          <div class="pd-desc">同样的信息,看到的"重量"不同</div>
+        </div>
+        <div class="pd-row">
+          <div class="pd-num">L10</div>
+          <div class="pd-name">反身性</div>
+          <div class="pd-desc">利好兑现是利空,利空出尽是利好</div>
+        </div>
+
+        <div class="pd-stage">
+          <div class="pd-stage-name">记忆端 · MEMORY</div>
+          <div class="pd-stage-line"></div>
+        </div>
+        <div class="pd-row">
+          <div class="pd-num">L11</div>
+          <div class="pd-name">记录</div>
+          <div class="pd-desc">外部存储,带时间戳,事后不可改</div>
+        </div>
+        <div class="pd-row">
+          <div class="pd-num">L12</div>
+          <div class="pd-name">复盘</div>
+          <div class="pd-desc">看判断逻辑对错,不是看股价对错</div>
+        </div>
+
+        <div class="pd-stage">
+          <div class="pd-stage-name">行动端 · ACTION</div>
+          <div class="pd-stage-line"></div>
+        </div>
+        <div class="pd-row">
+          <div class="pd-num">L13</div>
+          <div class="pd-name">可操作性</div>
+          <div class="pd-desc">无法落到具体动作的信息只是娱乐</div>
+        </div>
+        <div class="pd-row">
+          <div class="pd-num">L14</div>
+          <div class="pd-name">成本收益</div>
+          <div class="pd-desc">多数信息消费的边际收益已为零</div>
+        </div>
+
+        <div class="pd-stage">
+          <div class="pd-stage-name">元认知层 · META</div>
+          <div class="pd-stage-line"></div>
+        </div>
+        <div class="pd-row">
+          <div class="pd-num">L15</div>
+          <div class="pd-name">自我偏差</div>
+          <div class="pd-desc">你看到的世界是被自己筛选过的</div>
+        </div>
+        <div class="pd-row">
+          <div class="pd-num">L16</div>
+          <div class="pd-name">认知边界</div>
+          <div class="pd-desc">承认无知比假装全知重要得多</div>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- ==================== Section 4: 案例 - AI算力 ==================== -->
+  <section class="section">
+    <div class="section-header">
+      <div class="section-num">04</div>
+      <div class="section-title">完整案例 · AI算力一季报触发</div>
+      <div class="section-subtitle">CASE STUDY · APR 2026 · A 16-LAYER WALKTHROUGH</div>
+    </div>
+
+    <div class="case-meta">
+      <span class="quote-mark">▍</span>触发事件:协创数据 2026 年一季度净利润同比 +284%—402%,股价 20cm 涨停,市值突破 1100 亿。AI算力概念再度爆发,创业板指创 4 年多新高。群里热议:"是不是该买点 AI 算力 ETF?"
+    </div>
+
+    <div class="case-flow">
+      <div class="flow-stage">
+        <div class="fs-stage-num">L1-L3</div>
+        <div class="fs-stage-name">输入</div>
+        <div class="fs-content">
+          <p>识别这是 <span class="key">L3 财报 + L4 情绪</span> 的混合信号。</p>
+          <p>主动扩展到上游(海外 Capex)、中游(国产链)、下游(Token 调用量)三个维度。</p>
+        </div>
+      </div>
+
+      <div class="flow-stage">
+        <div class="fs-stage-num">L4-L7</div>
+        <div class="fs-stage-name">加工</div>
+        <div class="fs-content">
+          <p><span class="key">可信度:</span>公告高可信,但预告区间太宽。</p>
+          <p><span class="key">时效:</span>HBM 涨价从 2025 年下半年就开始,不是新信息。</p>
+          <p><span class="key">缺失:</span>没说 PE 已 80-150 倍、没说存储是周期股。</p>
+        </div>
+      </div>
+
+      <div class="flow-stage">
+        <div class="fs-stage-num">L8-L10</div>
+        <div class="fs-stage-name">解释</div>
+        <div class="fs-content">
+          <p><span class="key">真因果:</span>海外 Capex 是源头,A股财报是滞后。</p>
+          <p><span class="key">权重:</span>英伟达指引 &gt; HBM 价格 &gt; 国产订单 &gt; 单股涨停。</p>
+          <p><span class="key">反身性:</span>已到第三阶段,估值体系切换是末期信号。</p>
+        </div>
+      </div>
+
+      <div class="flow-stage">
+        <div class="fs-stage-num">L11-L12</div>
+        <div class="fs-stage-name">记忆</div>
+        <div class="fs-content">
+          <p>写下时间戳判断:产业景气真,股价已透支。</p>
+          <p><span class="key">校验时点:</span>6 月中报 / 8 月海外 Capex / 12 月年报。</p>
+        </div>
+      </div>
+
+      <div class="flow-stage">
+        <div class="fs-stage-num">L13-L14</div>
+        <div class="fs-stage-name">行动</div>
+        <div class="fs-content">
+          <p><span class="key">未持仓:</span>不追高,等回调。</p>
+          <p><span class="key">已持仓:</span>设减仓阈值(PE&gt;100 / Capex 下修)。</p>
+          <p><span class="key">想参与:</span>用 ETF,不用个股。</p>
+        </div>
+      </div>
+
+      <div class="flow-stage">
+        <div class="fs-stage-num">L15-L16</div>
+        <div class="fs-stage-name">元认知</div>
+        <div class="fs-content">
+          <p>我是不是因为没赶上所以看空?</p>
+          <p>我对 HBM 周期的判断真的够专业吗?</p>
+          <p><span class="key">承认:</span>能力圈外,小仓位 + ETF。</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="case-conclusion">
+      <div class="cc-block">
+        <div class="cc-label">原始反应</div>
+        <div class="cc-text">
+          <span class="strike">"业绩暴增 + 板块创新高 → 赶紧 all in 协创数据"</span>
+        </div>
+      </div>
+      <div class="cc-block">
+        <div class="cc-label">流转后决策</div>
+        <div class="cc-text">
+          <span class="amber-text">小仓位参与 + ETF + 设减仓阈值</span>　基于产业链而非情绪,基于权重而非热度,基于能力圈而非追逐。
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ==================== Section 5: 信息系统四子系统 ==================== -->
+  <section class="section">
+    <div class="section-header">
+      <div class="section-num">05</div>
+      <div class="section-title">个人信息系统 · 四个子系统</div>
+      <div class="section-subtitle">SOURCE · DOMAIN · TRUST · ASSEMBLY</div>
+    </div>
+
+    <div class="system-grid">
+
+      <div class="system-card">
+        <div class="sc-num">SUB-SYSTEM 01 · 原料层</div>
+        <div class="sc-title">信息源系统</div>
+        <div class="sc-tagline">// 决定认知的天花板</div>
+        <ul class="sc-list">
+          <li><strong>L0 一手原始:</strong>监管文件、公告、官方数据(最高权重)</li>
+          <li><strong>L1 一手专业:</strong>行业协会、上游原厂、海外法说会</li>
+          <li><strong>L2 二手专业:</strong>头部券商深度报告、Wind/iFinD</li>
+          <li><strong>L3 二手大众:</strong>财联社、华尔街见闻(信息广度)</li>
+          <li><strong>L4-L5 自媒体/噪音:</strong>只用来感知情绪,不作为决策</li>
+          <li style="color: var(--amber);">每层 3-8 个固定来源 · 看原文不看二手解读</li>
+        </ul>
+      </div>
+
+      <div class="system-card">
+        <div class="sc-num">SUB-SYSTEM 02 · 专业层</div>
+        <div class="sc-title">行业认知系统</div>
+        <div class="sc-tagline">// 没有认知,信息读不懂</div>
+        <ul class="sc-list">
+          <li><strong>产业链思维:</strong>上游材料 → 设备 → 芯片 → 中游 → 下游需求</li>
+          <li><strong>3-5 个主战场:</strong>专业背景 / 景气向上 / 真正感兴趣</li>
+          <li><strong>读 5 年财报:</strong>龙头 5 家 × 5 年 = 25 份,超过 90% 散户</li>
+          <li><strong>关键先生:</strong>台积电、英伟达、宁德时代法说会</li>
+          <li><strong>领先指标:</strong>跟踪上游而非滞后下游</li>
+          <li style="color: var(--amber);">贪多嚼不烂 · 重点 5 个,其他保持基础认知</li>
+        </ul>
+      </div>
+
+      <div class="system-card">
+        <div class="sc-num">SUB-SYSTEM 03 · 过滤层</div>
+        <div class="sc-title">可信度认证系统</div>
+        <div class="sc-tagline">// 五问法 + 三重交叉</div>
+        <ul class="sc-list">
+          <li><strong>谁说的:</strong>实名+声誉成本 vs 匿名+无成本</li>
+          <li><strong>基于什么:</strong>数据/原文 vs 推测/二手</li>
+          <li><strong>为什么说:</strong>披露义务/中立 vs 持仓/营销</li>
+          <li><strong>可证伪吗:</strong>给出可验证预测 vs 永远正确</li>
+          <li><strong>三重交叉:</strong>同一事实 3 个独立来源验证</li>
+          <li style="color: var(--amber);">建立信源命中率档案 · 数据筛选 &gt; 名气筛选</li>
+        </ul>
+      </div>
+
+      <div class="system-card">
+        <div class="sc-num">SUB-SYSTEM 04 · 系统层</div>
+        <div class="sc-title">组装与执行</div>
+        <div class="sc-tagline">// 时间结构 + 三张表</div>
+        <ul class="sc-list">
+          <li><strong>每日 30 分钟:</strong>扫快讯、看外盘、记录关键事件</li>
+          <li><strong>每周 2 小时:</strong>精读 2-3 份深度研报、回顾判断</li>
+          <li><strong>每月 4 小时:</strong>复盘决策、校对预测、更新命中率</li>
+          <li><strong>三张表:</strong>观察清单 / 判断日志 / 信源命中率</li>
+          <li><strong>关掉:</strong>所有推送、热搜、个股短信</li>
+          <li style="color: var(--amber);">少而精的输入 + 严格记录 = 超过 90% 散户</li>
+        </ul>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ==================== Section 6: 关键纪律 ==================== -->
+  <section class="section">
+    <div class="section-header">
+      <div class="section-num">06</div>
+      <div class="section-title">关键纪律</div>
+      <div class="section-subtitle">THE ONE PRINCIPLE</div>
+    </div>
+
+    <div class="discipline-banner">
+      <div class="db-label">核心原则 · CORE DISCIPLINE</div>
+      <div class="db-text">
+        死死盯住 <span class="amber-text">5 个一手信源</span>　+　<span class="amber-text">3 个行业</span><br>
+        <span class="amber-text">1 个判断框架</span>　+　<span class="amber-text">严格记录每个判断</span>
+      </div>
+    </div>
+
+    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1px; background: var(--hair); border: 1px solid var(--hair); margin-top: 32px;">
+      <div style="background: var(--bg-elev-1); padding: 24px;">
+        <div style="font-family: var(--mono); font-size: 11px; color: var(--amber); letter-spacing: 0.15em; margin-bottom: 12px;">RULE 01</div>
+        <div style="font-family: var(--serif); font-size: 14px; color: var(--ink); line-height: 1.7;">
+          慢变量定方向<br>
+          中变量定结构<br>
+          快变量定时点<br>
+          噪音层只用来反向参考
+        </div>
+      </div>
+      <div style="background: var(--bg-elev-1); padding: 24px;">
+        <div style="font-family: var(--mono); font-size: 11px; color: var(--amber); letter-spacing: 0.15em; margin-bottom: 12px;">RULE 02</div>
+        <div style="font-family: var(--serif); font-size: 14px; color: var(--ink); line-height: 1.7;">
+          多看 100 篇自媒体<br>
+          不如多看 1 份英伟达财报会议纪要<br>
+          <span style="color: var(--amber);">后者价值高 50 倍</span>
+        </div>
+      </div>
+      <div style="background: var(--bg-elev-1); padding: 24px;">
+        <div style="font-family: var(--mono); font-size: 11px; color: var(--amber); letter-spacing: 0.15em; margin-bottom: 12px;">RULE 03</div>
+        <div style="font-family: var(--serif); font-size: 14px; color: var(--ink); line-height: 1.7;">
+          看完不写等于没看<br>
+          没复盘的信息消费<br>
+          <span style="color: var(--amber);">等于没有发生</span>
+        </div>
+      </div>
+    </div>
+
+  </section>
+
+  <!-- ==================== 文档底部 ==================== -->
+  <div class="doc-footer">
+    <div>
+      <div>FILE · COGNITION-SYSTEM-V1</div>
+      <div>STATUS · <span class="amber">RELEASED</span></div>
+    </div>
+    <div class="center">
+      <div>—— 投资认知不是知识,是结构 ——</div>
+      <div style="margin-top: 4px;">FROM PHENOMENA · TO PARADIGM</div>
+    </div>
+    <div class="right">
+      <div>2026/04/25 · APR</div>
+      <div><span class="amber">◆</span> END OF DOCUMENT</div>
+    </div>
+  </div>
+
+</div>
+
+</body>
+</html>

@@ -1,0 +1,535 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>05. 运维部署手册 (Operations Manual)</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Noto+Serif+SC:wght@400;700;900&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    
+    <!-- Libraries -->
+    <script src="https://lib.baomitu.com/marked/11.1.1/marked.min.js"></script>
+    <link rel="stylesheet" href="https://lib.baomitu.com/github-markdown-css/5.5.0/github-markdown-dark.min.css">
+    <script src="https://lib.baomitu.com/mermaid/10.9.0/mermaid.min.js"></script>
+    
+    <!-- Syntax Highlighting -->
+    <link rel="stylesheet" href="https://lib.baomitu.com/highlight.js/11.9.0/styles/tokyo-night-dark.min.css">
+    <script src="https://lib.baomitu.com/highlight.js/11.9.0/highlight.min.js"></script>
+    
+    <style>
+        :root {
+            --bg: #0a0a0a;
+            --surface: #121212;
+            --surface-hover: #1a1a1a;
+            --border: #222222;
+            --accent: #eab308;
+            --accent-glow: rgba(234, 179, 8, 0.1);
+            --text-primary: #f1f5f9;
+            --text-secondary: #94a3b8;
+            --text-muted: #64748b;
+            --font-sans: 'Outfit', 'Noto Sans SC', -apple-system, sans-serif;
+            --font-serif: 'Noto Serif SC', serif;
+            --font-mono: 'JetBrains Mono', monospace;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background-color: var(--bg);
+            color: var(--text-primary);
+            font-family: var(--font-sans);
+            line-height: 1.7;
+            -webkit-font-smoothing: antialiased;
+            overflow-x: hidden;
+        }
+
+        /* Subtle background glow */
+        body::after {
+            content: '';
+            position: fixed;
+            top: 0;
+            right: 0;
+            width: 40vw;
+            height: 40vh;
+            background: radial-gradient(circle, var(--accent-glow) 0%, transparent 70%);
+            z-index: -1;
+            filter: blur(100px);
+            pointer-events: none;
+        }
+
+        .sidebar {
+            width: 260px;
+            height: 100vh;
+            position: fixed;
+            left: 0;
+            top: 0;
+            border-right: 1px solid var(--border);
+            background: var(--bg);
+            padding: 1.5rem;
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+            overflow-y: auto;
+            z-index: 100;
+        }
+
+        .nav-link {
+            color: var(--text-muted);
+            text-decoration: none;
+            font-size: 0.85rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            transition: color 0.2s;
+            padding: 0.5rem;
+            border-radius: 6px;
+        }
+        .nav-link:hover { color: var(--accent); background: var(--surface); }
+
+        .toc-title {
+            font-family: var(--font-serif);
+            font-size: 1rem;
+            color: var(--text-primary);
+            margin-bottom: 0.8rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding-left: 0.5rem;
+        }
+        .toc-title::before {
+            content: '';
+            width: 3px;
+            height: 1rem;
+            background: var(--accent);
+            border-radius: 2px;
+        }
+
+        .toc-list {
+            list-style: none;
+            display: flex;
+            flex-direction: column;
+            gap: 0.4rem;
+        }
+        .toc-item {
+            font-size: 0.8rem;
+            line-height: 1.3;
+        }
+        .toc-item a {
+            color: var(--text-muted);
+            text-decoration: none;
+            transition: all 0.2s;
+            display: block;
+            padding: 0.4rem 0.5rem;
+            border-radius: 4px;
+        }
+        .toc-item a:hover { color: var(--accent); background: var(--surface); }
+        .toc-item.level-3 { margin-left: 0.8rem; border-left: 1px solid var(--border); }
+
+        .container {
+            max-width: 860px;
+            margin: 0 auto 0 260px;
+            padding: 3rem 4rem;
+            animation: fadeIn 0.6s ease-out;
+        }
+
+        @media (max-width: 1024px) {
+            .sidebar { width: 220px; padding: 1rem; }
+            .container { margin-left: 220px; padding: 2rem; }
+        }
+
+        @media (max-width: 800px) {
+            .sidebar { position: static; width: 100%; height: auto; border-right: none; border-bottom: 1px solid var(--border); }
+            .container { margin-left: 0; padding: 1.5rem; }
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(5px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        header {
+            margin-bottom: 3rem;
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 1.5rem;
+        }
+
+        .meta {
+            font-family: var(--font-mono);
+            font-size: 0.75rem;
+            color: var(--accent);
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            margin-bottom: 0.8rem;
+            display: flex;
+            align-items: center;
+            gap: 0.8rem;
+        }
+
+        .meta::before {
+            content: '';
+            width: 20px;
+            height: 1px;
+            background-color: var(--accent);
+        }
+
+        h1 {
+            font-family: var(--font-serif);
+            font-size: 2.2rem;
+            font-weight: 900;
+            line-height: 1.2;
+            margin-bottom: 1rem;
+            color: var(--text-primary);
+        }
+
+        .markdown-body {
+            background: transparent !important;
+            color: var(--text-primary) !important;
+            font-family: var(--font-sans) !important;
+            font-size: 0.95rem !important;
+        }
+
+        .markdown-body h2 {
+            font-family: var(--font-serif);
+            font-size: 1.5rem !important;
+            color: var(--accent) !important;
+            border-bottom: 1px solid var(--border) !important;
+            padding-bottom: 0.5rem !important;
+            margin-top: 2.5rem !important;
+            scroll-margin-top: 1rem;
+        }
+
+        .markdown-body h3 {
+            font-family: var(--font-serif);
+            font-size: 1.25rem !important;
+            color: var(--text-primary) !important;
+            margin-top: 2rem !important;
+            scroll-margin-top: 1rem;
+        }
+
+        .markdown-body p, .markdown-body li {
+            font-size: 0.95rem !important;
+            color: var(--text-primary) !important;
+        }
+        
+        .markdown-body pre {
+            background-color: #1a1b26 !important; /* Match Tokyo Night Dark */
+            border: 1px solid var(--border);
+            border-radius: 8px !important;
+            padding: 0 !important; /* Code internal handles padding */
+            margin: 1.2rem 0 !important;
+            overflow: hidden;
+        }
+
+        .markdown-body pre code {
+            background-color: transparent !important;
+            padding: 1.2rem !important;
+            display: block;
+            font-family: var(--font-mono) !important;
+            font-size: 0.85rem !important;
+            line-height: 1.5;
+        }
+
+        .markdown-body blockquote {
+            border-left: 3px solid var(--accent) !important;
+            background: var(--surface);
+            padding: 0.8rem 1.2rem;
+            color: var(--text-secondary) !important;
+            margin: 1.2rem 0 !important;
+        }
+
+        .markdown-body table {
+            background: var(--surface);
+            font-size: 0.85rem !important;
+            margin: 1.2rem 0 !important;
+        }
+
+        footer {
+            margin-top: 4rem;
+            padding-top: 1.5rem;
+            border-top: 1px solid var(--border);
+            color: var(--text-muted);
+            font-size: 0.8rem;
+            text-align: center;
+        }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar { width: 5px; }
+        ::-webkit-scrollbar-track { background: var(--bg); }
+        ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+    </style>
+</head>
+<body>
+    <aside class="sidebar">
+        <a href="index.html" class="nav-link">
+            <span>←</span> 返回目录门户
+        </a>
+        
+        <div class="toc-container">
+            <h3 class="toc-title">文档导航</h3>
+            <ul class="toc-list" id="toc">
+                <!-- TOC items will be injected here -->
+            </ul>
+        </div>
+    </aside>
+
+    <div class="container">
+        <header>
+            <div class="meta">GLOBAL | 2026-05-16 19:06</div>
+            <h1>05. 运维部署手册 (Operations Manual)</h1>
+        </header>
+
+        <article id="content" class="markdown-body">
+            <!-- Loading indicator -->
+            <p style="color: var(--text-muted)">正在解析文档内容...</p>
+        </article>
+
+        <footer>
+            &copy; 2026 MicroStock Project Docs | Generated by Antigravity
+        </footer>
+    </div>
+
+    <script id="markdown-raw" type="text/markdown"># 05. 运维部署手册 (Operations Manual)
+
+> **目标**: 提供 Copy-Paste 级别的部署指令，确保环境一致性。
+
+## 1. 端口与网络白名单 (Security Groups)
+
+### 1.1 腾讯云防火墙配置 (Inbound)
+
+| 端口 | 协议 | 来源限制 | 用途 |
+|:---|:---|:---|:---|
+| **80** | TCP | 0.0.0.0/0 | HTTP (Let's Encrypt 验证) |
+| **443** | TCP | 0.0.0.0/0 | HTTPS (Web/API 访问) |
+| **22** | TCP | 您的内网IP | SSH 管理 |
+| **26300** | TCP | 您的内网IP | MySQL 云数据库直连 |
+| **465** | TCP | 0.0.0.0/0 | SMTP (发邮件告警) |
+
+> \*: 如果使用 Docker Network 内部调用，则无需开放 6379 公网访问。但 26300 (MySQL CDB) 必须对内网 IP 开放。若使用加密发信，需确保云服务器出站 465 端口开放。
+
+---
+
+## 2. Docker Compose 编排文件
+
+### 2.1 云端 (`/opt/stock/docker-compose.cloud.yml`)
+
+```yaml
+version: '3.8'
+
+services:
+  nginx:
+    image: nginx:alpine
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/conf.d:/etc/nginx/conf.d:ro
+      - ./nginx/certs:/etc/nginx/certs:ro
+      - ./dist:/usr/share/nginx/html:ro
+    depends_on:
+      - cloud-api
+
+  cloud-api:
+    build: ./cloud-api
+    environment:
+      - DB_HOST=sh-cdb-h7flpxu4.sql.tencentcdb.com
+      - REDIS_HOST=redis
+    deploy:
+      resources:
+        limits:
+          memory: 800M
+
+  redis:
+    image: redis:7-alpine
+    command: redis-server --requirepass ${REDIS_PASSWORD}
+    volumes:
+      - redis_data:/data
+    deploy:
+      resources:
+        limits:
+          memory: 1.5G
+
+  # 数据采集器 (Limit 256M)
+  akshare-api:
+    build: ./akshare-api
+    deploy: { resources: { limits: { memory: 256M }}}
+  
+  baostock-api:
+    build: ./baostock-api
+    deploy: { resources: { limits: { memory: 256M }}}
+
+volumes:
+  redis_data:
+```
+
+### 2.2 内网 (`/home/user/stock/docker-compose.home.yml`)
+
+```yaml
+version: '3.8'
+
+services:
+  clickhouse:
+    image: clickhouse/clickhouse-server:23.8-alpine
+    ports:
+      - "8123:8123"  # HTTP
+      - "9000:9000"  # Native
+    volumes:
+      - /data/clickhouse:/var/lib/clickhouse  # 挂载大硬盘
+      - ./config/clickhouse:/etc/clickhouse-server/config.d
+    ulimits:
+      nofile:
+        soft: 262144
+        hard: 262144
+
+  sync-worker:
+    build: ./sync-worker
+    command: python daily_sync.py
+    environment:
+      - CLOUD_DB_HOST=124.221.80.250
+      - CH_HOST=clickhouse
+    volumes:
+      - ./logs:/app/logs
+    depends_on:
+      - clickhouse
+
+  # 策略 Dispatcher (负责启动临时容器)
+  strategy-dispatcher:
+    build: ./dispatcher
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock  # 允许操作 Docker
+```
+
+---
+
+## 3. 环境变量配置 (.env)
+
+项目根目录下的 `.env` 文件是系统运行的核心配置。
+
+### 3.1 核心凭据
+*   `TUSHARE_TOKEN`: 用于获取交易日历、复权因子等核心元数据。
+*   `DB_PASSWORD`: 云 MySQL 访问密码。
+
+### 3.2 邮件告警 (E6)
+| 配置项 | 示例 | 说明 |
+|:---|:---|:---|
+| `SMTP_HOST` | `smtp.qq.com` | SMTP 服务器地址 |
+| `SMTP_PORT` | `465` | SSL 端口 |
+| `SMTP_USER` | `xxx@qq.com` | 发件人账号 |
+| `SMTP_PASS` | `xxxx` | **授权码** (非登录密码) |
+| `ALERT_RECEIVER` | `xxx@qq.com` | 接收告警的邮箱 |
+| `ALERT_LEVEL_THRESHOLD` | `WARN` | 触发邮件的最低级别 |
+
+---
+
+## 4. 自动化监控与维护
+
+### 4.1 数据就绪状态核验 (E2)
+若怀疑数据缺失，可查询 `meta_data_readiness` 表：
+```sql
+-- 查看当日核心数据就绪情况
+SELECT * FROM meta_data_readiness WHERE biz_date = CURRENT_DATE;
+```
+
+### 4.2 任务自愈逻辑
+系统内置了“僵尸任务”清理器。若 `stock-manager` 日志中出现 `Cleanup zombie task: [ID]`，说明系统已自动将卡死超过 2 小时的任务标记为 `FAILED` 并释放资源。
+
+---
+
+## 5. 常见问题排查 (Troubleshooting)
+
+### Q1: 内网连不上云端 MySQL (26300)
+*   **检查**: `telnet 124.221.80.250 26300`
+*   **原因**: 腾讯云 CDB 默认不开启外网访问。
+*   **解决**: 登录腾讯云控制台 -> MySQL 实例 -> 开启外网地址 -> 设置白名单包含您的内网公网出口 IP。
+
+### Q2: ClickHouse 启动报错 `Memory limit`
+*   **检查**: `docker logs clickhouse`
+*   **解决**: 修改 `users.xml` 配置，增加 `<max_memory_usage>10000000000</max_memory_usage>` (10GB)。
+
+### Q3: 回测速度慢
+*   **检查**: 是否没走 ClickHouse 而走了 MySQL？
+*   **验证**: 查看 Worker 日志，确认 `Loading data from ClickHouse...` 字样。
+
+### Q4: 任务在周末/节假日没有运行
+*   **原因**: 系统集成了 `CalendarService` 交易日门禁。
+*   **验证**: 查看 `stock-manager` 日志，若出现 `Skip task: non-trading day` 则为正常拦截，非系统故障。
+
+### Q5: 修改了 .env 配置后不生效
+*   **原因**: `docker restart` 不会重载环境变量。
+*   **解决**: 必须运行 `docker compose up -d stock-manager` 触发容器重建以应用新配置。
+
+---
+
+# 常用运维别名 (Aliases)
+
+建议添加到 `~/.bashrc`:
+
+```bash
+# 云端服务
+alias logs-manager="docker logs -f stock-manager --tail=100"
+alias check-ready="docker exec stock-manager python3 -c '...查询readiness脚本...'"
+
+# 部署
+alias deploy-all="docker compose up -d"
+alias rebuild-manager="docker compose up -d --build stock-manager"
+```
+</script>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', async () => {
+            const rawMd = document.getElementById('markdown-raw').textContent;
+            const contentEl = document.getElementById('content');
+            const tocEl = document.getElementById('toc');
+            
+            // Set options for marked
+            marked.setOptions({
+                gfm: true,
+                breaks: true,
+                headerIds: true,
+                mangle: false,
+                highlight: function(code, lang) {
+                    const language = hljs.getLanguage(lang) ? lang : 'plaintext';
+                    return hljs.highlight(code, { language }).value;
+                }
+            });
+
+            // Parse Markdown
+            contentEl.innerHTML = marked.parse(rawMd);
+            
+            // Generate TOC
+            const headings = contentEl.querySelectorAll('h2, h3');
+            headings.forEach((h, index) => {
+                if (!h.id) h.id = 'heading-' + index;
+                
+                const li = document.createElement('li');
+                li.className = 'toc-item level-' + h.tagName.toLowerCase().charAt(1);
+                
+                const a = document.createElement('a');
+                a.href = '#' + h.id;
+                a.textContent = h.textContent;
+                
+                li.appendChild(a);
+                tocEl.appendChild(li);
+            });
+
+            // Handle Mermaid
+            if (window.mermaid) {
+                mermaid.initialize({ startOnLoad: false, theme: 'dark', useWorker: false });
+                document.querySelectorAll('pre code.language-mermaid').forEach(el => {
+                    const pre = el.parentElement;
+                    const div = document.createElement('div');
+                    div.className = 'mermaid';
+                    div.textContent = el.textContent;
+                    pre.parentElement.replaceChild(div, pre);
+                });
+                mermaid.run();
+            }
+        });
+    </script>
+</body>
+</html>

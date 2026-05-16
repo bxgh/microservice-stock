@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Epic-Story 评审台</title>
-<link rel="stylesheet" href="https://npm.elemecdn.com/katex@0.16.9/dist/katex.min.css">
+<link rel="stylesheet" href="https://lib.baomitu.com/katex@0.16.9/dist/katex.min.css">
 <style>
 :root{
   --bg:#0e0d0b;--bg1:#15130f;--bg2:#1c1915;--bg3:#2a2520;
@@ -129,6 +129,7 @@ html,body{background:var(--bg);color:var(--ink);font-family:var(--sans);font-siz
 .block-formula-inline{color:var(--ink);}
 .block-mermaid{margin:12px 0;background:var(--bg1);border:1px solid var(--hair);padding:16px;border-radius:4px;text-align:center;}
 .block-mermaid svg{max-width:100%;height:auto;}
+.mermaid { white-space: pre; }
 .block-table-wrap{overflow-x:auto;margin:12px 0;}
 .block-table{width:100%;border-collapse:collapse;font-size:var(--sm);}
 .block-table th{background:var(--bg2);color:var(--amber);padding:8px 12px;text-align:left;border:1px solid var(--hair);font-weight:500;font-size:var(--xs);letter-spacing:.04em;}
@@ -310,10 +311,10 @@ html,body{background:var(--bg);color:var(--ink);font-family:var(--sans);font-siz
   </div>
 </div>
 
-<script defer src="https://npm.elemecdn.com/katex@0.16.9/dist/katex.min.js"></script>
-<script defer src="https://npm.elemecdn.com/katex@0.16.9/dist/contrib/auto-render.min.js"
+<script defer src="https://lib.baomitu.com/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://lib.baomitu.com/katex@0.16.9/dist/contrib/auto-render.min.js"
   onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
-<script defer src="https://npm.elemecdn.com/mermaid@10.9.0/dist/mermaid.min.js"></script>
+<script defer src="https://lib.baomitu.com/mermaid@10.9.0/dist/mermaid.min.js"></script>
 <script>
 // ============================================================
 // PROMPT
@@ -687,9 +688,10 @@ function renderBlock(b){
         <tbody>${body.map(r=>`<tr>${r.map(c=>`<td>${c}</td>`).join('')}</tr>`).join('')}</tbody>
       </table></div>`;
     case 'code':
-      const lang = b.lang||'';
+      const lang = (b.lang || '').toLowerCase();
+      if (lang === 'mermaid') return `<div class="block-mermaid"><div class="mermaid">${b.content || ''}</div></div>`;
       return `<div class="code-wrapper" data-lang="${lang}">
-        <pre><code class="language-${lang}">${escHtml(b.content||'')}</code></pre>
+        <pre><code class="language-${lang}">${escHtml(b.content || '')}</code></pre>
         <button class="copy-btn" onclick="copyCode(this)">Copy</button>
       </div>`;
     default:
@@ -1054,16 +1056,44 @@ function dlBlob(content, name, type){
 (function(){
   try {
     const injectedData = {"title": "全市场日 K 线采集源迁移：从 BaoStock 切换至 Tushare (全量回填版)", "version": "v1.1", "date": "2026-05-16", "sections": [{"id": "background", "title": "背景与现状", "blocks": [{"type": "text", "content": "由于 BaoStock 数据源存在严重的「隐性复权」污染，导致 stock_kline_daily 历史数据不可靠。评审决定直接清空现有数据，改用 Tushare 作为唯一真源进行全量回填。"}, {"type": "text", "content": "本次迁移要求严格遵循「云端服务器运行（非 SCF）」、「单线程采集」及「不复权口径」原则。"}]}, {"id": "design", "title": "设计方案", "blocks": [{"type": "text", "content": "1. **物理隔离**: 所有同步逻辑部署于腾讯云服务器，利用其持久化存储和无限制运行时间的特性。\n2. **单线程策略**: 为了应对 Tushare 2000 分的频次限制，采用串行请求模式，每分钟限制请求次数，确保不触发熔断。\n3. **采集拓扑**: 按交易日（Trade Date）进行全市场切片采集，每次请求拉取当日全市场 A 股 K 线。\n4. **进度审计**: 依赖 `sync_progress` 表记录成功同步的日期，支持进程重启后的自动断点续传。"}, {"type": "mermaid", "content": "graph TD\n  Start[开始] --> Truncate[清空 stock_kline_daily]\n  Truncate --> GetCal[获取 Tushare 交易日历]\n  GetCal --> Loop[按日循环采集]\n  Loop --> Check[检查 sync_progress]\n  Check -- 已存在 --> Skip[跳过并进入下一日]\n  Check -- 缺失 --> Fetch[Tushare API: daily]\n  Fetch --> Save[批量写入 MySQL]\n  Save --> Log[记录 sync_progress]\n  Log --> Next[下一日]\n  Next --> Loop"}]}], "risks": [{"risk": "Tushare 频次限制", "impact": "中", "prob": "高", "mitigation": "设置单线程延时，每分钟请求不超过规定阈值。"}, {"risk": "磁盘空间压力", "impact": "低", "prob": "低", "mitigation": "全量 A 股 K 线约 1500w 行，MySQL 存储约 5-8GB，云服务器磁盘充足。"}], "milestones": [{"name": "M1: 环境准备", "date": "2026-05-16", "deliverable": "数据表清空与采集脚本初始化"}, {"name": "M2: 历史同步", "date": "2026-05-20", "deliverable": "1990 至今全量数据回填完成"}], "epics": [{"id": "E13", "title": "全市场日 K 线采集源迁移", "desc": "在云端服务器执行单线程全量 K 线回填，确保数据纯净性与完整性。", "stories": [{"id": "E13-S1", "title": "存量清理与环境初始化", "role": {"as": "DB Auditor", "want": "清空现有 stock_kline_daily 并准备同步进度表", "value": "为 Tushare 真源数据提供纯净的存储空间"}, "tasks": [{"id": "E13-S1-T1", "text": "执行 TRUNCATE TABLE stock_kline_daily"}, {"id": "E13-S1-T2", "text": "初始化 sync_progress 表中全量同步任务的状态记录"}], "acs": [{"id": "AC1", "name": "清空校验", "given": "执行 TRUNCATE 命令后", "when": "查询 stock_kline_daily 行数", "then": "结果必须为 0，且自增主键重置"}]}, {"id": "E13-S2", "title": "单线程断点同步引擎", "role": {"as": "Backend Engineer", "want": "按交易日顺序单线程采集全市场 K 线", "value": "稳定、安全地完成全量回填，不触发 Tushare 限流"}, "tasks": [{"id": "E13-S2-T1", "text": "开发按日循环采集脚本，对接 Tushare daily 接口"}, {"id": "E13-S2-T2", "text": "实现基于 sync_progress 的断点续传逻辑"}], "acs": [{"id": "AC1", "name": "单线程频次校验", "given": "Tushare 2000 分权限（120积分/次）", "when": "采集进程运行时", "then": "每分钟请求次数通过 time.sleep 严格控制在安全范围内"}, {"id": "AC2", "name": "断点恢复校验", "given": "同步到 2015-01-01 时进程被手动终止", "when": "再次启动脚本时", "then": "系统自动从 2015-01-01 之后的一个交易日继续，不重复采集"}]}, {"id": "E13-S3", "title": "进度可视化与健康度监控", "role": {"as": "Backend Engineer", "want": "实时查看同步进度与预估完成时间", "value": "掌控长时间跨度任务的运行状态"}, "tasks": [{"id": "E13-S3-T1", "text": "在 CLI 界面实时刷新同步进度（当前日期/总日期）"}, {"id": "E13-S3-T2", "text": "实现异常自动重试（3次）并在失败后发送告警通知"}], "acs": [{"id": "AC1", "name": "进度输出校验", "given": "采集脚本运行时", "when": "观察控制台输出", "then": "必须包含「当前同步日期」、「已完成百分比」及「已入库行数」"}]}]}]};
-    if(document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', ()=>loadDoc(injectedData));
-    } else {
-      loadDoc(injectedData);
+      if(document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', () => {
+          loadDoc(injectedData);
+          initMermaid();
+        });
+      } else {
+        loadDoc(injectedData);
+        initMermaid();
+      }
+      function initMermaid() {
+        if(window.mermaid) {
+          try {
+            mermaid.initialize({ 
+              startOnLoad: false, 
+              theme: 'dark',
+              securityLevel: 'loose',
+              fontFamily: 'inherit',
+              useWorker: false
+            });
+            // 延迟执行以确保 DOM 已完全就绪
+            setTimeout(() => {
+              mermaid.run({
+                nodes: document.querySelectorAll('.mermaid'),
+              });
+            }, 100);
+          } catch(err) {
+            console.error('Mermaid init error:', err);
+          }
+        } else {
+          console.error('Mermaid.js not loaded');
+        }
+      }
+    } catch(e) {
+      console.error('[inject.py] 数据注入失败:', e);
     }
-  } catch(e) {
-    console.error('[inject.py] 数据注入失败:', e);
-  }
-})();
-// === END AUTO-INJECTED ===
+  })();
+  // === END AUTO-INJECTED ===
 </script>
+<script src="./mermaid.min.js"></script>
 </body>
 </html>

@@ -1,0 +1,2085 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>实战篇 · 观测体系与决策引擎</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;500;700;900&family=JetBrains+Mono:wght@300;400;500;600&family=Bodoni+Moda:ital,wght@0,400;0,700;0,900;1,400&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg-deep: #0a0e14;
+  --bg-card: #11161f;
+  --bg-elevated: #1a212d;
+  --border: #2a3441;
+  --border-bright: #3d4a5c;
+  --text-primary: #e8eaed;
+  --text-secondary: #9ba7b8;
+  --text-muted: #5a6779;
+  --amber: #ffb547;
+  --amber-bright: #ffc875;
+  --amber-dim: #8a6027;
+  --cyan: #4dd0e1;
+  --cyan-bright: #7eecff;
+  --red: #ff5252;
+  --green: #66bb6a;
+  --purple: #b794f4;
+  --rose: #f48fb1;
+  --grid-line: rgba(255, 181, 71, 0.06);
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+
+body {
+  font-family: 'Noto Serif SC', serif;
+  background: var(--bg-deep);
+  color: var(--text-primary);
+  line-height: 1.7;
+  background-image: 
+    linear-gradient(var(--grid-line) 1px, transparent 1px),
+    linear-gradient(90deg, var(--grid-line) 1px, transparent 1px);
+  background-size: 60px 60px;
+  background-attachment: fixed;
+}
+
+/* ========== HEADER ========== */
+.header {
+  position: relative;
+  padding: 100px 60px 80px;
+  border-bottom: 1px solid var(--border);
+  overflow: hidden;
+}
+
+.header::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--amber), transparent);
+}
+
+.header::after {
+  content: 'EXEC';
+  position: absolute;
+  font-family: 'Bodoni Moda', serif;
+  font-style: italic;
+  font-weight: 900;
+  font-size: 420px;
+  color: rgba(255, 181, 71, 0.025);
+  bottom: -120px;
+  right: -50px;
+  letter-spacing: -18px;
+  pointer-events: none;
+  line-height: 0.8;
+}
+
+.header-meta {
+  display: flex;
+  justify-content: space-between;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  color: var(--text-muted);
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  margin-bottom: 60px;
+}
+
+.header-meta .dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  background: var(--amber);
+  border-radius: 50%;
+  margin-right: 8px;
+  box-shadow: 0 0 12px var(--amber);
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+
+.title-tag {
+  font-family: 'Bodoni Moda', serif;
+  font-style: italic;
+  font-size: 22px;
+  color: var(--amber);
+  margin-bottom: 20px;
+  position: relative;
+  z-index: 1;
+}
+
+.title-zh {
+  font-family: 'Noto Serif SC', serif;
+  font-size: 80px;
+  font-weight: 900;
+  line-height: 1.05;
+  letter-spacing: -3px;
+  margin-bottom: 24px;
+  position: relative;
+  z-index: 1;
+}
+
+.title-zh .accent {
+  color: var(--amber);
+  font-style: italic;
+  font-family: 'Bodoni Moda', serif;
+  font-weight: 900;
+}
+
+.title-en {
+  font-family: 'Bodoni Moda', serif;
+  font-style: italic;
+  font-size: 24px;
+  color: var(--text-secondary);
+  margin-bottom: 40px;
+  letter-spacing: 1px;
+  position: relative;
+  z-index: 1;
+}
+
+.subtitle {
+  font-size: 17px;
+  color: var(--text-secondary);
+  max-width: 850px;
+  border-left: 2px solid var(--amber);
+  padding-left: 24px;
+  line-height: 1.8;
+  position: relative;
+  z-index: 1;
+}
+
+.subtitle strong { color: var(--amber); }
+
+/* ========== NAV ========== */
+.nav {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  background: rgba(10, 14, 20, 0.95);
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid var(--border);
+  padding: 16px 60px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+}
+
+.nav ul {
+  display: flex;
+  gap: 32px;
+  list-style: none;
+  flex-wrap: wrap;
+}
+
+.nav a {
+  color: var(--text-secondary);
+  text-decoration: none;
+  transition: color 0.3s;
+  position: relative;
+  padding-bottom: 4px;
+}
+
+.nav a:hover { color: var(--amber); }
+
+.nav a::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 0;
+  height: 1px;
+  background: var(--amber);
+  transition: width 0.3s;
+}
+
+.nav a:hover::after { width: 100%; }
+
+/* ========== SECTION ========== */
+.section {
+  padding: 120px 60px;
+  border-bottom: 1px solid var(--border);
+  position: relative;
+}
+
+.section-header {
+  display: flex;
+  align-items: baseline;
+  gap: 30px;
+  margin-bottom: 70px;
+  padding-bottom: 30px;
+  border-bottom: 1px dashed var(--border);
+}
+
+.section-num {
+  font-family: 'Bodoni Moda', serif;
+  font-size: 96px;
+  font-weight: 900;
+  color: transparent;
+  -webkit-text-stroke: 1px var(--amber);
+  line-height: 0.8;
+  font-style: italic;
+}
+
+.section-title {
+  font-size: 42px;
+  font-weight: 700;
+  margin-bottom: 8px;
+  letter-spacing: -1px;
+  line-height: 1.2;
+}
+
+.section-subtitle {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 2px;
+}
+
+.lead {
+  font-size: 17px;
+  color: var(--text-secondary);
+  line-height: 1.9;
+  max-width: 880px;
+  margin-bottom: 50px;
+}
+
+.lead strong {
+  color: var(--amber-bright);
+  font-weight: 500;
+}
+
+/* ========== 三原则 ========== */
+.principles {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 24px;
+  margin-top: 40px;
+}
+
+.principle {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  padding: 40px 36px;
+  position: relative;
+  border-top: 3px solid var(--amber);
+}
+
+.princ-num {
+  font-family: 'Bodoni Moda', serif;
+  font-style: italic;
+  font-weight: 900;
+  font-size: 80px;
+  color: rgba(255, 181, 71, 0.08);
+  position: absolute;
+  top: 16px;
+  right: 28px;
+  line-height: 0.8;
+}
+
+.princ-tag {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  color: var(--amber);
+  letter-spacing: 2px;
+  margin-bottom: 12px;
+}
+
+.princ-title {
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: 16px;
+  max-width: 80%;
+}
+
+.princ-formula {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  color: var(--cyan);
+  background: rgba(77, 208, 225, 0.06);
+  padding: 12px 16px;
+  border-left: 2px solid var(--cyan);
+  margin-bottom: 16px;
+  letter-spacing: 0.5px;
+}
+
+.princ-desc {
+  font-size: 13px;
+  color: var(--text-secondary);
+  line-height: 1.8;
+}
+
+.princ-desc strong { color: var(--amber-bright); }
+
+/* ========== 三屏架构 ========== */
+.screens-overview {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 16px;
+  margin-bottom: 60px;
+}
+
+.screen-tab {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  padding: 24px 28px;
+  border-top: 3px solid;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.screen-tab:hover {
+  background: var(--bg-elevated);
+}
+
+.screen-tab.s1 { border-top-color: var(--cyan); }
+.screen-tab.s2 { border-top-color: var(--amber); }
+.screen-tab.s3 { border-top-color: var(--green); }
+
+.screen-tab-num {
+  font-family: 'Bodoni Moda', serif;
+  font-style: italic;
+  font-weight: 900;
+  font-size: 36px;
+  margin-bottom: 8px;
+  line-height: 1;
+}
+
+.screen-tab.s1 .screen-tab-num { color: var(--cyan); }
+.screen-tab.s2 .screen-tab-num { color: var(--amber); }
+.screen-tab.s3 .screen-tab-num { color: var(--green); }
+
+.screen-tab-name {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: 4px;
+}
+
+.screen-tab-q {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  color: var(--text-muted);
+  letter-spacing: 1px;
+}
+
+/* 模拟屏幕 */
+.screen-mockup {
+  background: var(--bg-card);
+  border: 1px solid var(--border-bright);
+  margin-bottom: 30px;
+  overflow: hidden;
+}
+
+.screen-mockup-header {
+  background: var(--bg-elevated);
+  padding: 14px 24px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.mockup-dots {
+  display: flex;
+  gap: 6px;
+}
+
+.mockup-dots span {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--border-bright);
+}
+
+.mockup-title {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  color: var(--amber);
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  flex: 1;
+  text-align: center;
+}
+
+.mockup-time {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.screen-mockup-body {
+  padding: 30px;
+  display: grid;
+  gap: 24px;
+}
+
+/* Screen 1 - 状态屏 */
+.state-overview {
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr 1fr;
+  gap: 16px;
+  padding: 24px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+}
+
+.state-main {
+  border-right: 1px solid var(--border);
+  padding-right: 16px;
+}
+
+.state-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 9px;
+  color: var(--text-muted);
+  letter-spacing: 1.5px;
+  margin-bottom: 6px;
+  text-transform: uppercase;
+}
+
+.state-value-big {
+  font-family: 'Bodoni Moda', serif;
+  font-style: italic;
+  font-weight: 900;
+  font-size: 36px;
+  color: var(--amber);
+  margin-bottom: 4px;
+  line-height: 1;
+}
+
+.state-meta {
+  font-size: 11px;
+  color: var(--text-secondary);
+}
+
+.state-stat {
+  text-align: center;
+}
+
+.state-stat .num {
+  font-family: 'Bodoni Moda', serif;
+  font-weight: 700;
+  font-size: 28px;
+  color: var(--cyan);
+  line-height: 1;
+}
+
+.state-stat .num.warning { color: var(--red); }
+.state-stat .num.good { color: var(--green); }
+
+.state-stat .lbl {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 9px;
+  color: var(--text-muted);
+  letter-spacing: 1px;
+  margin-top: 6px;
+}
+
+/* 资金温度计 */
+.thermometers-block {
+  background: var(--bg-elevated);
+  padding: 24px;
+  border: 1px solid var(--border);
+}
+
+.block-title {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  color: var(--amber);
+  letter-spacing: 1.5px;
+  margin-bottom: 18px;
+  text-transform: uppercase;
+}
+
+.therm-row {
+  display: grid;
+  grid-template-columns: 100px 1fr 60px;
+  gap: 16px;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.therm-name {
+  font-size: 12px;
+  color: var(--text-primary);
+  text-align: right;
+}
+
+.therm-bar {
+  height: 18px;
+  background: rgba(255, 255, 255, 0.04);
+  position: relative;
+  border: 1px solid var(--border);
+}
+
+.therm-fill {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+}
+
+.therm-center {
+  position: absolute;
+  top: -2px;
+  bottom: -2px;
+  left: 50%;
+  width: 1px;
+  background: var(--text-muted);
+}
+
+.therm-value {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  text-align: left;
+}
+
+/* 警戒灯 */
+.warning-lights {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  background: var(--bg-elevated);
+  padding: 24px;
+  border: 1px solid var(--border);
+}
+
+.light {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+}
+
+.light-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.light-dot.green { background: var(--green); box-shadow: 0 0 10px var(--green); }
+.light-dot.yellow { background: var(--amber); box-shadow: 0 0 10px var(--amber); }
+.light-dot.red { background: var(--red); box-shadow: 0 0 10px var(--red); animation: pulse 1.5s infinite; }
+
+.light-text {
+  font-size: 11px;
+  color: var(--text-secondary);
+}
+
+/* Screen 2 - 博弈屏 */
+.relay-track {
+  background: var(--bg-elevated);
+  padding: 30px;
+  border: 1px solid var(--border);
+}
+
+.relay-bar {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 4px;
+  margin-bottom: 16px;
+}
+
+.relay-leg {
+  padding: 18px 12px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  text-align: center;
+  position: relative;
+  transition: all 0.3s;
+}
+
+.relay-leg.active {
+  background: var(--amber);
+  color: var(--bg-deep);
+  border-color: var(--amber);
+}
+
+.relay-leg.passed {
+  background: rgba(255, 181, 71, 0.15);
+  border-color: var(--amber-dim);
+}
+
+.relay-leg-num {
+  font-family: 'Bodoni Moda', serif;
+  font-weight: 900;
+  font-style: italic;
+  font-size: 18px;
+  margin-bottom: 4px;
+}
+
+.relay-leg-name {
+  font-size: 10px;
+  font-weight: 600;
+}
+
+.relay-status {
+  text-align: center;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  color: var(--amber);
+  letter-spacing: 1px;
+  margin-top: 8px;
+}
+
+/* 对手盘 */
+.opponent-radar {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+  padding: 24px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+}
+
+.opp-side {
+  padding: 20px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+}
+
+.opp-side.buyer { border-top: 2px solid var(--green); }
+.opp-side.seller { border-top: 2px solid var(--red); }
+
+.opp-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 1.5px;
+  margin-bottom: 12px;
+  text-transform: uppercase;
+}
+
+.buyer .opp-label { color: var(--green); }
+.seller .opp-label { color: var(--red); }
+
+.opp-list {
+  list-style: none;
+}
+
+.opp-list li {
+  padding: 8px 0;
+  font-size: 12px;
+  color: var(--text-secondary);
+  border-bottom: 1px dashed var(--border);
+  display: flex;
+  justify-content: space-between;
+}
+
+.opp-list li:last-child { border-bottom: none; }
+
+.opp-list .pct {
+  font-family: 'JetBrains Mono', monospace;
+  color: var(--text-primary);
+}
+
+/* Screen 3 - 行动屏 */
+.action-questions {
+  background: var(--bg-elevated);
+  padding: 24px;
+  border: 1px solid var(--border);
+}
+
+.q-item {
+  display: grid;
+  grid-template-columns: 30px 1fr auto;
+  gap: 16px;
+  align-items: center;
+  padding: 14px 16px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  margin-bottom: 8px;
+}
+
+.q-num {
+  font-family: 'Bodoni Moda', serif;
+  font-style: italic;
+  font-weight: 700;
+  font-size: 16px;
+  color: var(--amber);
+}
+
+.q-text {
+  font-size: 13px;
+  color: var(--text-primary);
+}
+
+.q-buttons {
+  display: flex;
+  gap: 6px;
+}
+
+.q-btn {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 9px;
+  padding: 4px 10px;
+  border: 1px solid var(--border-bright);
+  background: var(--bg-deep);
+  color: var(--text-muted);
+  letter-spacing: 0.5px;
+}
+
+/* 策略候选 */
+.strategy-candidates {
+  background: var(--bg-elevated);
+  padding: 24px;
+  border: 1px solid var(--border);
+}
+
+.cand-list {
+  display: grid;
+  gap: 10px;
+}
+
+.cand-item {
+  display: grid;
+  grid-template-columns: auto 1fr auto auto;
+  gap: 16px;
+  align-items: center;
+  padding: 14px 18px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--amber);
+}
+
+.cand-tag {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 9px;
+  color: var(--amber);
+  letter-spacing: 1px;
+  padding: 4px 8px;
+  border: 1px solid var(--amber-dim);
+}
+
+.cand-name {
+  font-size: 13px;
+  color: var(--text-primary);
+}
+
+.cand-pos {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  color: var(--cyan);
+}
+
+.cand-winrate {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  color: var(--text-secondary);
+}
+
+/* ========== 五问框架 ========== */
+.five-q {
+  display: grid;
+  gap: 20px;
+  margin-top: 40px;
+}
+
+.q-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  padding: 36px 40px;
+  display: grid;
+  grid-template-columns: 80px 1fr 280px;
+  gap: 30px;
+  align-items: start;
+  position: relative;
+}
+
+.q-card-num {
+  font-family: 'Bodoni Moda', serif;
+  font-style: italic;
+  font-weight: 900;
+  font-size: 80px;
+  color: var(--amber);
+  line-height: 0.8;
+}
+
+.q-card-content h3 {
+  font-size: 22px;
+  font-weight: 700;
+  margin-bottom: 6px;
+  color: var(--text-primary);
+}
+
+.q-card-en {
+  font-family: 'Bodoni Moda', serif;
+  font-style: italic;
+  font-size: 14px;
+  color: var(--text-muted);
+  margin-bottom: 20px;
+}
+
+.q-thinking {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  color: var(--amber);
+  letter-spacing: 1.5px;
+  margin-bottom: 10px;
+}
+
+.q-card-content ul {
+  list-style: none;
+  margin-bottom: 16px;
+}
+
+.q-card-content li {
+  font-size: 13px;
+  color: var(--text-secondary);
+  padding: 4px 0;
+  padding-left: 18px;
+  position: relative;
+  line-height: 1.7;
+}
+
+.q-card-content li::before {
+  content: '·';
+  position: absolute;
+  left: 4px;
+  color: var(--amber);
+  font-weight: 700;
+}
+
+.q-trap {
+  background: rgba(255, 82, 82, 0.06);
+  border-left: 3px solid var(--red);
+  padding: 18px 22px;
+  height: fit-content;
+}
+
+.q-trap-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  color: var(--red);
+  letter-spacing: 1.5px;
+  margin-bottom: 10px;
+}
+
+.q-trap-text {
+  font-size: 12px;
+  color: var(--text-secondary);
+  line-height: 1.7;
+}
+
+.q-trap-text strong { color: var(--amber-bright); }
+
+/* ========== 三层引擎 ========== */
+.engine-layers {
+  display: grid;
+  gap: 4px;
+  margin-top: 40px;
+  background: var(--border);
+  border: 1px solid var(--border);
+}
+
+.engine {
+  background: var(--bg-card);
+  padding: 36px 40px;
+  display: grid;
+  grid-template-columns: 220px 1fr;
+  gap: 40px;
+  border-left: 4px solid;
+}
+
+.engine.strategic { border-left-color: var(--green); }
+.engine.tactical { border-left-color: var(--amber); }
+.engine.operational { border-left-color: var(--red); }
+
+.engine-meta {
+  text-align: left;
+}
+
+.engine-tier {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 2px;
+  margin-bottom: 8px;
+}
+
+.engine.strategic .engine-tier { color: var(--green); }
+.engine.tactical .engine-tier { color: var(--amber); }
+.engine.operational .engine-tier { color: var(--red); }
+
+.engine-name {
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: 6px;
+}
+
+.engine-cycle {
+  font-family: 'Bodoni Moda', serif;
+  font-style: italic;
+  font-size: 14px;
+  color: var(--text-muted);
+  margin-bottom: 24px;
+}
+
+.engine-rule {
+  font-size: 12px;
+  color: var(--text-secondary);
+  border-top: 1px dashed var(--border);
+  padding-top: 16px;
+  font-style: italic;
+  line-height: 1.7;
+}
+
+.engine-rule strong { color: var(--amber-bright); font-style: normal; }
+
+.engine-content {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 24px;
+}
+
+.engine-block-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  color: var(--amber);
+  letter-spacing: 1.5px;
+  margin-bottom: 10px;
+  text-transform: uppercase;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--border);
+}
+
+.engine-block ul {
+  list-style: none;
+}
+
+.engine-block li {
+  font-size: 12px;
+  color: var(--text-secondary);
+  padding: 5px 0;
+  padding-left: 14px;
+  position: relative;
+  line-height: 1.6;
+}
+
+.engine-block li::before {
+  content: '→';
+  position: absolute;
+  left: 0;
+  color: var(--amber);
+  font-size: 11px;
+}
+
+/* ========== 闭环反馈 ========== */
+.feedback-loop {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  padding: 50px;
+  margin-top: 40px;
+  position: relative;
+}
+
+.loop-stages {
+  display: grid;
+  grid-template-columns: 1fr 50px 1fr 50px 1fr;
+  gap: 16px;
+  align-items: center;
+  margin-bottom: 40px;
+}
+
+.loop-stage {
+  background: var(--bg-elevated);
+  padding: 24px;
+  border: 1px solid var(--border);
+  text-align: center;
+  border-top: 3px solid var(--amber);
+}
+
+.loop-stage-num {
+  font-family: 'Bodoni Moda', serif;
+  font-style: italic;
+  font-weight: 900;
+  font-size: 32px;
+  color: var(--amber);
+  margin-bottom: 8px;
+  line-height: 1;
+}
+
+.loop-stage-name {
+  font-size: 16px;
+  font-weight: 700;
+  margin-bottom: 12px;
+  color: var(--text-primary);
+}
+
+.loop-stage-cycle {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 9px;
+  color: var(--text-muted);
+  letter-spacing: 1px;
+}
+
+.loop-arrow {
+  text-align: center;
+  font-size: 24px;
+  color: var(--amber);
+}
+
+.loop-detail {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 24px;
+}
+
+.loop-d {
+  padding: 20px 24px;
+  background: var(--bg-elevated);
+  border-left: 3px solid var(--amber);
+}
+
+.loop-d-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  color: var(--amber);
+  letter-spacing: 1.5px;
+  margin-bottom: 10px;
+}
+
+.loop-d-content {
+  font-size: 12px;
+  color: var(--text-secondary);
+  line-height: 1.8;
+}
+
+.loop-d-content strong { color: var(--amber-bright); }
+
+/* ========== 一日工作流 ========== */
+.workflow-day {
+  margin-top: 40px;
+  position: relative;
+}
+
+.workflow-day::before {
+  content: '';
+  position: absolute;
+  left: 90px;
+  top: 30px;
+  bottom: 30px;
+  width: 1px;
+  background: var(--amber-dim);
+}
+
+.flow-block {
+  display: grid;
+  grid-template-columns: 90px 40px 1fr;
+  gap: 30px;
+  margin-bottom: 24px;
+  align-items: stretch;
+}
+
+.flow-time {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  color: var(--amber);
+  text-align: right;
+  padding-top: 28px;
+  letter-spacing: 1px;
+  font-weight: 600;
+}
+
+.flow-marker {
+  position: relative;
+  padding-top: 28px;
+}
+
+.flow-dot {
+  width: 16px;
+  height: 16px;
+  background: var(--amber);
+  border: 3px solid var(--bg-deep);
+  border-radius: 50%;
+  margin: 0 auto;
+  position: relative;
+  z-index: 1;
+  box-shadow: 0 0 0 4px var(--bg-deep), 0 0 12px var(--amber);
+}
+
+.flow-content {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  padding: 26px 32px;
+  border-left: 3px solid var(--amber);
+}
+
+.flow-stage {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  color: var(--amber);
+  letter-spacing: 2px;
+  margin-bottom: 8px;
+}
+
+.flow-title {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: 14px;
+}
+
+.flow-desc {
+  font-size: 13px;
+  color: var(--text-secondary);
+  line-height: 1.85;
+  margin-bottom: 14px;
+}
+
+.flow-checklist {
+  margin-top: 14px;
+}
+
+.flow-checklist li {
+  font-size: 12px;
+  color: var(--text-secondary);
+  padding: 4px 0;
+  padding-left: 22px;
+  position: relative;
+  line-height: 1.6;
+  list-style: none;
+}
+
+.flow-checklist li::before {
+  content: '✓';
+  position: absolute;
+  left: 0;
+  color: var(--green);
+  font-weight: 700;
+}
+
+/* ========== 终极洞察 ========== */
+.ultimate {
+  padding: 140px 60px;
+  text-align: center;
+  border-top: 1px solid var(--border);
+  background: 
+    radial-gradient(ellipse at center top, rgba(255, 181, 71, 0.08) 0%, transparent 60%),
+    var(--bg-deep);
+  position: relative;
+  overflow: hidden;
+}
+
+.ultimate-tag {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  color: var(--amber);
+  letter-spacing: 3px;
+  margin-bottom: 30px;
+}
+
+.ultimate-quote {
+  font-family: 'Noto Serif SC', serif;
+  font-weight: 700;
+  font-size: 36px;
+  color: var(--text-primary);
+  max-width: 950px;
+  margin: 0 auto 40px;
+  line-height: 1.5;
+  letter-spacing: -0.5px;
+}
+
+.ultimate-quote .highlight {
+  color: var(--amber);
+  font-family: 'Bodoni Moda', serif;
+  font-style: italic;
+}
+
+.ultimate-final {
+  font-family: 'Bodoni Moda', serif;
+  font-style: italic;
+  font-size: 22px;
+  color: var(--amber);
+  max-width: 720px;
+  margin: 0 auto 60px;
+  line-height: 1.7;
+}
+
+.series-info {
+  display: flex;
+  justify-content: center;
+  gap: 24px;
+  padding-top: 50px;
+  border-top: 1px solid var(--border);
+  max-width: 1100px;
+  margin: 0 auto;
+  flex-wrap: wrap;
+}
+
+.series-item {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  color: var(--text-muted);
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
+  text-align: center;
+  flex: 1;
+  min-width: 140px;
+}
+
+.series-item.current {
+  color: var(--amber);
+}
+
+.series-item .num {
+  font-family: 'Bodoni Moda', serif;
+  font-style: italic;
+  font-size: 22px;
+  display: block;
+  margin-bottom: 6px;
+  font-weight: 700;
+}
+
+/* Responsive */
+@media (max-width: 968px) {
+  .header { padding: 60px 30px 40px; }
+  .header::after { font-size: 200px; }
+  .title-zh { font-size: 44px; }
+  .title-en { font-size: 18px; }
+  .nav { padding: 16px 30px; }
+  .nav ul { gap: 16px; }
+  .section { padding: 60px 30px; }
+  .section-num { font-size: 64px; }
+  .section-title { font-size: 26px; }
+  .principles { grid-template-columns: 1fr; }
+  .screens-overview { grid-template-columns: 1fr; }
+  .state-overview { grid-template-columns: 1fr 1fr; }
+  .therm-row { grid-template-columns: 80px 1fr 50px; }
+  .warning-lights { grid-template-columns: 1fr; }
+  .relay-bar { grid-template-columns: 1fr; }
+  .opponent-radar { grid-template-columns: 1fr; }
+  .q-card { grid-template-columns: 1fr; gap: 20px; }
+  .engine { grid-template-columns: 1fr; gap: 24px; }
+  .engine-content { grid-template-columns: 1fr; }
+  .loop-stages { grid-template-columns: 1fr; }
+  .loop-arrow { display: none; }
+  .loop-detail { grid-template-columns: 1fr; }
+  .workflow-day::before { left: 8px; }
+  .flow-block { grid-template-columns: 1fr; gap: 12px; }
+  .flow-time { text-align: left; padding-top: 0; }
+  .flow-marker { display: none; }
+  .ultimate { padding: 60px 30px; }
+  .ultimate-quote { font-size: 24px; }
+}
+</style>
+</head>
+<body>
+
+<!-- ========== HEADER ========== -->
+<header class="header">
+  <div class="header-meta">
+    <div><span class="dot"></span>RESEARCH FRAMEWORK · EXECUTION HANDBOOK</div>
+    <div>SERIES V · FROM THEORY TO DAILY PRACTICE</div>
+  </div>
+  <div class="title-tag">— A Daily-Use Operational Handbook —</div>
+  <h1 class="title-zh">实战篇<br><span class="accent">观测体系与决策引擎</span></h1>
+  <div class="title-en">Operational Manual · Observe · Think · Decide · Reflect</div>
+  <p class="subtitle">
+    前面四册建立了认知框架,但要真正用起来,需要一套<strong>可操作的观测体系</strong>和<strong>与之匹配的决策引擎</strong>。本册回答一个根本问题:如何把"研究研究股票的人"这种高阶认知,转化为<strong>每天都能用的具体工具</strong>?
+  </p>
+</header>
+
+<!-- ========== NAV ========== -->
+<nav class="nav">
+  <ul>
+    <li><a href="#principles">01 · 三大原则</a></li>
+    <li><a href="#screens">02 · 三屏架构</a></li>
+    <li><a href="#five-q">03 · 五问框架</a></li>
+    <li><a href="#engine">04 · 三层引擎</a></li>
+    <li><a href="#feedback">05 · 闭环反馈</a></li>
+    <li><a href="#workflow">06 · 一日工作流</a></li>
+  </ul>
+</nav>
+
+<!-- ========== 01 三大原则 ========== -->
+<section class="section" id="principles">
+  <div class="section-header">
+    <div class="section-num">01</div>
+    <div>
+      <h2 class="section-title">设计的三个不可妥协原则</h2>
+      <div class="section-subtitle">Three Non-Negotiable Design Principles</div>
+    </div>
+  </div>
+
+  <p class="lead">
+    在动手之前,先确立三个根本原则。这些原则会决定整个系统的形态——<strong>不遵守它们,系统再复杂也会失效</strong>。
+  </p>
+
+  <div class="principles">
+    <div class="principle">
+      <div class="princ-num">1</div>
+      <div class="princ-tag">— PRINCIPLE 01 —</div>
+      <div class="princ-title">观测体系必须"傻瓜化"</div>
+      <div class="princ-formula">
+        complexity → backend<br>
+        simplicity → frontend
+      </div>
+      <div class="princ-desc">
+        所有的复杂性都应该被吸收到后台。呈现给用户的必须是<strong>简洁、直观、可立即理解</strong>的信息——一眼看懂状态、三秒判断警觉、十秒找到下一步。
+      </div>
+    </div>
+
+    <div class="principle">
+      <div class="princ-num">2</div>
+      <div class="princ-tag">— PRINCIPLE 02 —</div>
+      <div class="princ-title">思维引导必须"问题化"</div>
+      <div class="princ-formula">
+        not "tell me what to do"<br>
+        but "ask me what to think"
+      </div>
+      <div class="princ-desc">
+        系统不直接告诉你"该做什么",而是问你"你考虑过这些问题吗?"<strong>问题化的引导</strong>既能突破情绪干扰,又能保留人的主观判断空间。
+      </div>
+    </div>
+
+    <div class="principle">
+      <div class="princ-num">3</div>
+      <div class="princ-tag">— PRINCIPLE 03 —</div>
+      <div class="princ-title">决策体系必须"分层化"</div>
+      <div class="princ-formula">
+        Strategic / Tactical / Operational<br>
+        monthly / weekly / daily
+      </div>
+      <div class="princ-desc">
+        不要试图建立"万能决策器"。<strong>战略 → 战术 → 操作</strong>三层有自己的规则、信号、动作,有清晰边界,但<strong>绝不互相干扰</strong>。
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ========== 02 三屏架构 ========== -->
+<section class="section" id="screens">
+  <div class="section-header">
+    <div class="section-num">02</div>
+    <div>
+      <h2 class="section-title">观测体系的三屏架构</h2>
+      <div class="section-subtitle">The Three-Screen Observation System</div>
+    </div>
+  </div>
+
+  <p class="lead">
+    直观有效的观测体系由<strong>三块屏幕</strong>组成,每一块对应不同的认知功能。三屏之间是递进关系——<strong>是什么 → 为什么 → 怎么办</strong>。
+  </p>
+
+  <div class="screens-overview">
+    <div class="screen-tab s1">
+      <div class="screen-tab-num">I</div>
+      <div class="screen-tab-name">状态屏</div>
+      <div class="screen-tab-q">"现在是什么状态?"</div>
+    </div>
+    <div class="screen-tab s2">
+      <div class="screen-tab-num">II</div>
+      <div class="screen-tab-name">博弈屏</div>
+      <div class="screen-tab-q">"谁在和谁博弈?"</div>
+    </div>
+    <div class="screen-tab s3">
+      <div class="screen-tab-num">III</div>
+      <div class="screen-tab-name">行动屏</div>
+      <div class="screen-tab-q">"现在该思考什么?"</div>
+    </div>
+  </div>
+
+  <!-- Screen 1 模拟 -->
+  <div class="screen-mockup">
+    <div class="screen-mockup-header">
+      <div class="mockup-dots"><span></span><span></span><span></span></div>
+      <div class="mockup-title">— SCREEN I · STATE OVERVIEW —</div>
+      <div class="mockup-time">15:00:00</div>
+    </div>
+    <div class="screen-mockup-body">
+
+      <!-- 市场状态总览 -->
+      <div class="state-overview">
+        <div class="state-main">
+          <div class="state-label">CURRENT STATE</div>
+          <div class="state-value-big">B · 游资题材市</div>
+          <div class="state-meta">主导资金:游资 · 散户跟风</div>
+        </div>
+        <div class="state-stat">
+          <div class="num">12</div>
+          <div class="lbl">持续天数</div>
+        </div>
+        <div class="state-stat">
+          <div class="num warning">68%</div>
+          <div class="lbl">5日切换概率</div>
+        </div>
+        <div class="state-stat">
+          <div class="num good">↑</div>
+          <div class="lbl">情绪温度</div>
+        </div>
+      </div>
+
+      <!-- 资金温度计 -->
+      <div class="thermometers-block">
+        <div class="block-title">— 九类资金温度计 · CAPITAL THERMOMETER —</div>
+        <div class="therm-row">
+          <div class="therm-name">国家队</div>
+          <div class="therm-bar"><div class="therm-center"></div><div class="therm-fill" style="left:50%;width:5%;background:var(--green)"></div></div>
+          <div class="therm-value" style="color:var(--green)">+0.3σ</div>
+        </div>
+        <div class="therm-row">
+          <div class="therm-name">北向配置</div>
+          <div class="therm-bar"><div class="therm-center"></div><div class="therm-fill" style="right:50%;width:8%;background:var(--red)"></div></div>
+          <div class="therm-value" style="color:var(--red)">-0.5σ</div>
+        </div>
+        <div class="therm-row">
+          <div class="therm-name">北向交易</div>
+          <div class="therm-bar"><div class="therm-center"></div><div class="therm-fill" style="left:50%;width:18%;background:var(--green)"></div></div>
+          <div class="therm-value" style="color:var(--green)">+1.2σ</div>
+        </div>
+        <div class="therm-row">
+          <div class="therm-name">公募</div>
+          <div class="therm-bar"><div class="therm-center"></div><div class="therm-fill" style="right:50%;width:12%;background:var(--red)"></div></div>
+          <div class="therm-value" style="color:var(--red)">-0.8σ</div>
+        </div>
+        <div class="therm-row">
+          <div class="therm-name">量化</div>
+          <div class="therm-bar"><div class="therm-center"></div><div class="therm-fill" style="left:50%;width:25%;background:var(--amber)"></div></div>
+          <div class="therm-value" style="color:var(--amber)">+1.7σ</div>
+        </div>
+        <div class="therm-row">
+          <div class="therm-name">险资</div>
+          <div class="therm-bar"><div class="therm-center"></div><div class="therm-fill" style="left:48%;width:4%;background:var(--text-muted)"></div></div>
+          <div class="therm-value" style="color:var(--text-muted)">+0.1σ</div>
+        </div>
+        <div class="therm-row">
+          <div class="therm-name">游资</div>
+          <div class="therm-bar"><div class="therm-center"></div><div class="therm-fill" style="left:50%;width:32%;background:var(--green)"></div></div>
+          <div class="therm-value" style="color:var(--green)">+2.1σ</div>
+        </div>
+        <div class="therm-row">
+          <div class="therm-name">散户</div>
+          <div class="therm-bar"><div class="therm-center"></div><div class="therm-fill" style="left:50%;width:28%;background:var(--green)"></div></div>
+          <div class="therm-value" style="color:var(--green)">+1.9σ</div>
+        </div>
+        <div class="therm-row">
+          <div class="therm-name">产业资本</div>
+          <div class="therm-bar"><div class="therm-center"></div><div class="therm-fill" style="right:50%;width:15%;background:var(--red)"></div></div>
+          <div class="therm-value" style="color:var(--red)">-1.0σ</div>
+        </div>
+      </div>
+
+      <!-- 警戒灯 -->
+      <div class="warning-lights">
+        <div class="light"><div class="light-dot green"></div><div class="light-text">流动性环境</div></div>
+        <div class="light"><div class="light-dot yellow"></div><div class="light-text">公募仓位</div></div>
+        <div class="light"><div class="light-dot red"></div><div class="light-text">量化拥挤度</div></div>
+        <div class="light"><div class="light-dot red"></div><div class="light-text">散户情绪</div></div>
+        <div class="light"><div class="light-dot yellow"></div><div class="light-text">北向背离</div></div>
+        <div class="light"><div class="light-dot green"></div><div class="light-text">政策密度</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Screen 2 模拟 -->
+  <div class="screen-mockup">
+    <div class="screen-mockup-header">
+      <div class="mockup-dots"><span></span><span></span><span></span></div>
+      <div class="mockup-title">— SCREEN II · GAME ANALYSIS —</div>
+      <div class="mockup-time">15:00:00</div>
+    </div>
+    <div class="screen-mockup-body">
+
+      <!-- 接力赛 -->
+      <div class="relay-track">
+        <div class="block-title">— 主线行情接力位置 · RELAY POSITION —</div>
+        <div class="relay-bar">
+          <div class="relay-leg passed">
+            <div class="relay-leg-num">1</div>
+            <div class="relay-leg-name">产业资本</div>
+          </div>
+          <div class="relay-leg passed">
+            <div class="relay-leg-num">2</div>
+            <div class="relay-leg-name">公募</div>
+          </div>
+          <div class="relay-leg passed">
+            <div class="relay-leg-num">3</div>
+            <div class="relay-leg-name">北向</div>
+          </div>
+          <div class="relay-leg active">
+            <div class="relay-leg-num">4</div>
+            <div class="relay-leg-name">散户·游资</div>
+          </div>
+          <div class="relay-leg">
+            <div class="relay-leg-num">5</div>
+            <div class="relay-leg-name">出货期</div>
+          </div>
+        </div>
+        <div class="relay-status">⚠ 当前位于第4棒 · 接近最后阶段 · 警惕产业资本减持信号</div>
+      </div>
+
+      <!-- 对手盘雷达 -->
+      <div class="opponent-radar">
+        <div class="opp-side buyer">
+          <div class="opp-label">▲ MAIN BUYERS</div>
+          <ul class="opp-list">
+            <li>散户(集中加杠杆)<span class="pct">38%</span></li>
+            <li>游资(短线打板)<span class="pct">22%</span></li>
+            <li>量化(动量跟随)<span class="pct">15%</span></li>
+          </ul>
+        </div>
+        <div class="opp-side seller">
+          <div class="opp-label">▼ MAIN SELLERS</div>
+          <ul class="opp-list">
+            <li>产业资本(密集减持)<span class="pct">28%</span></li>
+            <li>公募(部分调仓)<span class="pct">18%</span></li>
+            <li>北向配置盘(撤离)<span class="pct">12%</span></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Screen 3 模拟 -->
+  <div class="screen-mockup">
+    <div class="screen-mockup-header">
+      <div class="mockup-dots"><span></span><span></span><span></span></div>
+      <div class="mockup-title">— SCREEN III · ACTION GUIDE —</div>
+      <div class="mockup-time">15:00:00</div>
+    </div>
+    <div class="screen-mockup-body">
+
+      <!-- 强制问题 -->
+      <div class="action-questions">
+        <div class="block-title">— 今日强制问题清单 · MANDATORY CHECKLIST —</div>
+        <div class="q-item">
+          <div class="q-num">1</div>
+          <div class="q-text">B→C切换概率上升至68%,小盘持仓是否需要减仓?</div>
+          <div class="q-buttons">
+            <span class="q-btn">已考虑</span>
+            <span class="q-btn">未考虑</span>
+          </div>
+        </div>
+        <div class="q-item">
+          <div class="q-num">2</div>
+          <div class="q-text">量化拥挤度警戒灯变红,你是否在小微盘上有暴露?</div>
+          <div class="q-buttons">
+            <span class="q-btn">已考虑</span>
+            <span class="q-btn">未考虑</span>
+          </div>
+        </div>
+        <div class="q-item">
+          <div class="q-num">3</div>
+          <div class="q-text">产业资本密集减持,你持有的题材股大股东动向如何?</div>
+          <div class="q-buttons">
+            <span class="q-btn">已考虑</span>
+            <span class="q-btn">未考虑</span>
+          </div>
+        </div>
+        <div class="q-item">
+          <div class="q-num">4</div>
+          <div class="q-text">接力赛已到第4棒,你的卖出计划是否明确?</div>
+          <div class="q-buttons">
+            <span class="q-btn">已考虑</span>
+            <span class="q-btn">未考虑</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- 策略候选 -->
+      <div class="strategy-candidates">
+        <div class="block-title">— 策略候选清单 · STRATEGY CANDIDATES —</div>
+        <div class="cand-list">
+          <div class="cand-item">
+            <div class="cand-tag">DEFENSIVE</div>
+            <div class="cand-name">部分仓位转向红利低波</div>
+            <div class="cand-pos">建议:50-70%</div>
+            <div class="cand-winrate">历史胜率 72%</div>
+          </div>
+          <div class="cand-item">
+            <div class="cand-tag">HEDGE</div>
+            <div class="cand-name">用IM做空对冲小盘暴露</div>
+            <div class="cand-pos">对冲比:30%</div>
+            <div class="cand-winrate">历史胜率 65%</div>
+          </div>
+          <div class="cand-item">
+            <div class="cand-tag">EXIT</div>
+            <div class="cand-name">分批卖出题材股,锁定利润</div>
+            <div class="cand-pos">3日分批</div>
+            <div class="cand-winrate">历史胜率 78%</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ========== 03 五问框架 ========== -->
+<section class="section" id="five-q">
+  <div class="section-header">
+    <div class="section-num">03</div>
+    <div>
+      <h2 class="section-title">思维引导的五问框架</h2>
+      <div class="section-subtitle">The Five Daily Questions · Mental Discipline Framework</div>
+    </div>
+  </div>
+
+  <p class="lead">
+    观测体系给你"信息",但信息不会自动变成"洞察"。从信息到洞察的桥梁是<strong>正确的提问</strong>。下面这五问是把前面四册理论压缩成的可操作版本——每天机械地走完,就能避免90%的认知陷阱。
+  </p>
+
+  <div class="five-q">
+    <div class="q-card">
+      <div class="q-card-num">i</div>
+      <div class="q-card-content">
+        <h3>谁在主导?</h3>
+        <div class="q-card-en">Who is dominating?</div>
+        <div class="q-thinking">— 展开思考 —</div>
+        <ul>
+          <li>当前哪一类资金的活跃度最高?</li>
+          <li>这一类资金的目标函数是什么?</li>
+          <li>它的行为受什么约束?</li>
+          <li>它通常持续主导多久?</li>
+        </ul>
+      </div>
+      <div class="q-trap">
+        <div class="q-trap-label">⚠ AVOID THIS TRAP</div>
+        <div class="q-trap-text">错把<strong>暂时的现象</strong>当作<strong>长期趋势</strong>。当你以为"市场在涨"时,可能只是某一类资金在短期主导,而它的弹药很快会耗尽。</div>
+      </div>
+    </div>
+
+    <div class="q-card">
+      <div class="q-card-num">ii</div>
+      <div class="q-card-content">
+        <h3>谁在跟随?谁在博弈?</h3>
+        <div class="q-card-en">Who is following? Who is fighting back?</div>
+        <div class="q-thinking">— 展开思考 —</div>
+        <ul>
+          <li>主导资金之外,还有哪些资金在同方向行动?</li>
+          <li>哪些资金在反方向行动?</li>
+          <li>同向资金的规模能否接力?</li>
+          <li>反向资金的力量有多大?</li>
+        </ul>
+      </div>
+      <div class="q-trap">
+        <div class="q-trap-label">⚠ AVOID THIS TRAP</div>
+        <div class="q-trap-text">看到一个方向就all in。<strong>任何主导都有反向的力量在积累</strong>,理解反向力量比强化主导判断更重要。</div>
+      </div>
+    </div>
+
+    <div class="q-card">
+      <div class="q-card-num">iii</div>
+      <div class="q-card-content">
+        <h3>接力到哪一棒了?</h3>
+        <div class="q-card-en">Which leg of the relay?</div>
+        <div class="q-thinking">— 展开思考 —</div>
+        <ul>
+          <li>这轮行情启动时,谁是先动者?</li>
+          <li>现在是接力的第几棒?</li>
+          <li>后面还有几棒资金可以接力?</li>
+          <li>最后一棒是不是已经在场内?</li>
+        </ul>
+      </div>
+      <div class="q-trap">
+        <div class="q-trap-label">⚠ AVOID THIS TRAP</div>
+        <div class="q-trap-text">在最后一棒入场。<strong>当散户和媒体都在讨论某个机会时,通常已经是最后一棒</strong>,而最后一棒永远是接盘者。</div>
+      </div>
+    </div>
+
+    <div class="q-card">
+      <div class="q-card-num">iv</div>
+      <div class="q-card-content">
+        <h3>对手盘是谁?</h3>
+        <div class="q-card-en">Who is on the other side?</div>
+        <div class="q-thinking">— 展开思考 —</div>
+        <ul>
+          <li>如果我现在做这笔交易,卖给我(或买我)的是谁?</li>
+          <li>他为什么愿意在这个价格交易?</li>
+          <li>他比我多知道什么?或者少知道什么?</li>
+          <li>这种对手盘结构在历史上的胜率如何?</li>
+        </ul>
+      </div>
+      <div class="q-trap">
+        <div class="q-trap-label">⚠ AVOID THIS TRAP</div>
+        <div class="q-trap-text">假设市场是"匿名"的。<strong>每一笔交易都有具体的对手方</strong>,理解对手方的目的,你才能判断这笔交易是机会还是陷阱。</div>
+      </div>
+    </div>
+
+    <div class="q-card">
+      <div class="q-card-num">v</div>
+      <div class="q-card-content">
+        <h3>我是谁?我的局限是什么?</h3>
+        <div class="q-card-en">Who am I? What are my limits?</div>
+        <div class="q-thinking">— 展开思考 —</div>
+        <ul>
+          <li>我现在的判断,有多少基于事实,有多少基于希望?</li>
+          <li>我的位置(资金量、持有期、信息渠道)如何塑造了我的视角?</li>
+          <li>我现在的情绪状态是什么?</li>
+          <li>如果我错了,我能承受吗?</li>
+        </ul>
+      </div>
+      <div class="q-trap">
+        <div class="q-trap-label">⚠ AVOID THIS TRAP</div>
+        <div class="q-trap-text">把自己当作"客观的观察者"。<strong>你也是市场的一部分</strong>,你的偏见和局限会系统性地扭曲判断,定期自检是防止认知失控的唯一办法。</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ========== 04 三层引擎 ========== -->
+<section class="section" id="engine">
+  <div class="section-header">
+    <div class="section-num">04</div>
+    <div>
+      <h2 class="section-title">决策体系的三层引擎</h2>
+      <div class="section-subtitle">Three-Tier Decision Engine · Strategic / Tactical / Operational</div>
+    </div>
+  </div>
+
+  <p class="lead">
+    决策体系按时间维度分为<strong>三层</strong>。每一层有自己的决策内容、频率、输入、输出和原则。<strong>分层独立但服从层级</strong>——下层不能违反上层的约束。
+  </p>
+
+  <div class="engine-layers">
+
+    <div class="engine strategic">
+      <div class="engine-meta">
+        <div class="engine-tier">— TIER 1 · MONTHLY —</div>
+        <div class="engine-name">战略层</div>
+        <div class="engine-cycle">Strategic Layer</div>
+        <div class="engine-rule">
+          <strong>决策原则:</strong>战略层的决策不能频繁改变。一旦确定,除非市场状态根本切换,否则保持稳定。<strong>频繁的战略调整是亏损的最大来源</strong>。
+        </div>
+      </div>
+      <div class="engine-content">
+        <div class="engine-block">
+          <div class="engine-block-label">— INPUT —</div>
+          <ul>
+            <li>市场状态(A/B/C/D)</li>
+            <li>主要资金中长期趋势</li>
+            <li>宏观流动性环境</li>
+            <li>政策催化密度</li>
+          </ul>
+        </div>
+        <div class="engine-block">
+          <div class="engine-block-label">— OUTPUT —</div>
+          <ul>
+            <li>总仓位区间</li>
+            <li>风格倾斜配比</li>
+            <li>风险预算</li>
+            <li>月度最大可承受回撤</li>
+          </ul>
+        </div>
+        <div class="engine-block">
+          <div class="engine-block-label">— TRIGGER —</div>
+          <ul>
+            <li>每月第一个交易日</li>
+            <li>重大状态切换事件</li>
+            <li>不允许临时调整</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="engine tactical">
+      <div class="engine-meta">
+        <div class="engine-tier">— TIER 2 · WEEKLY —</div>
+        <div class="engine-name">战术层</div>
+        <div class="engine-cycle">Tactical Layer</div>
+        <div class="engine-rule">
+          <strong>决策原则:</strong>战术层<strong>服从战略层</strong>。不能因为某个行业短期看好就违反战略层的总仓位约束;不能因为某只个股有题材就违反风格约束。
+        </div>
+      </div>
+      <div class="engine-content">
+        <div class="engine-block">
+          <div class="engine-block-label">— INPUT —</div>
+          <ul>
+            <li>行业资金流向变化</li>
+            <li>主导资金持仓调整</li>
+            <li>重要事件影响评估</li>
+            <li>个股资金博弈结构</li>
+          </ul>
+        </div>
+        <div class="engine-block">
+          <div class="engine-block-label">— OUTPUT —</div>
+          <ul>
+            <li>重点关注3-5个行业</li>
+            <li>每行业具体标的清单</li>
+            <li>买入/卖出/观望计划</li>
+          </ul>
+        </div>
+        <div class="engine-block">
+          <div class="engine-block-label">— TRIGGER —</div>
+          <ul>
+            <li>每周末复盘</li>
+            <li>每周一调仓</li>
+            <li>周中遇重大事件评估</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="engine operational">
+      <div class="engine-meta">
+        <div class="engine-tier">— TIER 3 · DAILY —</div>
+        <div class="engine-name">操作层</div>
+        <div class="engine-cycle">Operational Layer</div>
+        <div class="engine-rule">
+          <strong>决策原则:</strong>操作层<strong>不做战略决策</strong>。看到大涨不能临时加仓打破上限;看到大跌不能临时减仓打破下限。<strong>纪律是整个系统稳定运行的最后防线</strong>。
+        </div>
+      </div>
+      <div class="engine-content">
+        <div class="engine-block">
+          <div class="engine-block-label">— INPUT —</div>
+          <ul>
+            <li>当日资金流向</li>
+            <li>当日异动信号</li>
+            <li>当日风险预警</li>
+          </ul>
+        </div>
+        <div class="engine-block">
+          <div class="engine-block-label">— OUTPUT —</div>
+          <ul>
+            <li>当日具体下单计划</li>
+            <li>止损/止盈触发监控</li>
+            <li>异常情况应急预案</li>
+          </ul>
+        </div>
+        <div class="engine-block">
+          <div class="engine-block-label">— TRIGGER —</div>
+          <ul>
+            <li>每个交易日</li>
+            <li>开盘前定计划</li>
+            <li>盘中执行盘后复盘</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<!-- ========== 05 闭环反馈 ========== -->
+<section class="section" id="feedback">
+  <div class="section-header">
+    <div class="section-num">05</div>
+    <div>
+      <h2 class="section-title">闭环反馈机制</h2>
+      <div class="section-subtitle">Closed-Loop Feedback System</div>
+    </div>
+  </div>
+
+  <p class="lead">
+    观测、思维、决策三者必须形成<strong>闭环反馈</strong>,否则系统会逐渐失效。反馈机制是把"一次性的好决策"变成"持续的好决策"的唯一途径。
+  </p>
+
+  <div class="feedback-loop">
+    <div class="loop-stages">
+      <div class="loop-stage">
+        <div class="loop-stage-num">α</div>
+        <div class="loop-stage-name">决策记录</div>
+        <div class="loop-stage-cycle">EVERY DECISION</div>
+      </div>
+      <div class="loop-arrow">→</div>
+      <div class="loop-stage">
+        <div class="loop-stage-num">β</div>
+        <div class="loop-stage-name">定期复盘</div>
+        <div class="loop-stage-cycle">WEEKLY · MONTHLY</div>
+      </div>
+      <div class="loop-arrow">→</div>
+      <div class="loop-stage">
+        <div class="loop-stage-num">γ</div>
+        <div class="loop-stage-name">体系迭代</div>
+        <div class="loop-stage-cycle">QUARTERLY</div>
+      </div>
+    </div>
+
+    <div class="loop-detail">
+      <div class="loop-d">
+        <div class="loop-d-label">— α · 决策记录 —</div>
+        <div class="loop-d-content">
+          每一次重要决策都必须记录:决策时间、市场状态判断、具体内容、依据信号、预期收益与风险。<strong>不是为了留档,而是为了事后能够诚实复盘</strong>。
+        </div>
+      </div>
+      <div class="loop-d">
+        <div class="loop-d-label">— β · 定期复盘 —</div>
+        <div class="loop-d-content">
+          核心问题不是"赚了还是亏了",而是:<strong>判断对了吗?对是因为看对还是运气?错是判断错还是执行错?</strong>最重要的产出是"经验沉淀"——把教训写成具体规则加入决策体系。
+        </div>
+      </div>
+      <div class="loop-d">
+        <div class="loop-d-label">— γ · 体系迭代 —</div>
+        <div class="loop-d-content">
+          每季度评估整个体系:<strong>哪些指标的预测力下降了?哪些新结构变化没被捕捉?哪些决策规则胜率下滑?</strong>任何体系都会衰减,持续迭代是保持有效性的唯一办法。
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ========== 06 一日工作流 ========== -->
+<section class="section" id="workflow">
+  <div class="section-header">
+    <div class="section-num">06</div>
+    <div>
+      <h2 class="section-title">完整工作日的样子</h2>
+      <div class="section-subtitle">A Day in the Life · Putting It All Together</div>
+    </div>
+  </div>
+
+  <p class="lead">
+    理论说完了,具体到一天该怎么用?下面是把所有体系串起来的<strong>完整工作日范本</strong>。每一个时间段对应一个明确的认知动作。
+  </p>
+
+  <div class="workflow-day">
+
+    <div class="flow-block">
+      <div class="flow-time">7:30<br>—<br>8:30</div>
+      <div class="flow-marker"><div class="flow-dot"></div></div>
+      <div class="flow-content">
+        <div class="flow-stage">— STAGE 01 · 准备阶段 —</div>
+        <div class="flow-title">早晨准备 · 看完三屏</div>
+        <div class="flow-desc">
+          打开<strong>状态屏</strong>,30秒看完市场状态。任何警戒灯变红,先看系统弹出的警示说明。然后打开<strong>博弈屏</strong>,确认接力位置和对手盘结构。最后打开<strong>行动屏</strong>,过一遍今日强制问题清单。
+        </div>
+        <ul class="flow-checklist">
+          <li>状态屏:确认市场状态、警戒灯</li>
+          <li>博弈屏:确认接力位置、对手盘</li>
+          <li>行动屏:浏览今日强制问题清单</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="flow-block">
+      <div class="flow-time">8:30<br>—<br>9:00</div>
+      <div class="flow-marker"><div class="flow-dot"></div></div>
+      <div class="flow-content">
+        <div class="flow-stage">— STAGE 02 · 思考阶段 —</div>
+        <div class="flow-title">五问框架 · 进入二阶思维</div>
+        <div class="flow-desc">
+          机械地走完<strong>"五问框架"</strong>。每一问至少思考30秒,把答案简短地写在交易日志上。这个过程不是为了得出结论,而是<strong>为了让自己进入"二阶思维状态"</strong>。
+        </div>
+        <ul class="flow-checklist">
+          <li>谁在主导?</li>
+          <li>谁在跟随?谁在博弈?</li>
+          <li>接力到哪一棒了?</li>
+          <li>对手盘是谁?</li>
+          <li>我是谁?我的局限是什么?</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="flow-block">
+      <div class="flow-time">9:30<br>—<br>15:00</div>
+      <div class="flow-marker"><div class="flow-dot"></div></div>
+      <div class="flow-content">
+        <div class="flow-stage">— STAGE 03 · 执行阶段 —</div>
+        <div class="flow-title">盘中执行 · 严守纪律</div>
+        <div class="flow-desc">
+          按照前一晚或早晨制定的日度操作计划执行。<strong>不允许临时改变战略层和战术层的决策</strong>。如果出现异常情况(如黑天鹅事件),启动应急预案,而不是临场创造新决策。
+        </div>
+        <ul class="flow-checklist">
+          <li>严格按操作层计划执行</li>
+          <li>不临时违反战略/战术约束</li>
+          <li>异常情况启动应急预案</li>
+          <li>每笔交易记录决策日志</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="flow-block">
+      <div class="flow-time">15:30<br>—<br>17:00</div>
+      <div class="flow-marker"><div class="flow-dot"></div></div>
+      <div class="flow-content">
+        <div class="flow-stage">— STAGE 04 · 复盘阶段 —</div>
+        <div class="flow-title">收盘复盘 · 诚实自检</div>
+        <div class="flow-desc">
+          数据更新到位后,看当日资金流向变化。<strong>比较自己早晨的判断和实际发生的差异</strong>。在交易日志上记录今天的对错、学到了什么、是否需要调整明天的计划。
+        </div>
+        <ul class="flow-checklist">
+          <li>今天的判断哪里对了?</li>
+          <li>今天的判断哪里错了?</li>
+          <li>学到了什么?</li>
+          <li>是否需要调整明天的计划?</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="flow-block">
+      <div class="flow-time">WEEKEND</div>
+      <div class="flow-marker"><div class="flow-dot"></div></div>
+      <div class="flow-content">
+        <div class="flow-stage">— STAGE 05 · 战术复盘 —</div>
+        <div class="flow-title">周末复盘 · 战术调整</div>
+        <div class="flow-desc">
+          周末做更深入的<strong>战术复盘</strong>。包括本周所有交易记录梳理、本周市场关键变化、本周自己的认知盲区、下周的战术计划调整。
+        </div>
+        <ul class="flow-checklist">
+          <li>本周交易记录梳理</li>
+          <li>本周市场关键变化</li>
+          <li>本周自己的认知盲区</li>
+          <li>下周战术计划制定</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="flow-block">
+      <div class="flow-time">MONTH<br>END</div>
+      <div class="flow-marker"><div class="flow-dot"></div></div>
+      <div class="flow-content">
+        <div class="flow-stage">— STAGE 06 · 战略复盘 —</div>
+        <div class="flow-title">月末复盘 · 战略评估</div>
+        <div class="flow-desc">
+          每月最后一个交易日做<strong>战略复盘</strong>。重新评估总仓位、风格配置、风险预算。如果市场发生根本性变化,启动战略调整。
+        </div>
+        <ul class="flow-checklist">
+          <li>评估总仓位是否合理</li>
+          <li>评估风格配置有效性</li>
+          <li>评估风险预算执行情况</li>
+          <li>必要时启动战略调整</li>
+        </ul>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<!-- ========== 终极洞察 ========== -->
+<section class="ultimate">
+  <div class="ultimate-tag">— ULTIMATE INSIGHT · THE CLOSING OF THE LOOP —</div>
+
+  <h2 class="ultimate-quote">
+    再好的认知,不能落地为<span class="highlight">每天的动作</span>,<br>
+    都只是<span class="highlight">空中楼阁</span>。
+  </h2>
+
+  <p class="ultimate-final">
+    系统的真正价值不在它有多复杂,而在它<strong style="color:var(--amber);">能不能让你在情绪激烈时仍然按规则行事</strong>。
+  </p>
+
+  <div class="series-info">
+    <div class="series-item">
+      <div class="num">I</div>
+      监测体系全景
+    </div>
+    <div class="series-item">
+      <div class="num">II</div>
+      资金视角方法论
+    </div>
+    <div class="series-item">
+      <div class="num">III</div>
+      建立资金图谱
+    </div>
+    <div class="series-item">
+      <div class="num">IV</div>
+      研究研究股票的人
+    </div>
+    <div class="series-item current">
+      <div class="num">V</div>
+      实战篇 · CURRENT
+    </div>
+  </div>
+</section>
+
+</body>
+</html>

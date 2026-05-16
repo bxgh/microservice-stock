@@ -1,0 +1,1670 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>A股资金博弈监测体系 · 全景图谱</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;500;700;900&family=JetBrains+Mono:wght@300;400;600&family=Bodoni+Moda:ital,wght@0,400;0,700;0,900;1,400&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg-deep: #0a0e14;
+  --bg-card: #11161f;
+  --bg-elevated: #1a212d;
+  --border: #2a3441;
+  --border-bright: #3d4a5c;
+  --text-primary: #e8eaed;
+  --text-secondary: #9ba7b8;
+  --text-muted: #5a6779;
+  --amber: #ffb547;
+  --amber-bright: #ffc875;
+  --amber-dim: #8a6027;
+  --cyan: #4dd0e1;
+  --cyan-bright: #7eecff;
+  --red: #ff5252;
+  --green: #66bb6a;
+  --purple: #b794f4;
+  --grid-line: rgba(255, 181, 71, 0.06);
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  font-family: 'Noto Serif SC', serif;
+  background: var(--bg-deep);
+  color: var(--text-primary);
+  line-height: 1.7;
+  background-image: 
+    linear-gradient(var(--grid-line) 1px, transparent 1px),
+    linear-gradient(90deg, var(--grid-line) 1px, transparent 1px);
+  background-size: 60px 60px;
+  background-attachment: fixed;
+}
+
+/* ========== 顶部Header ========== */
+.header {
+  position: relative;
+  padding: 80px 60px 60px;
+  border-bottom: 1px solid var(--border);
+  background: linear-gradient(180deg, rgba(255, 181, 71, 0.04) 0%, transparent 100%);
+  overflow: hidden;
+}
+
+.header::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--amber), transparent);
+}
+
+.header-meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  margin-bottom: 40px;
+}
+
+.header-meta .dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  background: var(--amber);
+  border-radius: 50%;
+  margin-right: 8px;
+  box-shadow: 0 0 12px var(--amber);
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+
+.title-zh {
+  font-family: 'Noto Serif SC', serif;
+  font-size: 72px;
+  font-weight: 900;
+  line-height: 1.1;
+  letter-spacing: -2px;
+  margin-bottom: 20px;
+  background: linear-gradient(180deg, var(--text-primary) 0%, var(--text-secondary) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.title-en {
+  font-family: 'Bodoni Moda', serif;
+  font-style: italic;
+  font-size: 28px;
+  color: var(--amber);
+  font-weight: 400;
+  margin-bottom: 30px;
+  letter-spacing: 1px;
+}
+
+.subtitle {
+  font-size: 16px;
+  color: var(--text-secondary);
+  max-width: 800px;
+  border-left: 2px solid var(--amber);
+  padding-left: 20px;
+  margin-top: 20px;
+}
+
+.header-stats {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1px;
+  margin-top: 60px;
+  background: var(--border);
+  border: 1px solid var(--border);
+}
+
+.stat-cell {
+  background: var(--bg-deep);
+  padding: 24px 20px;
+}
+
+.stat-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  margin-bottom: 8px;
+}
+
+.stat-value {
+  font-family: 'Bodoni Moda', serif;
+  font-size: 36px;
+  font-weight: 700;
+  color: var(--amber);
+}
+
+.stat-unit {
+  font-size: 14px;
+  color: var(--text-secondary);
+  margin-left: 4px;
+  font-family: 'Noto Serif SC', serif;
+}
+
+/* ========== 导航 ========== */
+.nav {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  background: rgba(10, 14, 20, 0.95);
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid var(--border);
+  padding: 16px 60px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+}
+
+.nav ul {
+  display: flex;
+  gap: 40px;
+  list-style: none;
+  flex-wrap: wrap;
+}
+
+.nav a {
+  color: var(--text-secondary);
+  text-decoration: none;
+  transition: color 0.3s;
+  position: relative;
+  padding-bottom: 4px;
+}
+
+.nav a:hover {
+  color: var(--amber);
+}
+
+.nav a::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 0;
+  height: 1px;
+  background: var(--amber);
+  transition: width 0.3s;
+}
+
+.nav a:hover::after {
+  width: 100%;
+}
+
+/* ========== Section通用 ========== */
+.section {
+  padding: 100px 60px;
+  border-bottom: 1px solid var(--border);
+  position: relative;
+}
+
+.section-header {
+  display: flex;
+  align-items: baseline;
+  gap: 30px;
+  margin-bottom: 60px;
+  padding-bottom: 30px;
+  border-bottom: 1px dashed var(--border);
+}
+
+.section-num {
+  font-family: 'Bodoni Moda', serif;
+  font-size: 96px;
+  font-weight: 900;
+  color: transparent;
+  -webkit-text-stroke: 1px var(--amber);
+  line-height: 0.8;
+}
+
+.section-title-group {
+  flex: 1;
+}
+
+.section-title {
+  font-size: 42px;
+  font-weight: 700;
+  margin-bottom: 8px;
+  letter-spacing: -1px;
+}
+
+.section-subtitle {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 2px;
+}
+
+/* ========== 观点评判 Section ========== */
+.viewpoints {
+  display: grid;
+  gap: 24px;
+}
+
+.viewpoint {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  padding: 36px 40px;
+  position: relative;
+  transition: border-color 0.3s;
+}
+
+.viewpoint:hover {
+  border-color: var(--border-bright);
+}
+
+.viewpoint::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 4px;
+  height: 100%;
+  background: var(--amber);
+}
+
+.vp-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--border);
+}
+
+.vp-num {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  color: var(--amber);
+  letter-spacing: 2px;
+}
+
+.vp-verdict {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  padding: 4px 12px;
+  border: 1px solid var(--amber);
+  color: var(--amber);
+  letter-spacing: 1px;
+}
+
+.vp-verdict.partial {
+  border-color: var(--purple);
+  color: var(--purple);
+}
+
+.vp-statement {
+  font-size: 18px;
+  font-weight: 500;
+  color: var(--text-primary);
+  margin-bottom: 16px;
+  line-height: 1.5;
+}
+
+.vp-analysis {
+  font-size: 14px;
+  color: var(--text-secondary);
+  line-height: 1.8;
+}
+
+.vp-analysis strong {
+  color: var(--amber-bright);
+  font-weight: 500;
+}
+
+/* ========== 资金分层图 ========== */
+.capital-layers {
+  display: grid;
+  gap: 2px;
+  background: var(--border);
+  border: 1px solid var(--border);
+  margin-top: 40px;
+}
+
+.layer {
+  background: var(--bg-card);
+  padding: 28px 36px;
+  display: grid;
+  grid-template-columns: 200px 1fr 200px;
+  gap: 30px;
+  align-items: center;
+  transition: background 0.3s;
+}
+
+.layer:hover {
+  background: var(--bg-elevated);
+}
+
+.layer-name {
+  font-family: 'Bodoni Moda', serif;
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--amber);
+}
+
+.layer-name span {
+  display: block;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  color: var(--text-muted);
+  margin-top: 4px;
+  letter-spacing: 1px;
+}
+
+.layer-desc {
+  font-size: 13px;
+  color: var(--text-secondary);
+  line-height: 1.7;
+}
+
+.layer-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  justify-content: flex-end;
+}
+
+.tag {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 9px;
+  padding: 4px 10px;
+  background: rgba(255, 181, 71, 0.1);
+  color: var(--amber);
+  border: 1px solid var(--amber-dim);
+  letter-spacing: 1px;
+}
+
+/* ========== 监测体系矩阵 ========== */
+.matrix {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 24px;
+}
+
+.dimension {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  padding: 36px;
+  position: relative;
+}
+
+.dim-header {
+  display: flex;
+  align-items: baseline;
+  gap: 16px;
+  margin-bottom: 24px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid var(--border);
+}
+
+.dim-icon {
+  font-family: 'Bodoni Moda', serif;
+  font-size: 48px;
+  font-weight: 900;
+  color: var(--amber);
+  font-style: italic;
+  line-height: 1;
+}
+
+.dim-title {
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.dim-subtitle {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  margin-top: 4px;
+}
+
+.indicator-list {
+  list-style: none;
+}
+
+.indicator-list li {
+  padding: 14px 0;
+  border-bottom: 1px dashed var(--border);
+  display: grid;
+  grid-template-columns: 30px 1fr;
+  gap: 16px;
+  font-size: 13px;
+}
+
+.indicator-list li:last-child {
+  border-bottom: none;
+}
+
+.ind-num {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  color: var(--amber);
+}
+
+.ind-name {
+  color: var(--text-primary);
+  font-weight: 500;
+  margin-bottom: 4px;
+}
+
+.ind-desc {
+  color: var(--text-muted);
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+/* ========== 状态识别图 ========== */
+.states {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1px;
+  background: var(--border);
+  border: 1px solid var(--border);
+  margin-top: 40px;
+}
+
+.state {
+  background: var(--bg-card);
+  padding: 40px;
+  position: relative;
+  min-height: 320px;
+}
+
+.state::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+}
+
+.state-A::before { background: var(--green); }
+.state-B::before { background: var(--amber); }
+.state-C::before { background: var(--purple); }
+.state-D::before { background: var(--cyan); }
+
+.state-letter {
+  font-family: 'Bodoni Moda', serif;
+  font-size: 120px;
+  font-weight: 900;
+  position: absolute;
+  top: 30px;
+  right: 40px;
+  opacity: 0.1;
+  line-height: 0.8;
+}
+
+.state-A .state-letter { color: var(--green); }
+.state-B .state-letter { color: var(--amber); }
+.state-C .state-letter { color: var(--purple); }
+.state-D .state-letter { color: var(--cyan); }
+
+.state-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  letter-spacing: 2px;
+  margin-bottom: 12px;
+}
+
+.state-A .state-label { color: var(--green); }
+.state-B .state-label { color: var(--amber); }
+.state-C .state-label { color: var(--purple); }
+.state-D .state-label { color: var(--cyan); }
+
+.state-name {
+  font-size: 28px;
+  font-weight: 700;
+  margin-bottom: 20px;
+  color: var(--text-primary);
+}
+
+.state-conditions {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  color: var(--text-secondary);
+  line-height: 2;
+  border-left: 1px solid var(--border-bright);
+  padding-left: 16px;
+  position: relative;
+  z-index: 1;
+}
+
+.state-conditions div {
+  margin-bottom: 4px;
+}
+
+.state-conditions span {
+  color: var(--amber);
+}
+
+/* ========== 策略卡片 ========== */
+.strategies {
+  display: grid;
+  gap: 24px;
+  margin-top: 40px;
+}
+
+.strategy {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  padding: 36px 40px;
+  display: grid;
+  grid-template-columns: 80px 1fr 280px;
+  gap: 40px;
+  align-items: start;
+}
+
+.strat-mark {
+  font-family: 'Bodoni Moda', serif;
+  font-size: 80px;
+  font-weight: 900;
+  line-height: 0.8;
+  font-style: italic;
+}
+
+.strategy:nth-child(1) .strat-mark { color: var(--green); }
+.strategy:nth-child(2) .strat-mark { color: var(--amber); }
+.strategy:nth-child(3) .strat-mark { color: var(--purple); }
+.strategy:nth-child(4) .strat-mark { color: var(--cyan); }
+
+.strat-content h3 {
+  font-size: 22px;
+  font-weight: 700;
+  margin-bottom: 16px;
+}
+
+.strat-content p {
+  font-size: 13px;
+  color: var(--text-secondary);
+  line-height: 1.8;
+  margin-bottom: 12px;
+}
+
+.strat-content strong {
+  color: var(--amber-bright);
+  font-weight: 500;
+}
+
+.strat-meta {
+  border-left: 1px solid var(--border);
+  padding-left: 24px;
+}
+
+.meta-item {
+  margin-bottom: 16px;
+}
+
+.meta-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 9px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  margin-bottom: 4px;
+}
+
+.meta-value {
+  font-family: 'Bodoni Moda', serif;
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--amber);
+}
+
+.meta-value-text {
+  font-size: 12px;
+  color: var(--text-primary);
+}
+
+/* ========== 系统架构图 ========== */
+.architecture {
+  margin-top: 40px;
+}
+
+.arch-stack {
+  display: grid;
+  gap: 2px;
+  background: var(--border);
+  border: 1px solid var(--border);
+}
+
+.arch-layer {
+  background: var(--bg-card);
+  padding: 32px 40px;
+  display: grid;
+  grid-template-columns: 60px 200px 1fr;
+  gap: 30px;
+  align-items: center;
+  transition: background 0.3s;
+}
+
+.arch-layer:hover {
+  background: var(--bg-elevated);
+}
+
+.arch-num {
+  font-family: 'Bodoni Moda', serif;
+  font-size: 36px;
+  font-weight: 900;
+  color: var(--amber);
+  font-style: italic;
+}
+
+.arch-name {
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.arch-name span {
+  display: block;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  color: var(--text-muted);
+  margin-top: 4px;
+  letter-spacing: 1.5px;
+}
+
+.arch-tools {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.arch-tool {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  padding: 6px 12px;
+  background: var(--bg-elevated);
+  color: var(--text-secondary);
+  border: 1px solid var(--border-bright);
+  letter-spacing: 0.5px;
+}
+
+/* ========== 时间线 ========== */
+.timeline {
+  margin-top: 40px;
+  position: relative;
+}
+
+.timeline::before {
+  content: '';
+  position: absolute;
+  left: 80px;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background: var(--border);
+}
+
+.phase {
+  display: grid;
+  grid-template-columns: 80px 40px 1fr;
+  gap: 40px;
+  margin-bottom: 50px;
+  position: relative;
+}
+
+.phase-time {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  color: var(--amber);
+  text-align: right;
+  padding-top: 8px;
+  letter-spacing: 1px;
+}
+
+.phase-marker {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--bg-deep);
+  border: 2px solid var(--amber);
+  margin-top: 6px;
+  margin-left: 12px;
+  position: relative;
+  z-index: 1;
+  box-shadow: 0 0 0 4px var(--bg-deep);
+}
+
+.phase-content {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  padding: 28px 32px;
+}
+
+.phase-title {
+  font-size: 20px;
+  font-weight: 700;
+  margin-bottom: 8px;
+  color: var(--text-primary);
+}
+
+.phase-goal {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-bottom: 16px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+
+.phase-desc {
+  font-size: 13px;
+  color: var(--text-secondary);
+  line-height: 1.8;
+  margin-bottom: 16px;
+}
+
+.phase-deliverables {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.deliverable {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 9px;
+  padding: 4px 10px;
+  background: rgba(77, 208, 225, 0.1);
+  color: var(--cyan);
+  border: 1px solid rgba(77, 208, 225, 0.3);
+  letter-spacing: 0.5px;
+}
+
+/* ========== 原则 ========== */
+.principles {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 24px;
+  margin-top: 40px;
+}
+
+.principle {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  padding: 32px;
+  position: relative;
+}
+
+.principle-num {
+  font-family: 'Bodoni Moda', serif;
+  font-size: 56px;
+  font-weight: 900;
+  color: transparent;
+  -webkit-text-stroke: 1px var(--amber);
+  line-height: 0.8;
+  position: absolute;
+  top: 20px;
+  right: 24px;
+  font-style: italic;
+}
+
+.principle-title {
+  font-size: 18px;
+  font-weight: 700;
+  margin-bottom: 12px;
+  color: var(--amber);
+  max-width: 70%;
+}
+
+.principle-desc {
+  font-size: 12px;
+  color: var(--text-secondary);
+  line-height: 1.8;
+}
+
+/* ========== Footer ========== */
+.footer {
+  padding: 80px 60px 60px;
+  text-align: center;
+  border-top: 1px solid var(--border);
+  background: linear-gradient(0deg, rgba(255, 181, 71, 0.04) 0%, transparent 100%);
+}
+
+.footer-quote {
+  font-family: 'Bodoni Moda', serif;
+  font-style: italic;
+  font-size: 24px;
+  color: var(--amber);
+  max-width: 700px;
+  margin: 0 auto 30px;
+  line-height: 1.5;
+}
+
+.footer-meta {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  color: var(--text-muted);
+  letter-spacing: 2px;
+  text-transform: uppercase;
+}
+
+/* ========== 响应式 ========== */
+@media (max-width: 968px) {
+  .header { padding: 60px 30px 40px; }
+  .title-zh { font-size: 48px; }
+  .title-en { font-size: 20px; }
+  .header-stats { grid-template-columns: repeat(2, 1fr); }
+  .nav { padding: 16px 30px; }
+  .nav ul { gap: 20px; }
+  .section { padding: 60px 30px; }
+  .section-num { font-size: 64px; }
+  .section-title { font-size: 28px; }
+  .matrix { grid-template-columns: 1fr; }
+  .states { grid-template-columns: 1fr; }
+  .layer { grid-template-columns: 1fr; gap: 12px; }
+  .layer-tags { justify-content: flex-start; }
+  .strategy { grid-template-columns: 1fr; gap: 24px; }
+  .strat-meta { border-left: none; border-top: 1px solid var(--border); padding-left: 0; padding-top: 20px; }
+  .arch-layer { grid-template-columns: 1fr; gap: 12px; }
+  .timeline::before { left: 8px; }
+  .phase { grid-template-columns: 1fr; gap: 12px; }
+  .phase-time { text-align: left; }
+  .phase-marker { display: none; }
+  .principles { grid-template-columns: 1fr; }
+}
+</style>
+</head>
+<body>
+
+<!-- ========== HEADER ========== -->
+<header class="header">
+  <div class="header-meta">
+    <div><span class="dot"></span>A-SHARE INTELLIGENCE BRIEF · 2026</div>
+    <div>CONFIDENTIAL · INTERNAL USE</div>
+  </div>
+  <h1 class="title-zh">A股资金博弈<br>监测体系全景</h1>
+  <div class="title-en">Capital Flow Intelligence Framework</div>
+  <p class="subtitle">
+    一份关于市场结构、资金分层、状态识别与策略匹配的系统化框架。从理论评判到量化监测,从信号合成到看盘系统开发的完整路径。
+  </p>
+
+  <div class="header-stats">
+    <div class="stat-cell">
+      <div class="stat-label">Capital Layers</div>
+      <div class="stat-value">04<span class="stat-unit">资金层</span></div>
+    </div>
+    <div class="stat-cell">
+      <div class="stat-label">Core Indicators</div>
+      <div class="stat-value">16<span class="stat-unit">核心指标</span></div>
+    </div>
+    <div class="stat-cell">
+      <div class="stat-label">Market States</div>
+      <div class="stat-value">04<span class="stat-unit">市场状态</span></div>
+    </div>
+    <div class="stat-cell">
+      <div class="stat-label">Dev Phases</div>
+      <div class="stat-value">05<span class="stat-unit">开发阶段</span></div>
+    </div>
+  </div>
+</header>
+
+<!-- ========== NAV ========== -->
+<nav class="nav">
+  <ul>
+    <li><a href="#viewpoints">01 · 观点评判</a></li>
+    <li><a href="#layers">02 · 资金分层</a></li>
+    <li><a href="#monitoring">03 · 监测体系</a></li>
+    <li><a href="#states">04 · 状态识别</a></li>
+    <li><a href="#strategies">05 · 策略匹配</a></li>
+    <li><a href="#system">06 · 系统架构</a></li>
+    <li><a href="#roadmap">07 · 开发路径</a></li>
+    <li><a href="#principles">08 · 核心原则</a></li>
+  </ul>
+</nav>
+
+<!-- ========== 01 观点评判 ========== -->
+<section class="section" id="viewpoints">
+  <div class="section-header">
+    <div class="section-num">01</div>
+    <div class="section-title-group">
+      <h2 class="section-title">三个核心观点的评判</h2>
+      <div class="section-subtitle">Critical Review · Market Structure Foundations</div>
+    </div>
+  </div>
+
+  <div class="viewpoints">
+    <div class="viewpoint">
+      <div class="vp-header">
+        <div class="vp-num">VIEWPOINT 01</div>
+        <div class="vp-verdict">基本成立</div>
+      </div>
+      <div class="vp-statement">A股是一个半封闭市场</div>
+      <div class="vp-analysis">
+        资本账户尚未完全开放、人民币不可自由兑换、外资通过陆股通等限定通道进入,加上涨跌停板和T+1制度,A股确实是被"管道化"连接到全球市场的体系。但需要修正:北向资金的边际定价权显著存在,情绪传导也是开放的。<strong>更准确的表述是:A股是资金通道半封闭、但情绪与估值锚部分全球化的市场。</strong>
+      </div>
+    </div>
+
+    <div class="viewpoint">
+      <div class="vp-header">
+        <div class="vp-num">VIEWPOINT 02</div>
+        <div class="vp-verdict partial">方向正确 · 需细化</div>
+      </div>
+      <div class="vp-statement">机构主导的结构性牛市,聚焦政策导向行业</div>
+      <div class="vp-analysis">
+        机构定价权较2015年前明显增强,A股的产业行情高度依赖政策催化。但需要注意:<strong>个人投资者贡献的换手率长期在60%以上</strong>——A股是"机构主导中长期定价、散户和游资推动日内波动"的双层市场。此外,机构内部并不同质——公募追逐景气度、保险偏好红利低波、外资看ROE和现金流、国家队负责维稳,它们之间的博弈本身就是结构性行情的重要驱动力。
+      </div>
+    </div>
+
+    <div class="viewpoint">
+      <div class="vp-header">
+        <div class="vp-num">VIEWPOINT 03</div>
+        <div class="vp-verdict partial">部分成立 · 需拆分</div>
+      </div>
+      <div class="vp-statement">量化和游资在大势好时做小盘股连板</div>
+      <div class="vp-analysis">
+        把量化和游资放在一起描述会模糊两者本质上的差异。<strong>游资的核心打法是情绪驱动的连板接力</strong>,本质是博弈散户跟风资金。<strong>而量化资金的逻辑几乎相反</strong>——依赖统计套利和因子暴露,偏好小盘股是因为波动率高、流动性溢价高、因子有效性强。2024年初的小微盘流动性危机清楚地展示了:量化的小盘暴露是因子拥挤,而非主动的题材投机。两者在小盘股上确实经常"相遇",但相遇不等于同盟。
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ========== 02 资金分层 ========== -->
+<section class="section" id="layers">
+  <div class="section-header">
+    <div class="section-num">02</div>
+    <div class="section-title-group">
+      <h2 class="section-title">A股资金的四层结构</h2>
+      <div class="section-subtitle">Four-Tier Capital Stratification</div>
+    </div>
+  </div>
+
+  <p style="font-size: 15px; color: var(--text-secondary); max-width: 800px; line-height: 1.8;">
+    理解A股行情的关键往往是判断:<strong style="color: var(--amber);">现在哪一层资金在加仓、哪一层在撤退</strong>。四个层次的资金在不同宏观环境下轮动主导,每一层都有独特的目标函数、持有期和风险偏好。
+  </p>
+
+  <div class="capital-layers">
+    <div class="layer">
+      <div class="layer-name">
+        Tier I
+        <span>大盘价值层</span>
+      </div>
+      <div class="layer-desc">
+        以险资、外资配置盘、社保和国家队为主体,追求长期稳健回报,偏好低估值、高股息、现金流稳定的大市值标的。换手率低,持有期以季度和年度计算,是A股真正的"压舱石"资金。
+      </div>
+      <div class="layer-tags">
+        <div class="tag">险资</div>
+        <div class="tag">外资配置盘</div>
+        <div class="tag">社保</div>
+        <div class="tag">国家队</div>
+      </div>
+    </div>
+
+    <div class="layer">
+      <div class="layer-name">
+        Tier II
+        <span>大盘成长层</span>
+      </div>
+      <div class="layer-desc">
+        以公募基金为核心,追求景气度和成长性,持有期以月度和季度为单位。这是制造结构性牛市核心资产行情的主力,白酒、新能源、医药等历次主线行情背后都是它们的身影。
+      </div>
+      <div class="layer-tags">
+        <div class="tag">公募</div>
+        <div class="tag">部分外资</div>
+        <div class="tag">头部私募</div>
+      </div>
+    </div>
+
+    <div class="layer">
+      <div class="layer-name">
+        Tier III
+        <span>中小盘成长层</span>
+      </div>
+      <div class="layer-desc">
+        以中小私募和量化基金为主,通过因子暴露和高换手获取alpha。偏好流动性好、波动率高的中小盘股。这一层的资金动作隐蔽但影响巨大,是2024年初小微盘流动性危机的主角。
+      </div>
+      <div class="layer-tags">
+        <div class="tag">中小私募</div>
+        <div class="tag">量化指增</div>
+        <div class="tag">市场中性</div>
+      </div>
+    </div>
+
+    <div class="layer">
+      <div class="layer-name">
+        Tier IV
+        <span>小微盘题材层</span>
+      </div>
+      <div class="layer-desc">
+        游资和散户共同构成,情绪驱动、题材驱动、连板接力。持有期以天为单位,本质是博弈跟风资金。这一层在风险偏好高、政策催化密集时极度活跃,是A股独特生态的底层底色。
+      </div>
+      <div class="layer-tags">
+        <div class="tag">游资</div>
+        <div class="tag">散户</div>
+        <div class="tag">龙虎榜席位</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ========== 03 监测体系 ========== -->
+<section class="section" id="monitoring">
+  <div class="section-header">
+    <div class="section-num">03</div>
+    <div class="section-title-group">
+      <h2 class="section-title">十六核心指标监测矩阵</h2>
+      <div class="section-subtitle">Quantitative Monitoring Framework · 4 Dimensions × 16 Indicators</div>
+    </div>
+  </div>
+
+  <div class="matrix">
+    <div class="dimension">
+      <div class="dim-header">
+        <div class="dim-icon">I</div>
+        <div>
+          <div class="dim-title">资金分层流向</div>
+          <div class="dim-subtitle">Capital Flow by Tier</div>
+        </div>
+      </div>
+      <ul class="indicator-list">
+        <li>
+          <div class="ind-num">01</div>
+          <div>
+            <div class="ind-name">北向资金分解</div>
+            <div class="ind-desc">配置盘 vs 交易盘,两者背离常意味行情进入尾声</div>
+          </div>
+        </li>
+        <li>
+          <div class="ind-num">02</div>
+          <div>
+            <div class="ind-name">公募仓位与新发</div>
+            <div class="ind-desc">仓位>85%为高位预警,百亿爆款基金频次为增量先行</div>
+          </div>
+        </li>
+        <li>
+          <div class="ind-num">03</div>
+          <div>
+            <div class="ind-name">两融交易占比</div>
+            <div class="ind-desc">>9%为散户杠杆过热,<7%为情绪低迷</div>
+          </div>
+        </li>
+        <li>
+          <div class="ind-num">04</div>
+          <div>
+            <div class="ind-name">ETF申赎数据</div>
+            <div class="ind-desc">汇金系ETF单日净申购>20亿基本确认国家队入场</div>
+          </div>
+        </li>
+        <li>
+          <div class="ind-num">05</div>
+          <div>
+            <div class="ind-name">龙虎榜席位</div>
+            <div class="ind-desc">游资席位活跃度,>30家活跃,<15家蛰伏</div>
+          </div>
+        </li>
+      </ul>
+    </div>
+
+    <div class="dimension">
+      <div class="dim-header">
+        <div class="dim-icon">II</div>
+        <div>
+          <div class="dim-title">风格与轮动</div>
+          <div class="dim-subtitle">Style Rotation</div>
+        </div>
+      </div>
+      <ul class="indicator-list">
+        <li>
+          <div class="ind-num">06</div>
+          <div>
+            <div class="ind-name">大小盘相对强度</div>
+            <div class="ind-desc">中证1000/沪深300比值,20日均线方向决定风格</div>
+          </div>
+        </li>
+        <li>
+          <div class="ind-num">07</div>
+          <div>
+            <div class="ind-name">高低估值价差</div>
+            <div class="ind-desc">PE最高30%与最低30%中位数比值,反映风险偏好</div>
+          </div>
+        </li>
+        <li>
+          <div class="ind-num">08</div>
+          <div>
+            <div class="ind-name">行业轮动速度</div>
+            <div class="ind-desc">Spearman相关系数,<0.3纯题材,>0.7主线明确</div>
+          </div>
+        </li>
+        <li>
+          <div class="ind-num">09</div>
+          <div>
+            <div class="ind-name">涨停股质量结构</div>
+            <div class="ind-desc">连板高度、炸板率>30%是情绪退潮信号</div>
+          </div>
+        </li>
+      </ul>
+    </div>
+
+    <div class="dimension">
+      <div class="dim-header">
+        <div class="dim-icon">III</div>
+        <div>
+          <div class="dim-title">宏观与政策</div>
+          <div class="dim-subtitle">Macro & Policy</div>
+        </div>
+      </div>
+      <ul class="indicator-list">
+        <li>
+          <div class="ind-num">10</div>
+          <div>
+            <div class="ind-name">政策事件密度</div>
+            <div class="ind-desc">关键词频次突破2倍标准差,板块48小时内通常反应</div>
+          </div>
+        </li>
+        <li>
+          <div class="ind-num">11</div>
+          <div>
+            <div class="ind-name">流动性指标</div>
+            <div class="ind-desc">DR007、10年期国债、M1-M2剪刀差</div>
+          </div>
+        </li>
+        <li>
+          <div class="ind-num">12</div>
+          <div>
+            <div class="ind-name">外部约束</div>
+            <div class="ind-desc">美元指数与10年美债收益率,>4.5%压制核心资产</div>
+          </div>
+        </li>
+      </ul>
+    </div>
+
+    <div class="dimension">
+      <div class="dim-header">
+        <div class="dim-icon">IV</div>
+        <div>
+          <div class="dim-title">情绪与拥挤度</div>
+          <div class="dim-subtitle">Sentiment & Crowding</div>
+        </div>
+      </div>
+      <ul class="indicator-list">
+        <li>
+          <div class="ind-num">13</div>
+          <div>
+            <div class="ind-name">成交额与换手</div>
+            <div class="ind-desc">>1.5万亿活跃,<8000亿冰点;边际变化更关键</div>
+          </div>
+        </li>
+        <li>
+          <div class="ind-num">14</div>
+          <div>
+            <div class="ind-name">量化策略拥挤度</div>
+            <div class="ind-desc">指增超额+小微盘相对强度,2024年危机前兆指标</div>
+          </div>
+        </li>
+        <li>
+          <div class="ind-num">15</div>
+          <div>
+            <div class="ind-name">期权与期货情绪</div>
+            <div class="ind-desc">PCR、IV、IC/IM贴水反映对冲需求</div>
+          </div>
+        </li>
+        <li>
+          <div class="ind-num">16</div>
+          <div>
+            <div class="ind-name">新增开户与搜索指数</div>
+            <div class="ind-desc">散户入场领先指标,通常领先大盘顶部1-2月</div>
+          </div>
+        </li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- ========== 04 状态识别 ========== -->
+<section class="section" id="states">
+  <div class="section-header">
+    <div class="section-num">04</div>
+    <div class="section-title-group">
+      <h2 class="section-title">四种市场状态识别</h2>
+      <div class="section-subtitle">Market State Recognition Engine</div>
+    </div>
+  </div>
+
+  <p style="font-size: 15px; color: var(--text-secondary); max-width: 800px; line-height: 1.8;">
+    把十六个指标合成为四种市场状态,每种状态有清晰的进入和退出条件,对应完全不同的操作策略。
+  </p>
+
+  <div class="states">
+    <div class="state state-A">
+      <div class="state-letter">A</div>
+      <div class="state-label">STATE A · INSTITUTIONAL TREND</div>
+      <h3 class="state-name">机构主导的趋势市</h3>
+      <div class="state-conditions">
+        <div><span>✓</span> 北向配置盘连续净流入</div>
+        <div><span>✓</span> 公募仓位上行但未达极值</div>
+        <div><span>✓</span> 大盘相对小盘走强</div>
+        <div><span>✓</span> 行业轮动速度慢(主线明确)</div>
+        <div><span>✓</span> DR007平稳,M1同比改善</div>
+        <div><span>✓</span> 美债收益率不构成压制</div>
+        <div><span>✓</span> 量化拥挤度低</div>
+      </div>
+    </div>
+
+    <div class="state state-B">
+      <div class="state-letter">B</div>
+      <div class="state-label">STATE B · THEMATIC SPECULATION</div>
+      <h3 class="state-name">游资主导的题材市</h3>
+      <div class="state-conditions">
+        <div><span>✓</span> 北向不明显,公募仓位中性</div>
+        <div><span>✓</span> 两融占比快速上行</div>
+        <div><span>✓</span> 小盘强于大盘</div>
+        <div><span>✓</span> 行业轮动速度快</div>
+        <div><span>✓</span> 涨停股以小市值为主</div>
+        <div><span>✓</span> 连板高度持续走高</div>
+        <div><span>✓</span> 游资席位活跃,炸板率低</div>
+      </div>
+    </div>
+
+    <div class="state state-C">
+      <div class="state-letter">C</div>
+      <div class="state-label">STATE C · QUANT DRIFT · DANGER</div>
+      <h3 class="state-name">量化主导的小盘漂移</h3>
+      <div class="state-conditions">
+        <div><span>✓</span> 北向中性,小微盘持续跑赢</div>
+        <div><span>✓</span> 指增超额收益持续累积</div>
+        <div><span>✓</span> IC/IM贴水扩大</div>
+        <div><span>✓</span> 行业轮动极快但波动率不高</div>
+        <div><span>⚠</span> 表面平静实则因子拥挤</div>
+        <div><span>⚠</span> 容易突发流动性危机</div>
+      </div>
+    </div>
+
+    <div class="state state-D">
+      <div class="state-letter">D</div>
+      <div class="state-label">STATE D · DEFENSIVE</div>
+      <h3 class="state-name">避险防御市</h3>
+      <div class="state-conditions">
+        <div><span>✓</span> 北向流出,公募仓位下降</div>
+        <div><span>✓</span> 两融余额收缩</div>
+        <div><span>✓</span> 红利低波指数走强</div>
+        <div><span>✓</span> 大盘价值占优</div>
+        <div><span>✓</span> DR007或美债快速上行</div>
+        <div><span>✓</span> 成交额萎缩,PCR走高</div>
+        <div><span>✓</span> 新增开户低迷</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ========== 05 策略匹配 ========== -->
+<section class="section" id="strategies">
+  <div class="section-header">
+    <div class="section-num">05</div>
+    <div class="section-title-group">
+      <h2 class="section-title">状态对应策略匹配</h2>
+      <div class="section-subtitle">State-Based Strategy Playbook</div>
+    </div>
+  </div>
+
+  <div class="strategies">
+    <div class="strategy">
+      <div class="strat-mark">A</div>
+      <div class="strat-content">
+        <h3>跟随策略 · 机构趋势市</h3>
+        <p><strong>核心持仓</strong>(60%):政策主线行业的龙头股,持有期1-3个月,跟随北向和公募加仓节奏。重点参考公募季报重仓股变化和北向月度增持榜。</p>
+        <p><strong>卫星持仓</strong>(20-30%):主线行业的二线弹性标的,等待机构补仓扩散。</p>
+        <p><strong>关键原则</strong>:这个状态下不要做高抛低吸,趋势性行情的回撤往往就是最后的上车机会。</p>
+      </div>
+      <div class="strat-meta">
+        <div class="meta-item">
+          <div class="meta-label">Position</div>
+          <div class="meta-value">70-90%</div>
+        </div>
+        <div class="meta-item">
+          <div class="meta-label">Hold Period</div>
+          <div class="meta-value-text">1-3个月</div>
+        </div>
+        <div class="meta-item">
+          <div class="meta-label">Exit Signal</div>
+          <div class="meta-value-text">公募仓位>88% + 北向配置盘转出</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="strategy">
+      <div class="strat-mark">B</div>
+      <div class="strat-content">
+        <h3>题材接力 · 游资题材市</h3>
+        <p><strong>打法</strong>:不参与首板(信息劣势),专注强势首板次日回踩不破均线或二板分歧转一致的卡位。每个题材最多持有2-3天,严格执行隔日卖出。</p>
+        <p><strong>品种选择</strong>:流通市值30-100亿的中小盘股,成交活跃,有明确题材催化。</p>
+        <p><strong>关键原则</strong>:题材市的核心是情绪管理而非基本面,亏损单必须当日止损,绝不留隔夜亏损票。</p>
+      </div>
+      <div class="strat-meta">
+        <div class="meta-item">
+          <div class="meta-label">Position</div>
+          <div class="meta-value">40-60%</div>
+        </div>
+        <div class="meta-item">
+          <div class="meta-label">Hold Period</div>
+          <div class="meta-value-text">2-3天</div>
+        </div>
+        <div class="meta-item">
+          <div class="meta-label">Exit Signal</div>
+          <div class="meta-value-text">炸板率连续2日>30% 或 高度板骤降</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="strategy">
+      <div class="strat-mark">C</div>
+      <div class="strat-content">
+        <h3>警戒与对冲 · 量化漂移</h3>
+        <p><strong>这是最容易亏钱的状态</strong>,因为表面平静。策略上转向高股息、低估值、流动性好的大盘股,或者直接配置红利ETF。</p>
+        <p><strong>对冲工具</strong>:如果有期货账户,可以做空IC或IM对冲小盘暴露。</p>
+        <p><strong>关键原则</strong>:永远不要在小微盘相对强度的最高点追入,这是2024年1月最惨痛的教训。</p>
+      </div>
+      <div class="strat-meta">
+        <div class="meta-item">
+          <div class="meta-label">Position</div>
+          <div class="meta-value">30-50%</div>
+        </div>
+        <div class="meta-item">
+          <div class="meta-label">Avoid</div>
+          <div class="meta-value-text">小微盘 / 高拥挤因子</div>
+        </div>
+        <div class="meta-item">
+          <div class="meta-label">Exit Signal</div>
+          <div class="meta-value-text">小微盘相对强度走弱 + IC贴水收敛</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="strategy">
+      <div class="strat-mark">D</div>
+      <div class="strat-content">
+        <h3>现金为王 · 防御市</h3>
+        <p><strong>核心持仓</strong>:红利低波(银行、煤炭、运营商、长江电力等)、黄金股、债券型基金。</p>
+        <p><strong>机会捕捉</strong>:等待状态切换信号——通常是政策超预期、汇金入场(ETF异常申购)、或DR007和美债收益率的同步回落。</p>
+        <p><strong>关键原则</strong>:防御市最大的错误是过早抄底。等待右侧确认信号(成交额放大+北向回流+公募新发回暖)再加仓。</p>
+      </div>
+      <div class="strat-meta">
+        <div class="meta-item">
+          <div class="meta-label">Position</div>
+          <div class="meta-value">10-30%</div>
+        </div>
+        <div class="meta-item">
+          <div class="meta-label">Core Holdings</div>
+          <div class="meta-value-text">红利低波 / 债基</div>
+        </div>
+        <div class="meta-item">
+          <div class="meta-label">Entry Signal</div>
+          <div class="meta-value-text">右侧三重确认信号</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ========== 06 系统架构 ========== -->
+<section class="section" id="system">
+  <div class="section-header">
+    <div class="section-num">06</div>
+    <div class="section-title-group">
+      <h2 class="section-title">看盘系统五层架构</h2>
+      <div class="section-subtitle">System Architecture · Layered Design</div>
+    </div>
+  </div>
+
+  <p style="font-size: 15px; color: var(--text-secondary); max-width: 800px; line-height: 1.8;">
+    每一层职责清晰,层间通过明确的接口通信。<strong style="color: var(--amber);">数据源换了不影响计算逻辑,指标算法改了不影响展示</strong>,展示UI改版不影响底层数据。
+  </p>
+
+  <div class="architecture">
+    <div class="arch-stack">
+      <div class="arch-layer">
+        <div class="arch-num">5</div>
+        <div class="arch-name">交互层<span>INTERACTION LAYER</span></div>
+        <div class="arch-tools">
+          <div class="arch-tool">告警推送</div>
+          <div class="arch-tool">企业微信</div>
+          <div class="arch-tool">钉钉机器人</div>
+          <div class="arch-tool">Telegram Bot</div>
+          <div class="arch-tool">人工干预入口</div>
+        </div>
+      </div>
+      <div class="arch-layer">
+        <div class="arch-num">4</div>
+        <div class="arch-name">展示层<span>PRESENTATION LAYER</span></div>
+        <div class="arch-tools">
+          <div class="arch-tool">Streamlit (MVP)</div>
+          <div class="arch-tool">Vue / React</div>
+          <div class="arch-tool">ECharts</div>
+          <div class="arch-tool">看板可视化</div>
+        </div>
+      </div>
+      <div class="arch-layer">
+        <div class="arch-num">3</div>
+        <div class="arch-name">信号层<span>SIGNAL LAYER</span></div>
+        <div class="arch-tools">
+          <div class="arch-tool">指标标准化(Z-score)</div>
+          <div class="arch-tool">规则引擎(YAML配置)</div>
+          <div class="arch-tool">状态判定</div>
+          <div class="arch-tool">回测框架</div>
+        </div>
+      </div>
+      <div class="arch-layer">
+        <div class="arch-num">2</div>
+        <div class="arch-name">计算层<span>COMPUTE LAYER</span></div>
+        <div class="arch-tools">
+          <div class="arch-tool">Python + pandas</div>
+          <div class="arch-tool">指标计算</div>
+          <div class="arch-tool">APScheduler</div>
+          <div class="arch-tool">数据校验</div>
+        </div>
+      </div>
+      <div class="arch-layer">
+        <div class="arch-num">1</div>
+        <div class="arch-name">数据层<span>DATA LAYER</span></div>
+        <div class="arch-tools">
+          <div class="arch-tool">akshare</div>
+          <div class="arch-tool">Tushare Pro</div>
+          <div class="arch-tool">Wind / Choice</div>
+          <div class="arch-tool">PostgreSQL</div>
+          <div class="arch-tool">ClickHouse</div>
+          <div class="arch-tool">Redis</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ========== 07 开发路径 ========== -->
+<section class="section" id="roadmap">
+  <div class="section-header">
+    <div class="section-num">07</div>
+    <div class="section-title-group">
+      <h2 class="section-title">五阶段开发路径</h2>
+      <div class="section-subtitle">Development Roadmap · From MVP to Production</div>
+    </div>
+  </div>
+
+  <div class="timeline">
+    <div class="phase">
+      <div class="phase-time">2-4周</div>
+      <div class="phase-marker"></div>
+      <div class="phase-content">
+        <h3 class="phase-title">阶段一 · MVP最小可用版本</h3>
+        <div class="phase-goal">PHASE 01 · MINIMAL VIABLE PRODUCT</div>
+        <p class="phase-desc">
+          目标是先有一个能用的看盘工具,覆盖最核心的6个指标(成交额、北向、两融、涨停结构、风格指标、行业涨跌),验证整体链路。日度数据足够,先把数据流和展示链路打通。
+        </p>
+        <div class="phase-deliverables">
+          <div class="deliverable">akshare</div>
+          <div class="deliverable">PostgreSQL</div>
+          <div class="deliverable">Streamlit</div>
+          <div class="deliverable">~1000行Python</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="phase">
+      <div class="phase-time">1-2月</div>
+      <div class="phase-marker"></div>
+      <div class="phase-content">
+        <h3 class="phase-title">阶段二 · 完整监测体系</h3>
+        <div class="phase-goal">PHASE 02 · FULL INDICATOR MATRIX</div>
+        <p class="phase-desc">
+          把16个指标全部纳入,难点在数据源拼接。建立统一的数据接入层、数据质量校验、历史数据回填、游资席位库的人工维护。封装DataProvider接口,让上层代码与底层数据源解耦。
+        </p>
+        <div class="phase-deliverables">
+          <div class="deliverable">CCASS爬虫</div>
+          <div class="deliverable">jieba关键词</div>
+          <div class="deliverable">游资席位库</div>
+          <div class="deliverable">数据校验告警</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="phase">
+      <div class="phase-time">2-4周</div>
+      <div class="phase-marker"></div>
+      <div class="phase-content">
+        <h3 class="phase-title">阶段三 · 信号合成与状态识别</h3>
+        <div class="phase-goal">PHASE 03 · SIGNAL ENGINE</div>
+        <p class="phase-desc">
+          把系统从"看盘工具"升级为"决策辅助系统"。指标标准化(Z-score / 百分位),规则引擎用YAML配置而非硬编码,状态切换告警实时推送,回测框架持续优化阈值。
+        </p>
+        <div class="phase-deliverables">
+          <div class="deliverable">YAML规则引擎</div>
+          <div class="deliverable">状态切换告警</div>
+          <div class="deliverable">历史回测</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="phase">
+      <div class="phase-time">1-2月</div>
+      <div class="phase-marker"></div>
+      <div class="phase-content">
+        <h3 class="phase-title">阶段四 · 策略层与持仓管理</h3>
+        <div class="phase-goal">PHASE 04 · STRATEGY EXECUTION</div>
+        <p class="phase-desc">
+          策略库代码化、选股器、仓位管理、交易日志与复盘。<strong>不做自动下单,只生成决策清单由人手动执行</strong>。这一层涉及真金白银,必须慎之又慎。
+        </p>
+        <div class="phase-deliverables">
+          <div class="deliverable">策略库</div>
+          <div class="deliverable">选股因子</div>
+          <div class="deliverable">复盘报表</div>
+          <div class="deliverable">人工下单</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="phase">
+      <div class="phase-time">持续</div>
+      <div class="phase-marker"></div>
+      <div class="phase-content">
+        <h3 class="phase-title">阶段五 · 性能优化与正式化</h3>
+        <div class="phase-goal">PHASE 05 · PRODUCTION HARDENING</div>
+        <p class="phase-desc">
+          盘中实时性升级到分钟级,Redis缓存热数据。稳定性:supervisor自动重启、双通道告警、数据库定时备份。可视化升级到专业看板,支持多账户和权限管理。
+        </p>
+        <div class="phase-deliverables">
+          <div class="deliverable">Level-2推送</div>
+          <div class="deliverable">Redis缓存</div>
+          <div class="deliverable">supervisor</div>
+          <div class="deliverable">权限管理</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ========== 08 核心原则 ========== -->
+<section class="section" id="principles">
+  <div class="section-header">
+    <div class="section-num">08</div>
+    <div class="section-title-group">
+      <h2 class="section-title">六条不可妥协的原则</h2>
+      <div class="section-subtitle">Six Non-Negotiable Principles</div>
+    </div>
+  </div>
+
+  <div class="principles">
+    <div class="principle">
+      <div class="principle-num">i</div>
+      <div class="principle-title">数据准确性优于一切</div>
+      <div class="principle-desc">
+        最怕的不是bug,是数据错了你不知道。所有数据源做交叉校验,宁可少一个指标,不要一个错的指标。
+      </div>
+    </div>
+
+    <div class="principle">
+      <div class="principle-num">ii</div>
+      <div class="principle-title">先解决有没有,再解决好不好</div>
+      <div class="principle-desc">
+        不要陷入完美主义。先用最简单的方式实现完整链路,跑起来再说。如果数据流没打通,一切都是空的。
+      </div>
+    </div>
+
+    <div class="principle">
+      <div class="principle-num">iii</div>
+      <div class="principle-title">所有阈值必须可配置</div>
+      <div class="principle-desc">
+        A股的市场结构一直在变。把所有判定阈值放到配置文件,定期review,而不是硬编码在代码里。
+      </div>
+    </div>
+
+    <div class="principle">
+      <div class="principle-num">iv</div>
+      <div class="principle-title">日志与审计要完整</div>
+      <div class="principle-desc">
+        每次拉数据、每次状态判定、每次告警触发,都要写日志。出问题时能追溯。结构化日志是底线。
+      </div>
+    </div>
+
+    <div class="principle">
+      <div class="principle-num">v</div>
+      <div class="principle-title">警惕过拟合</div>
+      <div class="principle-desc">
+        不要为了让回测好看而不断调阈值。在样本外数据上验证有效性。宁可粗糙稳健,不要精致脆弱。
+      </div>
+    </div>
+
+    <div class="principle">
+      <div class="principle-num">vi</div>
+      <div class="principle-title">人在回路</div>
+      <div class="principle-desc">
+        系统是辅助决策的,不是替代决策的。永远保留人工干预的入口。关键时刻必须由人来拍板。
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ========== FOOTER ========== -->
+<footer class="footer">
+  <div class="footer-quote">
+    "市场每个阶段都有它的主角资金,你要做的是认出主角、跟上节奏,而不是和主角对抗。"
+  </div>
+  <div class="footer-meta">
+    A-SHARE CAPITAL FLOW INTELLIGENCE FRAMEWORK · 2026 EDITION
+  </div>
+</footer>
+
+</body>
+</html>

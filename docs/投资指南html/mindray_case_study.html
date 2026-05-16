@@ -1,0 +1,566 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>案例册·B · 迈瑞医疗 · 一个"左侧困境"的资金博弈样本</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;500;700;900&family=JetBrains+Mono:wght@300;400;500;600;700&family=Bodoni+Moda:ital,wght@0,400;0,700;0,900;1,400&display=swap" rel="stylesheet">
+<style>
+:root{--bg-deep:#0a0e14;--bg-card:#11161f;--bg-elevated:#1a212d;--border:#2a3441;--border-bright:#3d4a5c;--text-primary:#e8eaed;--text-secondary:#9ba7b8;--text-muted:#5a6779;--amber:#ffb547;--amber-bright:#ffc875;--amber-dim:#8a6027;--cyan:#4dd0e1;--red:#ff5252;--green:#66bb6a;--purple:#b794f4;--rose:#f48fb1;--grid-line:rgba(255,181,71,0.06)}*{margin:0;padding:0;box-sizing:border-box}html{scroll-behavior:smooth}body{font-family:'Noto Serif SC',serif;background:var(--bg-deep);color:var(--text-primary);line-height:1.7;background-image:linear-gradient(var(--grid-line) 1px,transparent 1px),linear-gradient(90deg,var(--grid-line) 1px,transparent 1px);background-size:60px 60px;background-attachment:fixed}.header{position:relative;padding:100px 60px 80px;border-bottom:1px solid var(--border);overflow:hidden}.header::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,var(--cyan),transparent)}.header::after{content:'300760';position:absolute;font-family:'JetBrains Mono',monospace;font-weight:700;font-size:300px;color:rgba(77,208,225,0.025);bottom:-80px;right:-20px;letter-spacing:-8px;pointer-events:none;line-height:.8}.header-meta{display:flex;justify-content:space-between;font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text-muted);letter-spacing:2px;text-transform:uppercase;margin-bottom:60px}.header-meta .dot{display:inline-block;width:8px;height:8px;background:var(--cyan);border-radius:50%;margin-right:8px;box-shadow:0 0 12px var(--cyan);animation:pulse 2s infinite}@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}.title-tag{font-family:'JetBrains Mono',monospace;font-size:14px;color:var(--cyan);margin-bottom:20px;letter-spacing:2px;position:relative;z-index:1}.title-zh{font-family:'Noto Serif SC',serif;font-size:72px;font-weight:900;line-height:1.05;letter-spacing:-2px;margin-bottom:24px;position:relative;z-index:1}.title-zh .accent{color:var(--cyan);font-family:'Bodoni Moda',serif;font-style:italic;font-weight:900}.title-en{font-family:'Bodoni Moda',serif;font-style:italic;font-size:22px;color:var(--text-secondary);margin-bottom:40px;letter-spacing:1px;position:relative;z-index:1}.subtitle{font-size:17px;color:var(--text-secondary);max-width:860px;border-left:2px solid var(--cyan);padding-left:24px;line-height:1.8;position:relative;z-index:1}.subtitle strong{color:var(--cyan)}.header-stats{display:grid;grid-template-columns:repeat(5,1fr);gap:1px;margin-top:60px;background:var(--border);border:1px solid var(--border);position:relative;z-index:1}.stat-cell{background:var(--bg-deep);padding:24px 16px;text-align:center}.stat-label{font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--text-muted);text-transform:uppercase;letter-spacing:1.5px;margin-bottom:8px}.stat-value{font-family:'JetBrains Mono',monospace;font-size:28px;font-weight:700}.stat-value.down{color:var(--red)}.stat-value.up{color:var(--green)}.stat-value.neutral{color:var(--amber)}.stat-unit{font-size:12px;color:var(--text-secondary);margin-top:2px;display:block;font-family:'Noto Serif SC',serif}.nav{position:sticky;top:0;z-index:100;background:rgba(10,14,20,.95);backdrop-filter:blur(10px);border-bottom:1px solid var(--border);padding:16px 60px;font-family:'JetBrains Mono',monospace;font-size:11px;text-transform:uppercase;letter-spacing:1.5px}.nav ul{display:flex;gap:30px;list-style:none;flex-wrap:wrap}.nav a{color:var(--text-secondary);text-decoration:none;transition:color .3s;position:relative;padding-bottom:4px}.nav a:hover{color:var(--cyan)}.nav a::after{content:'';position:absolute;bottom:0;left:0;width:0;height:1px;background:var(--cyan);transition:width .3s}.nav a:hover::after{width:100%}.section{padding:100px 60px;border-bottom:1px solid var(--border);position:relative}.section-header{display:flex;align-items:baseline;gap:30px;margin-bottom:60px;padding-bottom:30px;border-bottom:1px dashed var(--border)}.section-num{font-family:'Bodoni Moda',serif;font-size:96px;font-weight:900;color:transparent;-webkit-text-stroke:1px var(--cyan);line-height:.8;font-style:italic}.section-title{font-size:38px;font-weight:700;margin-bottom:8px;letter-spacing:-1px;line-height:1.2}.section-subtitle{font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--text-muted);text-transform:uppercase;letter-spacing:2px}.lead{font-size:16px;color:var(--text-secondary);line-height:1.9;max-width:880px;margin-bottom:40px}.lead strong{color:var(--cyan);font-weight:500}
+
+/* Phase Cards */
+.phase-card{background:var(--bg-card);border:1px solid var(--border);margin-bottom:30px;overflow:hidden}.phase-header{padding:28px 36px;background:var(--bg-elevated);border-bottom:1px solid var(--border);display:grid;grid-template-columns:80px 1fr auto;gap:20px;align-items:center}.phase-num{font-family:'JetBrains Mono',monospace;font-weight:700;font-size:36px;text-align:center;padding:8px 0;border:2px solid;background:rgba(77,208,225,.05)}.phase-num.down{color:var(--red);border-color:var(--red)}.phase-num.bottom{color:var(--green);border-color:var(--green)}.phase-num.turn{color:var(--amber);border-color:var(--amber)}.phase-num.cur{color:var(--cyan);border-color:var(--cyan)}.p-title{font-size:22px;font-weight:700;margin-bottom:4px}.p-en{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text-muted);letter-spacing:1.5px}.p-period{font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:1px;padding:6px 12px;border:1px solid var(--border-bright);color:var(--text-muted)}.phase-body{padding:36px;display:grid;grid-template-columns:1fr 1fr;gap:32px}.phase-body-full{grid-template-columns:1fr}
+
+/* Sub blocks */
+.sub-label{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--cyan);letter-spacing:1.5px;margin-bottom:10px;text-transform:uppercase;display:flex;align-items:center;gap:8px}.sub-label::before{content:'';width:16px;height:1px;background:var(--cyan)}.sub-content{font-size:13px;color:var(--text-secondary);line-height:1.85}.sub-content strong{color:var(--amber-bright);font-weight:500}.sub-content ul{list-style:none;margin-top:8px}.sub-content li{padding:3px 0;padding-left:16px;position:relative;font-size:12px}.sub-content li::before{content:'·';position:absolute;left:4px;color:var(--cyan);font-weight:700}
+
+/* Insight */
+.insight-box{background:linear-gradient(135deg,rgba(77,208,225,.05),rgba(77,208,225,.01));border:1px solid rgba(77,208,225,.25);padding:24px 28px;margin:20px 0;border-left:4px solid var(--cyan)}.insight-label{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--cyan);letter-spacing:2px;margin-bottom:10px}.insight-text{font-size:14px;color:var(--text-primary);line-height:1.8}.insight-text strong{color:var(--cyan)}
+
+/* Warning */
+.warning-box{background:rgba(255,82,82,.05);border:1px solid rgba(255,82,82,.3);border-left:4px solid var(--red);padding:20px 24px;margin:20px 0}.warning-label{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--red);letter-spacing:2px;margin-bottom:8px}.warning-text{font-size:13px;color:var(--text-secondary);line-height:1.7}.warning-text strong{color:var(--text-primary)}
+
+/* Data table */
+.data-table{width:100%;border-collapse:collapse;font-size:12px;margin-top:12px}.data-table th{background:var(--bg-elevated);padding:10px 14px;text-align:left;font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--cyan);letter-spacing:1.2px;text-transform:uppercase;border:1px solid var(--border);font-weight:500}.data-table td{padding:10px 14px;border:1px solid var(--border);color:var(--text-secondary);vertical-align:top}.data-table .col-key{color:var(--text-primary);font-weight:500}.data-table .green{color:var(--green)}.data-table .red{color:var(--red)}.data-table .amber{color:var(--amber)}
+
+/* Contrast box */
+.contrast{display:grid;grid-template-columns:1fr 60px 1fr;gap:20px;align-items:stretch;margin:40px 0}.contrast-side{background:var(--bg-card);border:1px solid var(--border);padding:30px}.contrast-side.catl{border-top:3px solid var(--amber)}.contrast-side.mindray{border-top:3px solid var(--cyan)}.contrast-label{font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:2px;margin-bottom:12px}.contrast-side.catl .contrast-label{color:var(--amber)}.contrast-side.mindray .contrast-label{color:var(--cyan)}.contrast-name{font-size:20px;font-weight:700;margin-bottom:16px}.contrast-vs{text-align:center;align-self:center;font-family:'Bodoni Moda',serif;font-style:italic;font-size:32px;color:var(--text-muted)}
+
+/* Lessons */
+.lessons{display:grid;grid-template-columns:repeat(2,1fr);gap:20px;margin-top:40px}.lesson{background:var(--bg-card);border:1px solid var(--border);padding:28px 24px;border-left:3px solid var(--cyan);position:relative}.lesson-num{font-family:'Bodoni Moda',serif;font-style:italic;font-weight:900;font-size:56px;color:rgba(77,208,225,.1);position:absolute;top:12px;right:20px;line-height:.8}.lesson-title{font-size:16px;font-weight:700;color:var(--cyan);margin-bottom:12px;max-width:80%}.lesson-desc{font-size:12px;color:var(--text-secondary);line-height:1.8}
+
+/* Footer */
+.ultimate{padding:120px 60px;text-align:center;border-top:1px solid var(--border);background:radial-gradient(ellipse at center top,rgba(77,208,225,.06) 0%,transparent 60%),var(--bg-deep)}.ultimate-tag{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--cyan);letter-spacing:3px;margin-bottom:30px}.ultimate-quote{font-family:'Noto Serif SC',serif;font-weight:700;font-size:32px;color:var(--text-primary);max-width:950px;margin:0 auto 30px;line-height:1.5}.ultimate-quote .highlight{color:var(--cyan);font-family:'Bodoni Moda',serif;font-style:italic}.series-info{display:flex;justify-content:center;gap:20px;padding-top:40px;border-top:1px solid var(--border);max-width:1200px;margin:40px auto 0;flex-wrap:wrap}.series-item{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--text-muted);letter-spacing:1.2px;text-transform:uppercase;text-align:center;flex:1;min-width:100px}.series-item.current{color:var(--cyan)}.series-item .num{font-weight:700;font-size:18px;display:block;margin-bottom:4px}
+
+@media(max-width:968px){.header{padding:60px 30px 40px}.header::after{font-size:160px}.title-zh{font-size:40px}.header-stats{grid-template-columns:1fr 1fr}.nav{padding:16px 30px}.nav ul{gap:14px}.section{padding:60px 30px}.section-num{font-size:60px}.section-title{font-size:24px}.phase-header{grid-template-columns:1fr;gap:12px}.phase-body{grid-template-columns:1fr}.contrast{grid-template-columns:1fr}.contrast-vs{display:none}.lessons{grid-template-columns:1fr}.ultimate{padding:60px 30px}.ultimate-quote{font-size:22px}}
+</style>
+</head>
+<body>
+
+<header class="header">
+  <div class="header-meta">
+    <div><span class="dot"></span>CASE STUDY · LEFT-SIDE ANALYSIS</div>
+    <div>SERIES · CASE BOOK · B</div>
+  </div>
+  <div class="title-tag">/* 300760.SZ · MINDRAY · 迈瑞生物医疗 */</div>
+  <h1 class="title-zh">迈瑞医疗<br><span class="accent">一个"左侧困境"的资金博弈样本</span></h1>
+  <div class="title-en">When Fundamentals Deteriorate but Smart Money Stays</div>
+  <p class="subtitle">
+    与宁德时代的"底部反转 → 趋势上涨 → 创新高"的教科书叙事不同,迈瑞医疗呈现的是另一种更加复杂、也更加考验投资者认知的资金博弈模式:<strong>业绩连续下滑,但长线资金逆势不退;公募减仓与北向加仓并行;产业资本选择在困境期推进港股上市</strong>。这是一个"左侧"投资者必须直面的典型样本。
+  </p>
+
+  <div class="header-stats">
+    <div class="stat-cell">
+      <div class="stat-label">2021 High</div>
+      <div class="stat-value neutral">¥502</div>
+      <span class="stat-unit">历史高点</span>
+    </div>
+    <div class="stat-cell">
+      <div class="stat-label">2025 Revenue</div>
+      <div class="stat-value down">-9.38%</div>
+      <span class="stat-unit">营收同比</span>
+    </div>
+    <div class="stat-cell">
+      <div class="stat-label">2025 Net Profit</div>
+      <div class="stat-value down">-30.28%</div>
+      <span class="stat-unit">净利同比</span>
+    </div>
+    <div class="stat-cell">
+      <div class="stat-label">Current Price</div>
+      <div class="stat-value neutral">~¥220</div>
+      <span class="stat-unit">2026年4月</span>
+    </div>
+    <div class="stat-cell">
+      <div class="stat-label">Northbound</div>
+      <div class="stat-value up">Top 10</div>
+      <span class="stat-unit">北向持股市值前十</span>
+    </div>
+  </div>
+</header>
+
+<nav class="nav">
+  <ul>
+    <li><a href="#why">01 · 为什么是对照案例</a></li>
+    <li><a href="#chronicle">02 · 资金运行周期</a></li>
+    <li><a href="#divergence">03 · 资金分歧全景</a></li>
+    <li><a href="#contrast">04 · 与宁德时代对比</a></li>
+    <li><a href="#lessons">05 · 教训与前瞻</a></li>
+  </ul>
+</nav>
+
+<!-- ========== 01 ========== -->
+<section class="section" id="why">
+  <div class="section-header">
+    <div class="section-num">01</div>
+    <div>
+      <h2 class="section-title">为什么选迈瑞作为对照案例</h2>
+      <div class="section-subtitle">Why Mindray is the Perfect Counterexample</div>
+    </div>
+  </div>
+
+  <p class="lead">
+    宁德时代展示了<strong>顺周期中资金如何接力推高股价</strong>,但市场上更多的时间、更多的股票处于逆境之中。迈瑞医疗的价值在于:它展示了<strong>当基本面恶化时,不同资金的反应如何分化,以及"谁在逆势坚守"这个信息本身如何构成未来的领先信号</strong>。
+  </p>
+
+  <div class="insight-box">
+    <div class="insight-label">— THREE REASONS —</div>
+    <div class="insight-text">
+      <strong>第一,它是A股医药器械龙头中"基本面最确定"的公司遭遇"最确定的下行周期"。</strong>上市以来首次出现中报业绩"双降"——2025年上半年营收下降18.45%,净利下降32.96%。这不是个体经营问题,而是整个行业(医保改革、DRG落地、检验互认、招标延迟)的系统性压力。<br><br>
+      <strong>第二,不同类型资金在困境期的行为高度分化。</strong>散户恐慌卖出(投资者互动平台上多次质问"股价连续六年下跌"),公募基金减持出逃,但北向资金持续保持在前十大持仓——这种分化提供了丰富的"研究研究股票的人"的分析素材。<br><br>
+      <strong>第三,管理层在困境期选择推进港股IPO而非回购,</strong>这与宁德时代底部回购、高位配售形成了鲜明对比。两种产业资本行为的差异,揭示了不同公司在不同周期位置的战略选择逻辑。
+    </div>
+  </div>
+</section>
+
+<!-- ========== 02 资金运行周期 ========== -->
+<section class="section" id="chronicle">
+  <div class="section-header">
+    <div class="section-num">02</div>
+    <div>
+      <h2 class="section-title">资金运行周期 · 四个阶段</h2>
+      <div class="section-subtitle">The Capital Cycle · A Descent and Divergence</div>
+    </div>
+  </div>
+
+  <!-- Phase 1 -->
+  <div class="phase-card">
+    <div class="phase-header">
+      <div class="phase-num down">P1</div>
+      <div><div class="p-title">核心资产退潮 · 估值压缩</div><div class="p-en">Core Asset De-rating · Multiple Compression</div></div>
+      <div class="p-period">2022 — 2024.01</div>
+    </div>
+    <div class="phase-body">
+      <div>
+        <div class="sub-label">下跌驱动</div>
+        <div class="sub-content">
+          2021年底迈瑞医疗A股股价最高触及约¥502,此后随着核心资产整体退潮(茅台、宁德、药明等一批"机构抱团股"同步杀估值),迈瑞经历了系统性的<strong>估值压缩</strong>。这不是迈瑞独有的问题,而是2022-2024年A股核心资产风格逆风的缩影。
+        </div>
+      </div>
+      <div>
+        <div class="sub-label">资金行为</div>
+        <div class="sub-content">
+          <ul>
+            <li><strong>公募基金:</strong>从超配到减配。医药生物行业2024年全年在公募持仓中持续降低权重</li>
+            <li><strong>北向资金:</strong>也在减持,但减持幅度弱于公募,医药生物仍保持在北向前五大行业</li>
+            <li><strong>散户:</strong>逐步绝望,互动平台上弥漫着"还会跌到哪里"的情绪</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+    <div class="insight-box" style="margin:0 36px 36px">
+      <div class="insight-label">▸ 二阶研究视角</div>
+      <div class="insight-text">
+        这个阶段的关键认知:迈瑞的基本面(2022-2023年)仍在增长——2023年营收349亿(+15%),净利116亿(+21%),ROE超35%。<strong>股价下跌不是因为基本面变差,而是因为估值锚(PE)从40-50倍压缩到20倍出头</strong>。理解"估值压缩"和"基本面恶化"的区别,是区分一阶研究者和二阶研究者的关键。
+      </div>
+    </div>
+  </div>
+
+  <!-- Phase 2 -->
+  <div class="phase-card">
+    <div class="phase-header">
+      <div class="phase-num down">P2</div>
+      <div><div class="p-title">业绩下行 · 行业寒冬 · 抱团瓦解</div><div class="p-en">Earnings Decline · Industry Winter · Fund Exodus</div></div>
+      <div class="p-period">2024.05 — 2025.09</div>
+    </div>
+    <div class="phase-body">
+      <div>
+        <div class="sub-label">基本面恶化</div>
+        <div class="sub-content">
+          这个阶段,基本面开始<strong>真正恶化</strong>:
+          <ul>
+            <li>2024年全年:营收367亿(+5.1%),但增速骤降;净利117亿(+0.7%),近乎停滞</li>
+            <li>2024年Q1:营收下滑12.1%,净利下滑16.8%</li>
+            <li><strong>2025年上半年:营收167亿(-18.45%),净利50.7亿(-32.96%)</strong>——上市以来首次中报"双降"</li>
+            <li>毛利率从66.25%降至61.67%,创五年新低</li>
+            <li>三大业务线(体外诊断-16%、生命支持-32%、影像-23%)全面下滑</li>
+          </ul>
+        </div>
+      </div>
+      <div>
+        <div class="sub-label">行业压力源</div>
+        <div class="sub-content">
+          <ul>
+            <li><strong>医保改革:</strong>DRG 2.0落地,检验互认,压制医院采购意愿</li>
+            <li><strong>招标延迟:</strong>医疗设备更新专项债发行减少,地方财政资金紧张</li>
+            <li><strong>低价竞争:</strong>行业出现超低价中标现象,部分产品中标价低至3分钱</li>
+            <li><strong>收入确认周期拉长:</strong>从招标到收入确认需6-12个月</li>
+            <li>国内业务同比下降超30%</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+    <div style="padding:0 36px 36px">
+      <div class="sub-label">资金行为 · 分化加剧</div>
+      <table class="data-table">
+        <thead>
+          <tr><th>资金类型</th><th>行为</th><th>逻辑</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="col-key">公募基金</td>
+            <td class="red">持续减持,医药行业超配比下降</td>
+            <td>相对排名压力 → 抛弃表现差的行业</td>
+          </tr>
+          <tr>
+            <td class="col-key">北向资金</td>
+            <td class="amber">保持前十大持仓,未大幅减持</td>
+            <td>配置盘看长期ROE和全球化逻辑,不急于退出</td>
+          </tr>
+          <tr>
+            <td class="col-key">散户</td>
+            <td class="red">极度悲观,互动平台反复质疑管理层</td>
+            <td>股价"连续六年下跌",心理承受力耗尽</td>
+          </tr>
+          <tr>
+            <td class="col-key">产业资本</td>
+            <td class="amber">推进港股IPO,研发投入占比提升至11.8%</td>
+            <td>为全球化储备资金,穿越周期策略</td>
+          </tr>
+          <tr>
+            <td class="col-key">卖方分析师</td>
+            <td class="green">13家给出评级:10家买入、3家增持</td>
+            <td>目标价均值242元,高于现价约10%</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="warning-box" style="margin:0 36px 36px">
+      <div class="warning-label">⚠ 典型的资金分歧结构</div>
+      <div class="warning-text">
+        这种"公募卖出 + 散户绝望 + 北向坚守 + 产业资本投入"的结构,在A股历史上多次出现过。<strong>它不保证股价一定会反转,但它标记了"大多数人在卖、少数有信息优势的人在等"的博弈态势</strong>——这通常是左侧布局的窗口区域。
+      </div>
+    </div>
+  </div>
+
+  <!-- Phase 3 -->
+  <div class="phase-card">
+    <div class="phase-header">
+      <div class="phase-num turn">P3</div>
+      <div><div class="p-title">拐点萌芽 · 底部试探</div><div class="p-en">Inflection Point Emerging · Bottom Testing</div></div>
+      <div class="p-period">2025.Q3 — 2025.Q4</div>
+    </div>
+    <div class="phase-body">
+      <div>
+        <div class="sub-label">拐点信号</div>
+        <div class="sub-content">
+          2025年三季度,迈瑞医疗如期迎来管理层所说的"拐点":
+          <ul>
+            <li><strong>Q3营收90.9亿,同比增长+1.53%</strong>——上市以来首次从负转正</li>
+            <li>Q4营收同比增长进一步提速(+2.86%)</li>
+            <li>国际业务Q3同比增长11.93%,欧洲市场增长超20%</li>
+            <li>国内营收降幅从H1的-30%+收窄至Q3的-7.3%</li>
+            <li>2025年12月至2026年2月,中标额同比增长12%——行业回暖信号</li>
+          </ul>
+        </div>
+      </div>
+      <div>
+        <div class="sub-label">资金行为</div>
+        <div class="sub-content">
+          <ul>
+            <li><strong>主力资金:</strong>10月出现阶段性净流入——"主力进、散户出"结构</li>
+            <li>2025年10月某周数据:主力净流入1.65亿,游资净流出2700万,散户净流出1.38亿</li>
+            <li><strong>北向资金:</strong>迈瑞医疗保持在2025年Q1北向持股市值前十</li>
+            <li>卖方一致预期:2025-2027年净利复合增长率约14%</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+    <div class="insight-box" style="margin:0 36px 36px">
+      <div class="insight-label">▸ 二阶研究视角 · 最关键的观察</div>
+      <div class="insight-text">
+        "主力进、散户出"的资金结构,是<strong>机构资金在散户绝望出局时低位吸筹的经典信号</strong>。结合管理层对"2026年国内正增长、2027年加速增长"的展望,以及中标额已开始同比增长的事实,这个阶段可能是接力赛第一棒(机构底部布局)的启动窗口——虽然仍需要更多数据确认。
+      </div>
+    </div>
+  </div>
+
+  <!-- Phase 4 -->
+  <div class="phase-card">
+    <div class="phase-header">
+      <div class="phase-num cur">P4</div>
+      <div><div class="p-title">当下 · 2026年4月 · 分歧与抉择</div><div class="p-en">Now · Divergence and Decision Point</div></div>
+      <div class="p-period">2026.04 · NOW</div>
+    </div>
+    <div class="phase-body phase-body-full">
+      <div>
+        <div class="sub-label">当前状态</div>
+        <div class="sub-content">
+          <ul>
+            <li>股价约¥220,PE约20倍——近似2024年初宁德时代的估值水平</li>
+            <li>2025年全年:营收332.8亿(-9.38%),净利81.4亿(-30.28%),Q4净利创单季度新低</li>
+            <li>毛利率60.32%,近年最低——但国际业务收入占比提升至约50%</li>
+            <li>港股IPO正在审核中,尚未完成</li>
+            <li>累计分红377亿(含回购20亿),超6倍IPO募资额</li>
+            <li><strong>管理层展望:</strong>2026年国内正增长,2027年加速增长;国际业务继续快速增长</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="insight-box" style="margin:0 36px 36px">
+      <div class="insight-label">▸ 二阶研究视角 · 五问应用</div>
+      <div class="insight-text">
+        <strong>谁在主导?</strong>当前市场对迈瑞的主导叙事是"业绩下行未见底",主导资金行为是公募减持和散户出逃。<br><br>
+        <strong>谁在跟随?谁在博弈?</strong>跟随看空的是短线交易盘和恐慌散户;反向博弈的是北向配置盘和部分逆向私募。<br><br>
+        <strong>接力到哪一棒?</strong>如果未来1-2年业绩拐点确认,当前可能是接力赛的"第零棒"——连第一棒都还没正式启动,但底部区域的特征已经显现。<br><br>
+        <strong>对手盘是谁?</strong>如果你现在买入,卖给你的很可能是被迫止损的散户和被考核压力驱动的公募——这是相对有利的对手盘结构。<br><br>
+        <strong>我的局限是什么?</strong>最大的风险是"拐点被推迟"——如果国内医疗政策继续压制招标,2026年正增长的预期落空,左侧布局者将面临更长的等待期。
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ========== 03 资金分歧全景 ========== -->
+<section class="section" id="divergence">
+  <div class="section-header">
+    <div class="section-num">03</div>
+    <div>
+      <h2 class="section-title">资金分歧的全景数据</h2>
+      <div class="section-subtitle">Key Data Points · The Divergence Map</div>
+    </div>
+  </div>
+
+  <table class="data-table">
+    <thead>
+      <tr>
+        <th>维度</th>
+        <th>峰值期(2021)</th>
+        <th>下行期(2024)</th>
+        <th>困境底(2025)</th>
+        <th>当下(2026.04)</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td class="col-key">股价</td>
+        <td>¥502(历史最高)</td>
+        <td>¥212附近(52周低点)</td>
+        <td>¥212-325区间波动</td>
+        <td class="amber">~¥220</td>
+      </tr>
+      <tr>
+        <td class="col-key">PE(TTM)</td>
+        <td>~60倍</td>
+        <td>~23倍</td>
+        <td>~30倍(利润下降推高)</td>
+        <td class="amber">~20倍</td>
+      </tr>
+      <tr>
+        <td class="col-key">营收增速</td>
+        <td class="green">+20%</td>
+        <td class="green">+5.1%</td>
+        <td class="red">-9.38%</td>
+        <td>等待2026Q1</td>
+      </tr>
+      <tr>
+        <td class="col-key">净利增速</td>
+        <td class="green">+20%</td>
+        <td class="green">+0.7%</td>
+        <td class="red">-30.28%</td>
+        <td>机构预测+12%</td>
+      </tr>
+      <tr>
+        <td class="col-key">ROE</td>
+        <td>~30%</td>
+        <td>32.5%</td>
+        <td>下降中</td>
+        <td>预计31%+</td>
+      </tr>
+      <tr>
+        <td class="col-key">毛利率</td>
+        <td>~64%</td>
+        <td>63.1%</td>
+        <td class="red">60.32%</td>
+        <td>预计回稳63%</td>
+      </tr>
+      <tr>
+        <td class="col-key">国际收入占比</td>
+        <td>~38%</td>
+        <td>~45%</td>
+        <td class="green">~50%</td>
+        <td>继续提升</td>
+      </tr>
+      <tr>
+        <td class="col-key">北向持仓排名</td>
+        <td>前十大</td>
+        <td>前十大</td>
+        <td class="green">保持前十大</td>
+        <td class="green">2025Q1第9位</td>
+      </tr>
+      <tr>
+        <td class="col-key">公募持仓态度</td>
+        <td>重仓</td>
+        <td>减配中</td>
+        <td class="red">医药行业整体低配</td>
+        <td>观望中</td>
+      </tr>
+      <tr>
+        <td class="col-key">产业资本</td>
+        <td>稳定持有</td>
+        <td>稳定持有+分红</td>
+        <td class="amber">推进港股IPO</td>
+        <td class="amber">IPO审核中</td>
+      </tr>
+      <tr>
+        <td class="col-key">累计分红+回购</td>
+        <td>—</td>
+        <td>300亿+</td>
+        <td class="green">377亿(6x IPO募资额)</td>
+        <td>持续分红</td>
+      </tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- ========== 04 与宁德时代对比 ========== -->
+<section class="section" id="contrast">
+  <div class="section-header">
+    <div class="section-num">04</div>
+    <div>
+      <h2 class="section-title">与宁德时代的对照分析</h2>
+      <div class="section-subtitle">Mindray vs CATL · Two Sides of Capital Cycle</div>
+    </div>
+  </div>
+
+  <p class="lead">
+    两个案例放在一起看,构成了完整的<strong>资金周期光谱</strong>:宁德时代展示了"周期右侧+资金接力"的完整上涨剧本,迈瑞医疗展示了"周期左侧+资金分歧"的复杂底部形态。
+  </p>
+
+  <div class="contrast">
+    <div class="contrast-side catl">
+      <div class="contrast-label">— CATL · 宁德时代 —</div>
+      <div class="contrast-name">顺周期接力样本</div>
+      <div class="sub-content">
+        <ul>
+          <li>业绩持续增长(2025年净利+42%)</li>
+          <li>产业资本:底部回购 → 高位配售</li>
+          <li>公募:反超茅台成第一重仓</li>
+          <li>北向:连续7季加仓</li>
+          <li>散户:在主升浪中涌入</li>
+          <li>接力赛:第1棒 → 第5棒,完整呈现</li>
+          <li>股价:¥133 → ¥433(+225%)</li>
+          <li><strong>核心特征:资金同向,趋势自强化</strong></li>
+        </ul>
+      </div>
+    </div>
+    <div class="contrast-vs">vs</div>
+    <div class="contrast-side mindray">
+      <div class="contrast-label">— MINDRAY · 迈瑞医疗 —</div>
+      <div class="contrast-name">逆周期左侧样本</div>
+      <div class="sub-content">
+        <ul>
+          <li>业绩连续下滑(2025年净利-30%)</li>
+          <li>产业资本:困境期推进港股上市</li>
+          <li>公募:持续减配出逃</li>
+          <li>北向:逆势保持前十,未大幅减持</li>
+          <li>散户:极度绝望,要求管理层回购</li>
+          <li>接力赛:可能在"第零棒"阶段</li>
+          <li>股价:¥502 → ¥220(-56%)</li>
+          <li><strong>核心特征:资金分歧,底部特征累积</strong></li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <div class="insight-box">
+    <div class="insight-label">▸ 对照的核心启示</div>
+    <div class="insight-text">
+      <strong>宁德时代是教你"如何跟随右侧趋势"的教材</strong>——当多类资金同向、叙事统一时,趋势会自我强化,跟随者获利最大。<br><br>
+      <strong>迈瑞医疗是教你"如何判断左侧底部"的教材</strong>——当资金分歧加剧、散户绝望而长线资金不退时,底部特征在累积,但确认需要耐心。<br><br>
+      <strong>最关键的区别:</strong>两者的资金博弈结构传递了完全不同的信息。宁德时代在2024年1月的底部信号是产业资本回购;迈瑞医疗在2025年的底部信号是北向资金的"不退出"和主力资金的"低位吸筹"——<strong>不是所有底部信号都是主动买入,有时候"在困境中不卖"本身就是最强的底部信号</strong>。
+    </div>
+  </div>
+</section>
+
+<!-- ========== 05 教训与前瞻 ========== -->
+<section class="section" id="lessons">
+  <div class="section-header">
+    <div class="section-num">05</div>
+    <div>
+      <h2 class="section-title">教训与前瞻判断</h2>
+      <div class="section-subtitle">Lessons and Forward-Looking Assessment</div>
+    </div>
+  </div>
+
+  <div class="lessons">
+    <div class="lesson">
+      <div class="lesson-num">1</div>
+      <div class="lesson-title">区分"估值压缩"和"基本面恶化"</div>
+      <div class="lesson-desc">
+        2022-2023年迈瑞股价下跌是<strong>估值压缩</strong>(PE从60到23,但利润增长20%);2024-2025年才是<strong>基本面恶化</strong>(营收和利润双降)。一阶研究者会在2023年就说"基本面不行了",二阶研究者能看出两者的根本区别。
+      </div>
+    </div>
+
+    <div class="lesson">
+      <div class="lesson-num">2</div>
+      <div class="lesson-title">北向"不退出"是比"买入"更强的底部信号</div>
+      <div class="lesson-desc">
+        在业绩双降、公募减持、散户绝望的环境下,北向资金(尤其是配置盘)仍将迈瑞保持在前十大持仓。<strong>全球主权基金和养老金不是看不到业绩下滑,而是他们计算了5-10年的现金流折现后,认为当前价格已经反映了足够的悲观预期</strong>。
+      </div>
+    </div>
+
+    <div class="lesson">
+      <div class="lesson-num">3</div>
+      <div class="lesson-title">困境期港股上市 ≠ 套现,可能是战略信号</div>
+      <div class="lesson-desc">
+        宁德时代在高位港股配售是<strong>"变现信号"</strong>,但迈瑞在困境期推进港股上市目的不同——<strong>为全球化研发和供应链建设储备资金</strong>。前者是对短期高估的确认,后者是对长期战略的投入。同样的"港股上市"动作,因周期位置不同,含义完全相反。
+      </div>
+    </div>
+
+    <div class="lesson">
+      <div class="lesson-num">4</div>
+      <div class="lesson-title">分红回报率是困境期的"安全垫"</div>
+      <div class="lesson-desc">
+        累计分红377亿(超6倍IPO募资),2025年度分红53亿(分红比例65%)。在¥220的价位上,股息率约2%。<strong>对于长线投资者,持续的高分红在困境期提供了持股的"安全垫"和"等待的代价补偿"</strong>。
+      </div>
+    </div>
+
+    <div class="lesson">
+      <div class="lesson-num">5</div>
+      <div class="lesson-title">Q3拐点确认后,要观察的是"第一棒"何时启动</div>
+      <div class="lesson-desc">
+        2025年Q3营收同比转正(+1.53%),Q4进一步加速(+2.86%),中标额同比增长12%。管理层预计2026年国内正增长。<strong>如果拐点被数据持续确认,公募基金的"回补仓位"(即接力赛第二棒)将是推动股价反转的关键力量</strong>——但前提是要先看到更多的季度数据验证。
+      </div>
+    </div>
+
+    <div class="lesson">
+      <div class="lesson-num">6</div>
+      <div class="lesson-title">左侧投资的最大敌人是"太早"</div>
+      <div class="lesson-desc">
+        迈瑞医疗的案例完美诠释了左侧投资的困境:你可能在2024年看到了"估值很低+北向不退+管理层坚定",但如果那时买入,到现在又经历了一轮业绩大幅下滑和股价继续下探。<strong>"正确但太早"和"错误"在短期内是无法区分的</strong>——这是左侧投资者必须用仓位管理和时间容忍度来应对的核心挑战。
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ========== Footer ========== -->
+<section class="ultimate">
+  <div class="ultimate-tag">— CASE STUDY B · CLOSING INSIGHT —</div>
+
+  <h2 class="ultimate-quote">
+    宁德时代教你如何<span class="highlight">跟随趋势</span>,<br>
+    迈瑞医疗教你如何<span class="highlight">在孤独中等待</span>。
+  </h2>
+
+  <p style="font-size:17px;color:var(--text-secondary);max-width:750px;margin:0 auto 30px;line-height:1.8;">
+    市场上最赚钱的人不是在趋势中追涨的人,也不是在底部精准抄底的人——而是能分辨"什么时候该跟随、什么时候该等待"的人。这种分辨力,来自对资金博弈结构的深度理解。
+  </p>
+
+  <p style="font-family:'Bodoni Moda',serif;font-style:italic;font-size:20px;color:var(--cyan);max-width:700px;margin:0 auto 60px;line-height:1.7;">
+    不是所有底部信号都是"买入"——有时候,"在困境中不卖"本身就是最强的信号。
+  </p>
+
+  <div class="series-info">
+    <div class="series-item"><div class="num">I</div>监测体系</div>
+    <div class="series-item"><div class="num">II</div>方法论</div>
+    <div class="series-item"><div class="num">III</div>资金图谱</div>
+    <div class="series-item"><div class="num">IV</div>研究的研究</div>
+    <div class="series-item"><div class="num">V</div>实战篇</div>
+    <div class="series-item"><div class="num">A</div>工程附录</div>
+    <div class="series-item"><div class="num">B1</div>宁德时代</div>
+    <div class="series-item current"><div class="num">B2</div>迈瑞医疗 · NOW</div>
+  </div>
+</section>
+
+</body>
+</html>

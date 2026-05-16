@@ -1,0 +1,444 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>第 8 章 · 认知训练系统 (基础与设计)</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Noto+Serif+SC:wght@400;700;900&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    
+    <!-- Libraries -->
+    <script src="https://lib.baomitu.com/marked/11.1.1/marked.min.js"></script>
+    <link rel="stylesheet" href="https://lib.baomitu.com/github-markdown-css/5.5.0/github-markdown-dark.min.css">
+    <script src="https://lib.baomitu.com/mermaid/10.9.0/mermaid.min.js"></script>
+    
+    <!-- Syntax Highlighting -->
+    <link rel="stylesheet" href="https://lib.baomitu.com/highlight.js/11.9.0/styles/tokyo-night-dark.min.css">
+    <script src="https://lib.baomitu.com/highlight.js/11.9.0/highlight.min.js"></script>
+    
+    <style>
+        :root {
+            --bg: #0a0a0a;
+            --surface: #121212;
+            --surface-hover: #1a1a1a;
+            --border: #222222;
+            --accent: #eab308;
+            --accent-glow: rgba(234, 179, 8, 0.1);
+            --text-primary: #f1f5f9;
+            --text-secondary: #94a3b8;
+            --text-muted: #64748b;
+            --font-sans: 'Outfit', 'Noto Sans SC', -apple-system, sans-serif;
+            --font-serif: 'Noto Serif SC', serif;
+            --font-mono: 'JetBrains Mono', monospace;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background-color: var(--bg);
+            color: var(--text-primary);
+            font-family: var(--font-sans);
+            line-height: 1.7;
+            -webkit-font-smoothing: antialiased;
+            overflow-x: hidden;
+        }
+
+        /* Subtle background glow */
+        body::after {
+            content: '';
+            position: fixed;
+            top: 0;
+            right: 0;
+            width: 40vw;
+            height: 40vh;
+            background: radial-gradient(circle, var(--accent-glow) 0%, transparent 70%);
+            z-index: -1;
+            filter: blur(100px);
+            pointer-events: none;
+        }
+
+        .sidebar {
+            width: 260px;
+            height: 100vh;
+            position: fixed;
+            left: 0;
+            top: 0;
+            border-right: 1px solid var(--border);
+            background: var(--bg);
+            padding: 1.5rem;
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+            overflow-y: auto;
+            z-index: 100;
+        }
+
+        .nav-link {
+            color: var(--text-muted);
+            text-decoration: none;
+            font-size: 0.85rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            transition: color 0.2s;
+            padding: 0.5rem;
+            border-radius: 6px;
+        }
+        .nav-link:hover { color: var(--accent); background: var(--surface); }
+
+        .toc-title {
+            font-family: var(--font-serif);
+            font-size: 1rem;
+            color: var(--text-primary);
+            margin-bottom: 0.8rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding-left: 0.5rem;
+        }
+        .toc-title::before {
+            content: '';
+            width: 3px;
+            height: 1rem;
+            background: var(--accent);
+            border-radius: 2px;
+        }
+
+        .toc-list {
+            list-style: none;
+            display: flex;
+            flex-direction: column;
+            gap: 0.4rem;
+        }
+        .toc-item {
+            font-size: 0.8rem;
+            line-height: 1.3;
+        }
+        .toc-item a {
+            color: var(--text-muted);
+            text-decoration: none;
+            transition: all 0.2s;
+            display: block;
+            padding: 0.4rem 0.5rem;
+            border-radius: 4px;
+        }
+        .toc-item a:hover { color: var(--accent); background: var(--surface); }
+        .toc-item.level-3 { margin-left: 0.8rem; border-left: 1px solid var(--border); }
+
+        .container {
+            max-width: 860px;
+            margin: 0 auto 0 260px;
+            padding: 3rem 4rem;
+            animation: fadeIn 0.6s ease-out;
+        }
+
+        @media (max-width: 1024px) {
+            .sidebar { width: 220px; padding: 1rem; }
+            .container { margin-left: 220px; padding: 2rem; }
+        }
+
+        @media (max-width: 800px) {
+            .sidebar { position: static; width: 100%; height: auto; border-right: none; border-bottom: 1px solid var(--border); }
+            .container { margin-left: 0; padding: 1.5rem; }
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(5px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        header {
+            margin-bottom: 3rem;
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 1.5rem;
+        }
+
+        .meta {
+            font-family: var(--font-mono);
+            font-size: 0.75rem;
+            color: var(--accent);
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            margin-bottom: 0.8rem;
+            display: flex;
+            align-items: center;
+            gap: 0.8rem;
+        }
+
+        .meta::before {
+            content: '';
+            width: 20px;
+            height: 1px;
+            background-color: var(--accent);
+        }
+
+        h1 {
+            font-family: var(--font-serif);
+            font-size: 2.2rem;
+            font-weight: 900;
+            line-height: 1.2;
+            margin-bottom: 1rem;
+            color: var(--text-primary);
+        }
+
+        .markdown-body {
+            background: transparent !important;
+            color: var(--text-primary) !important;
+            font-family: var(--font-sans) !important;
+            font-size: 0.95rem !important;
+        }
+
+        .markdown-body h2 {
+            font-family: var(--font-serif);
+            font-size: 1.5rem !important;
+            color: var(--accent) !important;
+            border-bottom: 1px solid var(--border) !important;
+            padding-bottom: 0.5rem !important;
+            margin-top: 2.5rem !important;
+            scroll-margin-top: 1rem;
+        }
+
+        .markdown-body h3 {
+            font-family: var(--font-serif);
+            font-size: 1.25rem !important;
+            color: var(--text-primary) !important;
+            margin-top: 2rem !important;
+            scroll-margin-top: 1rem;
+        }
+
+        .markdown-body p, .markdown-body li {
+            font-size: 0.95rem !important;
+            color: var(--text-primary) !important;
+        }
+        
+        .markdown-body pre {
+            background-color: #1a1b26 !important; /* Match Tokyo Night Dark */
+            border: 1px solid var(--border);
+            border-radius: 8px !important;
+            padding: 0 !important; /* Code internal handles padding */
+            margin: 1.2rem 0 !important;
+            overflow: hidden;
+        }
+
+        .markdown-body pre code {
+            background-color: transparent !important;
+            padding: 1.2rem !important;
+            display: block;
+            font-family: var(--font-mono) !important;
+            font-size: 0.85rem !important;
+            line-height: 1.5;
+        }
+
+        .markdown-body blockquote {
+            border-left: 3px solid var(--accent) !important;
+            background: var(--surface);
+            padding: 0.8rem 1.2rem;
+            color: var(--text-secondary) !important;
+            margin: 1.2rem 0 !important;
+        }
+
+        .markdown-body table {
+            background: var(--surface);
+            font-size: 0.85rem !important;
+            margin: 1.2rem 0 !important;
+        }
+
+        footer {
+            margin-top: 4rem;
+            padding-top: 1.5rem;
+            border-top: 1px solid var(--border);
+            color: var(--text-muted);
+            font-size: 0.8rem;
+            text-align: center;
+        }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar { width: 5px; }
+        ::-webkit-scrollbar-track { background: var(--bg); }
+        ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+    </style>
+</head>
+<body>
+    <aside class="sidebar">
+        <a href="index.html" class="nav-link">
+            <span>←</span> 返回目录门户
+        </a>
+        
+        <div class="toc-container">
+            <h3 class="toc-title">文档导航</h3>
+            <ul class="toc-list" id="toc">
+                <!-- TOC items will be injected here -->
+            </ul>
+        </div>
+    </aside>
+
+    <div class="container">
+        <header>
+            <div class="meta">GLOBAL | 2026-05-16 19:06</div>
+            <h1>第 8 章 · 认知训练系统 (基础与设计)</h1>
+        </header>
+
+        <article id="content" class="markdown-body">
+            <!-- Loading indicator -->
+            <p style="color: var(--text-muted)">正在解析文档内容...</p>
+        </article>
+
+        <footer>
+            &copy; 2026 MicroStock Project Docs | Generated by Antigravity
+        </footer>
+    </div>
+
+    <script id="markdown-raw" type="text/markdown"># 第 8 章 · 认知训练系统 (基础与设计)
+
+## 1. 背景与目标
+
+**背景**: 第 1-7 章解决了"数据可得性",但用户面对海量数据仍可能停留在被动消费层面。要让数据真正转化为决策能力,必须引入**强制输出 + 闭环校验**机制。本章将"先验假设 → 数据证伪 → 决策日志 → 误判复盘"四个动作产品化。
+
+**目标**:
+- 提供 4 个核心训练工具:**晨间预判**、**每日 3 句话日记**、**决策日志**、**周末误判档案**
+- 自动用客观数据校验主观判断,产出"判断准确率"等量化指标
+- 6 个月数据沉淀后能输出个人认知画像(擅长/盲区/偏差类型)
+
+**范围**:
+- 4 张训练数据表(prediction / journal / decision / review)
+- 1 个评分引擎(对比预判 vs 实际)
+- 4 个小程序页面 + 1 个仪表盘
+- 训练数据与第 1-7 章 ADS 表的关联
+
+**非目标**:
+- 不做下单功能(只记录决策意图,不接券商)
+- 不做社交比较(认知是私有的,不引入排行榜)
+- 不引入 AI 生成判断(用户必须自己写,AI 只做校验和总结)
+
+---
+
+## 2. 设计哲学(锁定不变)
+
+### 2.1 核心原则
+
+| 原则 | 说明 |
+|---|---|
+| **强制输出** | 输入数据前先写预判,先写决策再说理由,反过来无效 |
+| **不可编辑历史** | 已提交的预判 / 决策一律只读,只能补充反思,不能改判断 |
+| **客观校验** | 准确率由系统计算,不靠用户自评 |
+| **延迟反馈** | 决策日志的"事后反思"在 5 / 20 日后系统主动 push,避免事后归因 |
+| **盲测优先** | 晨间预判时**默认隐藏**昨日复盘数据,避免被锚定 |
+
+### 2.2 反直觉的设计选择
+
+| 决策 | 选择 | 理由 |
+|---|---|---|
+| 是否允许编辑预判 | 否 | 编辑就破坏了校验闭环,人会下意识改对自己有利的版本 |
+| 是否显示其他用户表现 | 否 | 单用户自我对照才有意义,横向比较引入情绪噪声 |
+| 是否用 AI 自动写预判 | 否 | AI 写的预判等于没写,认知是"输出"塑造的不是"输入" |
+| 反思能否当天写 | 否 | 当天写的反思 80% 是结果归因,5/20 日后才有意义 |
+| 错误判断是否警示 | 否(不直接) | 但会进入"误判档案"周末复盘,避免实时打击信心 |
+
+---
+
+## 3. 数据字典与字段映射 (E7)
+
+### 3.1 表清单
+
+| 表名 | 用途 | 主键 | 行数估算/月 |
+|---|---|---|---|
+| `train_prediction_morning` | 晨间预判 | `pred_id` | 22(每日 1 条) |
+| `train_journal_daily` | 每日日记 | `journal_id` | 22 |
+| `train_decision_log` | 决策日志 | `decision_id` | 5-30(因人而异) |
+| `train_weekly_review` | 周末复盘 | `review_id` | 4 |
+| `train_personal_checklist` | 避坑清单 | `rule_id` | 累积约 1-3/月 |
+
+### 3.2 与第 1-7 章数据的关联
+
+| 训练表字段 | 关联到 | 用途 |
+|---|---|---|
+| `prediction.context_snapshot` | `app_daily_brief` | 提交时锁定先验 |
+| `prediction` 校验 | `ads_l1_market_overview`、`ads_l2_industry_daily` | 客观比对 |
+| `decision.context_snapshot` | `ads_l3_capital_flow`、`ads_l5_*`、`ads_l7_cross_market` | 决策时锁定环境 |
+| `decision` 5/20 日结果 | `stock_kline_daily` | 算 return |
+| `weekly_review` 候选失误 | `train_prediction_morning`、`train_decision_log` | 自动筛选 |
+
+### 3.3 关键字段口径
+
+| 字段 | 口径 |
+|---|---|
+| `direction='up'` 标准 | 沪指 `pct_chg > 0.003`(0.3% 阈值,内嵌容错带) |
+| `volume='expand'` 标准 | 成交额 / 5 日均量 > 1.10 |
+| `judge_quality='good'` | reason_evidence 项数 ≥ 3 且非纯叙事 |
+| `outcome='good_result'` | `return_20d >= expected * 0.5` |
+| 决策预期周期 | 1d / 5d / 20d / 60d 四档,不允许自定义 |
+| `direction_confidence` | 1-5 整数,> 5 用户高估自己,< 1 不代表反向 |
+
+---
+
+## 4. 技术依赖
+
+- **MySQL 5.7**: 全程兼容,无窗口函数
+- **第 1 章** `ads_l1_market_overview` / `ods_event_limit_pool`: 校验预判
+- **第 2 章** `ads_l2_industry_daily.theme_label = 'main_theme'`: 校验主线
+- **第 7 章** `app_daily_brief`: context_snapshot 来源
+- **`stock_kline_daily`**: 算决策 return
+- **`trade_cal`**: 计算 T+5、T+20 准确日期
+- **微信 push 能力**: T+5 / T+20 / 周日早 push
+- **echarts-for-weixin**: 校准曲线、4 象限分布
+</script>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', async () => {
+            const rawMd = document.getElementById('markdown-raw').textContent;
+            const contentEl = document.getElementById('content');
+            const tocEl = document.getElementById('toc');
+            
+            // Set options for marked
+            marked.setOptions({
+                gfm: true,
+                breaks: true,
+                headerIds: true,
+                mangle: false,
+                highlight: function(code, lang) {
+                    const language = hljs.getLanguage(lang) ? lang : 'plaintext';
+                    return hljs.highlight(code, { language }).value;
+                }
+            });
+
+            // Parse Markdown
+            contentEl.innerHTML = marked.parse(rawMd);
+            
+            // Generate TOC
+            const headings = contentEl.querySelectorAll('h2, h3');
+            headings.forEach((h, index) => {
+                if (!h.id) h.id = 'heading-' + index;
+                
+                const li = document.createElement('li');
+                li.className = 'toc-item level-' + h.tagName.toLowerCase().charAt(1);
+                
+                const a = document.createElement('a');
+                a.href = '#' + h.id;
+                a.textContent = h.textContent;
+                
+                li.appendChild(a);
+                tocEl.appendChild(li);
+            });
+
+            // Handle Mermaid
+            if (window.mermaid) {
+                mermaid.initialize({ startOnLoad: false, theme: 'dark', useWorker: false });
+                document.querySelectorAll('pre code.language-mermaid').forEach(el => {
+                    const pre = el.parentElement;
+                    const div = document.createElement('div');
+                    div.className = 'mermaid';
+                    div.textContent = el.textContent;
+                    pre.parentElement.replaceChild(div, pre);
+                });
+                mermaid.run();
+            }
+        });
+    </script>
+</body>
+</html>

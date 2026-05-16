@@ -1,0 +1,2108 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>建立资金图谱 · 方法论与工程实践</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;500;700;900&family=JetBrains+Mono:wght@300;400;500;600&family=Bodoni+Moda:ital,wght@0,400;0,700;0,900;1,400&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg-deep: #0a0e14;
+  --bg-card: #11161f;
+  --bg-elevated: #1a212d;
+  --border: #2a3441;
+  --border-bright: #3d4a5c;
+  --text-primary: #e8eaed;
+  --text-secondary: #9ba7b8;
+  --text-muted: #5a6779;
+  --amber: #ffb547;
+  --amber-bright: #ffc875;
+  --amber-dim: #8a6027;
+  --cyan: #4dd0e1;
+  --cyan-bright: #7eecff;
+  --red: #ff5252;
+  --green: #66bb6a;
+  --purple: #b794f4;
+  --rose: #f48fb1;
+  --grid-line: rgba(255, 181, 71, 0.06);
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+
+body {
+  font-family: 'Noto Serif SC', serif;
+  background: var(--bg-deep);
+  color: var(--text-primary);
+  line-height: 1.7;
+  background-image: 
+    linear-gradient(var(--grid-line) 1px, transparent 1px),
+    linear-gradient(90deg, var(--grid-line) 1px, transparent 1px);
+  background-size: 60px 60px;
+  background-attachment: fixed;
+}
+
+/* ========== HEADER ========== */
+.header {
+  position: relative;
+  padding: 100px 60px 80px;
+  border-bottom: 1px solid var(--border);
+  overflow: hidden;
+}
+
+.header::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--amber), transparent);
+}
+
+.header::after {
+  content: 'MAP';
+  position: absolute;
+  font-family: 'Bodoni Moda', serif;
+  font-style: italic;
+  font-weight: 900;
+  font-size: 480px;
+  color: rgba(255, 181, 71, 0.025);
+  bottom: -160px;
+  right: -60px;
+  letter-spacing: -20px;
+  pointer-events: none;
+  line-height: 0.8;
+}
+
+.header-meta {
+  display: flex;
+  justify-content: space-between;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  color: var(--text-muted);
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  margin-bottom: 60px;
+}
+
+.header-meta .dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  background: var(--amber);
+  border-radius: 50%;
+  margin-right: 8px;
+  box-shadow: 0 0 12px var(--amber);
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+
+.title-tag {
+  font-family: 'Bodoni Moda', serif;
+  font-style: italic;
+  font-size: 22px;
+  color: var(--amber);
+  margin-bottom: 20px;
+  position: relative;
+  z-index: 1;
+}
+
+.title-zh {
+  font-family: 'Noto Serif SC', serif;
+  font-size: 88px;
+  font-weight: 900;
+  line-height: 1.05;
+  letter-spacing: -3px;
+  margin-bottom: 24px;
+  position: relative;
+  z-index: 1;
+}
+
+.title-zh .accent {
+  color: var(--amber);
+  font-style: italic;
+  font-family: 'Bodoni Moda', serif;
+  font-weight: 900;
+}
+
+.title-en {
+  font-family: 'Bodoni Moda', serif;
+  font-style: italic;
+  font-size: 24px;
+  color: var(--text-secondary);
+  margin-bottom: 40px;
+  letter-spacing: 1px;
+  position: relative;
+  z-index: 1;
+}
+
+.subtitle {
+  font-size: 17px;
+  color: var(--text-secondary);
+  max-width: 820px;
+  border-left: 2px solid var(--amber);
+  padding-left: 24px;
+  line-height: 1.8;
+  position: relative;
+  z-index: 1;
+}
+
+.subtitle strong { color: var(--amber); }
+
+/* ========== NAV ========== */
+.nav {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  background: rgba(10, 14, 20, 0.95);
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid var(--border);
+  padding: 16px 60px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+}
+
+.nav ul {
+  display: flex;
+  gap: 36px;
+  list-style: none;
+  flex-wrap: wrap;
+}
+
+.nav a {
+  color: var(--text-secondary);
+  text-decoration: none;
+  transition: color 0.3s;
+  position: relative;
+  padding-bottom: 4px;
+}
+
+.nav a:hover { color: var(--amber); }
+
+.nav a::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 0;
+  height: 1px;
+  background: var(--amber);
+  transition: width 0.3s;
+}
+
+.nav a:hover::after { width: 100%; }
+
+/* ========== SECTION ========== */
+.section {
+  padding: 120px 60px;
+  border-bottom: 1px solid var(--border);
+  position: relative;
+}
+
+.section-header {
+  display: flex;
+  align-items: baseline;
+  gap: 30px;
+  margin-bottom: 70px;
+  padding-bottom: 30px;
+  border-bottom: 1px dashed var(--border);
+}
+
+.section-num {
+  font-family: 'Bodoni Moda', serif;
+  font-size: 96px;
+  font-weight: 900;
+  color: transparent;
+  -webkit-text-stroke: 1px var(--amber);
+  line-height: 0.8;
+  font-style: italic;
+}
+
+.section-title {
+  font-size: 44px;
+  font-weight: 700;
+  margin-bottom: 8px;
+  letter-spacing: -1px;
+  line-height: 1.2;
+}
+
+.section-subtitle {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 2px;
+}
+
+.lead {
+  font-size: 17px;
+  color: var(--text-secondary);
+  line-height: 1.9;
+  max-width: 880px;
+  margin-bottom: 50px;
+}
+
+.lead strong {
+  color: var(--amber-bright);
+  font-weight: 500;
+}
+
+/* ========== 定义部分 ========== */
+.definition-box {
+  background: linear-gradient(135deg, rgba(255, 181, 71, 0.05), rgba(255, 181, 71, 0.01));
+  border: 1px solid var(--amber-dim);
+  padding: 50px;
+  margin-bottom: 50px;
+  position: relative;
+}
+
+.def-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  color: var(--amber);
+  letter-spacing: 2px;
+  margin-bottom: 20px;
+}
+
+.def-formula {
+  font-family: 'Bodoni Moda', serif;
+  font-style: italic;
+  font-size: 28px;
+  color: var(--text-primary);
+  margin-bottom: 30px;
+  line-height: 1.5;
+}
+
+.def-formula .symbol {
+  color: var(--amber);
+  font-weight: 700;
+  margin: 0 8px;
+}
+
+.def-question {
+  font-family: 'Noto Serif SC', serif;
+  font-size: 18px;
+  color: var(--text-secondary);
+  font-style: italic;
+  border-left: 3px solid var(--amber);
+  padding-left: 20px;
+  margin-top: 24px;
+  line-height: 1.7;
+}
+
+/* ========== 五维结构 ========== */
+.dimensions {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 1px;
+  background: var(--border);
+  border: 1px solid var(--border);
+  margin-top: 40px;
+}
+
+.dimension-card {
+  background: var(--bg-card);
+  padding: 36px 24px;
+  position: relative;
+  transition: background 0.3s;
+}
+
+.dimension-card:hover {
+  background: var(--bg-elevated);
+}
+
+.dim-greek {
+  font-family: 'Bodoni Moda', serif;
+  font-style: italic;
+  font-size: 56px;
+  font-weight: 900;
+  color: var(--amber);
+  line-height: 0.9;
+  margin-bottom: 16px;
+}
+
+.dim-question {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  color: var(--text-muted);
+  letter-spacing: 1.5px;
+  margin-bottom: 8px;
+  text-transform: uppercase;
+}
+
+.dim-name {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: 16px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--border);
+}
+
+.dim-fields {
+  list-style: none;
+  margin-bottom: 16px;
+}
+
+.dim-fields li {
+  font-size: 11px;
+  color: var(--text-secondary);
+  padding: 4px 0;
+  padding-left: 14px;
+  position: relative;
+  line-height: 1.5;
+}
+
+.dim-fields li::before {
+  content: '·';
+  position: absolute;
+  left: 4px;
+  color: var(--amber);
+  font-weight: 700;
+}
+
+.dim-why {
+  font-size: 11px;
+  color: var(--text-muted);
+  font-style: italic;
+  line-height: 1.6;
+  padding-top: 12px;
+  border-top: 1px dashed var(--border);
+}
+
+.dim-why strong {
+  color: var(--amber);
+  font-style: normal;
+}
+
+/* ========== 资金模板表格 ========== */
+.template-section {
+  margin-top: 40px;
+}
+
+.template-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  margin-bottom: 24px;
+  overflow: hidden;
+}
+
+.template-header {
+  padding: 28px 36px;
+  background: var(--bg-elevated);
+  display: grid;
+  grid-template-columns: 80px 1fr auto;
+  gap: 24px;
+  align-items: center;
+  border-bottom: 1px solid var(--border);
+}
+
+.tpl-num {
+  font-family: 'Bodoni Moda', serif;
+  font-style: italic;
+  font-weight: 900;
+  font-size: 48px;
+  color: var(--amber);
+  line-height: 0.8;
+  text-align: center;
+}
+
+.tpl-title-group h3 {
+  font-size: 22px;
+  font-weight: 700;
+  margin-bottom: 4px;
+}
+
+.tpl-en {
+  font-family: 'Bodoni Moda', serif;
+  font-style: italic;
+  font-size: 12px;
+  color: var(--text-muted);
+  letter-spacing: 0.5px;
+}
+
+.tpl-priority {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  padding: 6px 12px;
+  letter-spacing: 1px;
+}
+
+.priority-1 { background: rgba(255, 82, 82, 0.1); color: var(--red); border: 1px solid var(--red); }
+.priority-2 { background: rgba(255, 181, 71, 0.1); color: var(--amber); border: 1px solid var(--amber); }
+.priority-3 { background: rgba(102, 187, 106, 0.1); color: var(--green); border: 1px solid var(--green); }
+
+.template-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.template-table th {
+  background: var(--bg-deep);
+  padding: 12px 20px;
+  text-align: left;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  color: var(--amber);
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  border-bottom: 1px solid var(--border);
+  font-weight: 500;
+}
+
+.template-table td {
+  padding: 14px 20px;
+  font-size: 13px;
+  color: var(--text-secondary);
+  border-bottom: 1px solid var(--border);
+  vertical-align: top;
+}
+
+.template-table tr:last-child td {
+  border-bottom: none;
+}
+
+.template-table .field-dim {
+  color: var(--amber);
+  font-weight: 500;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  width: 100px;
+}
+
+.template-table .field-freq {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  color: var(--cyan);
+  width: 100px;
+}
+
+.tpl-extras {
+  padding: 20px 36px;
+  background: rgba(255, 181, 71, 0.03);
+  border-top: 1px solid var(--border);
+}
+
+.tpl-extras-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  color: var(--amber);
+  letter-spacing: 1.5px;
+  margin-bottom: 8px;
+}
+
+.tpl-extras-content {
+  font-size: 12px;
+  color: var(--text-secondary);
+  line-height: 1.7;
+}
+
+.tpl-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.tpl-tag {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  padding: 4px 10px;
+  background: var(--bg-elevated);
+  color: var(--text-secondary);
+  border: 1px solid var(--border-bright);
+}
+
+/* ========== 六步流程 ========== */
+.steps-flow {
+  display: grid;
+  gap: 16px;
+  margin-top: 40px;
+}
+
+.step-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  padding: 36px 40px;
+  display: grid;
+  grid-template-columns: 100px 1fr;
+  gap: 40px;
+  position: relative;
+  transition: border-color 0.3s;
+}
+
+.step-card:hover {
+  border-color: var(--amber-dim);
+}
+
+.step-num-block {
+  position: relative;
+}
+
+.step-roman {
+  font-family: 'Bodoni Moda', serif;
+  font-style: italic;
+  font-weight: 900;
+  font-size: 72px;
+  color: var(--amber);
+  line-height: 0.8;
+}
+
+.step-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 9px;
+  color: var(--text-muted);
+  letter-spacing: 2px;
+  margin-top: 8px;
+  text-transform: uppercase;
+}
+
+.step-content h3 {
+  font-size: 24px;
+  font-weight: 700;
+  margin-bottom: 16px;
+  color: var(--text-primary);
+}
+
+.step-content p {
+  font-size: 14px;
+  color: var(--text-secondary);
+  line-height: 1.85;
+  margin-bottom: 16px;
+}
+
+.step-content strong {
+  color: var(--amber-bright);
+  font-weight: 500;
+}
+
+.step-detail-box {
+  background: var(--bg-elevated);
+  border-left: 3px solid var(--amber);
+  padding: 18px 24px;
+  margin-top: 20px;
+}
+
+.step-detail-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  color: var(--amber);
+  letter-spacing: 1.5px;
+  margin-bottom: 10px;
+}
+
+.step-detail-content {
+  font-size: 12px;
+  color: var(--text-secondary);
+  line-height: 1.8;
+}
+
+.step-detail-content ul {
+  list-style: none;
+  margin-top: 8px;
+}
+
+.step-detail-content li {
+  padding: 4px 0;
+  padding-left: 16px;
+  position: relative;
+}
+
+.step-detail-content li::before {
+  content: '→';
+  position: absolute;
+  left: 0;
+  color: var(--amber);
+}
+
+/* 优先级阶梯 */
+.priority-tiers {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  margin-top: 20px;
+}
+
+.tier-box {
+  padding: 20px 24px;
+  border: 1px solid var(--border);
+  background: var(--bg-elevated);
+  position: relative;
+}
+
+.tier-box.tier-1 { border-left: 4px solid var(--red); }
+.tier-box.tier-2 { border-left: 4px solid var(--amber); }
+.tier-box.tier-3 { border-left: 4px solid var(--green); }
+
+.tier-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 1.5px;
+  margin-bottom: 8px;
+}
+
+.tier-1 .tier-label { color: var(--red); }
+.tier-2 .tier-label { color: var(--amber); }
+.tier-3 .tier-label { color: var(--green); }
+
+.tier-name {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: 10px;
+}
+
+.tier-list {
+  font-size: 12px;
+  color: var(--text-secondary);
+  line-height: 1.8;
+}
+
+/* ========== 架构图 ========== */
+.architecture-diagram {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  padding: 40px;
+  margin-top: 40px;
+}
+
+.arch-stack {
+  display: grid;
+  gap: 12px;
+}
+
+.arch-row {
+  display: grid;
+  grid-template-columns: 200px 1fr;
+  gap: 24px;
+  align-items: center;
+  padding: 24px 28px;
+  background: var(--bg-elevated);
+  border-left: 4px solid var(--amber);
+  position: relative;
+  transition: all 0.3s;
+}
+
+.arch-row:hover {
+  border-left-color: var(--amber-bright);
+  transform: translateX(4px);
+}
+
+.arch-layer-name {
+  font-family: 'Bodoni Moda', serif;
+  font-style: italic;
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--amber);
+}
+
+.arch-layer-name span {
+  display: block;
+  font-family: 'JetBrains Mono', monospace;
+  font-style: normal;
+  font-size: 10px;
+  color: var(--text-muted);
+  margin-top: 4px;
+  letter-spacing: 1.5px;
+  font-weight: 400;
+}
+
+.arch-components {
+  font-size: 13px;
+  color: var(--text-secondary);
+  line-height: 1.7;
+}
+
+.arch-components strong {
+  color: var(--text-primary);
+}
+
+.arch-arrow {
+  text-align: center;
+  color: var(--amber);
+  font-size: 20px;
+  padding: 4px 0;
+}
+
+/* 存储选型 */
+.storage-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+  margin-top: 30px;
+}
+
+.storage-item {
+  padding: 18px 24px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 20px;
+  align-items: center;
+}
+
+.storage-purpose {
+  font-size: 13px;
+  color: var(--text-primary);
+}
+
+.storage-purpose .purpose-label {
+  display: block;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 9px;
+  color: var(--text-muted);
+  margin-bottom: 4px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+
+.storage-tool {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  color: var(--amber);
+  padding: 6px 12px;
+  border: 1px solid var(--amber-dim);
+  background: rgba(255, 181, 71, 0.05);
+}
+
+/* 调度频率 */
+.frequency-grid {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 1px;
+  margin-top: 30px;
+  background: var(--border);
+  border: 1px solid var(--border);
+}
+
+.freq-cell {
+  background: var(--bg-card);
+  padding: 24px 16px;
+  text-align: center;
+}
+
+.freq-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  color: var(--amber);
+  letter-spacing: 1px;
+  margin-bottom: 12px;
+}
+
+.freq-name {
+  font-family: 'Bodoni Moda', serif;
+  font-weight: 700;
+  font-size: 18px;
+  color: var(--text-primary);
+  margin-bottom: 12px;
+  font-style: italic;
+}
+
+.freq-desc {
+  font-size: 11px;
+  color: var(--text-secondary);
+  line-height: 1.6;
+}
+
+/* ========== 陷阱 ========== */
+.pitfalls {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 20px;
+  margin-top: 40px;
+}
+
+.pitfall {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  padding: 28px 32px;
+  position: relative;
+  border-top: 2px solid var(--red);
+}
+
+.pitfall-num {
+  font-family: 'Bodoni Moda', serif;
+  font-style: italic;
+  font-weight: 900;
+  font-size: 56px;
+  color: rgba(255, 82, 82, 0.15);
+  position: absolute;
+  top: 16px;
+  right: 24px;
+  line-height: 0.8;
+}
+
+.pitfall-warning {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  color: var(--red);
+  letter-spacing: 2px;
+  margin-bottom: 8px;
+}
+
+.pitfall-title {
+  font-size: 17px;
+  font-weight: 700;
+  margin-bottom: 12px;
+  color: var(--text-primary);
+  max-width: 80%;
+}
+
+.pitfall-desc {
+  font-size: 12px;
+  color: var(--text-secondary);
+  line-height: 1.8;
+}
+
+.pitfall-desc strong {
+  color: var(--amber-bright);
+  font-weight: 500;
+}
+
+/* ========== MVP路径 ========== */
+.mvp-timeline {
+  margin-top: 40px;
+  position: relative;
+}
+
+.mvp-timeline::before {
+  content: '';
+  position: absolute;
+  left: 100px;
+  top: 20px;
+  bottom: 20px;
+  width: 1px;
+  background: var(--border-bright);
+}
+
+.mvp-phase {
+  display: grid;
+  grid-template-columns: 100px 50px 1fr;
+  gap: 30px;
+  margin-bottom: 30px;
+  position: relative;
+}
+
+.mvp-time {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  color: var(--amber);
+  text-align: right;
+  padding-top: 24px;
+  letter-spacing: 1px;
+}
+
+.mvp-marker {
+  position: relative;
+  padding-top: 24px;
+}
+
+.mvp-dot {
+  width: 14px;
+  height: 14px;
+  background: var(--bg-deep);
+  border: 2px solid var(--amber);
+  border-radius: 50%;
+  margin: 0 auto;
+  position: relative;
+  z-index: 1;
+  box-shadow: 0 0 0 4px var(--bg-deep);
+}
+
+.mvp-content {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  padding: 24px 30px;
+}
+
+.mvp-title {
+  font-size: 18px;
+  font-weight: 700;
+  margin-bottom: 12px;
+  color: var(--text-primary);
+}
+
+.mvp-desc {
+  font-size: 13px;
+  color: var(--text-secondary);
+  line-height: 1.7;
+  margin-bottom: 14px;
+}
+
+.mvp-tools {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.mvp-tool {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 9px;
+  padding: 3px 9px;
+  background: rgba(77, 208, 225, 0.08);
+  color: var(--cyan);
+  border: 1px solid rgba(77, 208, 225, 0.25);
+  letter-spacing: 0.5px;
+}
+
+/* ========== Footer ========== */
+.ultimate {
+  padding: 120px 60px;
+  text-align: center;
+  border-top: 1px solid var(--border);
+  background: 
+    radial-gradient(ellipse at center top, rgba(255, 181, 71, 0.06) 0%, transparent 60%),
+    var(--bg-deep);
+  position: relative;
+  overflow: hidden;
+}
+
+.ultimate-tag {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  color: var(--amber);
+  letter-spacing: 3px;
+  margin-bottom: 30px;
+}
+
+.ultimate-quote {
+  font-family: 'Noto Serif SC', serif;
+  font-weight: 700;
+  font-size: 36px;
+  color: var(--text-primary);
+  max-width: 950px;
+  margin: 0 auto 30px;
+  line-height: 1.5;
+  letter-spacing: -0.5px;
+}
+
+.ultimate-quote .highlight {
+  color: var(--amber);
+  font-family: 'Bodoni Moda', serif;
+  font-style: italic;
+}
+
+.ultimate-sub {
+  font-family: 'Bodoni Moda', serif;
+  font-style: italic;
+  font-size: 20px;
+  color: var(--text-secondary);
+  max-width: 720px;
+  margin: 0 auto 60px;
+  line-height: 1.7;
+}
+
+.series-info {
+  display: flex;
+  justify-content: center;
+  gap: 30px;
+  padding-top: 50px;
+  border-top: 1px solid var(--border);
+  max-width: 800px;
+  margin: 0 auto;
+  flex-wrap: wrap;
+}
+
+.series-item {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  color: var(--text-muted);
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+}
+
+.series-item.current {
+  color: var(--amber);
+}
+
+.series-item .num {
+  font-family: 'Bodoni Moda', serif;
+  font-style: italic;
+  font-size: 18px;
+  display: block;
+  margin-bottom: 6px;
+  font-weight: 700;
+}
+
+/* Responsive */
+@media (max-width: 968px) {
+  .header { padding: 60px 30px 40px; }
+  .header::after { font-size: 220px; }
+  .title-zh { font-size: 48px; }
+  .title-en { font-size: 18px; }
+  .nav { padding: 16px 30px; }
+  .nav ul { gap: 16px; }
+  .section { padding: 60px 30px; }
+  .section-num { font-size: 64px; }
+  .section-title { font-size: 28px; }
+  .dimensions { grid-template-columns: 1fr; }
+  .priority-tiers { grid-template-columns: 1fr; }
+  .arch-row { grid-template-columns: 1fr; gap: 12px; }
+  .storage-grid { grid-template-columns: 1fr; }
+  .frequency-grid { grid-template-columns: 1fr 1fr; }
+  .pitfalls { grid-template-columns: 1fr; }
+  .step-card { grid-template-columns: 1fr; gap: 20px; }
+  .mvp-timeline::before { left: 8px; }
+  .mvp-phase { grid-template-columns: 1fr; gap: 12px; }
+  .mvp-time { text-align: left; padding-top: 0; }
+  .mvp-marker { display: none; }
+  .ultimate { padding: 60px 30px; }
+  .ultimate-quote { font-size: 24px; }
+  .template-header { grid-template-columns: 1fr; gap: 12px; }
+  .template-table { font-size: 11px; }
+  .template-table th, .template-table td { padding: 10px; }
+}
+</style>
+</head>
+<body>
+
+<!-- ========== HEADER ========== -->
+<header class="header">
+  <div class="header-meta">
+    <div><span class="dot"></span>RESEARCH FRAMEWORK · ENGINEERING MANUAL</div>
+    <div>SERIES III · CAPITAL MAP CONSTRUCTION</div>
+  </div>
+  <div class="title-tag">— A Methodological Engineering Guide —</div>
+  <h1 class="title-zh">建立资金图谱<br><span class="accent">从数据到知识的工程</span></h1>
+  <div class="title-en">Constructing the Capital Map · From Raw Data to Predictive Intelligence</div>
+  <p class="subtitle">
+    资金图谱不是简单的"数据收集",而是一个需要<strong>系统化设计、长期维护、持续迭代</strong>的工程。它是整个资金视角研究体系的底层基础设施——没有它,所有的状态识别、博弈分析、策略匹配都是空中楼阁。
+  </p>
+</header>
+
+<!-- ========== NAV ========== -->
+<nav class="nav">
+  <ul>
+    <li><a href="#define">01 · 何为图谱</a></li>
+    <li><a href="#dimensions">02 · 五维结构</a></li>
+    <li><a href="#templates">03 · 九类模板</a></li>
+    <li><a href="#steps">04 · 六步建图</a></li>
+    <li><a href="#tech">05 · 技术架构</a></li>
+    <li><a href="#pitfalls">06 · 避坑指南</a></li>
+    <li><a href="#mvp">07 · MVP路径</a></li>
+  </ul>
+</nav>
+
+<!-- ========== 01 何为图谱 ========== -->
+<section class="section" id="define">
+  <div class="section-header">
+    <div class="section-num">01</div>
+    <div>
+      <h2 class="section-title">什么是资金图谱</h2>
+      <div class="section-subtitle">Defining the Capital Map</div>
+    </div>
+  </div>
+
+  <p class="lead">
+    资金图谱(Capital Map)是对A股市场中<strong>所有重要资金主体</strong>的结构化描述。它不是一张静态的图,而是一个<strong>持续更新的关系数据库 + 行为档案 + 预测模型</strong>的有机组合。
+  </p>
+
+  <div class="definition-box">
+    <div class="def-label">— FORMULA —</div>
+    <div class="def-formula">
+      Capital Map <span class="symbol">=</span> Static Identity <span class="symbol">+</span> Dynamic State <span class="symbol">+</span> Behavioral Pattern <span class="symbol">+</span> Predictive Model
+    </div>
+    <div class="def-question">
+      "如果明天美联储意外加息50个基点,北向交易盘会做什么?险资会做什么?它们的反应会通过什么链路传导到中证500?"<br><br>
+      <strong style="color: var(--amber);">能回答这种问题,就是资金图谱的最终价值。</strong>
+    </div>
+  </div>
+</section>
+
+<!-- ========== 02 五维结构 ========== -->
+<section class="section" id="dimensions">
+  <div class="section-header">
+    <div class="section-num">02</div>
+    <div>
+      <h2 class="section-title">资金图谱的五维结构</h2>
+      <div class="section-subtitle">The Five Dimensions of Capital Mapping</div>
+    </div>
+  </div>
+
+  <p class="lead">
+    一个完整的资金图谱必须从五个维度刻画每一类资金。每个维度回答一个核心问题,每个问题对应一组结构化字段。
+  </p>
+
+  <div class="dimensions">
+    <div class="dimension-card">
+      <div class="dim-greek">α</div>
+      <div class="dim-question">DIMENSION 1 · WHO</div>
+      <div class="dim-name">身份维度</div>
+      <ul class="dim-fields">
+        <li>资金类别归属</li>
+        <li>子类别细分</li>
+        <li>代表性主体</li>
+        <li>监管属性</li>
+        <li>资金来源性质</li>
+      </ul>
+      <div class="dim-why">
+        身份决定了一类资金的<strong>先天约束</strong>。理解身份就理解了资金的行为边界。
+      </div>
+    </div>
+
+    <div class="dimension-card">
+      <div class="dim-greek">β</div>
+      <div class="dim-question">DIMENSION 2 · HOW MUCH</div>
+      <div class="dim-name">规模维度</div>
+      <ul class="dim-fields">
+        <li>AUM及历史变化</li>
+        <li>A股实际持仓市值</li>
+        <li>30/90/365天净流入</li>
+        <li>杠杆水平</li>
+        <li>板块行业分布</li>
+      </ul>
+      <div class="dim-why">
+        规模决定了资金的<strong>市场影响力</strong>。边际变化往往比绝对规模更具预测性。
+      </div>
+    </div>
+
+    <div class="dimension-card">
+      <div class="dim-greek">γ</div>
+      <div class="dim-question">DIMENSION 3 · WHAT STYLE</div>
+      <div class="dim-name">风格维度</div>
+      <ul class="dim-fields">
+        <li>市值偏好</li>
+        <li>估值偏好</li>
+        <li>行业偏好</li>
+        <li>因子暴露</li>
+        <li>持有期偏好</li>
+      </ul>
+      <div class="dim-why">
+        风格是资金行为的<strong>DNA</strong>。决定了不同资金对同一事件的反应路径。
+      </div>
+    </div>
+
+    <div class="dimension-card">
+      <div class="dim-greek">δ</div>
+      <div class="dim-question">DIMENSION 4 · HOW THEY ACT</div>
+      <div class="dim-name">行为维度</div>
+      <ul class="dim-fields">
+        <li>牛熊震荡市行为</li>
+        <li>对宏观事件反应</li>
+        <li>加减仓触发条件</li>
+        <li>止损止盈规则</li>
+        <li>与其他资金互动</li>
+      </ul>
+      <div class="dim-why">
+        行为是<strong>预测的基础</strong>,也是图谱中最难刻画但最有价值的部分。
+      </div>
+    </div>
+
+    <div class="dimension-card">
+      <div class="dim-greek">ε</div>
+      <div class="dim-question">DIMENSION 5 · NOW</div>
+      <div class="dim-name">实时状态</div>
+      <ul class="dim-fields">
+        <li>当前仓位水平</li>
+        <li>近30天资金流向</li>
+        <li>重点持仓变动</li>
+        <li>情绪/拥挤度评分</li>
+        <li>偏离历史均值度</li>
+      </ul>
+      <div class="dim-why">
+        图谱的<strong>当前快照</strong>,所有实时决策都基于此维度。需日度甚至盘中更新。
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ========== 03 九类模板 ========== -->
+<section class="section" id="templates">
+  <div class="section-header">
+    <div class="section-num">03</div>
+    <div>
+      <h2 class="section-title">九类资金图谱模板</h2>
+      <div class="section-subtitle">Templates for Nine Capital Categories</div>
+    </div>
+  </div>
+
+  <p class="lead">
+    每一类资金都有独立的图谱模板,每一项都对应实际可获取的数据源和观察方法。下面给出五个核心资金类型的完整模板。
+  </p>
+
+  <div class="template-section">
+    <!-- 国家队模板 -->
+    <div class="template-card">
+      <div class="template-header">
+        <div class="tpl-num">I</div>
+        <div class="tpl-title-group">
+          <h3>国家队 · 市场稳定器</h3>
+          <div class="tpl-en">National Team · The Stabilizer</div>
+        </div>
+        <div class="tpl-priority priority-2">PRIORITY · 2</div>
+      </div>
+      <table class="template-table">
+        <thead>
+          <tr>
+            <th style="width:120px">维度</th>
+            <th>关键字段</th>
+            <th style="width:200px">数据源</th>
+            <th style="width:100px">更新频率</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="field-dim">身份</td>
+            <td>中央汇金、证金、外管局子公司、社保</td>
+            <td>公开信息</td>
+            <td class="field-freq">静态</td>
+          </tr>
+          <tr>
+            <td class="field-dim">规模</td>
+            <td>主要ETF的持有份额估算</td>
+            <td>ETF季报、Wind</td>
+            <td class="field-freq">季度</td>
+          </tr>
+          <tr>
+            <td class="field-dim">风格</td>
+            <td>宽基ETF为主,大盘蓝筹为辅</td>
+            <td>持仓分析</td>
+            <td class="field-freq">季度</td>
+          </tr>
+          <tr>
+            <td class="field-dim">行为</td>
+            <td>恐慌时入场,缓慢退出,与市场反向</td>
+            <td>历史事件研究</td>
+            <td class="field-freq">持续积累</td>
+          </tr>
+          <tr>
+            <td class="field-dim">实时</td>
+            <td>五大汇金系ETF的日度净申购</td>
+            <td>上交所/深交所</td>
+            <td class="field-freq">日度</td>
+          </tr>
+        </tbody>
+      </table>
+      <div class="tpl-extras">
+        <div class="tpl-extras-label">— 重点观察标的 —</div>
+        <div class="tpl-tags">
+          <div class="tpl-tag">华泰柏瑞300 (510300)</div>
+          <div class="tpl-tag">易方达300 (510310)</div>
+          <div class="tpl-tag">华夏300 (510330)</div>
+          <div class="tpl-tag">嘉实300 (159919)</div>
+          <div class="tpl-tag">华夏上证50 (510050)</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 北向配置盘模板 -->
+    <div class="template-card">
+      <div class="template-header">
+        <div class="tpl-num">II</div>
+        <div class="tpl-title-group">
+          <h3>北向资金 · 配置盘</h3>
+          <div class="tpl-en">Northbound Allocation Pool · Long-term Capital</div>
+        </div>
+        <div class="tpl-priority priority-1">PRIORITY · 1</div>
+      </div>
+      <table class="template-table">
+        <thead>
+          <tr>
+            <th>维度</th>
+            <th>关键字段</th>
+            <th>数据源</th>
+            <th>更新频率</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="field-dim">身份</td>
+            <td>全球养老金、主权基金、被动指数基金</td>
+            <td>CCASS分析</td>
+            <td class="field-freq">静态</td>
+          </tr>
+          <tr>
+            <td class="field-dim">规模</td>
+            <td>外资行托管的持仓总市值</td>
+            <td>HKEX CCASS</td>
+            <td class="field-freq">周度</td>
+          </tr>
+          <tr>
+            <td class="field-dim">风格</td>
+            <td>大盘蓝筹、高ROE、稳定现金流、行业龙头</td>
+            <td>持仓分析</td>
+            <td class="field-freq">月度</td>
+          </tr>
+          <tr>
+            <td class="field-dim">行为</td>
+            <td>长期配置,对短期波动钝化,关注估值与基本面</td>
+            <td>历史回测</td>
+            <td class="field-freq">持续积累</td>
+          </tr>
+          <tr>
+            <td class="field-dim">实时</td>
+            <td>配置盘日度净流入</td>
+            <td>CCASS爬取</td>
+            <td class="field-freq">日度</td>
+          </tr>
+        </tbody>
+      </table>
+      <div class="tpl-extras">
+        <div class="tpl-extras-label">— 重点托管行 —</div>
+        <div class="tpl-tags">
+          <div class="tpl-tag">HSBC · 汇丰</div>
+          <div class="tpl-tag">JP Morgan · 摩根大通</div>
+          <div class="tpl-tag">Citibank · 花旗</div>
+          <div class="tpl-tag">Standard Chartered · 渣打</div>
+          <div class="tpl-tag">Deutsche Bank · 德意志</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 北向交易盘模板 -->
+    <div class="template-card">
+      <div class="template-header">
+        <div class="tpl-num">III</div>
+        <div class="tpl-title-group">
+          <h3>北向资金 · 交易盘</h3>
+          <div class="tpl-en">Northbound Trading Pool · Short-term Speculative</div>
+        </div>
+        <div class="tpl-priority priority-1">PRIORITY · 1</div>
+      </div>
+      <table class="template-table">
+        <thead>
+          <tr>
+            <th>维度</th>
+            <th>关键字段</th>
+            <th>数据源</th>
+            <th>更新频率</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="field-dim">身份</td>
+            <td>对冲基金、量化基金、套利交易者</td>
+            <td>CCASS分析</td>
+            <td class="field-freq">静态</td>
+          </tr>
+          <tr>
+            <td class="field-dim">规模</td>
+            <td>投行托管的持仓总市值</td>
+            <td>HKEX CCASS</td>
+            <td class="field-freq">周度</td>
+          </tr>
+          <tr>
+            <td class="field-dim">风格</td>
+            <td>短期、中小盘、事件驱动、套利</td>
+            <td>持仓分析</td>
+            <td class="field-freq">月度</td>
+          </tr>
+          <tr>
+            <td class="field-dim">行为</td>
+            <td>严格止损、快进快出、对宏观事件敏感</td>
+            <td>历史回测</td>
+            <td class="field-freq">持续积累</td>
+          </tr>
+          <tr>
+            <td class="field-dim">实时</td>
+            <td>交易盘日度净流入</td>
+            <td>CCASS爬取</td>
+            <td class="field-freq">日度</td>
+          </tr>
+        </tbody>
+      </table>
+      <div class="tpl-extras">
+        <div class="tpl-extras-label">— 重点托管行 —</div>
+        <div class="tpl-tags">
+          <div class="tpl-tag">Goldman Sachs · 高盛</div>
+          <div class="tpl-tag">Morgan Stanley · 摩根士丹利</div>
+          <div class="tpl-tag">UBS · 瑞银</div>
+          <div class="tpl-tag">Barclays · 巴克莱</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 公募基金模板 -->
+    <div class="template-card">
+      <div class="template-header">
+        <div class="tpl-num">IV</div>
+        <div class="tpl-title-group">
+          <h3>公募基金 · 趋势抱团</h3>
+          <div class="tpl-en">Mutual Funds · Herding Trend Followers</div>
+        </div>
+        <div class="tpl-priority priority-1">PRIORITY · 1</div>
+      </div>
+      <table class="template-table">
+        <thead>
+          <tr>
+            <th>维度</th>
+            <th>关键字段</th>
+            <th>数据源</th>
+            <th>更新频率</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="field-dim">身份</td>
+            <td>头部40家公募(嘉实、易方达、华夏、富国等)</td>
+            <td>基金业协会</td>
+            <td class="field-freq">静态</td>
+          </tr>
+          <tr>
+            <td class="field-dim">规模</td>
+            <td>总AUM、权益AUM、新发规模</td>
+            <td>基金业协会月报</td>
+            <td class="field-freq">月度</td>
+          </tr>
+          <tr>
+            <td class="field-dim">风格</td>
+            <td>按基金经理风格分类(成长/价值/均衡)</td>
+            <td>历史持仓分析</td>
+            <td class="field-freq">季度</td>
+          </tr>
+          <tr>
+            <td class="field-dim">行为</td>
+            <td>抱团-瓦解循环、季报后调仓、年末排名战</td>
+            <td>长期跟踪</td>
+            <td class="field-freq">持续</td>
+          </tr>
+          <tr>
+            <td class="field-dim">实时</td>
+            <td>仓位估算、ETF份额变化、新发申购热度</td>
+            <td>卖方研报</td>
+            <td class="field-freq">周度</td>
+          </tr>
+        </tbody>
+      </table>
+      <div class="tpl-extras">
+        <div class="tpl-extras-label">— 关键监测点 —</div>
+        <div class="tpl-extras-content">
+          主动权益基金平均仓位(中信测算)<span style="color:var(--amber)"> · </span>百亿级新发基金的频次<span style="color:var(--amber)"> · </span>头部基金经理代表产品净值变化(反推持仓变动)
+        </div>
+      </div>
+    </div>
+
+    <!-- 量化基金模板 -->
+    <div class="template-card">
+      <div class="template-header">
+        <div class="tpl-num">V</div>
+        <div class="tpl-title-group">
+          <h3>量化基金 · 因子拥挤监测</h3>
+          <div class="tpl-en">Quant Funds · Factor Crowding Monitor</div>
+        </div>
+        <div class="tpl-priority priority-1">PRIORITY · 1</div>
+      </div>
+      <table class="template-table">
+        <thead>
+          <tr>
+            <th>维度</th>
+            <th>关键字段</th>
+            <th>数据源</th>
+            <th>更新频率</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="field-dim">身份</td>
+            <td>头部20家量化私募(幻方、明汯、九坤、灵均等)</td>
+            <td>基金业协会</td>
+            <td class="field-freq">静态</td>
+          </tr>
+          <tr>
+            <td class="field-dim">规模</td>
+            <td>各类策略AUM(指增、中性、CTA)</td>
+            <td>第三方平台</td>
+            <td class="field-freq">月度</td>
+          </tr>
+          <tr>
+            <td class="field-dim">风格</td>
+            <td>因子暴露(小市值、低波、动量、反转)</td>
+            <td>因子归因</td>
+            <td class="field-freq">月度</td>
+          </tr>
+          <tr>
+            <td class="field-dim">行为</td>
+            <td>拥挤-赎回循环、对小盘流动性极敏感</td>
+            <td>历史事件</td>
+            <td class="field-freq">持续</td>
+          </tr>
+          <tr>
+            <td class="field-dim">实时</td>
+            <td>指增超额、IC/IM贴水、小微盘相对强度</td>
+            <td>Wind/Choice</td>
+            <td class="field-freq">日度</td>
+          </tr>
+        </tbody>
+      </table>
+      <div class="tpl-extras">
+        <div class="tpl-extras-label">— 关键拥挤度指标 —</div>
+        <div class="tpl-tags">
+          <div class="tpl-tag">中证500指增滚动20日超额</div>
+          <div class="tpl-tag">中证1000指增滚动20日超额</div>
+          <div class="tpl-tag">微盘股/中证1000比值</div>
+          <div class="tpl-tag">IC/IM主力合约年化贴水</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 游资模板 -->
+    <div class="template-card">
+      <div class="template-header">
+        <div class="tpl-num">VI</div>
+        <div class="tpl-title-group">
+          <h3>游资 · 席位档案库</h3>
+          <div class="tpl-en">Hot Money · Seat Profile Database</div>
+        </div>
+        <div class="tpl-priority priority-2">PRIORITY · 2</div>
+      </div>
+      <table class="template-table">
+        <thead>
+          <tr>
+            <th>维度</th>
+            <th>关键字段</th>
+            <th>数据源</th>
+            <th>更新频率</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="field-dim">身份</td>
+            <td>知名游资席位库(50-100个核心席位)</td>
+            <td>龙虎榜+人工识别</td>
+            <td class="field-freq">季度更新</td>
+          </tr>
+          <tr>
+            <td class="field-dim">规模</td>
+            <td>单日最大成交量、典型操作金额</td>
+            <td>龙虎榜统计</td>
+            <td class="field-freq">月度</td>
+          </tr>
+          <tr>
+            <td class="field-dim">风格</td>
+            <td>题材偏好、市值偏好、操作风格</td>
+            <td>历史复盘</td>
+            <td class="field-freq">月度</td>
+          </tr>
+          <tr>
+            <td class="field-dim">行为</td>
+            <td>题材切换速度、与情绪指标的同步性</td>
+            <td>长期跟踪</td>
+            <td class="field-freq">持续</td>
+          </tr>
+          <tr>
+            <td class="field-dim">实时</td>
+            <td>当日上榜情况、操作个股、买卖方向</td>
+            <td>龙虎榜每日数据</td>
+            <td class="field-freq">日度</td>
+          </tr>
+        </tbody>
+      </table>
+      <div class="tpl-extras">
+        <div class="tpl-extras-label">— 单席位档案模板示例 —</div>
+        <div class="tpl-extras-content" style="font-family: 'JetBrains Mono', monospace; font-size: 11px; line-height: 1.9;">
+          席位代码 / 营业部 / <span style="color:var(--amber)">关联游资</span> / 风格标签 / 偏好题材 / 偏好市值 / 典型操作金额 / <span style="color:var(--amber)">活跃指数</span> / 最近活跃日期 / 最近操作个股 / <span style="color:var(--amber)">历史胜率</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ========== 04 六步流程 ========== -->
+<section class="section" id="steps">
+  <div class="section-header">
+    <div class="section-num">04</div>
+    <div>
+      <h2 class="section-title">建立资金图谱的六个步骤</h2>
+      <div class="section-subtitle">Six Steps to Build Your Capital Map</div>
+    </div>
+  </div>
+
+  <div class="steps-flow">
+
+    <div class="step-card">
+      <div class="step-num-block">
+        <div class="step-roman">i</div>
+        <div class="step-label">STEP ONE</div>
+      </div>
+      <div class="step-content">
+        <h3>确定优先级和粒度</h3>
+        <p>不要试图一次性建立所有九类资金的完整图谱,这会让项目从一开始就崩溃。建议按照<strong>信息价值密度</strong>排序,从高到低依次建设。每一类资金的粒度也要分级——先粗后细。</p>
+        <div class="priority-tiers">
+          <div class="tier-box tier-1">
+            <div class="tier-label">— TIER 1 · 必须做 —</div>
+            <div class="tier-name">第一优先级</div>
+            <div class="tier-list">北向资金<br>公募基金<br>量化基金</div>
+          </div>
+          <div class="tier-box tier-2">
+            <div class="tier-label">— TIER 2 · 尽快做 —</div>
+            <div class="tier-name">第二优先级</div>
+            <div class="tier-list">国家队<br>险资<br>游资</div>
+          </div>
+          <div class="tier-box tier-3">
+            <div class="tier-label">— TIER 3 · 可后做 —</div>
+            <div class="tier-name">第三优先级</div>
+            <div class="tier-list">散户<br>产业资本<br>私募</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="step-card">
+      <div class="step-num-block">
+        <div class="step-roman">ii</div>
+        <div class="step-label">STEP TWO</div>
+      </div>
+      <div class="step-content">
+        <h3>搭建数据采集基础设施</h3>
+        <p>数据采集是资金图谱的命脉,必须工程化。<strong>不要让上层代码直接调用各种数据源SDK</strong>,而要封装统一接口。</p>
+        <div class="step-detail-box">
+          <div class="step-detail-label">— CORE INFRASTRUCTURE —</div>
+          <div class="step-detail-content">
+            <ul>
+              <li><strong>数据源接入层:</strong>封装DataSource接口,所有数据源实现统一规范</li>
+              <li><strong>爬虫与API管理:</strong>区分高频/中频/低频更新,差异化调度策略</li>
+              <li><strong>数据存储分层:</strong>Raw → Staging → Production三层架构</li>
+              <li><strong>数据质量校验:</strong>非空、范围、完整性、趋势一致性多重校验</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="step-card">
+      <div class="step-num-block">
+        <div class="step-roman">iii</div>
+        <div class="step-label">STEP THREE</div>
+      </div>
+      <div class="step-content">
+        <h3>构建资金主体档案库</h3>
+        <p>这一步是把"数据"转化为"知识"的关键。每一类资金,需要建立一个<strong>主体档案库</strong>(Entity Profile Database),涵盖静态属性、风格标签、行为历史、当前状态、跟踪指标五大模块。</p>
+        <div class="step-detail-box">
+          <div class="step-detail-label">— 档案库结构 —</div>
+          <div class="step-detail-content">
+            <ul>
+              <li>entity_id · 唯一标识符</li>
+              <li>static_attributes · 成立日期、监管机构、AUM历史</li>
+              <li>style_tags · 风格标签集合</li>
+              <li>behavior_history · 历史事件反应记录</li>
+              <li>current_state · 仓位、持仓变动、活跃度评分</li>
+              <li>tracking_indicators · 关键观察指标列表</li>
+            </ul>
+            <p style="margin-top:12px"><strong>核心档案手工维护 + 扩展档案算法生成</strong>的混合模式最为可行。</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="step-card">
+      <div class="step-num-block">
+        <div class="step-roman">iv</div>
+        <div class="step-label">STEP FOUR · CRITICAL</div>
+      </div>
+      <div class="step-content">
+        <h3>构建行为模型</h3>
+        <p>这一步把资金图谱从"数据库"升级为<strong>预测引擎</strong>。每一类资金需要建立行为反应函数:给定资金当前状态、市场环境和触发事件,预测最可能的行为。</p>
+        <div class="step-detail-box">
+          <div class="step-detail-label">— 两种构建方法 —</div>
+          <div class="step-detail-content">
+            <ul>
+              <li><strong>规则化建模:</strong>基于研究和历史观察人工编写规则。保证可解释性和稳健性。</li>
+              <li><strong>统计学习:</strong>用历史数据训练模型,学习资金行为模式。捕捉细节和提升精度。</li>
+            </ul>
+            <p style="margin-top:12px;color:var(--amber-bright);"><strong>实战中两种方法必须结合使用</strong>。规则化打底,统计学习增强。</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="step-card">
+      <div class="step-num-block">
+        <div class="step-roman">v</div>
+        <div class="step-label">STEP FIVE</div>
+      </div>
+      <div class="step-content">
+        <h3>建立资金间关系图</h3>
+        <p>这是图谱的"图"字真正体现的地方。<strong>资金不是孤立存在的</strong>,它们之间有复杂的关联——接力、对手盘、协同、传染、替代。技术上可用有向图数据库存储这些关系。</p>
+        <div class="step-detail-box">
+          <div class="step-detail-label">— 关系类型 —</div>
+          <div class="step-detail-content">
+            <ul>
+              <li><strong>接力关系:</strong>A资金的退出对应B资金的进入</li>
+              <li><strong>对手盘关系:</strong>A资金的买入对应B资金的卖出</li>
+              <li><strong>协同关系:</strong>A资金和B资金在同方向行动</li>
+              <li><strong>传染关系:</strong>A资金的行为会触发B资金的行为</li>
+              <li><strong>替代关系:</strong>A资金的萎缩会被B资金填补</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="step-card">
+      <div class="step-num-block">
+        <div class="step-roman">vi</div>
+        <div class="step-label">STEP SIX · ETERNAL</div>
+      </div>
+      <div class="step-content">
+        <h3>迭代与维护</h3>
+        <p>资金图谱<strong>不是一次性建成的,而是持续演化的</strong>。维护机制必须从一开始就纳入设计,而非事后补救。</p>
+        <div class="step-detail-box">
+          <div class="step-detail-label">— 维护机制 —</div>
+          <div class="step-detail-content">
+            <ul>
+              <li><strong>定期校准:</strong>每季度对照市场表现,检查行为模型预测准确率</li>
+              <li><strong>事件驱动更新:</strong>重大市场事件后立即做事件复盘和档案更新</li>
+              <li><strong>新资金类型识别:</strong>定期评估是否需要新增资金类型(雪球、DMA、ETF期权等)</li>
+              <li><strong>死掉资金的清理:</strong>已消失的资金及时移除或标记为非活跃</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<!-- ========== 05 技术架构 ========== -->
+<section class="section" id="tech">
+  <div class="section-header">
+    <div class="section-num">05</div>
+    <div>
+      <h2 class="section-title">技术实现的关键设计</h2>
+      <div class="section-subtitle">Technical Architecture & Implementation</div>
+    </div>
+  </div>
+
+  <p class="lead">
+    资金图谱系统采用五层架构,从数据采集到应用服务层层抽象。<strong>层与层之间通过明确接口通信,确保高内聚低耦合</strong>。
+  </p>
+
+  <div class="architecture-diagram">
+    <div class="arch-stack">
+      <div class="arch-row">
+        <div class="arch-layer-name">应用层<span>APPLICATION LAYER</span></div>
+        <div class="arch-components">
+          <strong>状态识别</strong> · <strong>策略生成</strong> · <strong>实时告警</strong> · 看板展示 · 决策支持
+        </div>
+      </div>
+      <div class="arch-arrow">↑</div>
+      <div class="arch-row">
+        <div class="arch-layer-name">图谱引擎层<span>GRAPH ENGINE</span></div>
+        <div class="arch-components">
+          <strong>实体管理</strong> · <strong>关系管理</strong> · <strong>行为预测</strong> · 推理引擎 · 事件传导分析
+        </div>
+      </div>
+      <div class="arch-arrow">↑</div>
+      <div class="arch-row">
+        <div class="arch-layer-name">数据服务层<span>DATA SERVICE</span></div>
+        <div class="arch-components">
+          <strong>统一查询接口</strong> · 多级缓存 · 数据API · 权限控制
+        </div>
+      </div>
+      <div class="arch-arrow">↑</div>
+      <div class="arch-row">
+        <div class="arch-layer-name">存储层<span>STORAGE LAYER</span></div>
+        <div class="arch-components">
+          <strong>关系数据库</strong> + <strong>时序数据库</strong> + <strong>图数据库</strong> + 文档库 + 缓存
+        </div>
+      </div>
+      <div class="arch-arrow">↑</div>
+      <div class="arch-row">
+        <div class="arch-layer-name">数据采集层<span>DATA COLLECTION</span></div>
+        <div class="arch-components">
+          Wind · akshare · Tushare · CCASS爬虫 · 龙虎榜抓取 · 公告解析
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <h3 style="font-size:24px;margin:60px 0 20px;font-weight:700;color:var(--text-primary);">存储选型建议 <span style="font-family:'Bodoni Moda',serif;font-style:italic;font-size:16px;color:var(--text-muted);font-weight:400;">— Storage Stack</span></h3>
+
+  <div class="storage-grid">
+    <div class="storage-item">
+      <div class="storage-purpose">
+        <span class="purpose-label">关系数据 · 实体属性</span>
+        资金主体静态信息、风格标签、档案库
+      </div>
+      <div class="storage-tool">PostgreSQL</div>
+    </div>
+    <div class="storage-item">
+      <div class="storage-purpose">
+        <span class="purpose-label">时序数据 · 流向价格</span>
+        资金日度流向、ETF申赎、价格序列
+      </div>
+      <div class="storage-tool">ClickHouse</div>
+    </div>
+    <div class="storage-item">
+      <div class="storage-purpose">
+        <span class="purpose-label">图数据 · 资金关系</span>
+        资金主体间的关联与传导路径
+      </div>
+      <div class="storage-tool">Neo4j</div>
+    </div>
+    <div class="storage-item">
+      <div class="storage-purpose">
+        <span class="purpose-label">文档数据 · 公告研报</span>
+        全文搜索、政策文件、研究报告
+      </div>
+      <div class="storage-tool">Elasticsearch</div>
+    </div>
+    <div class="storage-item">
+      <div class="storage-purpose">
+        <span class="purpose-label">缓存 · 实时查询</span>
+        热数据缓存、实时状态、会话管理
+      </div>
+      <div class="storage-tool">Redis</div>
+    </div>
+    <div class="storage-item">
+      <div class="storage-purpose">
+        <span class="purpose-label">任务调度 · 工作流</span>
+        定时任务、依赖管理、失败重试
+      </div>
+      <div class="storage-tool">Airflow</div>
+    </div>
+  </div>
+
+  <h3 style="font-size:24px;margin:60px 0 20px;font-weight:700;color:var(--text-primary);">更新调度策略 <span style="font-family:'Bodoni Moda',serif;font-style:italic;font-size:16px;color:var(--text-muted);font-weight:400;">— Update Frequency Tiers</span></h3>
+
+  <div class="frequency-grid">
+    <div class="freq-cell">
+      <div class="freq-label">— TIER 1 —</div>
+      <div class="freq-name">Realtime</div>
+      <div class="freq-desc">行情数据<br>直接订阅源</div>
+    </div>
+    <div class="freq-cell">
+      <div class="freq-label">— TIER 2 —</div>
+      <div class="freq-name">Daily</div>
+      <div class="freq-desc">龙虎榜<br>ETF申赎<br>北向数据</div>
+    </div>
+    <div class="freq-cell">
+      <div class="freq-label">— TIER 3 —</div>
+      <div class="freq-name">Weekly</div>
+      <div class="freq-desc">CCASS分托管<br>卖方仓位测算</div>
+    </div>
+    <div class="freq-cell">
+      <div class="freq-label">— TIER 4 —</div>
+      <div class="freq-name">Monthly</div>
+      <div class="freq-desc">基金业协会<br>险资月报<br>新增开户</div>
+    </div>
+    <div class="freq-cell">
+      <div class="freq-label">— TIER 5 —</div>
+      <div class="freq-name">Quarterly</div>
+      <div class="freq-desc">公募季报<br>偿付能力报告</div>
+    </div>
+    <div class="freq-cell">
+      <div class="freq-label">— TIER 6 —</div>
+      <div class="freq-name">Annual</div>
+      <div class="freq-desc">图谱整体复盘<br>重大重构</div>
+    </div>
+  </div>
+</section>
+
+<!-- ========== 06 避坑指南 ========== -->
+<section class="section" id="pitfalls">
+  <div class="section-header">
+    <div class="section-num">06</div>
+    <div>
+      <h2 class="section-title">六个常见陷阱与避坑指南</h2>
+      <div class="section-subtitle">Common Pitfalls · A Survival Guide</div>
+    </div>
+  </div>
+
+  <p class="lead">
+    建立资金图谱过程中,有六个最容易掉进去的陷阱。提前识别它们,可以省下几个月甚至几年的弯路。
+  </p>
+
+  <div class="pitfalls">
+    <div class="pitfall">
+      <div class="pitfall-num">i</div>
+      <div class="pitfall-warning">— PITFALL 01 —</div>
+      <div class="pitfall-title">追求完美数据,忽视业务价值</div>
+      <div class="pitfall-desc">
+        有人会陷入"数据洁癖",非要把每一个数据源做到100%准确才开始用。<strong>错。70%准确率的数据 + 清晰的不确定性标注</strong>,远比"等到100%才用"有价值。
+      </div>
+    </div>
+
+    <div class="pitfall">
+      <div class="pitfall-num">ii</div>
+      <div class="pitfall-warning">— PITFALL 02 —</div>
+      <div class="pitfall-title">过度依赖单一数据源</div>
+      <div class="pitfall-desc">
+        任何单一数据源都会出错——API故障、口径变更、统计错误。<strong>关键指标必须双源校验</strong>,差异超过阈值就告警。
+      </div>
+    </div>
+
+    <div class="pitfall">
+      <div class="pitfall-num">iii</div>
+      <div class="pitfall-warning">— PITFALL 03 —</div>
+      <div class="pitfall-title">忽视维护成本</div>
+      <div class="pitfall-desc">
+        建立图谱是"花钱",维护图谱是"持续花钱"。<strong>一个长期不更新的图谱比没有图谱更危险</strong>——它会给你错误的安全感。预算上要把维护成本算清楚。
+      </div>
+    </div>
+
+    <div class="pitfall">
+      <div class="pitfall-num">iv</div>
+      <div class="pitfall-warning">— PITFALL 04 —</div>
+      <div class="pitfall-title">把图谱当作预测水晶球</div>
+      <div class="pitfall-desc">
+        资金图谱不是用来预测市场涨跌的,它是用来<strong>理解市场为什么这样运行</strong>的。预测能力来自图谱+情境判断+人的经验,单纯依赖图谱预测是危险的。
+      </div>
+    </div>
+
+    <div class="pitfall">
+      <div class="pitfall-num">v</div>
+      <div class="pitfall-warning">— PITFALL 05 —</div>
+      <div class="pitfall-title">忽视小数据的价值</div>
+      <div class="pitfall-desc">
+        不是所有有用的资金信息都来自大数据。一份私募访谈纪要、一段券商内部讨论,都可能包含关键信号。<strong>保留人工情报渠道</strong>,与算法图谱形成互补。
+      </div>
+    </div>
+
+    <div class="pitfall">
+      <div class="pitfall-num">vi</div>
+      <div class="pitfall-warning">— PITFALL 06 —</div>
+      <div class="pitfall-title">静态图谱思维</div>
+      <div class="pitfall-desc">
+        资金图谱必须是<strong>动态演化的</strong>。三年前的图谱(那时量化只有3000亿规模)拿到今天用,会得出完全错误的结论。<strong>每年至少做一次重大重构</strong>。
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ========== 07 MVP路径 ========== -->
+<section class="section" id="mvp">
+  <div class="section-header">
+    <div class="section-num">07</div>
+    <div>
+      <h2 class="section-title">最小可行图谱 · 五阶段路径</h2>
+      <div class="section-subtitle">MVP Roadmap · From Day One to Maturity</div>
+    </div>
+  </div>
+
+  <p class="lead">
+    如果你今天就要开始,不要追求完美。先搭一个MVP,然后<strong>用市场表现来驱动迭代</strong>,这是唯一可持续的路径。
+  </p>
+
+  <div class="mvp-timeline">
+
+    <div class="mvp-phase">
+      <div class="mvp-time">2 WEEKS</div>
+      <div class="mvp-marker"><div class="mvp-dot"></div></div>
+      <div class="mvp-content">
+        <div class="mvp-title">阶段一 · 北向 + 公募 双引擎</div>
+        <div class="mvp-desc">
+          只做北向资金和公募基金两类,只跟踪日度净流入和仓位。先把数据流和展示链路打通,验证整体可行性。
+        </div>
+        <div class="mvp-tools">
+          <div class="mvp-tool">akshare</div>
+          <div class="mvp-tool">Wind</div>
+          <div class="mvp-tool">PostgreSQL</div>
+          <div class="mvp-tool">Streamlit</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="mvp-phase">
+      <div class="mvp-time">1 MONTH</div>
+      <div class="mvp-marker"><div class="mvp-dot"></div></div>
+      <div class="mvp-content">
+        <div class="mvp-title">阶段二 · 量化 + 国家队 + 游资识别</div>
+        <div class="mvp-desc">
+          加入量化拥挤度监测、国家队ETF申赎跟踪、龙虎榜游资席位识别。游资席位库以30个核心席位起步,逐步扩展到100个。
+        </div>
+        <div class="mvp-tools">
+          <div class="mvp-tool">CCASS爬虫</div>
+          <div class="mvp-tool">龙虎榜抓取</div>
+          <div class="mvp-tool">席位库维护</div>
+          <div class="mvp-tool">指增超额计算</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="mvp-phase">
+      <div class="mvp-time">3 MONTHS</div>
+      <div class="mvp-marker"><div class="mvp-dot"></div></div>
+      <div class="mvp-content">
+        <div class="mvp-title">阶段三 · 完整图谱 + 行为档案</div>
+        <div class="mvp-desc">
+          完善其余资金类型(险资、散户、产业资本、私募),建立行为档案库,实现规则化的行为模型。这是图谱从"数据库"向"知识库"升级的关键阶段。
+        </div>
+        <div class="mvp-tools">
+          <div class="mvp-tool">行为档案库</div>
+          <div class="mvp-tool">YAML规则引擎</div>
+          <div class="mvp-tool">事件研究框架</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="mvp-phase">
+      <div class="mvp-time">6 MONTHS</div>
+      <div class="mvp-marker"><div class="mvp-dot"></div></div>
+      <div class="mvp-content">
+        <div class="mvp-title">阶段四 · 关系图 + 事件传导</div>
+        <div class="mvp-desc">
+          引入资金间关系图,做事件传导分析。开始构建从"宏观事件 → 资金反应 → 板块影响"的完整链路推理能力。
+        </div>
+        <div class="mvp-tools">
+          <div class="mvp-tool">Neo4j</div>
+          <div class="mvp-tool">传导路径推理</div>
+          <div class="mvp-tool">情景模拟</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="mvp-phase">
+      <div class="mvp-time">PERPETUAL</div>
+      <div class="mvp-marker"><div class="mvp-dot"></div></div>
+      <div class="mvp-content">
+        <div class="mvp-title">阶段五 · 维护 · 迭代 · 扩展</div>
+        <div class="mvp-desc">
+          这是<strong style="color:var(--amber-bright);">没有终点</strong>的工作。市场在演化,资金在演化,图谱也必须持续演化。建立年度重构机制和事件驱动更新机制是这一阶段的核心任务。
+        </div>
+        <div class="mvp-tools">
+          <div class="mvp-tool">年度复盘</div>
+          <div class="mvp-tool">事件驱动更新</div>
+          <div class="mvp-tool">模型校准</div>
+          <div class="mvp-tool">新类型识别</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<!-- ========== 终极洞察 ========== -->
+<section class="ultimate">
+  <div class="ultimate-tag">— ULTIMATE INSIGHT —</div>
+  <h2 class="ultimate-quote">
+    资金图谱的真正价值,<br>
+    不在于它<span class="highlight">告诉你什么</span>,<br>
+    而在于它让你学会<span class="highlight">问什么问题</span>。
+  </h2>
+  <p class="ultimate-sub">
+    一份成熟的资金图谱,是分析师与市场之间的"翻译器"——它把市场的混沌行为翻译成可理解的资金语言,把资金的隐秘动机翻译成可观察的数据信号。建图谱的过程,就是建立一种新的市场认知方式的过程。
+  </p>
+
+  <div class="series-info">
+    <div class="series-item">
+      <div class="num">I</div>
+      监测体系全景
+    </div>
+    <div class="series-item">
+      <div class="num">II</div>
+      资金视角方法论
+    </div>
+    <div class="series-item current">
+      <div class="num">III</div>
+      建立资金图谱 · CURRENT
+    </div>
+    <div class="series-item">
+      <div class="num">IV</div>
+      未来续篇 · TO BE CONTINUED
+    </div>
+  </div>
+</section>
+
+</body>
+</html>

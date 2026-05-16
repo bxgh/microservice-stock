@@ -1,0 +1,938 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>速查卡 X.C · 资金波浪实战对照 · Dark</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;0,700;1,500&family=Noto+Serif+SC:wght@400;500;600;700;900&family=JetBrains+Mono:wght@300;400;500;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0d0b08;
+  --bg-elev:#15120d;
+  --bg-deep:#1c1812;
+  --bg-inner:#1f1b14;
+  --ink:#ede4d0;
+  --ink-dim:#a8a090;
+  --muted:#6b6558;
+  --accent:#c9513d;
+  --accent-2:#7ab09a;
+  --gold:#d4a656;
+  --line:#2e2920;
+  --grid:rgba(237,228,208,.06);
+  
+  /* 介质色 - 深色模式下调亮 */
+  --m-jelly:#7ab09a;
+  --m-deep:#5b8bb8;
+  --m-shallow:#d4a656;
+  --m-resonant:#d85d5d;
+  --m-ice:#8a8070;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{
+  font-family:"Noto Serif SC",serif;
+  background:var(--bg);
+  color:var(--ink);
+  line-height:1.5;
+  padding:30px 20px;
+  min-height:100vh;
+}
+body::before{
+  content:"";
+  position:fixed;inset:0;
+  background-image:
+    radial-gradient(circle at 10% 15%,rgba(212,166,86,.05) 0%,transparent 40%),
+    radial-gradient(circle at 90% 75%,rgba(201,81,61,.04) 0%,transparent 50%),
+    repeating-linear-gradient(0deg,transparent 0,transparent 2px,rgba(237,228,208,.012) 2px,rgba(237,228,208,.012) 3px);
+  pointer-events:none;
+  z-index:0;
+}
+.card{
+  max-width:1280px;
+  margin:0 auto;
+  background:var(--bg-elev);
+  position:relative;
+  z-index:1;
+  border:1px solid var(--line);
+  padding:36px 44px 40px;
+  box-shadow:0 2px 40px rgba(0,0,0,.4);
+}
+
+/* ========== 卡头 ========== */
+.header{
+  display:flex;
+  justify-content:space-between;
+  align-items:flex-start;
+  padding-bottom:20px;
+  border-bottom:2px solid var(--ink-dim);
+  margin-bottom:24px;
+}
+.header-left{display:flex;align-items:baseline;gap:20px}
+.series-mark{
+  font-family:"Cormorant Garamond",serif;
+  font-style:italic;
+  font-size:60px;
+  font-weight:600;
+  color:var(--accent);
+  line-height:.8;
+  letter-spacing:-.02em;
+  text-shadow:0 0 30px rgba(201,81,61,.3);
+}
+.header-title{
+  font-size:26px;
+  font-weight:900;
+  letter-spacing:-.01em;
+  line-height:1.1;
+  color:var(--ink);
+}
+.header-subtitle{
+  font-family:"Cormorant Garamond",serif;
+  font-style:italic;
+  font-size:15px;
+  color:var(--ink-dim);
+  margin-top:4px;
+}
+.header-right{
+  text-align:right;
+  font-family:"JetBrains Mono",monospace;
+  font-size:10px;
+  letter-spacing:.15em;
+  color:var(--muted);
+  text-transform:uppercase;
+  line-height:1.7;
+}
+.header-right .tag{
+  display:inline-block;
+  background:var(--gold);
+  color:var(--bg);
+  padding:3px 9px;
+  margin-top:6px;
+  letter-spacing:.2em;
+  font-weight:700;
+}
+
+/* ========== 核心公式条 ========== */
+.formula-bar{
+  background:linear-gradient(135deg,var(--bg) 0%,var(--bg-deep) 100%);
+  color:var(--ink);
+  padding:22px 28px;
+  margin-bottom:28px;
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:30px;
+  border:1px solid var(--gold);
+  position:relative;
+  overflow:hidden;
+}
+.formula-bar::before{
+  content:"";
+  position:absolute;
+  inset:0;
+  background:radial-gradient(ellipse at center,rgba(212,166,86,.08) 0%,transparent 70%);
+  pointer-events:none;
+}
+.formula-label{
+  font-family:"JetBrains Mono",monospace;
+  font-size:10px;
+  letter-spacing:.25em;
+  color:var(--gold);
+  text-transform:uppercase;
+  white-space:nowrap;
+  position:relative;
+}
+.formula-main{
+  font-family:"Cormorant Garamond",serif;
+  font-style:italic;
+  font-size:22px;
+  letter-spacing:.02em;
+  flex:1;
+  text-align:center;
+  position:relative;
+}
+.formula-main .v{color:var(--gold);font-weight:600;font-style:normal;font-family:"JetBrains Mono",monospace;font-size:18px;letter-spacing:0}
+.formula-main .op{color:var(--ink-dim);margin:0 8px}
+
+/* ========== 主网格 ========== */
+.grid-main{
+  display:grid;
+  grid-template-columns:1.2fr 1fr;
+  gap:28px;
+  margin-bottom:28px;
+}
+
+/* ========== 面板 ========== */
+.panel{
+  border:1px solid var(--line);
+  padding:22px 26px;
+  background:var(--bg-inner);
+}
+.panel-head{
+  display:flex;
+  justify-content:space-between;
+  align-items:baseline;
+  padding-bottom:12px;
+  border-bottom:1px solid var(--line);
+  margin-bottom:18px;
+}
+.panel-num{
+  font-family:"Cormorant Garamond",serif;
+  font-style:italic;
+  font-size:36px;
+  font-weight:600;
+  color:var(--accent);
+  line-height:1;
+}
+.panel-title{
+  font-size:18px;
+  font-weight:700;
+  margin-top:2px;
+  color:var(--ink);
+}
+.panel-sub{
+  font-family:"JetBrains Mono",monospace;
+  font-size:10px;
+  letter-spacing:.15em;
+  color:var(--muted);
+  text-transform:uppercase;
+}
+
+.medium-row{
+  display:grid;
+  grid-template-columns:110px 1fr 60px;
+  gap:14px;
+  padding:12px 0;
+  border-bottom:1px dashed var(--line);
+  align-items:center;
+}
+.medium-row:last-child{border-bottom:none}
+.medium-badge{
+  display:flex;
+  flex-direction:column;
+  padding:8px 10px;
+  color:var(--bg);
+  border-radius:2px;
+  text-align:center;
+  font-weight:700;
+}
+.medium-badge.jelly{background:var(--m-jelly)}
+.medium-badge.deep{background:var(--m-deep);color:var(--ink)}
+.medium-badge.shallow{background:var(--m-shallow)}
+.medium-badge.resonant{background:var(--m-resonant);color:var(--ink)}
+.medium-badge.ice{background:var(--m-ice);color:var(--bg)}
+.medium-name{
+  font-size:13px;
+  font-weight:700;
+}
+.medium-en{
+  font-family:"Cormorant Garamond",serif;
+  font-style:italic;
+  font-size:10px;
+  opacity:.85;
+  margin-top:1px;
+  font-weight:500;
+}
+.medium-proxy{
+  font-size:12px;
+  line-height:1.5;
+  color:var(--ink);
+}
+.medium-proxy strong{color:var(--gold);font-weight:700}
+.medium-coef{
+  font-family:"JetBrains Mono",monospace;
+  font-weight:700;
+  font-size:18px;
+  text-align:right;
+  color:var(--ink);
+}
+.medium-coef .x{font-size:11px;color:var(--muted)}
+
+/* ========== 外力分级 ========== */
+.force-list{margin-top:6px}
+.force-row{
+  display:grid;
+  grid-template-columns:70px 1fr 50px;
+  gap:12px;
+  padding:10px 0;
+  border-bottom:1px dashed var(--line);
+  align-items:center;
+  font-size:12px;
+}
+.force-row:last-child{border-bottom:none}
+.force-level{
+  font-family:"JetBrains Mono",monospace;
+  font-weight:700;
+  font-size:11px;
+  letter-spacing:.05em;
+  padding:3px 6px;
+  text-align:center;
+  border-radius:2px;
+}
+.force-level.L5{background:var(--m-resonant);color:var(--ink)}
+.force-level.L4{background:var(--m-shallow);color:var(--bg)}
+.force-level.L3{background:var(--m-jelly);color:var(--bg)}
+.force-level.L2{background:var(--ink-dim);color:var(--bg)}
+.force-level.L1{background:var(--line);color:var(--ink-dim);border:1px solid var(--muted)}
+.force-desc{color:var(--ink)}
+.force-desc strong{color:var(--gold);font-weight:700}
+.force-energy{
+  font-family:"JetBrains Mono",monospace;
+  font-weight:700;
+  text-align:right;
+  color:var(--accent);
+}
+
+/* ========== 响应推断矩阵 ========== */
+.matrix-panel{margin-bottom:28px}
+.matrix-table{
+  width:100%;
+  border-collapse:collapse;
+  font-size:12px;
+}
+.matrix-table th{
+  background:var(--bg);
+  font-family:"JetBrains Mono",monospace;
+  font-size:10px;
+  letter-spacing:.1em;
+  text-transform:uppercase;
+  padding:10px 8px;
+  border:1px solid var(--line);
+  color:var(--ink-dim);
+  font-weight:600;
+  text-align:center;
+}
+.matrix-table td{
+  padding:10px 8px;
+  border:1px solid var(--line);
+  text-align:center;
+  font-family:"JetBrains Mono",monospace;
+  font-weight:700;
+  color:var(--ink);
+}
+.matrix-table td:first-child{
+  text-align:left;
+  font-family:"Noto Serif SC";
+  background:var(--bg);
+  font-weight:600;
+  color:var(--ink);
+}
+.cell-hot{color:var(--m-resonant);background:rgba(216,93,93,.12)}
+.cell-warm{color:var(--m-shallow);background:rgba(212,166,86,.05)}
+.cell-neutral{color:var(--ink-dim)}
+.cell-cool{color:var(--m-jelly);background:rgba(122,176,154,.05)}
+.cell-cold{color:var(--muted);background:rgba(107,101,88,.1)}
+
+/* ========== 接力棒数 ========== */
+.baton-grid{
+  display:grid;
+  grid-template-columns:repeat(5,1fr);
+  gap:6px;
+  margin-top:14px;
+}
+.baton-item{
+  padding:12px 10px;
+  border:1px solid var(--line);
+  text-align:center;
+  background:var(--bg);
+  position:relative;
+}
+.baton-num{
+  font-family:"Cormorant Garamond",serif;
+  font-style:italic;
+  font-size:26px;
+  color:var(--accent);
+  font-weight:600;
+  line-height:1;
+}
+.baton-time{
+  font-family:"JetBrains Mono",monospace;
+  font-size:11px;
+  font-weight:700;
+  margin-top:4px;
+  color:var(--ink);
+}
+.baton-label{
+  font-size:10px;
+  color:var(--ink-dim);
+  margin-top:3px;
+  line-height:1.3;
+}
+
+/* ========== Wave 3/5 延长判断 ========== */
+.wave-judge{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:14px;
+  margin-top:12px;
+}
+.wave-box{
+  padding:14px 16px;
+  background:var(--bg);
+  border-left:3px solid var(--accent);
+}
+.wave-box.five{border-left-color:var(--accent-2)}
+.wave-title{
+  font-size:13px;
+  font-weight:700;
+  margin-bottom:6px;
+  color:var(--ink);
+}
+.wave-title .num{
+  font-family:"Cormorant Garamond",serif;
+  font-style:italic;
+  color:var(--accent);
+  margin-right:6px;
+}
+.wave-box.five .wave-title .num{color:var(--accent-2)}
+.wave-cases{
+  font-size:11px;
+  line-height:1.6;
+  color:var(--ink-dim);
+}
+.wave-cases strong{color:var(--gold);font-weight:600}
+
+/* ========== 操作决策树 ========== */
+.decision-panel{
+  background:linear-gradient(135deg,var(--bg) 0%,var(--bg-deep) 100%);
+  color:var(--ink);
+  padding:26px 32px;
+  margin-top:28px;
+  border:1px solid var(--gold);
+  position:relative;
+  overflow:hidden;
+}
+.decision-panel::before{
+  content:"";
+  position:absolute;
+  top:-50%;right:-10%;
+  width:400px;height:400px;
+  background:radial-gradient(circle,rgba(212,166,86,.08) 0%,transparent 70%);
+  pointer-events:none;
+}
+.decision-panel .panel-head{border-bottom-color:rgba(237,228,208,.15);padding-bottom:12px;margin-bottom:18px;position:relative}
+.decision-panel .panel-num{color:var(--gold)}
+
+.decision-grid{
+  display:grid;
+  grid-template-columns:repeat(4,1fr);
+  gap:16px;
+  position:relative;
+}
+.decision-cell{
+  padding:16px 18px;
+  background:rgba(237,228,208,.04);
+  border-top:2px solid var(--gold);
+  border-left:1px solid var(--line);
+  border-right:1px solid var(--line);
+  border-bottom:1px solid var(--line);
+}
+.decision-cell.danger{border-top-color:var(--m-resonant)}
+.decision-cell.neutral{border-top-color:var(--m-shallow)}
+.decision-cell.good{border-top-color:var(--m-jelly)}
+.decision-label{
+  font-family:"JetBrains Mono",monospace;
+  font-size:9px;
+  letter-spacing:.2em;
+  color:var(--gold);
+  text-transform:uppercase;
+  margin-bottom:8px;
+}
+.decision-cell.danger .decision-label{color:var(--m-resonant)}
+.decision-cell.good .decision-label{color:var(--m-jelly)}
+.decision-signal{
+  font-size:13px;
+  font-weight:700;
+  margin-bottom:8px;
+  line-height:1.4;
+  color:var(--ink);
+}
+.decision-action{
+  font-size:12px;
+  line-height:1.6;
+  color:var(--ink-dim);
+}
+
+/* ========== 当前状态速诊 ========== */
+.quick-diag{
+  margin-top:28px;
+  padding:22px 28px;
+  border:2px solid var(--accent);
+  background:var(--bg-inner);
+  display:grid;
+  grid-template-columns:auto 1fr auto;
+  gap:32px;
+  align-items:center;
+  box-shadow:0 0 40px rgba(201,81,61,.1) inset;
+}
+.diag-label{
+  font-family:"Cormorant Garamond",serif;
+  font-style:italic;
+  font-size:18px;
+  color:var(--accent);
+  font-weight:600;
+}
+.diag-steps{
+  display:grid;
+  grid-template-columns:repeat(4,1fr);
+  gap:16px;
+}
+.diag-step{
+  font-size:11px;
+  line-height:1.5;
+}
+.diag-step-num{
+  font-family:"Cormorant Garamond",serif;
+  font-style:italic;
+  font-size:22px;
+  color:var(--accent);
+  font-weight:600;
+  line-height:1;
+  margin-bottom:4px;
+}
+.diag-step-q{
+  font-weight:700;
+  font-size:12px;
+  color:var(--ink);
+  margin-bottom:2px;
+}
+.diag-step-a{color:var(--ink-dim)}
+.diag-arrow{
+  font-family:"Cormorant Garamond",serif;
+  font-style:italic;
+  font-size:42px;
+  color:var(--gold);
+  line-height:1;
+}
+
+/* ========== 页脚 ========== */
+.footer{
+  margin-top:24px;
+  padding-top:16px;
+  border-top:1px solid var(--line);
+  display:flex;
+  justify-content:space-between;
+  align-items:flex-end;
+  font-family:"JetBrains Mono",monospace;
+  font-size:10px;
+  letter-spacing:.1em;
+  color:var(--muted);
+}
+.footer-motto{
+  font-family:"Cormorant Garamond",serif;
+  font-style:italic;
+  font-size:16px;
+  color:var(--gold);
+  letter-spacing:.02em;
+}
+
+@media (max-width:900px){
+  .card{padding:24px 20px}
+  .grid-main{grid-template-columns:1fr}
+  .decision-grid{grid-template-columns:1fr 1fr}
+  .wave-judge{grid-template-columns:1fr}
+  .quick-diag{grid-template-columns:1fr}
+  .diag-arrow{display:none}
+}
+</style>
+</head>
+<body>
+
+<div class="card">
+
+  <!-- 卡头 -->
+  <div class="header">
+    <div class="header-left">
+      <div class="series-mark">X.C</div>
+      <div>
+        <div class="header-title">资金波浪 · 实战速查卡</div>
+        <div class="header-subtitle">Capital Wave Cheat Sheet — for live diagnosis</div>
+      </div>
+    </div>
+    <div class="header-right">
+      A股资金博弈研究体系<br>
+      Companion to Vol. X<br>
+      <span class="tag">SINGLE PAGE</span>
+    </div>
+  </div>
+
+  <!-- 核心公式条 -->
+  <div class="formula-bar">
+    <div class="formula-label">CORE<br>FORMULA</div>
+    <div class="formula-main">
+      <span class="v">Amplitude</span> <span class="op">=</span> <span class="v">Force</span> <span class="op">×</span> <span class="v">Medium</span> <span class="op">×</span> <span class="v">Reflexivity</span>
+    </div>
+    <div class="formula-label">振幅 = 外力<br>× 介质 × 反身性</div>
+  </div>
+
+  <!-- 主网格 -->
+  <div class="grid-main">
+
+    <!-- 左:介质类型诊断 -->
+    <div class="panel">
+      <div class="panel-head">
+        <div>
+          <div class="panel-num">01</div>
+          <div class="panel-title">介质类型诊断</div>
+        </div>
+        <div class="panel-sub">Medium × Response Coef.</div>
+      </div>
+
+      <div class="medium-row">
+        <div class="medium-badge jelly">
+          <div class="medium-name">黏稠介质</div>
+          <div class="medium-en">Jelly</div>
+        </div>
+        <div class="medium-proxy">
+          <strong>红利低波 · 大行 · 长江电力</strong><br>
+          险资+国家队锁仓 · 能量被吸收
+        </div>
+        <div class="medium-coef">0.5<span class="x">×</span></div>
+      </div>
+
+      <div class="medium-row">
+        <div class="medium-badge deep">
+          <div class="medium-name">深水介质</div>
+          <div class="medium-en">Deep Water</div>
+        </div>
+        <div class="medium-proxy">
+          <strong>沪深300 · 核心资产 · 茅台宁德</strong><br>
+          机构定价 · 波浪经典5-3结构
+        </div>
+        <div class="medium-coef">1.0<span class="x">×</span></div>
+      </div>
+
+      <div class="medium-row">
+        <div class="medium-badge shallow">
+          <div class="medium-name">浅水介质</div>
+          <div class="medium-en">Shallow</div>
+        </div>
+        <div class="medium-proxy">
+          <strong>中证2000 · 中小盘 · 量化活跃股</strong><br>
+          量化+散户 · 振幅放大但易破碎
+        </div>
+        <div class="medium-coef">2.0<span class="x">×</span></div>
+      </div>
+
+      <div class="medium-row">
+        <div class="medium-badge resonant">
+          <div class="medium-name">共振介质</div>
+          <div class="medium-en">Resonant</div>
+        </div>
+        <div class="medium-proxy">
+          <strong>万得微盘 · 强题材 · 主升浪板块</strong><br>
+          亚稳态 · 小扰动引发超额波浪
+        </div>
+        <div class="medium-coef">2.5<span class="x">×</span></div>
+      </div>
+
+      <div class="medium-row">
+        <div class="medium-badge ice">
+          <div class="medium-name">结冰介质</div>
+          <div class="medium-en">Frozen</div>
+        </div>
+        <div class="medium-proxy">
+          <strong>流动性枯竭冷门股 · 基本面塌陷板块</strong><br>
+          单向结冰 · 涨不动但跌得快
+        </div>
+        <div class="medium-coef">0.2<span class="x">×</span></div>
+      </div>
+    </div>
+
+    <!-- 右:外力能量分级 -->
+    <div class="panel">
+      <div class="panel-head">
+        <div>
+          <div class="panel-num">02</div>
+          <div class="panel-title">外力能量分级</div>
+        </div>
+        <div class="panel-sub">Disturbance Energy · Base 924=100</div>
+      </div>
+
+      <div class="force-list">
+        <div class="force-row">
+          <div class="force-level L5">极大 L5</div>
+          <div class="force-desc"><strong>政策组合拳 / 系统性危机</strong><br>全市场级 · 多维度同时发力</div>
+          <div class="force-energy">±100</div>
+        </div>
+
+        <div class="force-row">
+          <div class="force-level L4">大 L4</div>
+          <div class="force-desc"><strong>重大技术突破 / 汇率剧震</strong><br>产业级+宏观级交叉</div>
+          <div class="force-energy">±60~80</div>
+        </div>
+
+        <div class="force-row">
+          <div class="force-level L3">中 L3</div>
+          <div class="force-desc"><strong>行业景气拐点 / 重磅个股事件</strong><br>板块级或龙头级</div>
+          <div class="force-energy">±30~50</div>
+        </div>
+
+        <div class="force-row">
+          <div class="force-level L2">小 L2</div>
+          <div class="force-desc"><strong>单项数据 / 监管微调 / 两融变化</strong><br>结构性扰动 · 杠杆型</div>
+          <div class="force-energy">±15~25</div>
+        </div>
+
+        <div class="force-row">
+          <div class="force-level L1">微 L1</div>
+          <div class="force-desc"><strong>个股业绩 / 日常资金面</strong><br>噪声级 · 仅共振态下放大</div>
+          <div class="force-energy">±5~10</div>
+        </div>
+      </div>
+
+      <div style="margin-top:16px;padding:12px 14px;background:var(--bg);font-size:11px;line-height:1.6;color:var(--ink-dim);border-left:3px solid var(--gold)">
+        <strong style="color:var(--ink)">关键提醒:</strong>
+        同样 L4 能量在<span style="color:var(--m-resonant);font-weight:700">共振介质</span>上可产生 L5 级波浪,在<span style="color:var(--m-jelly);font-weight:700">黏稠介质</span>上却看不出浪。<em style="color:var(--gold)">介质永远比外力更重要</em>。
+      </div>
+    </div>
+  </div>
+
+  <!-- 响应推断矩阵 -->
+  <div class="panel matrix-panel">
+    <div class="panel-head">
+      <div>
+        <div class="panel-num">03</div>
+        <div class="panel-title">外力 × 介质 响应推断矩阵</div>
+      </div>
+      <div class="panel-sub">Predicted Amplitude = Force × Coef.</div>
+    </div>
+
+    <table class="matrix-table">
+      <thead>
+        <tr>
+          <th style="width:16%">介质 ↓ / 外力 →</th>
+          <th>L1 微 (±10)</th>
+          <th>L2 小 (±20)</th>
+          <th>L3 中 (±40)</th>
+          <th>L4 大 (±70)</th>
+          <th>L5 极大 (±100)</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>黏稠介质 (0.5×)</td>
+          <td class="cell-cold">±5%</td>
+          <td class="cell-cold">±10%</td>
+          <td class="cell-cool">±20%</td>
+          <td class="cell-cool">±35%</td>
+          <td class="cell-neutral">±50%</td>
+        </tr>
+        <tr>
+          <td>深水介质 (1.0×)</td>
+          <td class="cell-cold">±10%</td>
+          <td class="cell-cool">±20%</td>
+          <td class="cell-neutral">±40%</td>
+          <td class="cell-warm">±70%</td>
+          <td class="cell-warm">±100%</td>
+        </tr>
+        <tr>
+          <td>浅水介质 (2.0×)</td>
+          <td class="cell-cool">±20%</td>
+          <td class="cell-neutral">±40%</td>
+          <td class="cell-warm">±80%</td>
+          <td class="cell-hot">±140%</td>
+          <td class="cell-hot">±200%</td>
+        </tr>
+        <tr>
+          <td>共振介质 (2.5×)</td>
+          <td class="cell-neutral">±25%</td>
+          <td class="cell-warm">±50%</td>
+          <td class="cell-hot">±100%</td>
+          <td class="cell-hot">±175%</td>
+          <td class="cell-hot">±250%</td>
+        </tr>
+        <tr>
+          <td>结冰介质 (0.2×)</td>
+          <td class="cell-cold">±2%</td>
+          <td class="cell-cold">±4%</td>
+          <td class="cell-cold">±8%</td>
+          <td class="cell-cold">±15%</td>
+          <td class="cell-cold">±20%</td>
+        </tr>
+      </tbody>
+    </table>
+    <div style="margin-top:10px;font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--muted);letter-spacing:.03em">
+      注:数字为基础振幅预估,未计入反身性放大项。真实反身性倍数在 1.0× (无放大) 到 3.0× (极端亢奋/恐慌) 之间。
+    </div>
+  </div>
+
+  <!-- 接力棒数 + Wave延长判断 -->
+  <div class="grid-main">
+
+    <!-- 左:接力棒数 -->
+    <div class="panel">
+      <div class="panel-head">
+        <div>
+          <div class="panel-num">04</div>
+          <div class="panel-title">接力棒数 → 持续时间</div>
+        </div>
+        <div class="panel-sub">T ≈ 7日 × 4.5^(N-1)</div>
+      </div>
+
+      <div class="baton-grid">
+        <div class="baton-item" style="border-top:3px solid var(--m-resonant)">
+          <div class="baton-num">N=1</div>
+          <div class="baton-time">~1周</div>
+          <div class="baton-label">首板次新<br>单一游资</div>
+        </div>
+        <div class="baton-item" style="border-top:3px solid var(--m-shallow)">
+          <div class="baton-num">N=2</div>
+          <div class="baton-time">~1月</div>
+          <div class="baton-label">游资+散户<br>典型题材</div>
+        </div>
+        <div class="baton-item" style="border-top:3px solid var(--gold)">
+          <div class="baton-num">N=3</div>
+          <div class="baton-time">~半年</div>
+          <div class="baton-label">+公募跟进<br>短期景气</div>
+        </div>
+        <div class="baton-item" style="border-top:3px solid var(--m-jelly)">
+          <div class="baton-num">N=4</div>
+          <div class="baton-time">~1年</div>
+          <div class="baton-label">+北向加仓<br>中期主线</div>
+        </div>
+        <div class="baton-item" style="border-top:3px solid var(--m-deep)">
+          <div class="baton-num">N=5</div>
+          <div class="baton-time">2-3年</div>
+          <div class="baton-label">产业→公募→<br>北向→散户→<br>产业减持</div>
+        </div>
+      </div>
+
+      <div style="margin-top:16px;font-size:12px;line-height:1.7;color:var(--ink-dim)">
+        <strong style="color:var(--ink)">使用方法:</strong>
+        当前行情/个股,你能数出几棒接力?<strong style="color:var(--accent)">能数出的棒数决定你持有多久</strong>。只有2棒的题材股别期待半年行情。
+      </div>
+    </div>
+
+    <!-- 右:Wave 延长判断 -->
+    <div class="panel">
+      <div class="panel-head">
+        <div>
+          <div class="panel-num">05</div>
+          <div class="panel-title">延长浪 · 事前判断</div>
+        </div>
+        <div class="panel-sub">Wave 3 vs Wave 5 Extension</div>
+      </div>
+
+      <div class="wave-judge">
+        <div class="wave-box">
+          <div class="wave-title"><span class="num">W3</span>延长 · 慢且长</div>
+          <div class="wave-cases">
+            <strong>高概率 (65-70%):</strong><br>
+            机构定价核心资产<br>
+            业绩拐点股<br><br>
+            <strong>信号:</strong>公募加仓+北向连续季度流入+基本面持续验证<br><br>
+            <strong>操作:</strong>不要过早卖出,Wave3的延长是主升浪的自然状态
+          </div>
+        </div>
+
+        <div class="wave-box five">
+          <div class="wave-title"><span class="num">W5</span>延长 · 快且脆</div>
+          <div class="wave-cases">
+            <strong>高概率 (45-60%):</strong><br>
+            游资题材股<br>
+            量化重仓小盘<br><br>
+            <strong>信号:</strong>两融加速+散户新开户+连板高度走高+北向交易盘反向<br><br>
+            <strong>操作:</strong>不要贪图最后涨幅,Wave5延长后往往是急跌
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 操作决策四象限 -->
+  <div class="decision-panel">
+    <div class="panel-head">
+      <div>
+        <div class="panel-num">06</div>
+        <div class="panel-title" style="color:var(--ink)">操作决策四象限</div>
+      </div>
+      <div class="panel-sub">Force × Medium → Action</div>
+    </div>
+
+    <div class="decision-grid">
+      <div class="decision-cell good">
+        <div class="decision-label">α 协同买入</div>
+        <div class="decision-signal">正向外力 + 共振/浅水介质 + 接力起点</div>
+        <div class="decision-action">
+          产业回购+公募低配+情绪冰点<br>
+          <strong style="color:var(--gold)">→ 建仓,预期N=4~5棒</strong>
+        </div>
+      </div>
+
+      <div class="decision-cell neutral">
+        <div class="decision-label">γ 左侧等待</div>
+        <div class="decision-signal">负向外力 + 深水/黏稠介质 + 配置盘未撤</div>
+        <div class="decision-action">
+          业绩下修但北向不减+险资持有<br>
+          <strong style="color:var(--gold)">→ 小仓位长时间,等外力反转</strong>
+        </div>
+      </div>
+
+      <div class="decision-cell danger">
+        <div class="decision-label">ε 拥挤警报</div>
+        <div class="decision-signal">无明显外力 + 共振介质 + 量化极致拥挤</div>
+        <div class="decision-action">
+          小微盘独大+两融创新高+主流观望<br>
+          <strong style="color:var(--m-resonant)">→ 降低小盘暴露,退到深水</strong>
+        </div>
+      </div>
+
+      <div class="decision-cell danger">
+        <div class="decision-label">δ 顶部警示</div>
+        <div class="decision-signal">负向外力初现 + 共振介质 + 接力末棒</div>
+        <div class="decision-action">
+          产业减持+散户亢奋+两融攀升<br>
+          <strong style="color:var(--m-resonant)">→ 止盈,Wave5延长即终点</strong>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 当前状态速诊 -->
+  <div class="quick-diag">
+    <div class="diag-label">四步速诊</div>
+    <div class="diag-steps">
+      <div class="diag-step">
+        <div class="diag-step-num">01</div>
+        <div class="diag-step-q">外力是什么?</div>
+        <div class="diag-step-a">能量分级 L1~L5</div>
+      </div>
+      <div class="diag-step">
+        <div class="diag-step-num">02</div>
+        <div class="diag-step-q">介质是什么?</div>
+        <div class="diag-step-a">五类介质诊断</div>
+      </div>
+      <div class="diag-step">
+        <div class="diag-step-num">03</div>
+        <div class="diag-step-q">接力到第几棒?</div>
+        <div class="diag-step-a">N=1~5 剩余空间</div>
+      </div>
+      <div class="diag-step">
+        <div class="diag-step-num">04</div>
+        <div class="diag-step-q">对应操作?</div>
+        <div class="diag-step-a">α / γ / δ / ε</div>
+      </div>
+    </div>
+    <div class="diag-arrow">→</div>
+  </div>
+
+  <!-- 页脚 -->
+  <div class="footer">
+    <div>
+      CAPITAL WAVE CHEAT SHEET · X.C<br>
+      COMPANION TO VOLUME X · 资金波浪定量验证
+    </div>
+    <div class="footer-motto">
+      外力决定是否有波 · 介质决定波有多大 · 心理决定波的形状
+    </div>
+    <div style="text-align:right">
+      v 2026.04<br>
+      DARK MODE
+    </div>
+  </div>
+
+</div>
+
+</body>
+</html>

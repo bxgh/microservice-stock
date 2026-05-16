@@ -1,0 +1,628 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>量化数据监控小程序 - 前端开发规范</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Noto+Serif+SC:wght@400;700;900&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    
+    <!-- Libraries -->
+    <script src="https://lib.baomitu.com/marked/11.1.1/marked.min.js"></script>
+    <link rel="stylesheet" href="https://lib.baomitu.com/github-markdown-css/5.5.0/github-markdown-dark.min.css">
+    <script src="https://lib.baomitu.com/mermaid/10.9.0/mermaid.min.js"></script>
+    
+    <!-- Syntax Highlighting -->
+    <link rel="stylesheet" href="https://lib.baomitu.com/highlight.js/11.9.0/styles/tokyo-night-dark.min.css">
+    <script src="https://lib.baomitu.com/highlight.js/11.9.0/highlight.min.js"></script>
+    
+    <style>
+        :root {
+            --bg: #0a0a0a;
+            --surface: #121212;
+            --surface-hover: #1a1a1a;
+            --border: #222222;
+            --accent: #eab308;
+            --accent-glow: rgba(234, 179, 8, 0.1);
+            --text-primary: #f1f5f9;
+            --text-secondary: #94a3b8;
+            --text-muted: #64748b;
+            --font-sans: 'Outfit', 'Noto Sans SC', -apple-system, sans-serif;
+            --font-serif: 'Noto Serif SC', serif;
+            --font-mono: 'JetBrains Mono', monospace;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background-color: var(--bg);
+            color: var(--text-primary);
+            font-family: var(--font-sans);
+            line-height: 1.7;
+            -webkit-font-smoothing: antialiased;
+            overflow-x: hidden;
+        }
+
+        /* Subtle background glow */
+        body::after {
+            content: '';
+            position: fixed;
+            top: 0;
+            right: 0;
+            width: 40vw;
+            height: 40vh;
+            background: radial-gradient(circle, var(--accent-glow) 0%, transparent 70%);
+            z-index: -1;
+            filter: blur(100px);
+            pointer-events: none;
+        }
+
+        .sidebar {
+            width: 260px;
+            height: 100vh;
+            position: fixed;
+            left: 0;
+            top: 0;
+            border-right: 1px solid var(--border);
+            background: var(--bg);
+            padding: 1.5rem;
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+            overflow-y: auto;
+            z-index: 100;
+        }
+
+        .nav-link {
+            color: var(--text-muted);
+            text-decoration: none;
+            font-size: 0.85rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            transition: color 0.2s;
+            padding: 0.5rem;
+            border-radius: 6px;
+        }
+        .nav-link:hover { color: var(--accent); background: var(--surface); }
+
+        .toc-title {
+            font-family: var(--font-serif);
+            font-size: 1rem;
+            color: var(--text-primary);
+            margin-bottom: 0.8rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding-left: 0.5rem;
+        }
+        .toc-title::before {
+            content: '';
+            width: 3px;
+            height: 1rem;
+            background: var(--accent);
+            border-radius: 2px;
+        }
+
+        .toc-list {
+            list-style: none;
+            display: flex;
+            flex-direction: column;
+            gap: 0.4rem;
+        }
+        .toc-item {
+            font-size: 0.8rem;
+            line-height: 1.3;
+        }
+        .toc-item a {
+            color: var(--text-muted);
+            text-decoration: none;
+            transition: all 0.2s;
+            display: block;
+            padding: 0.4rem 0.5rem;
+            border-radius: 4px;
+        }
+        .toc-item a:hover { color: var(--accent); background: var(--surface); }
+        .toc-item.level-3 { margin-left: 0.8rem; border-left: 1px solid var(--border); }
+
+        .container {
+            max-width: 860px;
+            margin: 0 auto 0 260px;
+            padding: 3rem 4rem;
+            animation: fadeIn 0.6s ease-out;
+        }
+
+        @media (max-width: 1024px) {
+            .sidebar { width: 220px; padding: 1rem; }
+            .container { margin-left: 220px; padding: 2rem; }
+        }
+
+        @media (max-width: 800px) {
+            .sidebar { position: static; width: 100%; height: auto; border-right: none; border-bottom: 1px solid var(--border); }
+            .container { margin-left: 0; padding: 1.5rem; }
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(5px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        header {
+            margin-bottom: 3rem;
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 1.5rem;
+        }
+
+        .meta {
+            font-family: var(--font-mono);
+            font-size: 0.75rem;
+            color: var(--accent);
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            margin-bottom: 0.8rem;
+            display: flex;
+            align-items: center;
+            gap: 0.8rem;
+        }
+
+        .meta::before {
+            content: '';
+            width: 20px;
+            height: 1px;
+            background-color: var(--accent);
+        }
+
+        h1 {
+            font-family: var(--font-serif);
+            font-size: 2.2rem;
+            font-weight: 900;
+            line-height: 1.2;
+            margin-bottom: 1rem;
+            color: var(--text-primary);
+        }
+
+        .markdown-body {
+            background: transparent !important;
+            color: var(--text-primary) !important;
+            font-family: var(--font-sans) !important;
+            font-size: 0.95rem !important;
+        }
+
+        .markdown-body h2 {
+            font-family: var(--font-serif);
+            font-size: 1.5rem !important;
+            color: var(--accent) !important;
+            border-bottom: 1px solid var(--border) !important;
+            padding-bottom: 0.5rem !important;
+            margin-top: 2.5rem !important;
+            scroll-margin-top: 1rem;
+        }
+
+        .markdown-body h3 {
+            font-family: var(--font-serif);
+            font-size: 1.25rem !important;
+            color: var(--text-primary) !important;
+            margin-top: 2rem !important;
+            scroll-margin-top: 1rem;
+        }
+
+        .markdown-body p, .markdown-body li {
+            font-size: 0.95rem !important;
+            color: var(--text-primary) !important;
+        }
+        
+        .markdown-body pre {
+            background-color: #1a1b26 !important; /* Match Tokyo Night Dark */
+            border: 1px solid var(--border);
+            border-radius: 8px !important;
+            padding: 0 !important; /* Code internal handles padding */
+            margin: 1.2rem 0 !important;
+            overflow: hidden;
+        }
+
+        .markdown-body pre code {
+            background-color: transparent !important;
+            padding: 1.2rem !important;
+            display: block;
+            font-family: var(--font-mono) !important;
+            font-size: 0.85rem !important;
+            line-height: 1.5;
+        }
+
+        .markdown-body blockquote {
+            border-left: 3px solid var(--accent) !important;
+            background: var(--surface);
+            padding: 0.8rem 1.2rem;
+            color: var(--text-secondary) !important;
+            margin: 1.2rem 0 !important;
+        }
+
+        .markdown-body table {
+            background: var(--surface);
+            font-size: 0.85rem !important;
+            margin: 1.2rem 0 !important;
+        }
+
+        footer {
+            margin-top: 4rem;
+            padding-top: 1.5rem;
+            border-top: 1px solid var(--border);
+            color: var(--text-muted);
+            font-size: 0.8rem;
+            text-align: center;
+        }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar { width: 5px; }
+        ::-webkit-scrollbar-track { background: var(--bg); }
+        ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+    </style>
+</head>
+<body>
+    <aside class="sidebar">
+        <a href="index.html" class="nav-link">
+            <span>←</span> 返回目录门户
+        </a>
+        
+        <div class="toc-container">
+            <h3 class="toc-title">文档导航</h3>
+            <ul class="toc-list" id="toc">
+                <!-- TOC items will be injected here -->
+            </ul>
+        </div>
+    </aside>
+
+    <div class="container">
+        <header>
+            <div class="meta">GLOBAL | 2026-05-16 19:06</div>
+            <h1>量化数据监控小程序 - 前端开发规范</h1>
+        </header>
+
+        <article id="content" class="markdown-body">
+            <!-- Loading indicator -->
+            <p style="color: var(--text-muted)">正在解析文档内容...</p>
+        </article>
+
+        <footer>
+            &copy; 2026 MicroStock Project Docs | Generated by Antigravity
+        </footer>
+    </div>
+
+    <script id="markdown-raw" type="text/markdown"># 量化数据监控小程序 - 前端开发规范
+
+## 1. 项目概述
+
+### 1.1 定位
+这是一款面向个人量化交易者的**数据质量监控与任务管理**小程序。用户可以通过手机随时查看股票数据采集状态、触发补采任务、接收告警通知。
+
+### 1.2 技术栈
+- **框架**: 原生微信小程序 或 uni-app
+- **UI 库**: WeUI / Vant Weapp
+- **请求**: wx.request (封装统一的 API 调用模块)
+- **状态管理**: 简单场景可用 globalData，复杂可用 MobX
+
+### 1.3 后端接口
+- **基础 URL**: `https://your-domain.com/api/v1`
+- **认证方式**: 暂无 (后续可加 Token)
+
+---
+
+## 2. 页面结构
+
+```
+pages/
+├── index/index          # 首页：今日数据概览 + 快捷操作
+├── tasks/list           # 任务列表：查看所有任务状态
+├── tasks/detail         # 任务详情：查看执行历史
+├── commands/history     # 命令历史：我发起的触发记录
+└── settings/index       # 设置：告警开关、阈值配置
+```
+
+---
+
+## 3. 页面设计与交互
+
+### 3.1 首页 (index)
+
+#### 布局
+```
+┌────────────────────────────────────────┐
+│  📊 今日数据概览          2026-01-14   │
+├────────────────────────────────────────┤
+│  ┌──────────────┐  ┌──────────────┐   │
+│  │  K线覆盖率   │  │  分笔覆盖率  │   │
+│  │    98.5%     │  │    92.3%     │   │
+│  │   ✅ 达标    │  │   ⚠️ 偏低    │   │
+│  └──────────────┘  └──────────────┘   │
+├────────────────────────────────────────┤
+│  📋 最近任务                           │
+│  ├─ daily_kline_sync   ✅ 17:32 完成   │
+│  ├─ sync_tick_shard_0  ⏳ 运行中...    │
+│  └─ pre_market_gate    ⏰ 明日 08:00   │
+├────────────────────────────────────────┤
+│  ┌────────────────────────────────┐    │
+│  │     🔄 手动触发补采            │    │
+│  └────────────────────────────────┘    │
+└────────────────────────────────────────┘
+```
+
+#### 交互说明
+1. 点击覆盖率卡片 → 跳转到对应数据详情页
+2. 点击任务条目 → 跳转到任务详情页
+3. 点击"手动触发补采" → 弹出任务选择弹窗
+
+---
+
+### 3.2 手动触发弹窗 (Modal)
+
+```
+┌────────────────────────────────────────┐
+│           选择要触发的任务              │
+├────────────────────────────────────────┤
+│  ○ 盘前数据校验 (pre_market_gate)      │
+│  ○ K线同步 (daily_kline_sync)          │
+│  ○ 分笔补采 (sync_tick)                │
+├────────────────────────────────────────┤
+│  📅 目标日期: [2026-01-13]  ← 可选     │
+├────────────────────────────────────────┤
+│  [取消]              [确认触发]        │
+└────────────────────────────────────────┘
+```
+
+#### 交互说明
+1. 单选任务类型
+2. 可选填入目标日期（默认昨天）
+3. 点击"确认触发" → 调用 `/commands` 接口 → 显示"已加入队列"
+
+---
+
+### 3.3 命令历史页 (commands/history)
+
+```
+┌────────────────────────────────────────┐
+│  📜 我的触发记录                        │
+├────────────────────────────────────────┤
+│  #12  sync_tick        ✅ 已完成       │
+│       2026-01-14 09:15  耗时 3分12秒   │
+├────────────────────────────────────────┤
+│  #11  pre_market_gate  ✅ 已完成       │
+│       2026-01-14 08:05  耗时 45秒      │
+├────────────────────────────────────────┤
+│  #10  daily_kline_sync ❌ 失败         │
+│       2026-01-13 17:45  网络超时       │
+└────────────────────────────────────────┘
+```
+
+---
+
+## 4. API 接口规范
+
+### 4.1 获取今日数据概览
+```yaml
+GET /api/v1/dashboard/overview
+
+Response:
+{
+  "date": "2026-01-14",
+  "kline_coverage": 98.5,
+  "tick_coverage": 92.3,
+  "kline_status": "ok",      // ok | warning | error
+  "tick_status": "warning",
+  "recent_tasks": [
+    {
+      "task_id": "daily_kline_sync",
+      "name": "K线同步",
+      "status": "SUCCESS",
+      "last_run": "2026-01-14T17:32:00"
+    }
+  ]
+}
+```
+
+### 4.2 获取任务列表
+```yaml
+GET /api/v1/tasks
+
+Response:
+{
+  "tasks": [
+    {
+      "id": "pre_market_gate",
+      "name": "盘前数据校验",
+      "category": "pre_market",
+      "enabled": true,
+      "schedule": "08:00 交易日",
+      "next_run": "2026-01-15T08:00:00",
+      "last_status": "SUCCESS"
+    }
+  ]
+}
+```
+
+### 4.3 触发任务命令
+```yaml
+POST /api/v1/commands
+
+Request:
+{
+  "task_id": "sync_tick",
+  "params": {
+    "target_date": "20260113"   // 可选
+  }
+}
+
+Response:
+{
+  "command_id": 15,
+  "status": "PENDING",
+  "message": "命令已加入队列"
+}
+```
+
+### 4.4 查询命令状态
+```yaml
+GET /api/v1/commands/{command_id}
+
+Response:
+{
+  "id": 15,
+  "task_id": "sync_tick",
+  "status": "DONE",           // PENDING | RUNNING | DONE | FAILED
+  "created_at": "2026-01-14T09:15:00",
+  "executed_at": "2026-01-14T09:15:05",
+  "result": "SUCCESS"
+}
+```
+
+### 4.5 获取命令历史
+```yaml
+GET /api/v1/commands?limit=20
+
+Response:
+{
+  "commands": [
+    {
+      "id": 15,
+      "task_id": "sync_tick",
+      "status": "DONE",
+      "created_at": "2026-01-14T09:15:00"
+    }
+  ]
+}
+```
+
+---
+
+## 5. 开发注意事项
+
+### 5.1 网络请求封装
+```javascript
+// utils/api.js
+const BASE_URL = 'https://your-domain.com/api/v1';
+
+export const request = (options) => {
+  return new Promise((resolve, reject) => {
+    wx.request({
+      url: BASE_URL + options.url,
+      method: options.method || 'GET',
+      data: options.data,
+      success: (res) => {
+        if (res.statusCode === 200) {
+          resolve(res.data);
+        } else {
+          reject(res);
+        }
+      },
+      fail: reject
+    });
+  });
+};
+
+// 使用示例
+import { request } from '../../utils/api';
+const overview = await request({ url: '/dashboard/overview' });
+```
+
+### 5.2 状态颜色规范
+| 状态 | 颜色 | 图标 |
+|:-----|:-----|:-----|
+| SUCCESS / ok | #52c41a (绿) | ✅ |
+| WARNING | #faad14 (黄) | ⚠️ |
+| FAILED / error | #f5222d (红) | ❌ |
+| RUNNING | #1890ff (蓝) | ⏳ |
+| PENDING | #8c8c8c (灰) | ⏰ |
+
+### 5.3 域名配置
+在微信公众平台后台配置：
+- **request 合法域名**: `https://your-domain.com`
+
+---
+
+## 6. 开发顺序建议
+
+1. **首页 (index)**: 仅展示静态 Mock 数据
+2. **手动触发弹窗**: 实现 POST /commands 调用
+3. **命令历史页**: 实现列表拉取与状态轮询
+4. **任务列表页**: 展示所有任务配置
+5. **联调对接**: 替换 Mock 为真实 API
+
+---
+
+## 7. Mock 数据示例 (开发阶段使用)
+
+```javascript
+// mock/dashboard.js
+export const mockOverview = {
+  date: "2026-01-14",
+  kline_coverage: 98.5,
+  tick_coverage: 92.3,
+  kline_status: "ok",
+  tick_status: "warning",
+  recent_tasks: [
+    { task_id: "daily_kline_sync", name: "K线同步", status: "SUCCESS", last_run: "2026-01-14T17:32:00" },
+    { task_id: "sync_tick_shard_0", name: "分笔采集", status: "RUNNING", last_run: "2026-01-14T15:35:00" }
+  ]
+};
+```
+
+#  发布日期：2026-01-14</script>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', async () => {
+            const rawMd = document.getElementById('markdown-raw').textContent;
+            const contentEl = document.getElementById('content');
+            const tocEl = document.getElementById('toc');
+            
+            // Set options for marked
+            marked.setOptions({
+                gfm: true,
+                breaks: true,
+                headerIds: true,
+                mangle: false,
+                highlight: function(code, lang) {
+                    const language = hljs.getLanguage(lang) ? lang : 'plaintext';
+                    return hljs.highlight(code, { language }).value;
+                }
+            });
+
+            // Parse Markdown
+            contentEl.innerHTML = marked.parse(rawMd);
+            
+            // Generate TOC
+            const headings = contentEl.querySelectorAll('h2, h3');
+            headings.forEach((h, index) => {
+                if (!h.id) h.id = 'heading-' + index;
+                
+                const li = document.createElement('li');
+                li.className = 'toc-item level-' + h.tagName.toLowerCase().charAt(1);
+                
+                const a = document.createElement('a');
+                a.href = '#' + h.id;
+                a.textContent = h.textContent;
+                
+                li.appendChild(a);
+                tocEl.appendChild(li);
+            });
+
+            // Handle Mermaid
+            if (window.mermaid) {
+                mermaid.initialize({ startOnLoad: false, theme: 'dark', useWorker: false });
+                document.querySelectorAll('pre code.language-mermaid').forEach(el => {
+                    const pre = el.parentElement;
+                    const div = document.createElement('div');
+                    div.className = 'mermaid';
+                    div.textContent = el.textContent;
+                    pre.parentElement.replaceChild(div, pre);
+                });
+                mermaid.run();
+            }
+        });
+    </script>
+</body>
+</html>

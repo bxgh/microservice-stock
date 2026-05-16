@@ -1,0 +1,446 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>静态数据库 (MySQL) 交互接口指南 (Static DB API Guide)</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Noto+Serif+SC:wght@400;700;900&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    
+    <!-- Libraries -->
+    <script src="https://lib.baomitu.com/marked/11.1.1/marked.min.js"></script>
+    <link rel="stylesheet" href="https://lib.baomitu.com/github-markdown-css/5.5.0/github-markdown-dark.min.css">
+    <script src="https://lib.baomitu.com/mermaid/10.9.0/mermaid.min.js"></script>
+    
+    <!-- Syntax Highlighting -->
+    <link rel="stylesheet" href="https://lib.baomitu.com/highlight.js/11.9.0/styles/tokyo-night-dark.min.css">
+    <script src="https://lib.baomitu.com/highlight.js/11.9.0/highlight.min.js"></script>
+    
+    <style>
+        :root {
+            --bg: #0a0a0a;
+            --surface: #121212;
+            --surface-hover: #1a1a1a;
+            --border: #222222;
+            --accent: #eab308;
+            --accent-glow: rgba(234, 179, 8, 0.1);
+            --text-primary: #f1f5f9;
+            --text-secondary: #94a3b8;
+            --text-muted: #64748b;
+            --font-sans: 'Outfit', 'Noto Sans SC', -apple-system, sans-serif;
+            --font-serif: 'Noto Serif SC', serif;
+            --font-mono: 'JetBrains Mono', monospace;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background-color: var(--bg);
+            color: var(--text-primary);
+            font-family: var(--font-sans);
+            line-height: 1.7;
+            -webkit-font-smoothing: antialiased;
+            overflow-x: hidden;
+        }
+
+        /* Subtle background glow */
+        body::after {
+            content: '';
+            position: fixed;
+            top: 0;
+            right: 0;
+            width: 40vw;
+            height: 40vh;
+            background: radial-gradient(circle, var(--accent-glow) 0%, transparent 70%);
+            z-index: -1;
+            filter: blur(100px);
+            pointer-events: none;
+        }
+
+        .sidebar {
+            width: 260px;
+            height: 100vh;
+            position: fixed;
+            left: 0;
+            top: 0;
+            border-right: 1px solid var(--border);
+            background: var(--bg);
+            padding: 1.5rem;
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+            overflow-y: auto;
+            z-index: 100;
+        }
+
+        .nav-link {
+            color: var(--text-muted);
+            text-decoration: none;
+            font-size: 0.85rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            transition: color 0.2s;
+            padding: 0.5rem;
+            border-radius: 6px;
+        }
+        .nav-link:hover { color: var(--accent); background: var(--surface); }
+
+        .toc-title {
+            font-family: var(--font-serif);
+            font-size: 1rem;
+            color: var(--text-primary);
+            margin-bottom: 0.8rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding-left: 0.5rem;
+        }
+        .toc-title::before {
+            content: '';
+            width: 3px;
+            height: 1rem;
+            background: var(--accent);
+            border-radius: 2px;
+        }
+
+        .toc-list {
+            list-style: none;
+            display: flex;
+            flex-direction: column;
+            gap: 0.4rem;
+        }
+        .toc-item {
+            font-size: 0.8rem;
+            line-height: 1.3;
+        }
+        .toc-item a {
+            color: var(--text-muted);
+            text-decoration: none;
+            transition: all 0.2s;
+            display: block;
+            padding: 0.4rem 0.5rem;
+            border-radius: 4px;
+        }
+        .toc-item a:hover { color: var(--accent); background: var(--surface); }
+        .toc-item.level-3 { margin-left: 0.8rem; border-left: 1px solid var(--border); }
+
+        .container {
+            max-width: 860px;
+            margin: 0 auto 0 260px;
+            padding: 3rem 4rem;
+            animation: fadeIn 0.6s ease-out;
+        }
+
+        @media (max-width: 1024px) {
+            .sidebar { width: 220px; padding: 1rem; }
+            .container { margin-left: 220px; padding: 2rem; }
+        }
+
+        @media (max-width: 800px) {
+            .sidebar { position: static; width: 100%; height: auto; border-right: none; border-bottom: 1px solid var(--border); }
+            .container { margin-left: 0; padding: 1.5rem; }
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(5px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        header {
+            margin-bottom: 3rem;
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 1.5rem;
+        }
+
+        .meta {
+            font-family: var(--font-mono);
+            font-size: 0.75rem;
+            color: var(--accent);
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            margin-bottom: 0.8rem;
+            display: flex;
+            align-items: center;
+            gap: 0.8rem;
+        }
+
+        .meta::before {
+            content: '';
+            width: 20px;
+            height: 1px;
+            background-color: var(--accent);
+        }
+
+        h1 {
+            font-family: var(--font-serif);
+            font-size: 2.2rem;
+            font-weight: 900;
+            line-height: 1.2;
+            margin-bottom: 1rem;
+            color: var(--text-primary);
+        }
+
+        .markdown-body {
+            background: transparent !important;
+            color: var(--text-primary) !important;
+            font-family: var(--font-sans) !important;
+            font-size: 0.95rem !important;
+        }
+
+        .markdown-body h2 {
+            font-family: var(--font-serif);
+            font-size: 1.5rem !important;
+            color: var(--accent) !important;
+            border-bottom: 1px solid var(--border) !important;
+            padding-bottom: 0.5rem !important;
+            margin-top: 2.5rem !important;
+            scroll-margin-top: 1rem;
+        }
+
+        .markdown-body h3 {
+            font-family: var(--font-serif);
+            font-size: 1.25rem !important;
+            color: var(--text-primary) !important;
+            margin-top: 2rem !important;
+            scroll-margin-top: 1rem;
+        }
+
+        .markdown-body p, .markdown-body li {
+            font-size: 0.95rem !important;
+            color: var(--text-primary) !important;
+        }
+        
+        .markdown-body pre {
+            background-color: #1a1b26 !important; /* Match Tokyo Night Dark */
+            border: 1px solid var(--border);
+            border-radius: 8px !important;
+            padding: 0 !important; /* Code internal handles padding */
+            margin: 1.2rem 0 !important;
+            overflow: hidden;
+        }
+
+        .markdown-body pre code {
+            background-color: transparent !important;
+            padding: 1.2rem !important;
+            display: block;
+            font-family: var(--font-mono) !important;
+            font-size: 0.85rem !important;
+            line-height: 1.5;
+        }
+
+        .markdown-body blockquote {
+            border-left: 3px solid var(--accent) !important;
+            background: var(--surface);
+            padding: 0.8rem 1.2rem;
+            color: var(--text-secondary) !important;
+            margin: 1.2rem 0 !important;
+        }
+
+        .markdown-body table {
+            background: var(--surface);
+            font-size: 0.85rem !important;
+            margin: 1.2rem 0 !important;
+        }
+
+        footer {
+            margin-top: 4rem;
+            padding-top: 1.5rem;
+            border-top: 1px solid var(--border);
+            color: var(--text-muted);
+            font-size: 0.8rem;
+            text-align: center;
+        }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar { width: 5px; }
+        ::-webkit-scrollbar-track { background: var(--bg); }
+        ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+    </style>
+</head>
+<body>
+    <aside class="sidebar">
+        <a href="index.html" class="nav-link">
+            <span>←</span> 返回目录门户
+        </a>
+        
+        <div class="toc-container">
+            <h3 class="toc-title">文档导航</h3>
+            <ul class="toc-list" id="toc">
+                <!-- TOC items will be injected here -->
+            </ul>
+        </div>
+    </aside>
+
+    <div class="container">
+        <header>
+            <div class="meta">GLOBAL | 2026-05-16 19:06</div>
+            <h1>静态数据库 (MySQL) 交互接口指南 (Static DB API Guide)</h1>
+        </header>
+
+        <article id="content" class="markdown-body">
+            <!-- Loading indicator -->
+            <p style="color: var(--text-muted)">正在解析文档内容...</p>
+        </article>
+
+        <footer>
+            &copy; 2026 MicroStock Project Docs | Generated by Antigravity
+        </footer>
+    </div>
+
+    <script id="markdown-raw" type="text/markdown"># 静态数据库 (MySQL) 交互接口指南 (Static DB API Guide)
+
+> **版本**: 1.0  
+> **状态**: 已整理  
+> **说明**: 本文档专门汇总了直接操作、同步或查询云端 MySQL 数据库（`alwaysup` 库）的 API 接口。
+腾讯云ip: [IP_ADDRESS]  124.221.80.250
+---
+
+## 1. 基础元数据 (Fundamental & Metadata)
+此类数据存储在 `stock_basic_info` (标的信息)、`trade_calendar` (交易日历) 等表中，是系统的基石。
+
+| 接口路径 | 方法 | 服务 | 端口 | 数据性质 | 说明 |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| `/api/v1/metadata/baseline/current` | GET | Stock-Manager | 8004 | **静态/统计** | 获取当前 MySQL 中录入的所有 A 股标的总数及分板块统计。 |
+| `/api/v1/metadata/calendar/tradingDays` | GET | Stock-Manager | 8004 | **时序/字典** | 获取交易日历，用于确定数据抓取和计算的时间基准。 |
+| `/api/v1/metadata/sync/stock-list` | POST | AkShare-API | 8003 | **全量同步** | 触发将全市场股票基础信息从数据源同步至 MySQL `stock_basic_info` 表。 |
+| `/api/v1/metadata/sync/sw-industries` | POST | AkShare-API | 8003 | **关系数据** | 同步申万行业分类数据。 |
+| `/api/v1/metadata/sync/issue-prices` | POST | AkShare-API | 8003 | **静态数据** | 同步个股发行价数据，用于发行价破位计算。 |
+
+---
+
+## 2. 股东与机构数据 (Shareholders & Institutional)
+存储在 `stock_shareholder_count` 和 `stock_shareholder_top10` 等表中。
+
+| 接口路径 | 方法 | 服务 | 端口 | 数据性质 | 说明 |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| `/api/v1/shareholders/count/{code}` | GET | Stock-Manager | 8004 | **季度报告** | 获取个股的历史股东户数变化情况。 |
+| `/api/v1/shareholders/top10/{code}` | GET | Stock-Manager | 8004 | **季度报告** | 获取个股前十大股东明细。 |
+| `/api/v1/shareholders/sync/{code}` | POST | Stock-Manager | 8004 | **增量入库** | 针对特定股票触发股东数据的抓取并持久化至 MySQL。 |
+
+---
+
+## 3. 财务报表数据 (Financial Reports)
+涉及 `stock_balance_sheet` (资产负债表)、`stock_income_statement` (利润表) 和 `stock_cash_flow_statement` (现金流量表)。
+
+| 接口路径 | 方法 | 服务 | 端口 | 数据性质 | 说明 |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| `/api/v1/finance/reports/{code}` | GET | Stock-Manager | 8004 | **时序报表** | 获取个股历史三大会计报表数据的结构化 JSON。 |
+| `/api/v1/finance/indicators/{code}` | GET | Stock-Manager | 8004 | **衍生指标** | 获取个股历史财务衍生指标（ROE, EPS 等）。 |
+| `/api/v1/finance/sync/{code}` | POST | Stock-Manager | 8004 | **全量同步** | 从数据源抓取个股全量历史财务报表并增量存入 MySQL。 |
+| `/api/v1/finance/sync-indicators/{code}` | POST | Stock-Manager | 8004 | **指标同步** | 同步个股历史财务衍生指标数据。 |
+
+---
+
+## 4. 行情同步与持久化 (Market Data Persistence)
+涉及到 `stock_daily_kline` (日线)、`stock_valuation_daily` (估值) 等核心大表。
+
+| 接口路径 | 方法 | 服务 | 端口 | 数据性质 | 说明 |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| `/api/v1/sync/full` | POST | BaoStock-API | 8001 | **批处理同步** | 全市场 A 股 K 线数据的自动化增量同步至 MySQL。 |
+| `/api/v1/sync/status` | GET | BaoStock-API | 8001 | **运维状态** | 查询当前 MySQL K 线同步任务的进度和汇总统计。 |
+| `/api/v1/sync/freshness` | GET | BaoStock-API | 8001 | **数据审计** | 检测 MySQL 中各表数据的最新时间戳，判断是否存在数漏。 |
+| `/api/v1/game/sync/lhb` | POST | Stock-Manager | 8004 | **每日增量** | 将龙虎榜 (LHB) 每日明细数据同步至 MySQL。 |
+| `/api/v1/game/sync/north` | POST | Stock-Manager | 8004 | **每日增量** | 将北向资金持仓数据同步至 MySQL。 |
+
+---
+
+## 4. 停牌与业绩数据 (Events & Performance)
+存储在 `stock_suspension` (停牌) 和 `stock_performance_forecast` (业绩预告) 等表中。
+
+| 接口路径 | 方法 | 服务 | 端口 | 数据性质 | 说明 |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| `/api/v1/suspensions/sync` | POST | Stock-Manager | 8004 | **每日状态** | 抓取今日停牌数据并更新至 MySQL，用于排除计算标的。 |
+| `/api/v1/information/forecasts/sync` | POST | Stock-Manager | 8004 | **公告数据** | 同步业绩预告数据，用于信息维度评分。 |
+
+---
+
+## 5. 计算指标与监控评分 (Monitoring & Scores)
+核心存储在 `monitor_scores` (综合分) 和 `monitor_indicators` (分项指标) 中。
+
+| 接口路径 | 方法 | 服务 | 端口 | 数据性质 | 说明 |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| `/api/v1/monitor/summary` | GET | Stock-Manager | 8004 | **聚合分析** | 从 MySQL 读取全市场最新的监控指标汇总（如高分占比等）。 |
+| `/api/v1/monitor/history/score` | GET | Stock-Manager | 8004 | **时序指标** | 查询特定标的历史健康度评分曲线。 |
+| `/api/v1/calculate` | POST | Monitor-Service | 8006 | **引擎入库** | 触发评分引擎计算并将结果持久化到 MySQL `monitor_scores` 表。 |
+
+---
+
+## 6. 系统与审计 (System & Audit)
+存储在 `ops_audit_logs` (审计日志)、`task_executions` (任务执行) 等表中。
+
+| 接口路径 | 方法 | 服务 | 端口 | 数据性质 | 说明 |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| `/api/v1/audit/weekly` | GET | Stock-Manager | 8004 | **分析报告** | 汇总 MySQL 中的同步日志，生成周度数据质量审计报告。 |
+| `/api/v1/data-audits` | GET | Stock-Manager | 8004 | **质量报告** | 查询 MySQL 中记录的数据一致性核查结果。 |
+| `/api/v1/commands` | GET/POST | Stock-Manager | 8004 | **交互日志** | 管理和记录所有对数据库产生变更的手动干预命令。 |
+
+---
+
+## 数据性质说明指南
+*   **静态/词典**: 变更频率极低（如行业定义、发行价）。
+*   **时序/K线**: 每日收盘后产生一批（如日线行情、每日评分）。
+*   **状态/看板**: 描述当前系统或市场的瞬时情况（如今日停牌、同步状态）。
+*   **月度/季度**: 随定期报告发布，更新周期长（如股东人数、业绩预告、三大会计报表）。
+*   **审计/日志**: 记录系统行为的历史足迹。
+</script>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', async () => {
+            const rawMd = document.getElementById('markdown-raw').textContent;
+            const contentEl = document.getElementById('content');
+            const tocEl = document.getElementById('toc');
+            
+            // Set options for marked
+            marked.setOptions({
+                gfm: true,
+                breaks: true,
+                headerIds: true,
+                mangle: false,
+                highlight: function(code, lang) {
+                    const language = hljs.getLanguage(lang) ? lang : 'plaintext';
+                    return hljs.highlight(code, { language }).value;
+                }
+            });
+
+            // Parse Markdown
+            contentEl.innerHTML = marked.parse(rawMd);
+            
+            // Generate TOC
+            const headings = contentEl.querySelectorAll('h2, h3');
+            headings.forEach((h, index) => {
+                if (!h.id) h.id = 'heading-' + index;
+                
+                const li = document.createElement('li');
+                li.className = 'toc-item level-' + h.tagName.toLowerCase().charAt(1);
+                
+                const a = document.createElement('a');
+                a.href = '#' + h.id;
+                a.textContent = h.textContent;
+                
+                li.appendChild(a);
+                tocEl.appendChild(li);
+            });
+
+            // Handle Mermaid
+            if (window.mermaid) {
+                mermaid.initialize({ startOnLoad: false, theme: 'dark', useWorker: false });
+                document.querySelectorAll('pre code.language-mermaid').forEach(el => {
+                    const pre = el.parentElement;
+                    const div = document.createElement('div');
+                    div.className = 'mermaid';
+                    div.textContent = el.textContent;
+                    pre.parentElement.replaceChild(div, pre);
+                });
+                mermaid.run();
+            }
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,707 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>📋 代码评估报告</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Noto+Serif+SC:wght@400;700;900&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    
+    <!-- Libraries -->
+    <script src="https://lib.baomitu.com/marked/11.1.1/marked.min.js"></script>
+    <link rel="stylesheet" href="https://lib.baomitu.com/github-markdown-css/5.5.0/github-markdown-dark.min.css">
+    <script src="https://lib.baomitu.com/mermaid/10.9.0/mermaid.min.js"></script>
+    
+    <!-- Syntax Highlighting -->
+    <link rel="stylesheet" href="https://lib.baomitu.com/highlight.js/11.9.0/styles/tokyo-night-dark.min.css">
+    <script src="https://lib.baomitu.com/highlight.js/11.9.0/highlight.min.js"></script>
+    
+    <style>
+        :root {
+            --bg: #0a0a0a;
+            --surface: #121212;
+            --surface-hover: #1a1a1a;
+            --border: #222222;
+            --accent: #eab308;
+            --accent-glow: rgba(234, 179, 8, 0.1);
+            --text-primary: #f1f5f9;
+            --text-secondary: #94a3b8;
+            --text-muted: #64748b;
+            --font-sans: 'Outfit', 'Noto Sans SC', -apple-system, sans-serif;
+            --font-serif: 'Noto Serif SC', serif;
+            --font-mono: 'JetBrains Mono', monospace;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background-color: var(--bg);
+            color: var(--text-primary);
+            font-family: var(--font-sans);
+            line-height: 1.7;
+            -webkit-font-smoothing: antialiased;
+            overflow-x: hidden;
+        }
+
+        /* Subtle background glow */
+        body::after {
+            content: '';
+            position: fixed;
+            top: 0;
+            right: 0;
+            width: 40vw;
+            height: 40vh;
+            background: radial-gradient(circle, var(--accent-glow) 0%, transparent 70%);
+            z-index: -1;
+            filter: blur(100px);
+            pointer-events: none;
+        }
+
+        .sidebar {
+            width: 260px;
+            height: 100vh;
+            position: fixed;
+            left: 0;
+            top: 0;
+            border-right: 1px solid var(--border);
+            background: var(--bg);
+            padding: 1.5rem;
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+            overflow-y: auto;
+            z-index: 100;
+        }
+
+        .nav-link {
+            color: var(--text-muted);
+            text-decoration: none;
+            font-size: 0.85rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            transition: color 0.2s;
+            padding: 0.5rem;
+            border-radius: 6px;
+        }
+        .nav-link:hover { color: var(--accent); background: var(--surface); }
+
+        .toc-title {
+            font-family: var(--font-serif);
+            font-size: 1rem;
+            color: var(--text-primary);
+            margin-bottom: 0.8rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding-left: 0.5rem;
+        }
+        .toc-title::before {
+            content: '';
+            width: 3px;
+            height: 1rem;
+            background: var(--accent);
+            border-radius: 2px;
+        }
+
+        .toc-list {
+            list-style: none;
+            display: flex;
+            flex-direction: column;
+            gap: 0.4rem;
+        }
+        .toc-item {
+            font-size: 0.8rem;
+            line-height: 1.3;
+        }
+        .toc-item a {
+            color: var(--text-muted);
+            text-decoration: none;
+            transition: all 0.2s;
+            display: block;
+            padding: 0.4rem 0.5rem;
+            border-radius: 4px;
+        }
+        .toc-item a:hover { color: var(--accent); background: var(--surface); }
+        .toc-item.level-3 { margin-left: 0.8rem; border-left: 1px solid var(--border); }
+
+        .container {
+            max-width: 860px;
+            margin: 0 auto 0 260px;
+            padding: 3rem 4rem;
+            animation: fadeIn 0.6s ease-out;
+        }
+
+        @media (max-width: 1024px) {
+            .sidebar { width: 220px; padding: 1rem; }
+            .container { margin-left: 220px; padding: 2rem; }
+        }
+
+        @media (max-width: 800px) {
+            .sidebar { position: static; width: 100%; height: auto; border-right: none; border-bottom: 1px solid var(--border); }
+            .container { margin-left: 0; padding: 1.5rem; }
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(5px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        header {
+            margin-bottom: 3rem;
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 1.5rem;
+        }
+
+        .meta {
+            font-family: var(--font-mono);
+            font-size: 0.75rem;
+            color: var(--accent);
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            margin-bottom: 0.8rem;
+            display: flex;
+            align-items: center;
+            gap: 0.8rem;
+        }
+
+        .meta::before {
+            content: '';
+            width: 20px;
+            height: 1px;
+            background-color: var(--accent);
+        }
+
+        h1 {
+            font-family: var(--font-serif);
+            font-size: 2.2rem;
+            font-weight: 900;
+            line-height: 1.2;
+            margin-bottom: 1rem;
+            color: var(--text-primary);
+        }
+
+        .markdown-body {
+            background: transparent !important;
+            color: var(--text-primary) !important;
+            font-family: var(--font-sans) !important;
+            font-size: 0.95rem !important;
+        }
+
+        .markdown-body h2 {
+            font-family: var(--font-serif);
+            font-size: 1.5rem !important;
+            color: var(--accent) !important;
+            border-bottom: 1px solid var(--border) !important;
+            padding-bottom: 0.5rem !important;
+            margin-top: 2.5rem !important;
+            scroll-margin-top: 1rem;
+        }
+
+        .markdown-body h3 {
+            font-family: var(--font-serif);
+            font-size: 1.25rem !important;
+            color: var(--text-primary) !important;
+            margin-top: 2rem !important;
+            scroll-margin-top: 1rem;
+        }
+
+        .markdown-body p, .markdown-body li {
+            font-size: 0.95rem !important;
+            color: var(--text-primary) !important;
+        }
+        
+        .markdown-body pre {
+            background-color: #1a1b26 !important; /* Match Tokyo Night Dark */
+            border: 1px solid var(--border);
+            border-radius: 8px !important;
+            padding: 0 !important; /* Code internal handles padding */
+            margin: 1.2rem 0 !important;
+            overflow: hidden;
+        }
+
+        .markdown-body pre code {
+            background-color: transparent !important;
+            padding: 1.2rem !important;
+            display: block;
+            font-family: var(--font-mono) !important;
+            font-size: 0.85rem !important;
+            line-height: 1.5;
+        }
+
+        .markdown-body blockquote {
+            border-left: 3px solid var(--accent) !important;
+            background: var(--surface);
+            padding: 0.8rem 1.2rem;
+            color: var(--text-secondary) !important;
+            margin: 1.2rem 0 !important;
+        }
+
+        .markdown-body table {
+            background: var(--surface);
+            font-size: 0.85rem !important;
+            margin: 1.2rem 0 !important;
+        }
+
+        footer {
+            margin-top: 4rem;
+            padding-top: 1.5rem;
+            border-top: 1px solid var(--border);
+            color: var(--text-muted);
+            font-size: 0.8rem;
+            text-align: center;
+        }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar { width: 5px; }
+        ::-webkit-scrollbar-track { background: var(--bg); }
+        ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+    </style>
+</head>
+<body>
+    <aside class="sidebar">
+        <a href="index.html" class="nav-link">
+            <span>←</span> 返回目录门户
+        </a>
+        
+        <div class="toc-container">
+            <h3 class="toc-title">文档导航</h3>
+            <ul class="toc-list" id="toc">
+                <!-- TOC items will be injected here -->
+            </ul>
+        </div>
+    </aside>
+
+    <div class="container">
+        <header>
+            <div class="meta">GLOBAL | 2026-05-16 19:06</div>
+            <h1>📋 代码评估报告</h1>
+        </header>
+
+        <article id="content" class="markdown-body">
+            <!-- Loading indicator -->
+            <p style="color: var(--text-muted)">正在解析文档内容...</p>
+        </article>
+
+        <footer>
+            &copy; 2026 MicroStock Project Docs | Generated by Antigravity
+        </footer>
+    </div>
+
+    <script id="markdown-raw" type="text/markdown">收到。我注意到截图——你已经用了 90% 的会话限额。基于这个情况，我快速调整策略：
+
+1. **评估报告聚焦文字描述**（你给 Gemini 改）
+2. **并行推进**（旧代码改 + 新文档写）
+3. **ts_code 不一致问题**：让我先快速核实归一化处理是否真的覆盖
+
+由于会话即将耗尽，我**直接进入实质内容**，不再做长铺垫。核实了一下，结果重要：**你的"归一化"是代码层对值的标准化（如 sh.600519 → 600519.SH），不是数据库字段名的统一**。这两个层面要分开处理。
+
+下面是**精简版评估报告**，可以直接交给 Gemini 改。
+
+---
+
+# 📋 代码评估报告
+
+> **目的**：列出问题清单、优先级、改进方向。不含具体代码，由 Gemini 落地。
+> **范围**：microservice-stock 全项目（24,674 行）
+
+---
+
+## 一、对"ts_code 归一化"的精准定位
+
+经过核实，项目中存在**两个层面**的"代码处理"，必须区分清楚：
+
+### 层面 A：值的归一化（已经做对）
+
+**位置**：`baostock-api/services/baostock_service.py`、`wxch-gateway/services/quote_service.py` 等
+
+**作用**：把不同数据源的格式统一到标准 TS_CODE
+```
+输入：sh.600519 / 600519 / 600519.SH
+输出：统一为 600519.SH
+```
+
+✅ **这部分做得好，保留即可。**
+
+### 层面 B：数据库字段命名（存在不一致，建议统一）
+
+**问题**：同一个概念（股票代码），在不同表里命名不同：
+- 大多数表：`ts_code VARCHAR(20)`
+- 部分表：`stock_code VARCHAR(20)`（stock_analyst_rank、stock_health_ledger、CCI_*、stock_sentiment_daily）
+- 个别表：`code VARCHAR(16)`（stock_adjust_factor、stock_industry_sw、mootdx_symbol）
+
+**问题定位**——值已经归一化了，但字段名没统一。
+
+### 层面 B 的真实危害
+
+```sql
+-- 想要的查询（理想）：
+SELECT k.close, l.net_buy_amt
+FROM stock_kline_daily k
+JOIN stock_lhb_daily l USING (ts_code, trade_date)
+
+-- 实际不得不写（现实）：
+SELECT k.close, l.net_buy_amt
+FROM stock_kline_daily k
+JOIN stock_lhb_daily l 
+  ON k.code = l.ts_code 
+ AND k.trade_date = l.trade_date
+```
+
+**每个 JOIN 都要记不同表用什么字段，写 SQL 时出错率高，性能也差**（不同字段长度的隐式转换）。
+
+### B 类问题的处理建议（**重点**）
+
+不必激进重构整个数据库，分级处理：
+
+**P0（必须做）：新代码层面的统一**
+
+所有**新写的代码**（包括 service.py 的 INSERT/SELECT）：
+- 一律使用 `ts_code` 字段名
+- 不允许混用 `stock_code` / `code`
+
+**P1（应该做）：发现 service 层的 bug**
+
+我看到一个真实 bug：`information_service.py` 写 `stock_performance_forecast` 时用了 `stock_code` 字段，但表实际字段是 `ts_code`，**这条 INSERT 应该一直在报错或写不进去**。Gemini 修复时务必检查。
+
+**P2（渐进做）：旧表的字段重命名**
+
+按使用频率分批迁移：
+1. 高频核心表先做：`stock_kline_daily.code` → `ts_code`（最重要）
+2. 其他表跟随：`stock_analyst_rank.stock_code` → `ts_code`
+3. 边缘表保持现状即可
+
+迁移方式（每张表）：
+- Step 1: ADD COLUMN `ts_code` 复制 `code` 数据
+- Step 2: 业务代码切换查询到 `ts_code`
+- Step 3: DROP 旧字段
+
+---
+
+## 二、问题清单（按优先级）
+
+### 🔴 P0 — 必须立即修复（数据正确性问题）
+
+#### P0-1：业绩预告写入字段不匹配
+
+**文件**：`stock-manager-api/app/services/information_service.py` line 73-101
+
+**问题**：SQL 用 `stock_code`，但 `stock_performance_forecast` 表实际字段是 `ts_code`。
+
+**影响**：业绩预告同步功能可能完全失效（取决于数据库是否启用严格模式）。
+
+**修复方向**：
+- 把 `information_service.py` 中所有 `stock_code` 字段改为 `ts_code`
+- 同时修改 `app/schemas/information.py` 中 Pydantic 模型字段
+- 同时修改 `app/api/information.py` 中接口字段
+- 验证调用方是否需要兼容（前端、其他 service）
+
+**完成标准**：业绩预告同步 1 条记录后，能在数据库查到。
+
+#### P0-2：业绩预告字段被写死 None
+
+**文件**：`stock-manager-api/app/services/information_service.py` line 222-225
+
+**问题**：
+```
+"growth_min": None,    # 直接写死
+"growth_max": None     # 直接写死
+```
+关键的业绩变动幅度数据被丢弃。
+
+**修复方向**：
+- AkShare 的业绩预告接口实际返回的字段需要核实（应该有 growth_min、growth_max 或类似字段）
+- 如果 AkShare 没有，改用 Tushare 的 `forecast` 接口（2000 积分支持）
+- 数据库表 `stock_performance_forecast` 也需要添加 `growth_min`、`growth_max` 字段（当前只有 `growth_range` 文本字段）
+
+#### P0-3：DDL 写在业务代码中
+
+**文件**：`stock-manager-api/app/services/pre_market_service.py` line 16-55
+
+**问题**：`create_tables_if_not_exists()` 把建表 SQL 内嵌在 service 里，每次方法调用都执行一次。
+
+**修复方向**：
+- 建立 `migrations/` 目录管理所有 DDL
+- 推荐使用 Alembic（FastAPI 生态成熟）或 yoyo-migrations（轻量）
+- 利用现有的 `migrations_history` 表记录版本
+- 业务 service 只能 INSERT/UPDATE/SELECT，禁止 CREATE/ALTER
+
+**完成标准**：全项目搜索 `CREATE TABLE` / `ALTER TABLE` 在 services 目录下应为 0 处。
+
+---
+
+### 🟠 P1 — 这周内修复（代码质量问题）
+
+#### P1-1：Tushare service 大量重复代码
+
+**文件**：`tushare-api/app/services/tushare_service.py`
+
+**问题**：每个方法都重复写 `import math` 和 NaN/Inf 清理逻辑（出现 8+ 次）。
+
+**修复方向**：
+- 抽取私有方法 `_df_to_records(df)` 处理 DataFrame → records 转换
+- 处理 NaN/Inf/NaT 等所有 pandas 特殊值
+- 模块顶部统一 `import math` / `import numpy`
+- 每个 API 方法简化为 2-3 行
+
+**完成标准**：单个方法不超过 5 行，模块总行数减少 50%+。
+
+#### P1-2：异常吞没问题
+
+**文件**：`pre_market_service.py` line 77-80, `information_service.py` line 232-256（多处）
+
+**问题**：`except Exception as e: logger.error(...)` 后不 raise，调用方以为成功。
+
+**修复方向**：
+- 区分"业务异常"（应继续）和"系统异常"（应中断）
+- 业务异常：在返回 dict 中遵循 Rule 3 格式 `{"error": {"code": "SERVICE_ERROR", "message": str(e), "request_id": "..."}}`
+- 系统异常（DB 连接、网络）：必须 raise，让调度器能重试
+- 调度器 jobs.py 接收返回值后，根据 status 决定是否标记任务失败
+
+#### P1-3：测试覆盖率待提升
+
+**问题**：
+- `stock-manager-api`（19 个 service）**0 测试**
+- `monitor-service` **0 测试**
+- 其他服务测试也很薄
+
+**修复方向**（按优先级）：
+1. 优先补关键路径测试：`information_service`、`pre_market_service`、`finance_service`
+2. 测试目标：每个 service 的 `sync_xxx` 方法、关键 SQL 逻辑
+3. 使用项目规范中的 pytest + pytest-asyncio + httpx
+4. Mock 外部依赖（Tushare、AkShare），不调真实 API
+5. 目标覆盖率：**核心 service 80%+，整体 50%+**
+
+#### P1-4：service 间字段命名混用
+
+**问题**：同一域内的 service 文件，对同一概念命名不一致（部分用 `stock_code`，部分用 `ts_code`）。
+
+**修复方向**：
+- 全局检查：grep 所有 `stock_code` 出现位置
+- 在不影响接口契约的前提下，统一改为 `ts_code`
+- 开发规范文档中**显式规定**：变量名、参数名、字段名一律用 `ts_code`
+
+---
+
+### 🟡 P2 — 持续优化（代码整洁度）
+
+#### P2-1：清理 Placeholder 注释
+
+**问题**：代码中有大量"暂时跳过"、"Placeholder"、"我们暂时"、"TODO"等草稿注释。
+
+**修复方向**：
+- 全项目 grep `Placeholder|placeholder|TODO|FIXME|XXX|暂时|暂时跳过`
+- 真实待办迁移到 issue tracker（Gitee Issues 或文档）
+- 注释只保留最终设计意图
+
+#### P2-2：scheduler 注册散乱
+
+**文件**：`stock-manager-api/app/main.py` line 30-94
+
+**问题**：所有定时任务在 `lifespan` 中硬编码注册，加新任务要改主入口。
+
+**修复方向**：
+- 抽取 `app/scheduler/registry.py`，所有定时任务以装饰器或配置文件方式注册
+- main.py 只调用 `register_all_jobs(scheduler)`
+- 便于新增"观察跟踪"系统的定时任务
+
+#### P2-3：HTTP Client 没有连接池复用
+
+**文件**：`pre_market_service.py` line 53-55
+
+**问题**：每次调用都新建 `httpx.AsyncClient()`，没复用连接池。
+
+**修复方向**：
+- 使用 `app/utils/http_client.py` 的全局实例（已存在）
+- 全项目检查 `httpx.AsyncClient()` 直接实例化的位置，统一改用 http_client.get/post
+
+#### P2-4：日志缺失关键字段
+
+**问题**：部分 service 的日志只写错误信息，没记录关键参数（股票代码、日期、批次大小）。
+
+**修复方向**：
+- 关键操作日志强制包含：`code`、`date`、`count`、`duration_ms`
+- 利用现有 `request_id` 做链路追踪
+- 出错时自动 dump 上下文（不仅是 exception）
+
+---
+
+### 🟢 P3 — 长期优化（架构层面，不急）
+
+#### P3-1：DDL/Migration 管理工具化
+
+升级到 Alembic，配合 CI/CD 自动迁移。
+
+#### P3-2：监控告警体系
+
+补充 Prometheus / Sentry 集成（项目目前是日志型监控）。
+
+#### P3-3：API 网关统一入口
+
+把分散的 8000-8006 端口收敛到 wxch-gateway，统一鉴权、限流。
+
+---
+
+## 三、第 9 章新系统的接入规范（给 Gemini 的明确约束）
+
+写新系统时，**必须遵循以下规范**：
+
+### 数据库层
+
+```
+✅ 表名前缀：obs_（observation 域）
+✅ 主键：id BIGINT UNSIGNED AUTO_INCREMENT
+✅ 股票代码字段：ts_code VARCHAR(20) NOT NULL
+✅ 时间戳：created_at + updated_at（不用 update_time）
+✅ 软删除：deleted_at TIMESTAMP NULL
+✅ 字符集：utf8mb4 + utf8mb4_unicode_ci
+✅ 引擎：InnoDB + ROW_FORMAT=DYNAMIC
+✅ 表注释 + 字段注释完整
+✅ DDL 放在 migrations/ 目录，绝不内嵌业务代码
+```
+
+### 代码层
+
+```
+✅ 跟随 information_service.py 的 sync_xxx_from_external 模式
+✅ 使用全局 db、http_client 实例（不新建连接）
+✅ async/await 异步全栈
+✅ 错误处理：业务异常返回 status，系统异常 raise
+✅ 日志：JSON 格式 + request_id + 关键字段
+✅ 配置：通过 pydantic-settings 注入，不硬编码
+✅ Pydantic v2 模型校验所有 API 输入输出
+```
+
+### 调度层
+
+```
+✅ 在 post_market_def.json / pre_market_prep_def.json 添加 step
+✅ 不新建独立 cron 或 Airflow
+✅ 复用现有 task_commands / workflow_runs 表追踪执行
+```
+
+### LLM 接入层
+
+```
+✅ 在 stock-manager-api 新建 app/services/llm_service.py
+✅ 调用方式跟随 http_client 风格
+✅ 模型推荐：DeepSeek-V3（国内合规、中文金融场景强、便宜）
+✅ Prompt 模板配置化：app/config/llm_prompts/{event_type}.json
+✅ Token 用量、调用频次记录到 task_execution_logs
+```
+
+---
+
+## 四、推进顺序（明确的 To-Do）
+
+按这个顺序给 Gemini 派活：
+
+```
+Week 1（基础修复 + 新系统启动）：
+  Day 1：修 P0-1（字段不匹配 bug）
+  Day 1：修 P0-2（业绩预告字段补全）+ 表结构 ALTER
+  Day 2：修 P0-3（DDL 剥离 + 引入 Alembic）
+  Day 3-5：写第 9 章 DDL + ETL 脚本（按新规范）
+
+Week 2（重构 + 新系统继续）：
+  Day 6-7：修 P1-1（Tushare 重构）
+  Day 8：修 P1-2（异常处理改进）
+  Day 9-10：写第 9 章 LLM 集成 + API
+
+Week 3（测试 + 前端）：
+  Day 11-13：补 P1-3（核心 service 测试）
+  Day 14-15：第 9 章前端页面
+
+Week 4（持续优化）：
+  P2 系列、P3 系列按需处理
+```
+
+---
+
+## 五、关键提醒
+
+1. **修字段命名 bug 时（P0-1），先备份数据**，再做迁移
+2. **引入 Alembic 时（P0-3），把现有表结构作为 baseline migration**，避免重建
+3. **新系统的 LLM 调用要做成本控制**，建议每天预算上限（如 5 元）
+4. **测试先写后改**：补测试时，**先写测试覆盖现状**，再改代码，避免回归
+
+---
+
+**报告结束。** 这份报告 Gemini 可以按照"P0 → P1 → 新文档 → P2 → P3"的顺序逐项落地。
+
+下一步如果你确认这份评估，**我们直接进入第 9 章交付文档**——给 Gemini 做的不是评估，是写新代码，所以新文档要"足够详细可直接执行"。
+
+会话剩余有限，你确认这份评估后，我会**集中精力一次性把第 9 章关键骨架（DDL + 主要 service 接口规范 + LLM prompt 模板）出完**，让 Gemini 后续可以独立推进。
+
+** 2026-05-02 10:10 **
+根据实际情况，调整了 06_最新评估.md 中的第 4 部分：**推进顺序（明确的 To-Do）**。
+
+**原方案**：Week 1（基础修复）→ Week 2（重构）→ Week 3（测试）→ Week 4（持续优化）
+
+**新方案（针对 Gemini 6 个阶段的安排）**：
+- **阶段 1（Day 1-3）**：先处理 P0 + P1-1（字段匹配、业绩预告、Tushare 重构），同时开始第 9 章骨架（DDL/ETL）。
+- **阶段 2（Day 4-6）**：完成第 9 章 DDL/ETL，开始第 9 章 LLM 接入 + API。
+- **阶段 3（Day 7-9）**：完成第 9 章 LLM/API，开始 P1-2、P1-3（异常处理 + 测试）。
+- **阶段 4（Day 10-12）**：补全测试，清理 placeholder、优化日志（P2 系列）。
+- **阶段 5（Day 13-15）**： 第 9 章前端 + P3 系列（Alembic、监控、网关）。
+- **阶段 6（Day 16-21）**：集成、部署、预演，同步推进测试覆盖。</script>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', async () => {
+            const rawMd = document.getElementById('markdown-raw').textContent;
+            const contentEl = document.getElementById('content');
+            const tocEl = document.getElementById('toc');
+            
+            // Set options for marked
+            marked.setOptions({
+                gfm: true,
+                breaks: true,
+                headerIds: true,
+                mangle: false,
+                highlight: function(code, lang) {
+                    const language = hljs.getLanguage(lang) ? lang : 'plaintext';
+                    return hljs.highlight(code, { language }).value;
+                }
+            });
+
+            // Parse Markdown
+            contentEl.innerHTML = marked.parse(rawMd);
+            
+            // Generate TOC
+            const headings = contentEl.querySelectorAll('h2, h3');
+            headings.forEach((h, index) => {
+                if (!h.id) h.id = 'heading-' + index;
+                
+                const li = document.createElement('li');
+                li.className = 'toc-item level-' + h.tagName.toLowerCase().charAt(1);
+                
+                const a = document.createElement('a');
+                a.href = '#' + h.id;
+                a.textContent = h.textContent;
+                
+                li.appendChild(a);
+                tocEl.appendChild(li);
+            });
+
+            // Handle Mermaid
+            if (window.mermaid) {
+                mermaid.initialize({ startOnLoad: false, theme: 'dark', useWorker: false });
+                document.querySelectorAll('pre code.language-mermaid').forEach(el => {
+                    const pre = el.parentElement;
+                    const div = document.createElement('div');
+                    div.className = 'mermaid';
+                    div.textContent = el.textContent;
+                    pre.parentElement.replaceChild(div, pre);
+                });
+                mermaid.run();
+            }
+        });
+    </script>
+</body>
+</html>
