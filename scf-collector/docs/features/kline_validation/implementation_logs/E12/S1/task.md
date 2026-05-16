@@ -1,33 +1,19 @@
-# Task List: [E12-S1] 分层数据完整性巡检 (Multi-Tier Integrity Checker)
+# Task List - E12-S1-T1
 
-## 状态说明
-- `[ ]` 未开始
-- `[/]` 进行中
-- `[x]` 已完成
-
----
-
-## 实施任务
-
-### 1. 脚本开发 (E12-S1-T1)
-- [ ] 创建 `scf-collector/scripts/inspect/check_kline_integrity.py`
-- [ ] 实现 `--mode=[full|delta]` 参数解析逻辑
-- [ ] 编写核心 SQL：基于 `meta_trading_calendar` 与 `stock_kline_daily` 的 LEFT JOIN 查漏逻辑
-- [ ] 封装 Chunking 分批处理机制，支持 2000 万行量级对比
-
-### 2. 状态维护 (E12-S1-T4)
-- [ ] 在数据库中确认/创建 `meta_config` 相关配置项 `last_kline_check_date`
-- [ ] 实现增量模式下的日期范围自动计算（基于 `last_kline_check_date` 至 今日）
-
-### 3. 环境部署 (E12-S1-T2 & T3)
-- [ ] **Docker 部署**: 将脚本映射至 `stock-manager` 容器，验证 Full 模式运行
-- [ ] **SCF 部署**: 创建定时触发的 SCF 云函数，验证 Delta 模式运行
-
-### 4. 任务下发 (E12-S1-T3)
-- [ ] 实现巡检发现空洞后，向 `meta_task_queue` 自动插入 `kline_refetch` 任务的逻辑
-
----
-
-## 验收标准 (AC) 验证记录
-- [ ] **AC1: 增量巡检准确性**
-- [ ] **AC2: 基准校验性能**
+- [x] **T1-0: 基础设施准备 (Migration)**
+    - 执行 DDL 创建 `meta_task_queue` 表。
+    - 在 `meta_config` 中初始化 `kline_audit_cursor`。
+- [x] **T1-1: 脚本架构与三源抽象层**
+    - 实现 `TushareClient` 与 `AkShareClient` 的统一调用接口。
+    - 引入 `Arbitrator` 类处理 `(Local, Tushare, AkShare)` 的三方对账逻辑。
+- [x] **T1-2: 每日全市场对账引擎**
+    - 实现以“天”为单位的 `daily_chunk_iterator`。
+    - 编写数值对账逻辑（OHLC、成交量、成交额）。
+- [/] **T1-3: 因子表专项巡检 (stock_adjust_factor)**
+    - 针对 `stock_adjust_factor` 的全量完整性检查。
+    - 验证 K 线表中的内嵌因子与因子表记录的对应关系。
+- [x] **T1-4: 断点续传与元数据状态管理**
+    - 在 `meta_config` 中记录巡检进度。
+    - 支持 `--start_date` 和 `--end_date` 参数，实现任务可重入。
+- [ ] **T1-5: 审计报告生成 (REPORT.html)**
+    - 统计总对账行数、错误分布、自动标记为修复状态的比例。
