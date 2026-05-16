@@ -3,6 +3,7 @@ import sys
 import asyncio
 import logging
 import json
+from datetime import datetime, date
 from dotenv import load_dotenv
 
 # Add parent directories to sys.path for shared module imports
@@ -102,6 +103,42 @@ class KlineRepairExecutor:
             logger.error(f"Failed to repair task {task['id']} for {task['ts_code']}: {e}")
             return False
 
+    async def repair_kline_batch(self, task):
+        """ 执行全量覆盖修复某日数据 """
+        trade_date = task['trade_date']
+        db_date = trade_date.strftime('%Y-%m-%d') if isinstance(trade_date, (date, datetime)) else str(trade_date)
+        logger.info(f"Executing BATCH repair for date: {db_date}")
+        
+        try:
+            # 1. 从 Tushare 获取全量
+            from shared.collectors.tushare_cl import TushareCollector
+            ts_cl = TushareCollector()
+            batch_data = await ts_cl.fetch_batch_daily_kline(db_date)
+            
+            if not batch_data:
+                logger.warning(f"No batch data fetched from Tushare for {db_date}")
+                return False
+
+            # 2. 调用 DAO 批量保存 (DAO 内部已有 ON DUPLICATE KEY UPDATE 逻辑)
+            # 注意: DAO.save_kline_data 会把 volume 处理为 '股' (如果输入是手，需要处理)
+            # 但是 fetch_batch_daily_kline 返回的是 KLineModel 列表，
+            # 我需要检查 save_kline_data 是否处理了单位。
+            # 查看之前的 DAO 代码，save_kline_data 并没有自动 *100。
+            # 所以我们需要在这里手动处理单位，或者修改 DAO。
+            
+            # 为了安全，我们在这里处理
+            for item in batch_data:
+                if hasattr(item, 'volume'):
+                    item.volume = float(item.volume) * 100.0
+                elif isinstance(item, dict):
+                    item['volume'] = float(item['volume']) * 100.0
+
+            await self.dao.save_kline_data(batch_data)
+            return True
+        except Exception as e:
+            logger.error(f"Failed to execute batch repair for {db_date}: {e}")
+            return False
+
     async def run(self):
         tasks = await self.fetch_pending_tasks(limit=500)
         if not tasks:
@@ -114,6 +151,8 @@ class KlineRepairExecutor:
             success = False
             if task['task_type'] == 'REPAIR_KLINE':
                 success = await self.repair_kline(task)
+            elif task['task_type'] == 'REPAIR_KLINE_BATCH':
+                success = await self.repair_kline_batch(task)
             
             if success:
                 await self.update_task_status(task['id'], 'SUCCESS')
@@ -126,5 +165,21 @@ class KlineRepairExecutor:
         logger.info(f"Repair mission completed. Success: {success_count}, Total: {len(tasks)}")
 
 if __name__ == "__main__":
+    import argparse
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--loop", action="store_true", help="Run in loop mode")
+    parser.add_argument("--interval", type=int, default=60, help="Interval in seconds for loop mode")
+    args = parser.parse_args()
+    
     executor = KlineRepairExecutor()
-    asyncio.run(executor.run())
+    
+    async def main():
+        if args.loop:
+            logger.info(f"Starting RepairExecutor in LOOP mode (interval: {args.interval}s)")
+            while True:
+                await executor.run()
+                await asyncio.sleep(args.interval)
+        else:
+            await executor.run()
+            
+    asyncio.run(main())

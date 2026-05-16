@@ -241,34 +241,53 @@ class KlineIntegrityChecker:
 
     async def audit_kline_day(self, trade_date: str):
         """
-        审计单日全市场 K 线
+        审计单日全市场 K 线 - 三阶快进模式
         """
         logger.info(f">>> Auditing market K-lines for date: {trade_date}")
         db_date = f"{trade_date[:4]}-{trade_date[4:6]}-{trade_date[6:]}"
         
-        # 1. Get all active stocks for this day
+        # 1. 获取本地数据
         active_codes = await self.dao.get_active_stock_codes(db_date)
         if not active_codes:
             logger.warning(f"No active codes found for {trade_date}")
             return
-        
-        # 2. Get local K-lines
         local_klines = await self.dao.get_kline_daily(db_date)
         local_map = {row['ts_code']: row for row in local_klines}
-        
-        # 3. Get suspended codes
         suspended_codes = set(await self.dao.get_suspended_codes(db_date))
-        
-        logger.info(f"Active: {len(active_codes)}, Local: {len(local_klines)}, Suspended: {len(suspended_codes)}")
-        
-        # 4. Iterate and arbitrate
+
+        # 2. 获取 Tushare 批量数据 (用于对比)
         try:
             tushare_batch = await self.tushare.fetch_batch_daily_kline(db_date)
             tushare_map = {item.ts_code: item.model_dump() for item in tushare_batch}
         except Exception as e:
             logger.error(f"Batch fetch Tushare failed for {trade_date}: {e}")
-            tushare_map = {}
+            return
 
+        # --- 第一阶：计数探测 (Count Check) ---
+        # 如果本地记录数与 Tushare 差异超过 1% 或 20 条，视为系统性空洞
+        if abs(len(local_klines) - len(tushare_batch)) > max(20, len(tushare_batch) * 0.01):
+            logger.warning(f"!!! [STAGE 1] Count mismatch: Local {len(local_klines)} vs Tushare {len(tushare_batch)}. Triggering BATCH REPAIR.")
+            await self.add_to_task_queue('REPAIR_KLINE_BATCH', 'ALL', trade_date, 'SYSTEMIC_ERROR', 
+                                      {"reason": "count_mismatch", "local": len(local_klines), "target": len(tushare_batch)})
+            return
+
+        # --- 第二阶：基准探测 (Benchmark Check) ---
+        # 抽查权重股，如果价格不符，视为系统性偏移（如口径错误）
+        benchmarks = ['000001.SZ', '600519.SH', '000002.SZ']
+        for b_code in benchmarks:
+            l_rec = local_map.get(b_code)
+            t_rec = tushare_map.get(b_code)
+            if l_rec and t_rec:
+                comp = self.arbitrator.compare_records(l_rec, t_rec, is_stock=True)
+                if not comp['close']:
+                    logger.warning(f"!!! [STAGE 2] Benchmark {b_code} price mismatch. Triggering BATCH REPAIR.")
+                    await self.add_to_task_queue('REPAIR_KLINE_BATCH', 'ALL', trade_date, 'SYSTEMIC_ERROR', 
+                                              {"reason": "benchmark_mismatch", "code": b_code, "local": l_rec['close'], "target": t_rec['close']})
+                    return
+
+        # --- 第三阶：深度巡检 (Deep Audit) ---
+        # 只有前两阶通过，才进行个股逐一仲裁
+        mismatch_count = 0
         for ts_code in active_codes:
             local_rec = local_map.get(ts_code)
             tushare_rec = tushare_map.get(ts_code)
@@ -290,13 +309,26 @@ class KlineIntegrityChecker:
             # Full arbitration (includes AkShare if needed)
             res = await self.arbitrator.arbitrate(ts_code, trade_date, local_rec, is_stock=True)
             
-            if res['status'] == 'HOLE':
-                logger.warning(f"[HOLE] {ts_code} is missing locally.")
-                await self.add_to_task_queue('REPAIR_KLINE', ts_code, trade_date, 'HOLE', res)
-            elif res['status'] == 'MISMATCH':
-                logger.warning(f"[MISMATCH] {ts_code} value discrepancy.")
-                error_type = 'PRICE_MISMATCH' if not res['diff'].get('close', True) else 'VOLUME_MISMATCH'
-                await self.add_to_task_queue('REPAIR_KLINE', ts_code, trade_date, error_type, res)
+            if res['status'] in ['HOLE', 'MISMATCH']:
+                mismatch_count += 1
+                
+                # Circuit breaker: if > 30 errors, treat whole day as systemic error
+                if mismatch_count > 30:
+                    logger.warning(f"!!! Day {trade_date} has >30 errors. Triggering BATCH REPAIR task.")
+                    await self.add_to_task_queue('REPAIR_KLINE_BATCH', 'ALL', trade_date, 'SYSTEMIC_ERROR', 
+                                              {"mismatch_trigger": mismatch_count, "last_code": ts_code})
+                    # Optional: Clean up existing individual tasks for this day
+                    sql_cleanup = "DELETE FROM meta_task_queue WHERE trade_date = %s AND task_type = 'REPAIR_KLINE'"
+                    await execute_query(sql_cleanup, (db_date,), is_select=False)
+                    return
+
+                if res['status'] == 'HOLE':
+                    logger.warning(f"[HOLE] {ts_code} is missing locally.")
+                    await self.add_to_task_queue('REPAIR_KLINE', ts_code, trade_date, 'HOLE', res)
+                elif res['status'] == 'MISMATCH':
+                    logger.warning(f"[MISMATCH] {ts_code} value discrepancy.")
+                    error_type = 'PRICE_MISMATCH' if not res['diff'].get('close', True) else 'VOLUME_MISMATCH'
+                    await self.add_to_task_queue('REPAIR_KLINE', ts_code, trade_date, error_type, res)
 
     async def run(self, start_date: str = None, end_date: str = None):
         if not start_date:

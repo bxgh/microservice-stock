@@ -9,6 +9,7 @@
 - [x] **T1-2: 每日全市场对账引擎**
     - 实现以“天”为单位的 `daily_chunk_iterator`。
     - 编写数值对账逻辑（OHLC、成交量、成交额）。
+    - **[闭环补强]**: 开发 `kline_repair_executor.py` 自动读取 `meta_task_queue` 并执行物理修复。
 - [/] **T1-3: 因子表专项巡检 (stock_adjust_factor)**
     - 针对 `stock_adjust_factor` 的全量完整性检查。
     - 验证 K 线表中的内嵌因子与因子表记录的对应关系。

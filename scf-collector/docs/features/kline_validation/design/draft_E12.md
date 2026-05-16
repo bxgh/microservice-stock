@@ -52,7 +52,7 @@
 
 - E12-S1-T1 开发具备“三源仲裁”功能的巡检脚本（Local vs Tushare vs AkShare）
 - E12-S1-T2 创建 `meta_task_queue` 任务对账表，建立巡检到修复的闭环链路
-- E12-S1-T3 执行全量像素级对账 (Full Mode: 2010-至今)，识别空洞与数值错误
+- E12-S1-T3 执行全量像素级对账 (Full Mode: 1991年-至今)，识别空洞与数值错误
 - E12-S1-T4 建立因子表 `stock_adjust_factor` 的专项完整性巡检
 - E12-S1-T5 在 SCF 中部署每周增量巡检任务 (Delta Mode)
 
