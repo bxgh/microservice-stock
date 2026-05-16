@@ -1,6 +1,6 @@
 {
   "title": "Epic 14: AI-Driven Policy Tracking System (MVP)",
-  "version": "v1.0",
+  "version": "v1.1",
   "date": "2026-05-17",
   "sections": [
     {
@@ -13,15 +13,17 @@
     },
     {
       "id": "architecture",
-      "title": "核心技术栈",
+      "title": "核心技术栈与环境约束",
       "blocks": [
-        { "type": "table", "content": [["组件", "技术选型", "备注"], ["语言", "Python 3.12", ""], ["LLM", "DeepSeek / Claude", "DeepSeek负责日常，Claude负责重磅长文"], ["存储", "SQLite + Chroma", "轻量级，支持向量检索"], ["抓取", "RSS + BeautifulSoup", "优先稳定源"]] }
+        { "type": "table", "content": [["组件", "技术选型", "备注"], ["语言", "Python 3.10+", "兼容 SCF 运行环境"], ["LLM", "DeepSeek / Claude (API)", "SCF 通过 API 请求大模型，不进行本地推理"], ["存储", "Tencent Cloud MySQL", "强制要求使用腾讯云数据库，弃用本地存储"], ["抓取", "RSS + BeautifulSoup", "RSS 逻辑集成在 scf-collector 中，无需独立部署"], ["环境", "Tencent SCF", "受限只读环境，需处理好依赖层打包"]] },
+        { "type": "text", "content": "> **架构答疑**：\n> 1. **SCF 是否支持 LLM**：支持，通过 httpx 异步请求外部 API 实现。\n> 2. **Python 版本**：优先适配 SCF 环境默认的 3.10 版本。\n> 3. **数据库**：所有数据持久化均通过 Tencent Cloud MySQL 实现。\n> 4. **RSS 部署**：作为采集微服务的一个 Adapter 存在，随 collector 统一部署。" }
       ]
     }
   ],
   "risks": [
-    { "risk": "政府网站反爬导致信号缺失", "impact": "高", "prob": "中", "mitigation": "优先使用 RSS 订阅，控制频率 > 5min" },
-    { "risk": "LLM 幻觉导致误读政策", "impact": "中", "prob": "高", "mitigation": "保留原文链接，5星政策人工核验" }
+    { "risk": "政府网站反爬导致信号缺失", "impact": "高", "prob": "中", "mitigation": "优先使用 RSS 订阅，控制频率 > 30min，引入 MD5 去重" },
+    { "risk": "LLM 幻觉导致误读政策", "impact": "中", "prob": "高", "mitigation": "保留原文链接，5星政策人工核验" },
+    { "risk": "SCF 只读环境导致解析失败", "impact": "中", "prob": "中", "mitigation": "解析过程中所有临时文件均在 /tmp 目录下处理" }
   ],
   "milestones": [
     { "name": "M1: 采集与分析闭环", "date": "2026-05-30", "deliverable": "全自动政策日报生成" },
@@ -31,7 +33,7 @@
     {
       "id": "E14",
       "title": "AI-Driven Policy Tracking System (MVP)",
-      "desc": "交付一套完整的政策自动化监控与分析系统，显著降低宏观研究的噪音。",
+      "desc": "交付一套基于腾讯云 SCF 的全自动政策监控与分析系统。",
       "stories": [
         {
           "id": "E14-S1",
@@ -43,23 +45,23 @@
           },
           "tasks": [
             { "id": "E14-S1-T1", "text": "实现中国政府网 (gov.cn/zhengce) 政策文件的抓取适配器" },
-            { "id": "E14-S1-T2", "text": "实现央行 (PBC) 与证监会 (CSRC) 公告栏目的定时扫描逻辑" },
-            { "id": "E14-S1-T3", "text": "建立基于 RSS 的降级监控机制" }
+            { "id": "E14-S1-T2", "text": "设计定时扫描逻辑：默认 30min/次，处理重复抓取（MD5 摘要对比）" },
+            { "id": "E14-S1-T3", "text": "实现采集完整性探针：自动检测采集漏项并触发重试" }
           ],
           "acs": [
             {
               "id": "AC1",
               "name": "采集覆盖度验证",
               "given": "系统运行在采集模式",
-              "when": "访问上述 3 个核心机构页面",
+              "when": "访问核心机构页面",
               "then": "能够准确解析出「标题、发布时间、发文机构、原文链接、正文内容」"
             },
             {
               "id": "AC2",
-              "name": "频控与反爬防护",
-              "given": "多线程并发采集",
-              "when": "触发预设的 300s 间隔",
-              "then": "无 403 封禁，请求成功率 > 99%"
+              "name": "去重逻辑验证",
+              "given": "已存在相同 MD5 的政策记录",
+              "when": "再次触发抓取",
+              "then": "数据库不会产生重复记录，日志显示 'Skip existing policy'"
             }
           ]
         },
@@ -68,27 +70,27 @@
           "title": "AI 分析层与措辞对比 (AI Intelligence)",
           "role": {
             "as": "AI Analyzer",
-            "want": "利用 LLM 对政策进行三句话摘要和历史措辞对比",
+            "want": "完善 Prompt 体系以覆盖摘要、措辞、影响评估等场景",
             "value": "快速提炼核心增量信息"
           },
           "tasks": [
-            { "id": "E14-S2-T1", "text": "设计并测试摘要 (Prompt 1) 与措辞对比 (Prompt 2) 模板" },
-            { "id": "E14-S2-T2", "text": "集成 LLM API 实现结构化输出流水线" }
+            { "id": "E14-S2-T1", "text": "建立 Prompt 模板库，包含：通用摘要、货币政策对比、产业扶持评估等 5+ 场景" },
+            { "id": "E14-S2-T2", "text": "集成 LLM API 流水线，支持异步并发请求与自动重试" }
           ],
           "acs": [
             {
               "id": "AC1",
-              "name": "摘要质量验证",
-              "given": "某篇 2000 字以上的行业政策",
-              "when": "运行摘要流水线",
-              "then": "输出符合三段式格式，内容准确且无废话"
+              "name": "场景化 Prompt 验证",
+              "given": "输入一篇货币政策会议纪要",
+              "when": "指定场景为 'monetary_policy'",
+              "then": "输出包含「利率/准备金率表述变化」的对比分析"
             },
             {
               "id": "AC2",
-              "name": "措辞敏感度测试",
-              "given": "两段相似但强度不同的表述",
-              "when": "运行对比逻辑",
-              "then": "必须识别出措辞强度的具体变化（如：积极->稳慎）"
+              "name": "输出结构化验证",
+              "given": "LLM 返回分析内容",
+              "when": "解析 JSON 响应",
+              "then": "能够提取出「重要性星级、板块关键词、核心结论」三个关键字段"
             }
           ]
         },
@@ -97,27 +99,27 @@
           "title": "知识库与板块映射 (Mapping & Storage)",
           "role": {
             "as": "Data Architect",
-            "want": "建立政策-申万板块映射关系及 SQLite 存储",
+            "want": "基于腾讯云 MySQL 建立政策-申万板块映射关系",
             "value": "进行回测和持仓影响分析"
           },
           "tasks": [
-            { "id": "E14-S3-T1", "text": "设计并初始化 SQLite 表结构" },
-            { "id": "E14-S3-T2", "text": "建立基础映射知识库" }
+            { "id": "E14-S3-T1", "text": "在腾讯云 MySQL 初始化 `ods_policy_info` 与 `dwd_sector_mapping` 表" },
+            { "id": "E14-S3-T2", "text": "建立申万 31 个一级行业的关键词词库映射" }
           ],
           "acs": [
             {
               "id": "AC1",
-              "name": "数据持久化验证",
-              "given": "采集到一条新政策",
-              "when": "执行入库",
-              "then": "数据库记录完整且 keywords 为 JSON 格式"
+              "name": "MySQL 持久化验证",
+              "given": "采集到新政策",
+              "when": "执行 INSERT 操作",
+              "then": "数据成功存入 Tencent Cloud MySQL，字符集为 utf8mb4"
             },
             {
               "id": "AC2",
               "name": "自动映射准确性",
-              "given": "政策包含行业关键词",
+              "given": "政策提及「白酒、家电」",
               "when": "运行映射逻辑",
-              "then": "返回正确的申万一级行业及对标龙头"
+              "then": "返回正确的「食品饮料、家用电器」行业 ID"
             }
           ]
         },
@@ -130,23 +132,23 @@
             "value": "辅助最终投资决策"
           },
           "tasks": [
-            { "id": "E14-S4-T1", "text": "开发 HTML 版每日政策简报模板" },
-            { "id": "E14-S4-T2", "text": "实现持仓影响打分算法" }
+            { "id": "E14-S4-T1", "text": "开发 HTML 版每日政策简报模板，适应手机端阅读" },
+            { "id": "E14-S4-T2", "text": "实现高星级政策的实时 WX 推送逻辑" }
           ],
           "acs": [
             {
               "id": "AC1",
               "name": "简报完整性",
-              "given": "当日有新政策更新",
+              "given": "当日有新政策",
               "when": "生成简报",
-              "then": "包含重大预警、一般关注、未来窗口预测三大部分"
+              "then": "内容覆盖「今日要闻、板块异动、专家解读」三部分"
             },
             {
               "id": "AC2",
               "name": "告警及时性",
-              "given": "发现高星级政策",
-              "when": "采集完成 60s 内",
-              "then": "触发告警通知推送"
+              "given": "发现 5 星级重大政策",
+              "when": "采集后 60s 内",
+              "then": "成功触发并发送微信预警"
             }
           ]
         }
