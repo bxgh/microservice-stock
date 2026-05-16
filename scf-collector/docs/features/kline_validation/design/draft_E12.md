@@ -6,6 +6,24 @@
 
 > **评审批注**: 针对日线数据全量巡检的高开销问题，方案调整为「一次基准校验 + 每周增量校验」模式，并根据算力需求实现环境隔离（Docker/SCF）。
 
+## 核心规则：三源对账过滤与对齐逻辑
+
+为了消除不同数据源之间的系统性差异，巡检脚本必须严格遵守以下过滤逻辑：
+
+### 1. 不复权口径对齐 (Raw Data Alignment)
+*   **强制约束**：所有比对（本地、Tushare、AkShare）必须强制使用 **“不复权” (Unadjusted/Raw)** 价格。
+*   **理由**：不复权 OHLC 是交易所的物理真值，不含任何算法漂移。AkShare 调用必须指定 `adjust=""`。
+
+### 2. 停牌日处理 (Suspension Logic)
+*   **对齐基准**：以 `meta_trading_calendar` 为主索引。
+*   **过滤规则**：若本地缺失某日记录，但经核实该股当天处于“停牌”状态（Tushare 无记录且 AkShare 成交量为 0），则：
+    *   **判定**：视为“合规缺失”，不记录为 Hole。
+    *   **例外**：若本地有记录但成交量 > 0（数据污染），则记录为 `redundant_error`。
+
+### 3. 特殊股息与计算偏差 (Special Dividend & Drift)
+*   **除权日对冲**：在 `stock_adjust_factor` 校验中，若发现因子差异，优先检查是否为“特殊股息”发放日。
+*   **容错处理**：对于不影响价格序列连续性的极小因子差异（< 0.0001），记录为 `Precision_Drift` 而非 `Error`。
+
 ## 风险与避坑提示
 
 | 风险 | 表现 | 应对 |
@@ -26,28 +44,34 @@
 
 ## E12: stock_kline_daily 历史数据校验与自动修复体系
 
-### E12-S1: [L2] 分层数据完整性巡检 (Multi-Tier Integrity Checker)
+### E12-S1: [L2] 分层数据完整性与准确性全量巡检 (Pixel-Level Integrity & Accuracy Checker)
 
-**作为** Data Integrity Steward，**我希望** 区分基准全量巡检与每周增量巡检，**以便** 在兼顾性能与算力的前提下，确保全量数据的完整性。
+**作为** Data Integrity Steward，**我希望** 建立一套覆盖全量历史数据的“像素级”对账机制，**以便** 通过 Tushare 与 AkShare 的交叉校验，彻底消除 `stock_kline_daily` 与 `stock_adjust_factor` 中的脏数据。
 
 #### 任务
 
-- E12-S1-T1 开发具备 `--mode=[full|delta]` 切换功能的巡检脚本
-- E12-S1-T2 在 `stock-manager` Docker 容器中执行首次全量基准校验 (Full Mode)
-- E12-S1-T3 在 SCF 中部署每周定时运行的增量巡检任务 (Delta Mode)
-- E12-S1-T4 引入 `meta_config` 维护“上次校验成功日期”，支持增量对比逻辑
+- E12-S1-T1 开发具备“三源仲裁”功能的巡检脚本（Local vs Tushare vs AkShare）
+- E12-S1-T2 创建 `meta_task_queue` 任务对账表，建立巡检到修复的闭环链路
+- E12-S1-T3 执行全量像素级对账 (Full Mode: 2010-至今)，识别空洞与数值错误
+- E12-S1-T4 建立因子表 `stock_adjust_factor` 的专项完整性巡检
+- E12-S1-T5 在 SCF 中部署每周增量巡检任务 (Delta Mode)
 
 #### 验收标准（AC）
 
 - **AC1: 增量巡检准确性**
-  - **Given** 基准校验已完成，`meta_config` 记录最后日期为 `2026-05-01`
-  - **When** 在 SCF 执行 Delta 模式巡检
-  - **Then** 脚本仅对比 `2026-05-01` 至今的交易日缺失情况，扫描行数降低 99%
+  - **Given** 基准校验已完成，`meta_config` 记录最后水位线
+  - **When** 执行 Delta 模式巡检
+  - **Then** 脚本仅对比水位线至今的交易日缺失情况，自动跳过已知停牌日，扫描性能满足 SCF 900s 限制
 
-- **AC2: 基准校验稳定性**
-  - **Given** Docker 容器环境下执行 Full 模式全量对比
-  - **When** 处理约 2000 万行历史记录
-  - **Then** 通过分批加载（Chunking）确保单次内存占用 < 512MB，且不产生长事务锁表
+- **AC2: 三源对账仲裁可靠性**
+  - **Given** 某记录本地价为 10.01，Tushare 为 10.00，AkShare 为 10.00
+  - **When** 运行 Full 模式审计（强制不复权口齐）
+  - **Then** 脚本必须自动判定 Tushare 与 AkShare 达成共识，将本地记录标记为 `need_repair` 并建议修复值为 10.00
+
+- **AC3: 审计报告交付**
+  - **Given** 全量巡检完成
+  - **When** 查看 `REPORT.html`
+  - **Then** 必须包含历史错误分布热力图（Heatmap）及前 100 条三源差异明细，且支持在移动端直观查看
 
 ---
 

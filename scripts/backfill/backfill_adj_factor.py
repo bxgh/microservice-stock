@@ -33,8 +33,8 @@ class Backfiller:
         self.cursor = self.conn.cursor()
 
     def get_all_ts_codes(self):
-        logger.info("Fetching list of stocks with NULL adj_factor...")
-        sql = "SELECT DISTINCT ts_code FROM stock_kline_daily WHERE adj_factor IS NULL"
+        logger.info("Fetching list of all stocks from stock_basic_info...")
+        sql = "SELECT ts_code FROM stock_basic_info"
         self.cursor.execute(sql)
         return [row[0] for row in self.cursor.fetchall()]
 
@@ -51,7 +51,7 @@ class Backfiller:
                 ORDER BY af.adjust_date DESC
                 LIMIT 1
             )
-            WHERE k.ts_code = %s AND k.adj_factor IS NULL
+            WHERE k.ts_code = %s
         """
         self.cursor.execute(sql_fill, (ts_code,))
 
