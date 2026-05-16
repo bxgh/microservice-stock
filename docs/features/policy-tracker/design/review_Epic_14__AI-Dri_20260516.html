@@ -111,8 +111,9 @@ html,body{background:var(--bg);color:var(--ink);font-family:var(--sans);font-siz
 .nav-story-node{padding-left:24px;}
 
 /* MAIN */
-.main{background:var(--bg);display:flex;flex-direction:column;overflow:hidden;}
-.view-panel{display:none;flex-direction:column;height:100%;overflow:hidden;}
+.main{background:var(--bg);display:flex;flex-direction:column;overflow:hidden;flex:1;}
+.main-inner{flex:1;display:flex;flex-direction:column;height:100%;overflow:hidden;}
+.view-panel{display:none;flex-direction:column;flex:1;height:100%;overflow:hidden;}
 .view-panel.active{display:flex;}
 
 /* Section view */
