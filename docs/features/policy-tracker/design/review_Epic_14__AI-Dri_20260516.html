@@ -423,7 +423,7 @@ let S = {
   acSt:{}, acQ:{},
   storyVote:{}, storyNote:{},
   taskRm:{}, taskEdit:{}, addedTasks:{},
-  secNote:{},
+  secNote:{}, secTab:{},
   riskOverride:{}, milestoneEdit:{},
   activeVid: null, storyTab:{}
 };
@@ -651,7 +651,7 @@ function renderViews(){
           ${node.desc ? `<div class="block-text">${node.desc}</div>` : ''}
         </div></div>`;
     } else if(node.type === 'section'){
-      h += renderSectionView(node);
+      h += renderSection(node);
     } else if(node.type === 'story'){
       h += renderStoryPanel(node);
     }
@@ -664,19 +664,32 @@ function renderViews(){
   selView(S.activeVid, false);
 }
 
-function renderSectionView(node){
-  const cur = S.activeVid===`sec-${node.id}`;
+function renderSection(node){
   const noteVal = S.secNote[node.id]||'';
-  let blocksHtml = (node.blocks||[]).map(renderBlock).join('');
-  return `<div class="view-panel ${cur?'active':''}" id="view-sec-${node.id}">
-    <div class="sec-view">
-      <h2>${node.title}</h2>
-      ${blocksHtml}
-      <div class="sec-note-area">
-        <div class="sec-note-lbl">章节批注</div>
-        <textarea class="sec-note-in" placeholder="对本章节的审核意见或补充说明…"
-          oninput="this.style.height='auto';this.style.height=this.scrollHeight+'px';S.secNote['${node.id}']=this.value;save();renderNav()">${noteVal}</textarea>
-      </div>
+  let blocksHtml = (node.blocks||[]).map(b=>renderBlock(b)).join('');
+  const activeTab = S.secTab && S.secTab[node.id] ? S.secTab[node.id] : 'content';
+  const tabs = `<div class="stab ${activeTab==='content'?'on':''}" onclick="switchSecTab('${node.id}','content')">章节内容</div>
+                <div class="stab ${activeTab==='notes'?'on':''} ${noteVal?'s-q':''}" onclick="switchSecTab('${node.id}','notes')">章节批注</div>`;
+  const content = `<div class="stab-content ${activeTab==='content'?'on':''}" id="stc-sec-${node.id}-content" style="padding:24px;">
+                      <h2>${node.title}</h2>
+                      ${blocksHtml}
+                   </div>
+                   <div class="stab-content ${activeTab==='notes'?'on':''}" id="stc-sec-${node.id}-notes" style="padding:24px;">
+                      <div class="sec-note-area" style="margin-top:0; border:none; padding:0; background:transparent;">
+                        <div class="sec-note-lbl">本章节评审意见</div>
+                        <textarea class="sec-note-in" style="min-height:400px;" placeholder="在此输入对本章节的审核意见、修正建议或补充说明…"
+                          oninput="this.style.height='auto';this.style.height=this.scrollHeight+'px';S.secNote['${node.id}']=this.value;save();renderNav()">${noteVal}</textarea>
+                      </div>
+                   </div>`;
+  
+  return `<div class="view-panel" id="view-sec-${node.id}">
+    <div class="story-hd">
+      <span class="story-id-b">SECTION</span>
+      <div class="story-title-t">${node.title}</div>
+    </div>
+    <div class="story-body">
+      <div class="story-tabs">${tabs}</div>
+      ${content}
     </div></div>`;
 }
 
@@ -715,13 +728,16 @@ function escHtml(s){ return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace
 function renderStoryPanel(node){
   const st = storySt(node.id);
   const activeTab = S.storyTab[node.id]||'tasks';
+  const noteVal = S.storyNote[node.id]||'';
+  
   let tabs = `<div class="stab ${activeTab==='tasks'?'on':''}" onclick="switchStab('${node.id}','tasks')">任务清单</div>`;
   (node.acs||[]).forEach(ac=>{
     const ast = S.acSt[`${node.id}-${ac.id}`];
     const tc = ast==='ok'?'s-ok':ast==='no'?'s-no':ast==='q'?'s-q':'';
     tabs += `<div class="stab ${tc} ${activeTab===ac.id?'on':''}" onclick="switchStab('${node.id}','${ac.id}')">${ac.id}</div>`;
   });
-  const noteVal = S.storyNote[node.id]||'';
+  tabs += `<div class="stab ${activeTab==='notes'?'on':''} ${noteVal?'s-q':''}" onclick="switchStab('${node.id}','notes')">评审总结</div>`;
+
   const taskContent = `
     ${node.role ? `<div class="role-blk"><em>作为</em> ${node.role.as}，<em>我希望</em> ${node.role.want}，<em>以便</em> ${node.role.value}。</div>` : node.desc ? `<div class="block-text">${node.desc}</div>` : ''}
     <div class="sub-ttl">任务清单</div>
@@ -729,16 +745,21 @@ function renderStoryPanel(node){
     <div class="task-add-row">
       <input type="text" class="task-add-in" id="add-in-${node.id}" placeholder="添加新任务… (Enter 确认)" onkeyup="if(event.key==='Enter')addTask('${node.id}')">
       <div class="task-add-btn" onclick="addTask('${node.id}')">+ 添加</div>
-    </div>
-    <div class="story-note-wrap">
-      <div class="story-note-lbl">Story 批注</div>
-      <textarea class="story-note-in" placeholder="整体评审意见或设计建议…"
+    </div>`;
+
+  const noteContent = `
+    <div class="story-note-wrap" style="margin-top:0; border:none; padding:0; background:transparent;">
+      <div class="story-note-lbl">Story 整体评审意见</div>
+      <textarea class="story-note-in" style="min-height:400px;" placeholder="在此输入对该 Story 的整体评价、架构建议或需要后续跟踪的问题…"
         oninput="this.style.height='auto';this.style.height=this.scrollHeight+'px';S.storyNote['${node.id}']=this.value;save();renderNav()">${noteVal}</textarea>
     </div>`;
-  let contents = `<div class="stab-content ${activeTab==='tasks'?'on':''}" id="stc-${node.id}-tasks">${taskContent}</div>`;
+
+  let contents = `<div class="stab-content ${activeTab==='tasks'?'on':''}" id="stc-${node.id}-tasks" style="padding:24px;">${taskContent}</div>`;
   (node.acs||[]).forEach(ac=>{
-    contents += `<div class="stab-content ${activeTab===ac.id?'on':''}" id="stc-${node.id}-${ac.id}">${renderAC(node.id,ac)}</div>`;
+    contents += `<div class="stab-content ${activeTab===ac.id?'on':''}" id="stc-${node.id}-${ac.id}" style="padding:24px;">${renderAC(node.id,ac)}</div>`;
   });
+  contents += `<div class="stab-content ${activeTab==='notes'?'on':''}" id="stc-${node.id}-notes" style="padding:24px;">${noteContent}</div>`;
+
   return `<div class="view-panel" id="view-story-${node.id}">
     <div class="story-hd">
       <span class="story-id-b">${node.id}</span>
@@ -833,7 +854,23 @@ function switchStab(sid, tabId){
   const content = document.getElementById(`stc-${sid}-${tabId}`); if(content) content.classList.add('on');
   const node = findNode(sid); if(!node) return;
   const tabs = Array.from(panel.querySelectorAll('.stab'));
-  const idx = tabId==='tasks' ? 0 : (node.acs||[]).findIndex(a=>a.id===tabId)+1;
+  let idx = 0;
+  if(tabId==='tasks') idx=0;
+  else if(tabId==='notes') idx=tabs.length-1;
+  else idx = (node.acs||[]).findIndex(a=>a.id===tabId)+1;
+  if(tabs[idx]) tabs[idx].classList.add('on');
+  save();
+}
+
+function switchSecTab(sid, tabId){
+  if(!S.secTab) S.secTab = {};
+  S.secTab[sid] = tabId;
+  const panel = document.getElementById(`view-sec-${sid}`); if(!panel) return;
+  panel.querySelectorAll('.stab').forEach(t=>t.classList.remove('on'));
+  panel.querySelectorAll('.stab-content').forEach(c=>c.classList.remove('on'));
+  const content = document.getElementById(`stc-sec-${sid}-${tabId}`); if(content) content.classList.add('on');
+  const tabs = Array.from(panel.querySelectorAll('.stab'));
+  const idx = tabId==='content' ? 0 : 1;
   if(tabs[idx]) tabs[idx].classList.add('on');
   save();
 }
