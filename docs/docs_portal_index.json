@@ -1,5 +1,21 @@
 [
   {
+    "title": "📈 Epic 14 Story 1 宏观与监管政策多源采集阶段总结\n            阶段总结",
+    "path": "scf-collector/docs/features/policy-tracker/implementation_logs/E14/S1/e14_s1_policy_acquisition.summary.html",
+    "type": "summary",
+    "service": "POLICY-TRACKER",
+    "last_modified": "2026-05-17 17:33",
+    "deprecated": false
+  },
+  {
+    "title": "⚠️ 央行官网 WAF 屏蔽避坑与国务院政策库动态映射决策\n            排障避坑",
+    "path": "scf-collector/docs/features/policy-tracker/implementation_logs/E14/S1/pbc_waf_bypass.pitfall.html",
+    "type": "pitfall",
+    "service": "POLICY-TRACKER",
+    "last_modified": "2026-05-17 17:32",
+    "deprecated": false
+  },
+  {
     "title": "踩坑与排障复盘: [E4-S1] 自增主键下 `REPLACE INTO` 退化与历史幽灵因子污染",
     "path": "scf-collector/docs/features/kline_management/implementation_logs/E4/S1/factor_duplicate_pollution.pitfall.html",
     "type": "pitfall",

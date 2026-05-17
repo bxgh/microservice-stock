@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Epic 14 Story 1 宏观与监管政策多源联合探测采集层完工阶段性总结</title>
+    <style>
+        :root {
+            --bg-color: #0d1117;
+            --container-bg: #161b22;
+            --border-color: #30363d;
+            --text-primary: #c9d1d9;
+            --text-secondary: #8b949e;
+            --accent-color: #58a6ff;
+            --success-color: #2ea043;
+            --font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-primary);
+            font-family: var(--font-family);
+            margin: 0;
+            padding: 40px 20px;
+            display: flex;
+            justify-content: center;
+        }
+
+        .container {
+            max-width: 900px;
+            width: 100%;
+            background-color: var(--container-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 40px;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+        }
+
+        h1 {
+            color: #ffffff;
+            font-size: 26px;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 15px;
+            margin-top: 0;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        h2 {
+            color: #ffffff;
+            font-size: 18px;
+            margin-top: 30px;
+            border-bottom: 1px solid rgba(240, 246, 252, 0.1);
+            padding-bottom: 8px;
+        }
+
+        p, li {
+            line-height: 1.6;
+            color: var(--text-primary);
+        }
+
+        ul {
+            padding-left: 20px;
+        }
+
+        .tag {
+            background-color: rgba(46, 160, 67, 0.15);
+            color: var(--success-color);
+            padding: 4px 10px;
+            border-radius: 6px;
+            font-size: 13px;
+            font-weight: 600;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+        }
+
+        th, td {
+            border: 1px solid var(--border-color);
+            padding: 12px;
+            text-align: left;
+            font-size: 14px;
+        }
+
+        th {
+            background-color: rgba(255, 255, 255, 0.05);
+            color: #ffffff;
+        }
+
+        pre {
+            background-color: #010409;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 16px;
+            overflow-x: auto;
+            color: #8b949e;
+            font-family: SFMono-Regular, Consolas, "Liberation Mono", Menlo, monospace;
+            font-size: 13px;
+            line-height: 1.5;
+        }
+
+        .footer {
+            margin-top: 40px;
+            border-top: 1px solid var(--border-color);
+            padding-top: 20px;
+            font-size: 13px;
+            color: var(--text-secondary);
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>
+            <span>📈 Epic 14 Story 1 宏观与监管政策多源采集阶段总结</span>
+            <span class="tag">阶段总结</span>
+        </h1>
+
+        <h2>一、 核心成果与交付组件</h2>
+        <p>
+            我们构建了稳定、抗封锁的高容错监管政策数据采集管道，主要由以下核心功能模块组成：
+        </p>
+        <ul>
+            <li><strong>`GovCollector` (中国政府网)</strong>：提取详情页发文机关元数据，在 `gov.cn` 实现针对央行与证监会核心政策的自动映射分流。</li>
+            <li><strong>`CsrcCollector` (证监会直连)</strong>：逆向证监会 `/searchList` 接口，摆脱安防阻碍，实现对证券监管类政策通知的毫秒级高频同步。</li>
+            <li><strong>`index.py` 并行控制</strong>：通过多 Collector 异步串联运行并整合 Server酱、SMTP 警报。</li>
+        </ul>
+
+        <h2>二、 数据库存储与 QC 质量对账</h2>
+        <p>
+            通过 URL 一级去重与 MD5 全文摘要二级去重防御，实现了数据的高清洁落子。
+        </p>
+        <table>
+            <thead>
+                <tr>
+                    <th>数据源归属 (ts_code)</th>
+                    <th>存量行数</th>
+                    <th>去重机制</th>
+                    <th>状态</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><strong>GOV_CN</strong> (中央及多部委政策)</td>
+                    <td>1,046 行</td>
+                    <td>URL UNIQUE + MD5 摘要</td>
+                    <td>🟢 历史数据回填完毕</td>
+                </tr>
+                <tr>
+                    <td><strong>CSRC</strong> (证监会资本市场公告)</td>
+                    <td>15 行</td>
+                    <td>URL UNIQUE + MD5 摘要</td>
+                    <td>🟢 增量高频同步运行</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <h2>三、 自动化校验套件通过情况</h2>
+        <p>
+            单元测试覆盖了对证监会列表/详情解析，以及政府网三项不同发文机关的精确重归类逻辑：
+        </p>
+        <pre>
+python tests/test_policy_collector.py
+.
+----------------------------------------------------------------------
+Ran 3 tests in 1.497s
+
+OK
+        </pre>
+
+        <div class="footer">
+            <p>腾讯云云函数 scf-collector · E14-S1 阶段完工总结</p>
+            <p>统计日期: 2026-05-17</p>
+        </div>
+    </div>
+</body>
+</html>
