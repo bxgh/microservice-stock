@@ -250,6 +250,47 @@ class StockDAO:
         return await execute_query(sql, params, is_select=False)
 
     @staticmethod
+    async def log_pipeline_run_v2(
+        pipeline_id: str, 
+        status: str, 
+        error_message: str = None, 
+        run_id: str = None, 
+        biz_date: str = None,
+        output_summary: Any = None
+    ) -> int:
+        """
+        [E14-S2-P1-T5] 升级版任务流水审计记录，支持 output_summary 结构化 JSON 写入
+        """
+        import json
+        from typing import Any
+        
+        output_summary_str = None
+        if output_summary is not None:
+            try:
+                if isinstance(output_summary, (dict, list)):
+                    output_summary_str = json.dumps(output_summary, ensure_ascii=False)
+                else:
+                    output_summary_str = str(output_summary)
+            except Exception as e:
+                # 容错降级
+                output_summary_str = json.dumps({"error": f"Serialize failed: {str(e)}"})
+                
+        sql = """
+        INSERT INTO meta_pipeline_run (
+            run_id, pipeline_id, biz_date, status, error_message, output_summary, started_at, finished_at
+        ) VALUES (
+            %s, %s, %s, %s, %s, %s, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+        ) ON DUPLICATE KEY UPDATE 
+            status = VALUES(status), 
+            error_message = VALUES(error_message), 
+            output_summary = VALUES(output_summary),
+            finished_at = CURRENT_TIMESTAMP
+        """
+        params = (run_id, pipeline_id, biz_date, status, error_message, output_summary_str)
+        return await execute_query(sql, params, is_select=False)
+
+
+    @staticmethod
     async def get_pipeline_status(pipeline_id: str, biz_date: str) -> Optional[str]:
         """
         [E3-S1-T2] 获取指定任务在特定交易日期的执行状态

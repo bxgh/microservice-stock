@@ -9,3 +9,4 @@ easyquotation
 aiosmtplib
 httpx
 beautifulsoup4
+openai>=1.30.0
