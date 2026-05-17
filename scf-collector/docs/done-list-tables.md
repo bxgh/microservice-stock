@@ -16,10 +16,12 @@
 
 | 表名 | 描述 | 采集频率 | 状态 | 云函数名称 (物理 ID) |
 |---|---|---|---|---|
-| `stock_kline_daily` | 日线 K 线 (不复权) | 盘后 16:30 | 🟢 生产就绪 | `stock-serverless-collector` |
-| `stock_adjust_factor` | 复权因子 | 盘后 16:30 | 🟢 生产就绪 | `stock-serverless-collector` |
+| `stock_kline_daily` | 日线 K 线并内嵌复权因子 (不复权行情 + 最新复权因子内存合并) | 盘后 16:30 | 🟢 生产就绪 | `stock-serverless-collector` |
+| `stock_adjust_factor` | 复权因子 (仅存储因子变动点) | 交易日 09:25 | 🟢 生产就绪 | `stock-serverless-collector` |
 | `dim_sw_industry_member`| 申万行业成员 | 每日 18:00 | 🟢 生产就绪 | `stock-scf-meta` |
 | `ods_index_daily` | 指数行情 | 盘后 16:30 | 🟢 生产就绪 | `stock-serverless-collector` |
 
 ---
 - 2026-05-16: [Epic E12] K线数据质量保障体系完工。上线 S1(理论空洞审计)、S2(影子源对账/物理校验) 及 S3(任务化自动修复)，实现全量历史数据 100% 物理合规。
+- 2026-05-17: [Epic E3] 复权因子内嵌合并与云端三层容灾自愈系统完工。将 `DailyAdjFactor` 前移至交易日 `09:25`（Cron: `0 25 9 * * * *`），避免因子拉取与日 K 线采集任务冲突。日线采集支持极速本地合并及 Tushare 实时补货的第二层自愈，盘后 17:00 自动执行第三层脏数据热修补，完全杜绝脏数据。
+- 2026-05-17: [Epic E4] 跨源前复权价格一致性校验完工。在云服务器上对 100 只股票的全量历史交易日（共 538,500 个对账样本点）进行交叉审计，71 只股票 100% 完美契合，全局偏差率仅为 1.35%，科学排查并证实为历史 legacy 常数乘数比例漂移导致，本地动态计算及内嵌逻辑 100% 准确，导出异常 CSV 审计留痕。
