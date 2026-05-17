@@ -134,7 +134,7 @@ def setup_triggers():
         },
         {
             "name": "DailyAdjFactor",
-            "cron": "0 35 16 * * * *",
+            "cron": "0 25 9 * * * *",
             "payload": {"op": "sync_adj_factor"}
         },
         {

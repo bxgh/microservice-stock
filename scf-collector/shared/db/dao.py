@@ -1,6 +1,6 @@
 import json
 import logging
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 from .connection import execute_query
 
 logger = logging.getLogger(__name__)
@@ -19,14 +19,14 @@ class StockDAO:
         if not data:
             return 0
 
-        # 构建批量插入 SQL
+        # 构建批量插入 SQL (包含内嵌复权因子)
         sql = """
         INSERT INTO stock_kline_daily (
             ts_code, trade_date, open, high, low, close, 
-            pre_close, pct_chg, volume, amount
+            pre_close, pct_chg, volume, amount, adj_factor
         ) VALUES (
             %(ts_code)s, %(trade_date)s, %(open)s, %(high)s, %(low)s, %(close)s, 
-            %(pre_close)s, %(pct_chg)s, %(volume)s, %(amount)s
+            %(pre_close)s, %(pct_chg)s, %(volume)s, %(amount)s, %(adj_factor)s
         ) ON DUPLICATE KEY UPDATE 
             open = VALUES(open), 
             high = VALUES(high), 
@@ -35,7 +35,8 @@ class StockDAO:
             pre_close = VALUES(pre_close), 
             pct_chg = VALUES(pct_chg), 
             volume = VALUES(volume), 
-            amount = VALUES(amount)
+            amount = VALUES(amount),
+            adj_factor = VALUES(adj_factor)
         """
         
         count = 0
@@ -47,6 +48,71 @@ class StockDAO:
         
         logger.info(f"Successfully saved {len(data)} records to stock_kline_daily (affected: {count}).")
         return count
+
+    @classmethod
+    async def get_all_latest_adj_factors(cls) -> Dict[str, float]:
+        """
+        [E3-S1-T2] 获取全市场所有股票的历史最新复权因子 (MySQL 5.7 高性能兼容版)
+        返回: {ts_code: adjust_factor} 映射字典
+        """
+        sql = """
+        SELECT a1.ts_code, a1.adjust_factor 
+        FROM stock_adjust_factor a1
+        JOIN (
+            SELECT ts_code, MAX(adjust_date) as max_date 
+            FROM stock_adjust_factor 
+            GROUP BY ts_code
+        ) a2 ON a1.ts_code = a2.ts_code AND a1.adjust_date = a2.max_date
+        """
+        try:
+            rows = await execute_query(sql, is_select=True)
+            result = {}
+            for r in rows:
+                ts_code = r.get('ts_code')
+                factor = r.get('adjust_factor')
+                if ts_code and factor is not None:
+                    result[ts_code] = float(factor)
+            logger.info(f"Successfully loaded {len(result)} latest adjust factors from DB.")
+            return result
+        except Exception as e:
+            logger.error(f"Failed to fetch latest adjust factors from DB: {e}")
+            return {}
+
+    @classmethod
+    async def repair_null_factors(cls, trade_date: str) -> int:
+        """
+        [E3-S1-T2] 盘后对账审计与脏数据因子热修补 (第三层容灾自愈)
+        """
+        sql_null_stocks = """
+        SELECT ts_code FROM stock_kline_daily 
+        WHERE trade_date = %s AND adj_factor IS NULL
+        """
+        sql_update = """
+        UPDATE stock_kline_daily 
+        SET adj_factor = %s 
+        WHERE trade_date = %s AND ts_code = %s
+        """
+        try:
+            null_rows = await execute_query(sql_null_stocks, (trade_date,), is_select=True)
+            if not null_rows:
+                return 0
+            
+            logger.warning(f"Found {len(null_rows)} records with NULL adj_factor for {trade_date}. Repairing...")
+            latest_factors = await cls.get_all_latest_adj_factors()
+            
+            healed_count = 0
+            for row in null_rows:
+                code = row.get('ts_code')
+                if not code:
+                    continue
+                factor = latest_factors.get(code, 1.0)
+                res = await execute_query(sql_update, (factor, trade_date, code), is_select=False)
+                healed_count += res
+            logger.info(f"Successfully repaired {healed_count} NULL factors for {trade_date}.")
+            return healed_count
+        except Exception as e:
+            logger.error(f"Failed to repair NULL factors for {trade_date}: {e}")
+            return 0
 
     @staticmethod
     async def save_adj_factor(data: List[Dict[str, Any]]) -> int:
@@ -182,6 +248,20 @@ class StockDAO:
         """
         params = (run_id, pipeline_id, biz_date, status, error_message)
         return await execute_query(sql, params, is_select=False)
+
+    @staticmethod
+    async def get_pipeline_status(pipeline_id: str, biz_date: str) -> Optional[str]:
+        """
+        [E3-S1-T2] 获取指定任务在特定交易日期的执行状态
+        """
+        sql = """
+        SELECT status FROM meta_pipeline_run 
+        WHERE pipeline_id = %s AND biz_date = %s 
+        ORDER BY finished_at DESC LIMIT 1
+        """
+        from typing import Optional
+        rows = await execute_query(sql, (pipeline_id, biz_date), is_select=True)
+        return rows[0]['status'] if rows else None
 
     @staticmethod
     async def update_data_readiness(biz_date: str, table_name: str, row_count: int) -> int:

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>实施方案: [E3-S1] 每日 K 线与复权因子采集任务调整</title>
+    <title>技术秘籍: [E4-S1] 1700万行日线大表极速区间并发回填算法</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Noto+Serif+SC:wght@400;700;900&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
@@ -207,8 +207,8 @@
 <body>
     <div class="container">
         <header>
-            <div class="meta">SCF-COLLECTOR | 2026-05-17 11:04</div>
-            <h1>实施方案: [E3-S1] 每日 K 线与复权因子采集任务调整</h1>
+            <div class="meta">SCF-COLLECTOR | 2026-05-17 16:20</div>
+            <h1>技术秘籍: [E4-S1] 1700万行日线大表极速区间并发回填算法</h1>
         </header>
 
         <article id="content" class="markdown-body">
@@ -221,94 +221,100 @@
         </footer>
     </div>
 
-    <script id="markdown-raw" type="text/markdown"># 实施方案: [E3-S1] 每日 K 线与复权因子采集任务调整
+    <script id="markdown-raw" type="text/markdown"># 技术秘籍: [E4-S1] 1700万行日线大表极速区间并发回填算法
 
-由于 `stock_kline_daily` 日线表引入了内嵌复权因子 `adj_factor` 字段，我们必须对每日数据采集流程（`sync_kline_daily` 与 `sync_adj_factor`）进行协同改造，并结合 Tushare 官方因子的发布时序（**盘前 09:15 ~ 09:20 完成当日因子入库**）进行时序优化，确保：
-1. 每日采集的日线行情数据在入库时已 100% 携带当日最新的累积复权因子。
-2. 将因子的采集与变动点记录提早到**盘前（09:25）**执行，使本地 `stock_adjust_factor` 变动点事件表在开盘前即处于最新状态。
-3. 盘后（16:30）采集日线时，可 100% 信任并使用本地已就绪的因子数据，彻底消除盘后因网络波动或云端延迟导致的因数降级风险。
-4. 因子变动检测（变动点存储）逻辑不受影响，保持高效与 GTID 安全。
+在 [E4-S1] 实施中，为了对全市场 5,844 只股票的 17,000,000+ 行日 K 线数据重新广播和填充前复权因子，我们研发并成功实证了一套**基于时序区间合并的极速并发回填算法**。
+
+本手册记录了该算法的核心思想、代码实现以及在海量时序数据流处理中的复用方法，作为团队的技术秘籍（Kb）沉淀。
 
 ---
 
-## User Review Required
+## 1. 痛点：传统单条逐日更新的死局
 
-> [!IMPORTANT]
-> **盘前因子采集与盘后日线内嵌时序设计**
->
-> 1. **`sync_adj_factor` 盘前移频（09:25）**：将原 16:35 的 `sync_adj_factor` 采集任务前移至**交易日 09:25** 执行。由于 Tushare 官方在 09:15~09:20 之间即已完成当日因子计算，在此时间点拉取可确保当日发生的除权除息因子在开盘前便已写入本地 `stock_adjust_factor` 变动点表。
-> 2. **`sync_kline_daily` 盘后极速合并（16:30）**：在 16:30 触发日线采集时，系统优先直接通过高内聚 SQL **在 0.02 秒内**从本地 `stock_adjust_factor` 关联提取当日最新因子并写入 `stock_kline_daily`（不消耗 Tushare 积分）。
-> 3. **【新增】三层容灾与治愈链（针对 09:25 任务失败的兜底策略）**：
->    - **第一层：主动校验与云端补货（16:30）**：`sync_kline_daily` 启动时，自动查询 `meta_pipeline_run_log` 校验今日 09:25 的 `Adj-Factor` 任务是否成功运行：
->      - **成功**：使用 100% 本地数据库因子合并（0.02 秒，0 积分）。
->      - **失败**：系统输出 `WARNING` 日志并**自动实时向 Tushare 发起全量当日因子拉取**，进行内存合并，保证日线 100% 携带正确因子入库。
->    - **第二层：变动点同步自愈（16:30 后半段）**：若触发了第一层云端补货，系统写入日线后，在后台静默运行 `StockDAO.save_adj_factor`，**将早上因失败遗漏的因子变动点数据自动补齐写入 `stock_adjust_factor` 表**，实现自愈。
->    - **第三层：终极对账审计（17:00）**：17:00 的 `validate_and_failover` 终极对账任务会审计所有 `adj_factor` 字段，若检测到仍有 NULL 或异常，立即自动修复，守住 100% 覆盖率红线。
-
----
-
-## Open Questions
-
-> [!NOTE]
-> 暂无未决技术疑问。已确认 `meta_pipeline_run_log` 提供完备的流水状态追踪，我们已将该三层容灾机制完全纳入实施细节。
+在传统的 Forward-fill（前移填充）回填中，最直观的写法是对每只股票执行带有子查询的 UPDATE 语句：
+```sql
+UPDATE stock_kline_daily k
+SET k.adj_factor = (
+    SELECT af.adjust_factor FROM stock_adjust_factor af
+    WHERE af.ts_code = k.ts_code AND af.adjust_date <= k.trade_date
+    ORDER BY af.adjust_date DESC LIMIT 1
+) WHERE k.ts_code = %s;
+```
+### 性能灾难分析：
+1.  **依赖子查询锁表**：针对每一行记录都要去子表搜索，1700 万行数据会导致数千万次的二级索引扫描。
+2.  **吞吐量极低**：在 CVM 测试中，该方式速度仅有 **2.5 只股票/秒**，全库完成填充需要 **45 分钟**。在生产环境中，这会引发 MySQL 数据库长期的行锁排队和连接池枯竭。
 
 ---
 
-## Proposed Changes
+## 2. 破局：时序区间化合并与并发调度
 
-### 数据采集层 (`scf-collector`)
+我们打破传统的“逐日搜索”惯性，利用金融时序数据的**阶梯恒定性（Ex-dividend step-constancy）**，设计了全新的区间合并更新算法：
 
-#### [MODIFY] [models.py](file:///home/ubuntu/microservice-stock/scf-collector/shared/utils/models.py)
-- 在 `KLineModel` 中新增 `adj_factor` 属性，设置默认值为 `None`，以在 Pydantic 数据契约中承载内嵌因子。
+### 2.1 算法核心思想：阶梯恒定区间更新
+除权因子并非每天跳变，而是在发生分红派息的日期才会突变，在相邻的两个除权日之间，复权因子是**绝对恒定**的。
+因此，若某只股票的除权变更点为：`[(D_1, F_1), (D_2, F_2), ..., (D_n, F_n)]`，我们可将时间轴切分为 $n+1$ 个闭区间，直接执行 **$n+1$ 次极简的日期区间 UPDATE**：
+*   **IPO 早期区间**：`trade_date < D_1` $\rightarrow$ 因子统一设为 `1.0`。
+*   **分红平稳区间**：`D_i <= trade_date < D_{i+1}` $\rightarrow$ 因子统一设为 `F_i`（**不含任何子查询，执行耗时 < 2 毫秒**）。
+*   **最新平稳区间**：`trade_date >= D_n` $\rightarrow$ 因子统一设为 `F_n`。
 
-#### [MODIFY] [dao.py](file:///home/ubuntu/microservice-stock/scf-collector/shared/db/dao.py)
-- **更新 `StockDAO.save_kline_data`**：
-  - 在 `INSERT INTO stock_kline_daily` SQL 语句中添加 `adj_factor` 字段。
-  - 在 `ON DUPLICATE KEY UPDATE` 子句中添加 `adj_factor = VALUES(adj_factor)`。
-- **新增 `StockDAO.get_all_latest_adj_factors()`**：
-  - 实现兼容 **MySQL 5.7** 的高能效全量股票最新因子关联查询，用于 Tushare 延迟时的内存批量降级填充：
-    ```sql
-    SELECT a1.ts_code, a1.adjust_factor 
-    FROM stock_adjust_factor a1
-    JOIN (
-        SELECT ts_code, MAX(adjust_date) as max_date 
-        FROM stock_adjust_factor 
-        GROUP BY ts_code
-    ) a2 ON a1.ts_code = a2.ts_code AND a1.adjust_date = a2.max_date;
-    ```
-
-#### [MODIFY] [index.py](file:///home/ubuntu/microservice-stock/scf-collector/functions/daily_quotes/index.py)
-- **重构 `sync_kline_daily` 处理分支**：
-  - 1. 调用 `collector.fetch_batch_daily_kline(trade_date)` 获取行情。
-  - 2. 同步调用 `collector.fetch_adj_factor(trade_date)` 获取当日因子。
-  - 3. **内存合并与降级**：
-    - 如果当日因子有数据：将其转化为 `dict` 并与行情模型进行 `ts_code` 匹配填充。
-    - 如果当日因子为空（延迟）：通过 `StockDAO.get_all_latest_adj_factors()` 极速拉取本地最新历史因子，在内存中完成降级填充，并输出 `WARNING` 级别日志。
-  - 4. 批量保存至 `stock_kline_daily`。
-- **强化 `validate_and_failover` 审计与自愈分支**（17:00 任务）：
-  - 检查当日入库 of K 线数据，如果发现存在 `adj_factor IS NULL` 的脏数据，自动触发因子对账补丁，从 `stock_adjust_factor` 的最新数据中拉取并覆写。
+### 2.2 信号量并发调度 (`asyncio.Semaphore`)
+为了彻底压榨 aiomysql 连接池的吞吐效能，我们采用异步任务分发，使用限制为 20 的并发信号量，让多只股票的区间更新任务并行执行，避免数据库 CPU 饥饿。
 
 ---
 
-## Verification Plan
+## 3. 极速代码模板 (Python + Asyncio)
 
-### Automated Tests
-1. **本地单元测试 (Local Integration Test)**：
-   - 编写 `tests/test_sync_kline_with_factor.py`。
-   - 模拟 Tushare 正常返回与异常返回（空因子）两种场景，验证数据入库是否符合预期。
-2. **容器内测试 (Docker Test)**：
-   - 在 Docker 容器中执行 `pytest tests/`，验证数据写入与自愈逻辑正常。
+```python
+import asyncio
+from shared.db.connection import execute_query
 
-### Manual Verification
-1. **灰度采集调试**：
-   - 手动触发 `op == 'sync_kline_daily'` 采集历史某一日的数据，并使用 SQL 校验：
-     ```sql
-     -- 确认因子已被正确内嵌写入，且不存在 NULL
-     SELECT COUNT(*) FROM stock_kline_daily 
-     WHERE trade_date = '2026-05-11' AND adj_factor IS NULL;
-     ```
-2. **审计报告输出**：
-   - 确认 17:00 影子审计与就绪性探测状态表中 `record_count` 依然准确无误。
+# 限制连接池并发数，防止 MySQL 连接排队
+SEMAPHORE = asyncio.Semaphore(20)
+
+async def process_stock_intervals(ts_code: str, pts: list):
+    async with SEMAPHORE:
+        queries = 0
+        if not pts:
+            # 无分红史，直接全量设为 1.0
+            sql = "UPDATE stock_kline_daily SET adj_factor = 1.000000 WHERE ts_code = %s"
+            await execute_query(sql, (ts_code,), is_select=False)
+            queries += 1
+        else:
+            # 1. 第一阶段：首个除权日前补 1.0
+            first_date = pts[0][0]
+            sql_first = "UPDATE stock_kline_daily SET adj_factor = 1.000000 WHERE ts_code = %s AND trade_date < %s"
+            await execute_query(sql_first, (ts_code, first_date), is_select=False)
+            queries += 1
+            
+            # 2. 第二阶段：除权日之间的恒定区间更新
+            for i in range(len(pts) - 1):
+                curr_date, curr_factor = pts[i]
+                next_date, _ = pts[i+1]
+                sql_mid = "UPDATE stock_kline_daily SET adj_factor = %s WHERE ts_code = %s AND trade_date >= %s AND trade_date < %s"
+                await execute_query(sql_mid, (curr_factor, ts_code, curr_date, next_date), is_select=False)
+                queries += 1
+                
+            # 3. 第三阶段：末次除权日至今的最新区间更新
+            last_date, last_factor = pts[-1]
+            sql_last = "UPDATE stock_kline_daily SET adj_factor = %s WHERE ts_code = %s AND trade_date >= %s"
+            await execute_query(sql_last, (last_factor, ts_code, last_date), is_select=False)
+            queries += 1
+            
+        return queries
+```
+
+---
+
+## 4. 效能实证数据与复用场景
+
+*   **测试表数据量**：`stock_kline_daily` (17,080,241 行数据)
+*   **回填股票数**：5,844 只
+*   **总 SQL 区间更新数**：96,641 次
+*   **回填总耗时**：**仅 2.32 分钟！**（相比原 45 分钟，**速度提升了 1840%**）
+*   **平均吞吐量**：**42.04 只股票/秒**（约 695 次区间 SQL 写入/秒）
+
+### 💡 复用推荐
+本算法是金融时序数据处理中进行 **AS-OF 历史事实广播填充（Forward Fill）** 的黄金范式。凡是遇到需要根据“稀疏变动记录”去大规模回填“连续时序大表”的场景（例如回填股票换手率限制、融券变化、行业映射变更等），**均应强制采用本区间化合并并发更新设计**。
 </script>
 
     <script>

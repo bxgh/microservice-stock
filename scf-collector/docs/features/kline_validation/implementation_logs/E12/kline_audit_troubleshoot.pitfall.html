@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Epic E12 K线质量保障踩坑与排障决策记录</title>
+    <style>
+        :root {
+            --bg-color: hsl(0, 0%, 98%);
+            --card-bg: hsl(0, 0%, 100%);
+            --text-main: hsl(220, 20%, 20%);
+            --primary: hsl(35, 90%, 45%);
+            --border-color: hsl(210, 15%, 90%);
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            padding: 2rem 1.5rem;
+            line-height: 1.6;
+        }
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: var(--card-bg);
+            padding: 2.5rem;
+            border-radius: 16px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.05);
+            border: 1px solid var(--border-color);
+        }
+        h1 {
+            font-size: 1.8rem;
+            color: hsl(20, 80%, 30%);
+            border-bottom: 2px solid var(--border-color);
+            padding-bottom: 1rem;
+        }
+        .alert-warning {
+            background-color: hsl(35, 100%, 97%);
+            border-left: 4px solid var(--primary);
+            color: hsl(35, 80%, 25%);
+            padding: 1rem;
+            border-radius: 4px;
+            margin: 1.5rem 0;
+        }
+        h2 {
+            font-size: 1.3rem;
+            color: hsl(220, 20%, 25%);
+            margin-top: 2rem;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 0.5rem;
+        }
+        .meta-box {
+            background-color: hsl(210, 20%, 97%);
+            padding: 1rem 1.5rem;
+            border-radius: 6px;
+            font-size: 0.95rem;
+            margin-bottom: 1rem;
+        }
+        .meta-box strong {
+            color: hsl(20, 70%, 30%);
+        }
+        pre {
+            background-color: hsl(220, 15%, 15%);
+            color: hsl(220, 15%, 90%);
+            padding: 1rem;
+            border-radius: 6px;
+            overflow-x: auto;
+            font-size: 0.9rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>⚠️ Epic E12 K线质量保障踩坑与排障决策记录</h1>
+        
+        <div class="alert-warning">
+            <strong>踩坑记录</strong>: 本文档记录了在构建 E12 数据质量巡检及自动修复引擎时遇到的诡异 Bug、性能瓶颈、网络/权限受阻等踩坑记录及择优决策。
+        </div>
+
+        <h2>1. 停牌股引发的“虚无空洞”警报</h2>
+        <div class="meta-box">
+            <p><strong>踩坑记录 (The Pitfall)</strong>: 在执行 S1 完工审计时，系统报出大量历史“空洞”（特别是 2025-2026 年间）。经单点排查，发现其在 Tushare 的 <code>daily</code> 接口中完全没有返回记录。由于审计脚本仅基于上市日期和交易日历进行强校验，便判定为“缺失”。</p>
+            <p><strong>择优决策 (Optimal Choice)</strong>: 引入 Tushare <code>suspend_d</code> 停牌接口进行交叉验证。如果某只股票在疑似缺失日确实处于停牌状态，引擎会将其视为“已解决（Resolved）”并将任务状态更新为 <code>SUCCESS</code>，从而避免重复尝试。</p>
+        </div>
+        <pre><code># 停牌判定排除假空洞
+suspensions = await self.collector.fetch_suspensions(trade_date)
+suspended_codes = set([s['ts_code'] for s in suspensions]) if suspensions else set()
+resolved_codes = fetched_codes.union(suspended_codes)</code></pre>
+
+        <h2>2. 影子源类名大小写拼写不一致</h2>
+        <div class="meta-box">
+            <p><strong>踩坑记录 (The Pitfall)</strong>: 在集成 AkShare 作为 P2 影子补偿源时，发生了 <code>cannot import name 'AkshareCollector' from 'shared.collectors.akshare_cl'</code> 异常。原来是 <code>AkShareCollector` 的 S 字母大小写拼写不一致，导致顽固空洞修复崩溃并阻塞任务队列。</p>
+            <p><strong>择优决策 (Optimal Choice)</strong>: 将拼写修正为 <code>AkShareCollector</code>，并在外部资源依赖导入时加入本地兜底，确保程序弹性。</p>
+        </div>
+
+        <h2>3. 全网缺失股引发的“无限 Pending 死循环”</h2>
+        <div class="meta-box">
+            <p><strong>踩坑记录 (The Pitfall)</strong>: 在处理最顽固的 18 只股票数据时，即使通过了 Tushare 批量、单点、停牌对账、AkShare 东方财富与新浪双源的五重检验，依然无法补齐。由于早期逻辑中，如果 AkShare 补不到数就不更新数据库状态，导致这 18 条记录永远处于 PENDING，被引擎无限循环扫描，造成资源浪费。</p>
+            <p><strong>择优决策 (Optimal Choice)</strong>: 增加 <code>FAILED</code> 终结状态。经过五重验证依然缺失的数据，强制标记为 <code>FAILED</code>，退出待修复队列。</p>
+        </div>
+
+        <h2>4. aiomysql 异步连接池 closed 异常</h2>
+        <div class="meta-box">
+            <p><strong>踩坑记录 (The Pitfall)</strong>: 在脚本顺利退出时，控制台频繁抛出 <code>RuntimeError: Event loop is closed</code>。这是由于 <code>aiomysql</code> 在异步垃圾回收时，事件循环已经关闭。</p>
+            <p><strong>择优决策 (Optimal Choice)</strong>: 在脚本生命周期结束前，显式调用 <code>await DBManager.close_all()</code> 关闭底层连接池。</p>
+        </div>
+    </div>
+</body>
+</html>
