@@ -119,6 +119,45 @@
 3.  **零容忍红线**: 构建过程中如果审计发现任何 `.pyd` 文件，必须立即停止构建并报错，严禁跳过审计上传。
 4.  **环境一致性**: 强制指定 `--platform manylinux2014_x86_64` 和 `--only-binary=:all:`。
 
+### 5.7 敏捷迭代与技术沉淀机制 (Agile Iteration & Tech Deposition)
+
+1. **临时/紧急需求绿色通道 (Ad-hoc Task Bypass)**:
+   - **适用场景**: 独立测试/验证脚本（如 `scratch/` 下的单次运行脚本）、少于 3 行逻辑的紧急线上 Bug 修复、纯配置调整、本地一次性数据回填。
+   - **豁免条件**: 豁免繁琐的 `draft_E{N}.md` 设计审查与正式的 `implementation_plan.md` / `task.md`。
+   - **极简审计门禁**:
+     - 必须在相关服务目录的 `scratch/README.md` 或脚本头部以注释形式，用 1-2 句话说明“目的”与“影响范围”。
+     - 提交 Commit 时，前缀强制使用 `[AD-HOC]`，严禁使用常规 Epic 编号。
+     - 跨模块临时脚本必须收拢在根目录的 `scratch/history/` 文件夹下。
+2. **避坑与技术秘籍记录 (Story Pitfall & Tech Tips)**:
+   - **规范要求**: 在 Story 交付物中，强制增设对于开发中遇到的诡异 Bug、性能瓶颈、网络/权限受阻等踩坑记录的沉淀。
+   - **记录要素**: 必须包含 **踩坑记录 (The Pitfall)**、**方案对比 (Options Explored)**、**择优决策 (Optimal Choice)**、**复用技巧 (Reusable Tips)**。
+3. **知识与避坑文档双轨命名规范 (Knowledge Suffix Naming Standard)**:
+   - **双轨专属后缀**: 为了便于全局搜索与工具链自动检索，所有具有知识意义的总结、技术技巧、排障避坑文档，其文件名必须强制使用结构化的双后缀：
+     - **排障避坑/方案决策**: 使用 **`*.pitfall.md`**（对应的 HTML 副本为 `*.pitfall.html`）。*示例*: `tushare_ip_block.pitfall.md`
+     - **技术秘籍/最佳实践**: 使用 **`*.kb.md`**（对应的 HTML 副本为 `*.kb.html`）。*示例*: `scf_memory_tuning.kb.md`
+     - **终结/阶段性总结**: 使用 **`*.summary.md`**（对应的 HTML 副本为 `*.summary.html`）。*示例*: `e12_kline_healing.summary.md`
+4. **AI 友好索引与自动门户集成 (AI-Native Indexing & Portal Integration)**:
+   - **双规自动集成**:
+     - 自动化门户更新脚本 `scripts/update_docs_portal.py` 将自动扫描微服务目录下所有的 `*.kb.html`、`*.pitfall.html` 和 `*.summary.html` 文件。
+     - **人类视角**: 自动提取其首行 `# 标题`，在全局门户 `docs/index.html` 中生成 **“知识与避坑技术库”** 板块。
+     - **AI 视角**: 同步在 `docs/` 根目录下生成轻量级、高密度的机器学习友好索引 `docs_portal_index.json`。AI Agent 启动时应优先读取该 JSON 获得系统的“知识地图”，从而以最低 Token 消耗精确定位并秒载目标避坑资产。
+5. **规则传导与注入规约 (Rule Infiltration to Active Rules)**:
+   - **动态传导**: 当 `*.pitfall.md` 或 `*.kb.md` 沉淀出**系统级强约束**（如 API 流控重试、异步锁死区等）时，必须同步以简练的 1 行陈述句，增补进 `.agent/rules/python-coding-standards.md` 或 `AGENTS.md` 的 `6. 反模式清单` 中，实现“热注入”约束红线。
+6. **Story/Epic 迭代演进机制 (Iteration Governance)**:
+   - **规范要求**: 当同一个 Epic 或 Story 在后续系统演进中产生二次迭代或重构时，**严禁**直接覆盖原始实施日志以防历史追溯丢失。
+   - **实施规范**:
+     - 在对应的 `implementation_logs/E{N}/S{M}/` 下新建 `iterations/v2/`（或以日期命名如 `v20260517/`）子文件夹。
+     - 撰写 `ITERATION_NOTE.md`（及 HTML），阐明：
+       1. **迭代触发动因 (Trigger)**：为什么要改？
+       2. **影响面评估 (Impact Map)**：改动了哪些存量表、核心类或接口？
+       3. **回归验证清单 (Regression AC)**：包含哪些回归测试用例，如何确保不影响存量老功能。
+     - Commit 提交前缀格式变更为 `[E{N}-S{M}-V2]` 或 `[E{N}-S{M}-ITER]`.
+7. **知识时效性与“过时信息”治理 (Knowledge Freshness & Deprecation Protocol)**:
+   - **唯一真源原则**: 无论是历史文档还是避坑指南，其描述若与现行代码实现、现行 MySQL/ClickHouse 物理 DDL 冲突，**必须以现行代码和物理 Schema 为唯一真源**。开发人员与 AI 代理在采用任何历史经验前，必须前置执行物理状态核验。
+   - **最新版优先原则**: 如果某个 Story 存在迭代目录（如 `iterations/v2/`），则 `v2` 中的设计与规范描述自动覆盖 `v1` 中的同名描述。
+   - **过期强打标机制**: 一旦某历史文档（`*.pitfall.md` / `*.kb.md`）中的解决方案被新系统设计彻底推翻、重构或废弃，**必须**在该历史文档顶部以 GitHub Alerts 语法标记 `> [!WARNING] 本文档描述的方案/Bug 已在 E{X}-S{Y} 中被重构/废弃，最新方案参考 [新文档路径](file:///...)`。
+   - **自动过滤机制**: 自动化门户更新脚本 `scripts/update_docs_portal.py` 在扫描发现包含 `> [!WARNING] *废弃*` 或 `*过期*` 标识的文档时，必须在 AI 友好索引 `docs_portal_index.json` 中自动将其标记为 `deprecated: true` 并排除在活跃知识库列表之外，防止 AI Agent 误吸入过时信息。
+
 ---
 
 ## 6. 反模式清单 (自检)
@@ -150,3 +189,4 @@
 | 2026-05-12 | v1.7 | **交付标准化**: 强化 5.2 节，要求云函数开发完成后必须同步更新 `done-list-tables.md`。 |
 | 2026-05-15 | v1.8 | 文档门户化: 引入 HTML 文档导航系统，要求所有报告产出 HTML 版并同步至 Portal。 |
 | 2026-05-15 | v1.9 | **SOP 闭环化**: 强制要求 Epic-Story 设计评审循环，实现全局+局部双级门户自动化。 |
+| 2026-05-17 | v2.0 | **敏捷与沉淀**: 优化临时需求免审通道，确立知识文档双轨后缀(*.kb.md/*.pitfall.md)，引入 Epic 终结总结、迭代演进目录及 AI-Native 自动索引规范。 |

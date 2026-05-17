@@ -1,0 +1,91 @@
+# 数据库接口设计文档: [E4-S1] 动态前复权价格数据视图 (MySQL 5.7 兼容)
+
+为了最大程度降低应用端（策略回测、指标聚合及对外 API）进行前复权折算时的复杂度和计算成本，项目在 MySQL ODS 数据总线层正式部署了面向应用侧（ADS）的**动态前复权价格查询视图**。
+
+---
+
+## 1. 接口概述
+
+传统的复权方案通常采用物理存储方式，每次发生除权事件时都需对历史 K 线的大量数据点进行重写，写开销巨大且易导致事务锁冲突。
+本设计采用**“物理内嵌因子 + 动态计算视图”**的冷热分离模式：
+*   **不复权数据表 (`stock_kline_daily`)**：存放交易所原始价格数据与当日静态因子 `adj_factor`。
+*   **变动因子表 (`stock_adjust_factor`)**：仅在分红除权日增量插入新因子变化值。
+*   **动态前复权视图 (`v_stock_kline_forward_adj`)**：在外部调用查询的瞬间，动态、实时、零事务地计算出高精度前复权价格。
+
+---
+
+## 2. 视图物理结构与字段规范
+
+### 2.1 主查询视图: `v_stock_kline_forward_adj`
+
+本视图在字段上与 `stock_kline_daily` 物理表完全兼容，可直接无缝替换原有表进行调用。
+
+#### 字段列表说明：
+
+| 字段名 | 数据类型 | 说明 | 复权类型 |
+| :--- | :--- | :--- | :--- |
+| **`ts_code`** | `varchar(16)` | 股票代码（格式：`600519.SH` / `000001.SZ`） | 唯一对齐键 |
+| **`trade_date`** | `date` | 交易日期（格式：`YYYY-MM-DD`） | 唯一对齐键 |
+| **`open`** | `decimal(16,4)` | **前复权开盘价** | **动态计算** |
+| **`high`** | `decimal(16,4)` | **前复权最高价** | **动态计算** |
+| **`low`** | `decimal(16,4)` | **前复权最低价** | **动态计算** |
+| **`close`** | `decimal(16,4)` | **前复权收盘价** | **动态计算** |
+| **`pre_close`** | `decimal(16,4)` | **前复权前收盘价** | **动态计算** |
+| **`volume`** | `bigint(20)` | 原始交易量（股） | 保持原样 |
+| **`amount`** | `decimal(20,4)` | 原始交易额（元） | 保持原样 |
+| **`turnover`** | `decimal(16,6)` | 当日换手率（小数表示） | 保持原样 |
+| **`pct_chg`** | `decimal(16,6)` | 当日涨跌幅（小数表示） | 保持原样 |
+| **`trade_status`** | `tinyint(4)` | 交易状态（1：交易，0：停牌） | 保持原样 |
+
+---
+
+## 3. 级联依赖关系设计
+
+由于 MySQL 5.7 存在底层强约束限制（**禁止在 View 声明的 `FROM` 子句中嵌套子查询，也不支持 CTE 语法**），本项目采用级联依赖结构进行设计。
+
+### 3.1 一级缓存视图: `v_latest_adjust_factors` (最新因子定位)
+```sql
+CREATE OR REPLACE VIEW v_latest_adjust_factors AS
+SELECT af.ts_code, af.adjust_factor AS latest_factor
+FROM stock_adjust_factor af
+WHERE af.adjust_date = (
+    SELECT MAX(af2.adjust_date)
+    FROM stock_adjust_factor af2
+    WHERE af2.ts_code = af.ts_code
+);
+```
+
+### 3.2 二级交付视图: `v_stock_kline_forward_adj` (前复权计算)
+```sql
+CREATE OR REPLACE VIEW v_stock_kline_forward_adj AS
+SELECT 
+    k.ts_code,
+    k.trade_date,
+    ROUND(k.open * k.adj_factor / COALESCE(lf.latest_factor, 1.0), 4) AS open,
+    ROUND(k.high * k.adj_factor / COALESCE(lf.latest_factor, 1.0), 4) AS high,
+    ROUND(k.low * k.adj_factor / COALESCE(lf.latest_factor, 1.0), 4) AS low,
+    ROUND(k.close * k.adj_factor / COALESCE(lf.latest_factor, 1.0), 4) AS close,
+    ROUND(k.pre_close * k.adj_factor / COALESCE(lf.latest_factor, 1.0), 4) AS pre_close,
+    k.volume,
+    k.amount,
+    k.turnover,
+    k.pct_chg,
+    k.trade_status
+FROM stock_kline_daily k
+LEFT JOIN v_latest_adjust_factors lf ON k.ts_code = lf.ts_code;
+```
+
+---
+
+## 4. 接入与调用示例
+
+量化策略或 API 查询时，直接将查询物理表 `stock_kline_daily` 改为查询视图即可，业务层逻辑零改动：
+
+```sql
+-- 查询某只股票在特定区间的动态前复权行情
+SELECT trade_date, open, high, low, close, volume, pct_chg 
+FROM v_stock_kline_forward_adj 
+WHERE ts_code = '000001.SZ' 
+  AND trade_date BETWEEN '2019-06-01' AND '2019-06-30'
+ORDER BY trade_date ASC;
+```

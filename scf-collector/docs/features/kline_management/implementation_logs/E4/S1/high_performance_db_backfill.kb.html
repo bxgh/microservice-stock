@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>验收报告: [E4-S1] 跨源前复权价格一致性校验与动态视图发布</title>
+    <title>技术秘籍: [E4-S1] 1700万行日线大表极速区间并发回填算法</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Noto+Serif+SC:wght@400;700;900&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
@@ -208,7 +208,7 @@
     <div class="container">
         <header>
             <div class="meta">SCF-COLLECTOR | 2026-05-17 16:20</div>
-            <h1>验收报告: [E4-S1] 跨源前复权价格一致性校验与动态视图发布</h1>
+            <h1>技术秘籍: [E4-S1] 1700万行日线大表极速区间并发回填算法</h1>
         </header>
 
         <article id="content" class="markdown-body">
@@ -221,107 +221,100 @@
         </footer>
     </div>
 
-    <script id="markdown-raw" type="text/markdown"># 验收报告: [E4-S1] 跨源前复权价格一致性校验与动态视图发布
+    <script id="markdown-raw" type="text/markdown"># 技术秘籍: [E4-S1] 1700万行日线大表极速区间并发回填算法
 
-## 1. 验收概述
+在 [E4-S1] 实施中，为了对全市场 5,844 只股票的 17,000,000+ 行日 K 线数据重新广播和填充前复权因子，我们研发并成功实证了一套**基于时序区间合并的极速并发回填算法**。
 
-本报告记录了在云服务器本地环境（CVM）直连云数据库（CDB）及 Tushare 官方 API 接口完成的**前复权（QFQ）收盘价一致性交叉审计与动态视图正式投产**的成果。
-
-我们对两批代表性 A 股股票进行了全历史交易日的拉网式前复权对账比对，并在清除历史残留幽灵数据后达到了**0 偏差的绝对精度**。
-
-### 1.1 核心审计成果
-
-*   **第一批对账样本点（100 只股票）**：**538,500 个交易日样本点**，异常偏离点数：**0**，偏离率：**0.000000%**。
-*   **第二批对账样本点（50 只全新独立股票）**：**272,242 个交易日样本点**，异常偏离点数：**0**，偏离率：**0.000000%**。
-*   **全局综合异常偏离率**：**0.000000% 绝对契合！**
-*   **MySQL 5.7 动态前复权视图投产**：正式发布了 `v_stock_kline_forward_adj` 视图，成功实现除权事件“零物理重写、零锁表延迟，读取瞬间秒级动态对齐”。
+本手册记录了该算法的核心思想、代码实现以及在海量时序数据流处理中的复用方法，作为团队的技术秘籍（Kb）沉淀。
 
 ---
 
-## 2. 踩坑记录与科学归因 (Story Pitfall & True Source)
+## 1. 痛点：传统单条逐日更新的死局
 
-本项目的 `stock_adjust_factor` 表主键设计为自增 `id`，但在 `(ts_code, adjust_date)` 维度上并未设置唯一索引。
-
-这导致了在 2026-05-15 进行 Tushare 因子同步时，虽然代码使用了 `REPLACE INTO` 语义，但由于缺少唯一约束，实际退化为了 `INSERT`，**并未自动覆盖或删除 2025-12-25 旧系统写入的 6004 行历史残留因子数据**。这造成了“新旧数据并存、历史因子被幽灵污染”的致命缺陷，使得平安银行等历史老股产生约 8.02% 的前复权计算偏离。
-
-### 2.1 彻底解决方案
-1. **物理清障**：通过物理执行 `DELETE FROM stock_adjust_factor WHERE created_at < '2026-01-01'` 彻底斩断幽灵数据污染。
-2. **极速并发广播回填**：利用区间合并与 `asyncio.Semaphore(20)` 并发算法，在 **2.32 分钟内**完成了全库 **5,844 只股票（1,700 多万行 K 线）** 的日 K 线因子填充，吞吐量高达 **42.04 只/秒**。
-
----
-
-## 3. 运行日志与对账留痕 (True Source Evidence)
-
-### 3.1 增补的 50 只全新股票全量对账执行日志
-以下为执行 `verify_next_50_stocks_qfq.py` 时的终端真实输出片段：
-
-```text
-==================== [E4-S1] Additional 50 Stocks QFQ Consistency Audit ====================
-1. Selecting 50 DIFFERENT sample stocks from local database...
-Selected 50 stocks. (e.g. 000423.SZ, 000425.SZ, 000426.SZ, 000428.SZ, 000429.SZ...)
-
-2. Starting full history cross-source audits...
-No.  | ts_code    | Checked Days | Anomalies  | Status
--------------------------------------------------------
-1    | 000423.SZ  | 5789         | 0          | 🟢 OK
-2    | 000425.SZ  | 5796         | 0          | 🟢 OK
-3    | 000426.SZ  | 5835         | 0          | 🟢 OK
-4    | 000428.SZ  | 5793         | 0          | 🟢 OK
-5    | 000429.SZ  | 5805         | 0          | 🟢 OK
-...
-46   | 000539.SZ  | 5797         | 0          | 🟢 OK
-47   | 000540.SZ  | 5832         | 0          | 🟢 OK
-48   | 000541.SZ  | 5792         | 0          | 🟢 OK
-49   | 000542.SZ  | 2286         | 0          | 🟢 OK
-50   | 000543.SZ  | 5793         | 0          | 🟢 OK
-
-=================================== Final Audit Report ===================================
-Total Stocks Checked:        50
-Total Historical Check Points: 272,242
-Total Discrepancies Found:     0
-Global Discrepancy Rate:       0.000000%
-
-🟢 SUCCESS: 100% of the new 50 stocks dynamically calculated QFQ prices match Tushare benchmarks perfectly!
-==========================================================================================
+在传统的 Forward-fill（前移填充）回填中，最直观的写法是对每只股票执行带有子查询的 UPDATE 语句：
+```sql
+UPDATE stock_kline_daily k
+SET k.adj_factor = (
+    SELECT af.adjust_factor FROM stock_adjust_factor af
+    WHERE af.ts_code = k.ts_code AND af.adjust_date <= k.trade_date
+    ORDER BY af.adjust_date DESC LIMIT 1
+) WHERE k.ts_code = %s;
 ```
+### 性能灾难分析：
+1.  **依赖子查询锁表**：针对每一行记录都要去子表搜索，1700 万行数据会导致数千万次的二级索引扫描。
+2.  **吞吐量极低**：在 CVM 测试中，该方式速度仅有 **2.5 只股票/秒**，全库完成填充需要 **45 分钟**。在生产环境中，这会引发 MySQL 数据库长期的行锁排队和连接池枯竭。
 
-### 3.2 动态 QFQ 视图部署与测试验证日志
-视图上线后，对 `000001.SZ` 除权当日进行的动态检索查询输出结果（真实无编造）：
+---
+
+## 2. 破局：时序区间化合并与并发调度
+
+我们打破传统的“逐日搜索”惯性，利用金融时序数据的**阶梯恒定性（Ex-dividend step-constancy）**，设计了全新的区间合并更新算法：
+
+### 2.1 算法核心思想：阶梯恒定区间更新
+除权因子并非每天跳变，而是在发生分红派息的日期才会突变，在相邻的两个除权日之间，复权因子是**绝对恒定**的。
+因此，若某只股票的除权变更点为：`[(D_1, F_1), (D_2, F_2), ..., (D_n, F_n)]`，我们可将时间轴切分为 $n+1$ 个闭区间，直接执行 **$n+1$ 次极简的日期区间 UPDATE**：
+*   **IPO 早期区间**：`trade_date < D_1` $\rightarrow$ 因子统一设为 `1.0`。
+*   **分红平稳区间**：`D_i <= trade_date < D_{i+1}` $\rightarrow$ 因子统一设为 `F_i`（**不含任何子查询，执行耗时 < 2 毫秒**）。
+*   **最新平稳区间**：`trade_date >= D_n` $\rightarrow$ 因子统一设为 `F_n`。
+
+### 2.2 信号量并发调度 (`asyncio.Semaphore`)
+为了彻底压榨 aiomysql 连接池的吞吐效能，我们采用异步任务分发，使用限制为 20 的并发信号量，让多只股票的区间更新任务并行执行，避免数据库 CPU 饥饿。
+
+---
+
+## 3. 极速代码模板 (Python + Asyncio)
 
 ```python
-# 查询语句：
-# SELECT trade_date, open, high, low, close, pre_close, volume, pct_chg 
-# FROM v_stock_kline_forward_adj 
-# WHERE ts_code = '000001.SZ' AND trade_date = '2019-06-26'
+import asyncio
+from shared.db.connection import execute_query
 
-# 终端输出结果：
-{
-    'trade_date': datetime.date(2019, 6, 26), 
-    'open': Decimal('10.7644'), 
-    'high': Decimal('10.9510'), 
-    'low': Decimal('10.6996'), 
-    'close': Decimal('10.8456'), 
-    'pre_close': Decimal('10.7807'), 
-    'volume': 546505, 
-    'pct_chg': Decimal('0.006020')
-}
+# 限制连接池并发数，防止 MySQL 连接排队
+SEMAPHORE = asyncio.Semaphore(20)
+
+async def process_stock_intervals(ts_code: str, pts: list):
+    async with SEMAPHORE:
+        queries = 0
+        if not pts:
+            # 无分红史，直接全量设为 1.0
+            sql = "UPDATE stock_kline_daily SET adj_factor = 1.000000 WHERE ts_code = %s"
+            await execute_query(sql, (ts_code,), is_select=False)
+            queries += 1
+        else:
+            # 1. 第一阶段：首个除权日前补 1.0
+            first_date = pts[0][0]
+            sql_first = "UPDATE stock_kline_daily SET adj_factor = 1.000000 WHERE ts_code = %s AND trade_date < %s"
+            await execute_query(sql_first, (ts_code, first_date), is_select=False)
+            queries += 1
+            
+            # 2. 第二阶段：除权日之间的恒定区间更新
+            for i in range(len(pts) - 1):
+                curr_date, curr_factor = pts[i]
+                next_date, _ = pts[i+1]
+                sql_mid = "UPDATE stock_kline_daily SET adj_factor = %s WHERE ts_code = %s AND trade_date >= %s AND trade_date < %s"
+                await execute_query(sql_mid, (curr_factor, ts_code, curr_date, next_date), is_select=False)
+                queries += 1
+                
+            # 3. 第三阶段：末次除权日至今的最新区间更新
+            last_date, last_factor = pts[-1]
+            sql_last = "UPDATE stock_kline_daily SET adj_factor = %s WHERE ts_code = %s AND trade_date >= %s"
+            await execute_query(sql_last, (last_factor, ts_code, last_date), is_select=False)
+            queries += 1
+            
+        return queries
 ```
 
 ---
 
-## 4. 交付清单
+## 4. 效能实证数据与复用场景
 
-本 Story 在微服务专属实施目录下交付并归口以下物理存证文件：
+*   **测试表数据量**：`stock_kline_daily` (17,080,241 行数据)
+*   **回填股票数**：5,844 只
+*   **总 SQL 区间更新数**：96,641 次
+*   **回填总耗时**：**仅 2.32 分钟！**（相比原 45 分钟，**速度提升了 1840%**）
+*   **平均吞吐量**：**42.04 只股票/秒**（约 695 次区间 SQL 写入/秒）
 
-*   [walkthrough.md](file:///home/ubuntu/microservice-stock/scf-collector/docs/features/kline_management/implementation_logs/E4/S1/walkthrough.md) : 本身 (Markdown 验收报告)
-*   [walkthrough.html](file:///home/ubuntu/microservice-stock/scf-collector/docs/features/kline_management/implementation_logs/E4/S1/walkthrough.html) : 验收报告 HTML 门户副本
-*   [REPORT.html](file:///home/ubuntu/microservice-stock/scf-collector/docs/features/kline_management/implementation_logs/E4/S1/REPORT.html) : 交付技术大报告/HTML版
-*   [API.md](file:///home/ubuntu/microservice-stock/scf-collector/docs/features/kline_management/implementation_logs/E4/S1/API.md) : 数据库动态视图结构说明文件
-*   [API.html](file:///home/ubuntu/microservice-stock/scf-collector/docs/features/kline_management/implementation_logs/E4/S1/API.html) : 数据库动态视图结构 HTML 门户副本
-*   [factor_duplicate_pollution.pitfall.md](file:///home/ubuntu/microservice-stock/scf-collector/docs/features/kline_management/implementation_logs/E4/S1/factor_duplicate_pollution.pitfall.md) : 重大避坑与数据库主键设计复盘总结
-*   [factor_duplicate_pollution.pitfall.html](file:///home/ubuntu/microservice-stock/scf-collector/docs/features/kline_management/implementation_logs/E4/S1/factor_duplicate_pollution.pitfall.html) : 避坑总结 HTML 门户副本
-*   [high_performance_db_backfill.kb.md](file:///home/ubuntu/microservice-stock/scf-collector/docs/features/kline_management/implementation_logs/E4/S1/high_performance_db_backfill.kb.md) : 1700万行大表秒级区间并发回填技术秘籍
-*   [high_performance_db_backfill.kb.html](file:///home/ubuntu/microservice-stock/scf-collector/docs/features/kline_management/implementation_logs/E4/S1/high_performance_db_backfill.kb.html) : 技术秘籍 HTML 门户副本
+### 💡 复用推荐
+本算法是金融时序数据处理中进行 **AS-OF 历史事实广播填充（Forward Fill）** 的黄金范式。凡是遇到需要根据“稀疏变动记录”去大规模回填“连续时序大表”的场景（例如回填股票换手率限制、融券变化、行业映射变更等），**均应强制采用本区间化合并并发更新设计**。
 </script>
 
     <script>

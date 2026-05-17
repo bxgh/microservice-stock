@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>验收报告: [E4-S1] 跨源前复权价格一致性校验与动态视图发布</title>
+    <title>数据库接口设计文档: [E4-S1] 动态前复权价格数据视图 (MySQL 5.7 兼容)</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Noto+Serif+SC:wght@400;700;900&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
@@ -208,7 +208,7 @@
     <div class="container">
         <header>
             <div class="meta">SCF-COLLECTOR | 2026-05-17 16:20</div>
-            <h1>验收报告: [E4-S1] 跨源前复权价格一致性校验与动态视图发布</h1>
+            <h1>数据库接口设计文档: [E4-S1] 动态前复权价格数据视图 (MySQL 5.7 兼容)</h1>
         </header>
 
         <article id="content" class="markdown-body">
@@ -221,107 +221,97 @@
         </footer>
     </div>
 
-    <script id="markdown-raw" type="text/markdown"># 验收报告: [E4-S1] 跨源前复权价格一致性校验与动态视图发布
+    <script id="markdown-raw" type="text/markdown"># 数据库接口设计文档: [E4-S1] 动态前复权价格数据视图 (MySQL 5.7 兼容)
 
-## 1. 验收概述
-
-本报告记录了在云服务器本地环境（CVM）直连云数据库（CDB）及 Tushare 官方 API 接口完成的**前复权（QFQ）收盘价一致性交叉审计与动态视图正式投产**的成果。
-
-我们对两批代表性 A 股股票进行了全历史交易日的拉网式前复权对账比对，并在清除历史残留幽灵数据后达到了**0 偏差的绝对精度**。
-
-### 1.1 核心审计成果
-
-*   **第一批对账样本点（100 只股票）**：**538,500 个交易日样本点**，异常偏离点数：**0**，偏离率：**0.000000%**。
-*   **第二批对账样本点（50 只全新独立股票）**：**272,242 个交易日样本点**，异常偏离点数：**0**，偏离率：**0.000000%**。
-*   **全局综合异常偏离率**：**0.000000% 绝对契合！**
-*   **MySQL 5.7 动态前复权视图投产**：正式发布了 `v_stock_kline_forward_adj` 视图，成功实现除权事件“零物理重写、零锁表延迟，读取瞬间秒级动态对齐”。
+为了最大程度降低应用端（策略回测、指标聚合及对外 API）进行前复权折算时的复杂度和计算成本，项目在 MySQL ODS 数据总线层正式部署了面向应用侧（ADS）的**动态前复权价格查询视图**。
 
 ---
 
-## 2. 踩坑记录与科学归因 (Story Pitfall & True Source)
+## 1. 接口概述
 
-本项目的 `stock_adjust_factor` 表主键设计为自增 `id`，但在 `(ts_code, adjust_date)` 维度上并未设置唯一索引。
-
-这导致了在 2026-05-15 进行 Tushare 因子同步时，虽然代码使用了 `REPLACE INTO` 语义，但由于缺少唯一约束，实际退化为了 `INSERT`，**并未自动覆盖或删除 2025-12-25 旧系统写入的 6004 行历史残留因子数据**。这造成了“新旧数据并存、历史因子被幽灵污染”的致命缺陷，使得平安银行等历史老股产生约 8.02% 的前复权计算偏离。
-
-### 2.1 彻底解决方案
-1. **物理清障**：通过物理执行 `DELETE FROM stock_adjust_factor WHERE created_at < '2026-01-01'` 彻底斩断幽灵数据污染。
-2. **极速并发广播回填**：利用区间合并与 `asyncio.Semaphore(20)` 并发算法，在 **2.32 分钟内**完成了全库 **5,844 只股票（1,700 多万行 K 线）** 的日 K 线因子填充，吞吐量高达 **42.04 只/秒**。
+传统的复权方案通常采用物理存储方式，每次发生除权事件时都需对历史 K 线的大量数据点进行重写，写开销巨大且易导致事务锁冲突。
+本设计采用**“物理内嵌因子 + 动态计算视图”**的冷热分离模式：
+*   **不复权数据表 (`stock_kline_daily`)**：存放交易所原始价格数据与当日静态因子 `adj_factor`。
+*   **变动因子表 (`stock_adjust_factor`)**：仅在分红除权日增量插入新因子变化值。
+*   **动态前复权视图 (`v_stock_kline_forward_adj`)**：在外部调用查询的瞬间，动态、实时、零事务地计算出高精度前复权价格。
 
 ---
 
-## 3. 运行日志与对账留痕 (True Source Evidence)
+## 2. 视图物理结构与字段规范
 
-### 3.1 增补的 50 只全新股票全量对账执行日志
-以下为执行 `verify_next_50_stocks_qfq.py` 时的终端真实输出片段：
+### 2.1 主查询视图: `v_stock_kline_forward_adj`
 
-```text
-==================== [E4-S1] Additional 50 Stocks QFQ Consistency Audit ====================
-1. Selecting 50 DIFFERENT sample stocks from local database...
-Selected 50 stocks. (e.g. 000423.SZ, 000425.SZ, 000426.SZ, 000428.SZ, 000429.SZ...)
+本视图在字段上与 `stock_kline_daily` 物理表完全兼容，可直接无缝替换原有表进行调用。
 
-2. Starting full history cross-source audits...
-No.  | ts_code    | Checked Days | Anomalies  | Status
--------------------------------------------------------
-1    | 000423.SZ  | 5789         | 0          | 🟢 OK
-2    | 000425.SZ  | 5796         | 0          | 🟢 OK
-3    | 000426.SZ  | 5835         | 0          | 🟢 OK
-4    | 000428.SZ  | 5793         | 0          | 🟢 OK
-5    | 000429.SZ  | 5805         | 0          | 🟢 OK
-...
-46   | 000539.SZ  | 5797         | 0          | 🟢 OK
-47   | 000540.SZ  | 5832         | 0          | 🟢 OK
-48   | 000541.SZ  | 5792         | 0          | 🟢 OK
-49   | 000542.SZ  | 2286         | 0          | 🟢 OK
-50   | 000543.SZ  | 5793         | 0          | 🟢 OK
+#### 字段列表说明：
 
-=================================== Final Audit Report ===================================
-Total Stocks Checked:        50
-Total Historical Check Points: 272,242
-Total Discrepancies Found:     0
-Global Discrepancy Rate:       0.000000%
+| 字段名 | 数据类型 | 说明 | 复权类型 |
+| :--- | :--- | :--- | :--- |
+| **`ts_code`** | `varchar(16)` | 股票代码（格式：`600519.SH` / `000001.SZ`） | 唯一对齐键 |
+| **`trade_date`** | `date` | 交易日期（格式：`YYYY-MM-DD`） | 唯一对齐键 |
+| **`open`** | `decimal(16,4)` | **前复权开盘价** | **动态计算** |
+| **`high`** | `decimal(16,4)` | **前复权最高价** | **动态计算** |
+| **`low`** | `decimal(16,4)` | **前复权最低价** | **动态计算** |
+| **`close`** | `decimal(16,4)` | **前复权收盘价** | **动态计算** |
+| **`pre_close`** | `decimal(16,4)` | **前复权前收盘价** | **动态计算** |
+| **`volume`** | `bigint(20)` | 原始交易量（股） | 保持原样 |
+| **`amount`** | `decimal(20,4)` | 原始交易额（元） | 保持原样 |
+| **`turnover`** | `decimal(16,6)` | 当日换手率（小数表示） | 保持原样 |
+| **`pct_chg`** | `decimal(16,6)` | 当日涨跌幅（小数表示） | 保持原样 |
+| **`trade_status`** | `tinyint(4)` | 交易状态（1：交易，0：停牌） | 保持原样 |
 
-🟢 SUCCESS: 100% of the new 50 stocks dynamically calculated QFQ prices match Tushare benchmarks perfectly!
-==========================================================================================
+---
+
+## 3. 级联依赖关系设计
+
+由于 MySQL 5.7 存在底层强约束限制（**禁止在 View 声明的 `FROM` 子句中嵌套子查询，也不支持 CTE 语法**），本项目采用级联依赖结构进行设计。
+
+### 3.1 一级缓存视图: `v_latest_adjust_factors` (最新因子定位)
+```sql
+CREATE OR REPLACE VIEW v_latest_adjust_factors AS
+SELECT af.ts_code, af.adjust_factor AS latest_factor
+FROM stock_adjust_factor af
+WHERE af.adjust_date = (
+    SELECT MAX(af2.adjust_date)
+    FROM stock_adjust_factor af2
+    WHERE af2.ts_code = af.ts_code
+);
 ```
 
-### 3.2 动态 QFQ 视图部署与测试验证日志
-视图上线后，对 `000001.SZ` 除权当日进行的动态检索查询输出结果（真实无编造）：
-
-```python
-# 查询语句：
-# SELECT trade_date, open, high, low, close, pre_close, volume, pct_chg 
-# FROM v_stock_kline_forward_adj 
-# WHERE ts_code = '000001.SZ' AND trade_date = '2019-06-26'
-
-# 终端输出结果：
-{
-    'trade_date': datetime.date(2019, 6, 26), 
-    'open': Decimal('10.7644'), 
-    'high': Decimal('10.9510'), 
-    'low': Decimal('10.6996'), 
-    'close': Decimal('10.8456'), 
-    'pre_close': Decimal('10.7807'), 
-    'volume': 546505, 
-    'pct_chg': Decimal('0.006020')
-}
+### 3.2 二级交付视图: `v_stock_kline_forward_adj` (前复权计算)
+```sql
+CREATE OR REPLACE VIEW v_stock_kline_forward_adj AS
+SELECT 
+    k.ts_code,
+    k.trade_date,
+    ROUND(k.open * k.adj_factor / COALESCE(lf.latest_factor, 1.0), 4) AS open,
+    ROUND(k.high * k.adj_factor / COALESCE(lf.latest_factor, 1.0), 4) AS high,
+    ROUND(k.low * k.adj_factor / COALESCE(lf.latest_factor, 1.0), 4) AS low,
+    ROUND(k.close * k.adj_factor / COALESCE(lf.latest_factor, 1.0), 4) AS close,
+    ROUND(k.pre_close * k.adj_factor / COALESCE(lf.latest_factor, 1.0), 4) AS pre_close,
+    k.volume,
+    k.amount,
+    k.turnover,
+    k.pct_chg,
+    k.trade_status
+FROM stock_kline_daily k
+LEFT JOIN v_latest_adjust_factors lf ON k.ts_code = lf.ts_code;
 ```
 
 ---
 
-## 4. 交付清单
+## 4. 接入与调用示例
 
-本 Story 在微服务专属实施目录下交付并归口以下物理存证文件：
+量化策略或 API 查询时，直接将查询物理表 `stock_kline_daily` 改为查询视图即可，业务层逻辑零改动：
 
-*   [walkthrough.md](file:///home/ubuntu/microservice-stock/scf-collector/docs/features/kline_management/implementation_logs/E4/S1/walkthrough.md) : 本身 (Markdown 验收报告)
-*   [walkthrough.html](file:///home/ubuntu/microservice-stock/scf-collector/docs/features/kline_management/implementation_logs/E4/S1/walkthrough.html) : 验收报告 HTML 门户副本
-*   [REPORT.html](file:///home/ubuntu/microservice-stock/scf-collector/docs/features/kline_management/implementation_logs/E4/S1/REPORT.html) : 交付技术大报告/HTML版
-*   [API.md](file:///home/ubuntu/microservice-stock/scf-collector/docs/features/kline_management/implementation_logs/E4/S1/API.md) : 数据库动态视图结构说明文件
-*   [API.html](file:///home/ubuntu/microservice-stock/scf-collector/docs/features/kline_management/implementation_logs/E4/S1/API.html) : 数据库动态视图结构 HTML 门户副本
-*   [factor_duplicate_pollution.pitfall.md](file:///home/ubuntu/microservice-stock/scf-collector/docs/features/kline_management/implementation_logs/E4/S1/factor_duplicate_pollution.pitfall.md) : 重大避坑与数据库主键设计复盘总结
-*   [factor_duplicate_pollution.pitfall.html](file:///home/ubuntu/microservice-stock/scf-collector/docs/features/kline_management/implementation_logs/E4/S1/factor_duplicate_pollution.pitfall.html) : 避坑总结 HTML 门户副本
-*   [high_performance_db_backfill.kb.md](file:///home/ubuntu/microservice-stock/scf-collector/docs/features/kline_management/implementation_logs/E4/S1/high_performance_db_backfill.kb.md) : 1700万行大表秒级区间并发回填技术秘籍
-*   [high_performance_db_backfill.kb.html](file:///home/ubuntu/microservice-stock/scf-collector/docs/features/kline_management/implementation_logs/E4/S1/high_performance_db_backfill.kb.html) : 技术秘籍 HTML 门户副本
+```sql
+-- 查询某只股票在特定区间的动态前复权行情
+SELECT trade_date, open, high, low, close, volume, pct_chg 
+FROM v_stock_kline_forward_adj 
+WHERE ts_code = '000001.SZ' 
+  AND trade_date BETWEEN '2019-06-01' AND '2019-06-30'
+ORDER BY trade_date ASC;
+```
 </script>
 
     <script>
