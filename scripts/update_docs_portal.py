@@ -36,11 +36,39 @@ DOMAIN_TITLES = {
     "other": "其他业务模块"
 }
 
+CATEGORIES = {
+    "design_reviews": "📋 需求设计与技术评审 (Design & Reviews)",
+    "plans_tasks": "🛠️ 实施方案与任务分解 (Plans & Tasks)",
+    "reports_walkthroughs": "📊 验证与验收报告 (Reports & Walkthroughs)",
+    "trackers": "✅ 交付清单与状态跟踪 (Trackers & Done Lists)",
+    "knowledge_base": "📚 知识与避坑技术库 (Knowledge Base)",
+    "other": "📂 其它文档资产 (Other Assets)"
+}
+
 class PortalManager:
     def __init__(self):
         self.services = []
         self.all_docs = []
         self.kb_docs = [] # To hold *.kb.html, *.pitfall.html, *.summary.html
+
+    def _classify_doc(self, doc):
+        """Classify document by its path and filename patterns."""
+        if doc["is_kb"]:
+            return "knowledge_base"
+            
+        filename_lower = doc["filename"].lower()
+        parts = [p.lower() for p in doc["path"].parts]
+        
+        if "design" in parts or "review" in filename_lower or "draft" in filename_lower:
+            return "design_reviews"
+        elif "plan" in filename_lower or "task" in filename_lower:
+            return "plans_tasks"
+        elif "report" in filename_lower or "walkthrough" in filename_lower or "conclusion" in filename_lower:
+            return "reports_walkthroughs"
+        elif "done-list" in filename_lower or "done_list" in filename_lower or "done" in filename_lower:
+            return "trackers"
+        else:
+            return "other"
 
     def _extract_title_from_html(self, file_path):
         """Extract title from HTML title tag or h1 tag."""
@@ -284,38 +312,50 @@ class PortalManager:
             f.write(full_html)
 
     def render_local(self):
-        """Render local index.html for each microservice."""
+        """Render local index.html for each microservice grouped by category."""
         for svc in self.services:
             local_index = svc["path"] / "docs" / "index.html"
             local_index.parent.mkdir(parents=True, exist_ok=True)
             
             # Combine svc standard docs with relevant KB docs
-            svc_kb = [d for d in self.kb_docs if d["service"] == svc["name"].upper()]
+            svc_kb = [d for d in self.kb_docs if svc["path"] in d["path"].parents]
             combined_docs = svc_kb + svc["docs"]
-            combined_docs.sort(key=lambda x: x["date"], reverse=True)
-
-            doc_items_html = ""
-            for doc in combined_docs:
-                rel_path = os.path.relpath(doc["path"], svc["path"] / "docs")
-                status_suffix = " ⚠️ [已废弃/过期]" if doc["deprecated"] else ""
-                
-                tag = doc["service"].upper()
-                if doc["is_kb"]:
-                    type_badges = {"kb": "最佳实践", "pitfall": "排障避坑", "summary": "阶段总结"}
-                    tag += f" · {type_badges.get(doc['kb_type'], 'KB')}"
-                
-                doc_items_html += DOC_ITEM_TEMPLATE.format(
-                    url=rel_path.replace("\\", "/"),
-                    date=doc["date"],
-                    tag=tag + status_suffix,
-                    title=doc["title"]
-                )
             
-            list_html = DOC_LIST_TEMPLATE.format(items=doc_items_html)
-            content_html = SECTION_TEMPLATE.format(
-                title=f"{svc['name'].upper()} 模块文档与技术资产归档",
-                body=list_html
-            )
+            # Group documents by category
+            grouped_docs = {cat: [] for cat in CATEGORIES.keys()}
+            for doc in combined_docs:
+                cat = self._classify_doc(doc)
+                grouped_docs[cat].append(doc)
+                
+            content_html = ""
+            for cat, docs in grouped_docs.items():
+                if not docs:
+                    continue
+                # Sort by date descending
+                docs.sort(key=lambda x: x["date"], reverse=True)
+                
+                doc_items_html = ""
+                for doc in docs:
+                    rel_path = os.path.relpath(doc["path"], svc["path"] / "docs")
+                    status_suffix = " ⚠️ [已废弃/过期]" if doc["deprecated"] else ""
+                    
+                    tag = doc["service"].upper()
+                    if doc["is_kb"]:
+                        type_badges = {"kb": "最佳实践", "pitfall": "排障避坑", "summary": "阶段总结"}
+                        tag += f" · {type_badges.get(doc['kb_type'], 'KB')}"
+                    
+                    doc_items_html += DOC_ITEM_TEMPLATE.format(
+                        url=rel_path.replace("\\", "/"),
+                        date=doc["date"],
+                        tag=tag + status_suffix,
+                        title=doc["title"]
+                    )
+                
+                list_html = DOC_LIST_TEMPLATE.format(items=doc_items_html)
+                content_html += SECTION_TEMPLATE.format(
+                    title=CATEGORIES[cat],
+                    body=list_html
+                )
             
             # Use relative path back to global index
             rel_to_hub = os.path.relpath(GLOBAL_INDEX, svc["path"] / "docs")

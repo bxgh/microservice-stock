@@ -1,26 +1,26 @@
 [
   {
-    "title": "💡 A股盘后数据自愈修复与三级校验最佳实践",
-    "path": "scf-collector/docs/features/kline_validation/implementation_logs/E12/triple_source_repair.kb.html",
-    "type": "kb",
-    "service": "KLINE_VALIDATION",
-    "last_modified": "2026-05-17 16:28",
-    "deprecated": false
-  },
-  {
-    "title": "⚠️ Epic E12 K线质量保障踩坑与排障决策记录",
+    "title": "Epic E12 K线质量保障踩坑与排障决策记录",
     "path": "scf-collector/docs/features/kline_validation/implementation_logs/E12/kline_audit_troubleshoot.pitfall.html",
     "type": "pitfall",
     "service": "KLINE_VALIDATION",
-    "last_modified": "2026-05-17 16:27",
+    "last_modified": "2026-05-17 17:21",
     "deprecated": false
   },
   {
-    "title": "🚀 A股盘后数据质量保障体系 (Epic E12) 阶段性总结",
+    "title": "A股盘后数据质量保障体系 (Epic E12) 阶段性总结",
     "path": "scf-collector/docs/features/kline_validation/implementation_logs/E12/kline_healing.summary.html",
     "type": "summary",
     "service": "KLINE_VALIDATION",
-    "last_modified": "2026-05-17 16:27",
+    "last_modified": "2026-05-17 17:21",
+    "deprecated": false
+  },
+  {
+    "title": "A股盘后数据自愈修复与三级校验最佳实践",
+    "path": "scf-collector/docs/features/kline_validation/implementation_logs/E12/triple_source_repair.kb.html",
+    "type": "kb",
+    "service": "KLINE_VALIDATION",
+    "last_modified": "2026-05-17 17:21",
     "deprecated": false
   },
   {
@@ -28,7 +28,7 @@
     "path": "scf-collector/docs/features/kline_management/implementation_logs/E4/S1/high_performance_db_backfill.kb.html",
     "type": "kb",
     "service": "KLINE_MANAGEMENT",
-    "last_modified": "2026-05-17 16:20",
+    "last_modified": "2026-05-17 17:21",
     "deprecated": false
   },
   {
@@ -36,7 +36,15 @@
     "path": "scf-collector/docs/features/kline_management/implementation_logs/E4/S1/factor_duplicate_pollution.pitfall.html",
     "type": "pitfall",
     "service": "KLINE_MANAGEMENT",
-    "last_modified": "2026-05-17 16:20",
+    "last_modified": "2026-05-17 17:21",
+    "deprecated": false
+  },
+  {
+    "title": "日线表内嵌复权因子设计方案",
+    "path": "docs/design/复权因子/Adjfactor-in-klineDaily.html",
+    "type": "standard",
+    "service": "GLOBAL",
+    "last_modified": "2026-05-17 17:21",
     "deprecated": false
   },
   {
@@ -44,7 +52,15 @@
     "path": "scf-collector/docs/done-list-tables.html",
     "type": "standard",
     "service": "scf-collector",
-    "last_modified": "2026-05-17 16:21",
+    "last_modified": "2026-05-17 17:21",
+    "deprecated": false
+  },
+  {
+    "title": "日线表内嵌复权因子设计方案",
+    "path": "scf-collector/docs/features/kline_management/design/Adjfactor-in-klineDaily.html",
+    "type": "standard",
+    "service": "KLINE_MANAGEMENT",
+    "last_modified": "2026-05-17 17:21",
     "deprecated": false
   },
   {
@@ -52,7 +68,55 @@
     "path": "scf-collector/docs/features/kline_management/implementation_logs/E4/S1/API.html",
     "type": "standard",
     "service": "KLINE_MANAGEMENT",
-    "last_modified": "2026-05-17 16:20",
+    "last_modified": "2026-05-17 17:21",
+    "deprecated": false
+  },
+  {
+    "title": "实施方案: [E4-S1] 跨源前复权价格一致性校验 (100只股票全量历史审计)",
+    "path": "scf-collector/docs/features/kline_management/implementation_logs/E4/S1/implementation_plan.html",
+    "type": "standard",
+    "service": "KLINE_MANAGEMENT",
+    "last_modified": "2026-05-17 17:21",
+    "deprecated": false
+  },
+  {
+    "title": "验收报告: [E4-S1] 跨源前复权价格一致性校验与动态视图发布",
+    "path": "scf-collector/docs/features/kline_management/implementation_logs/E4/S1/walkthrough.html",
+    "type": "standard",
+    "service": "KLINE_MANAGEMENT",
+    "last_modified": "2026-05-17 17:21",
+    "deprecated": false
+  },
+  {
+    "title": "[E2] 历史数据回填 - 复权因子内嵌",
+    "path": "scf-collector/docs/features/kline_management/implementation_logs/E2/S1/implementation_plan.html",
+    "type": "standard",
+    "service": "KLINE_MANAGEMENT",
+    "last_modified": "2026-05-17 17:21",
+    "deprecated": false
+  },
+  {
+    "title": "task",
+    "path": "scf-collector/docs/features/kline_management/implementation_logs/E2/S1/task.html",
+    "type": "standard",
+    "service": "KLINE_MANAGEMENT",
+    "last_modified": "2026-05-17 17:21",
+    "deprecated": false
+  },
+  {
+    "title": "实施日志: [E2-S1] 因子 Forward-Fill 回填",
+    "path": "scf-collector/docs/features/kline_management/implementation_logs/E2/S1/walkthrough.html",
+    "type": "standard",
+    "service": "KLINE_MANAGEMENT",
+    "last_modified": "2026-05-17 17:21",
+    "deprecated": false
+  },
+  {
+    "title": "实施方案: [E3-S1] 每日 K 线与复权因子采集任务调整",
+    "path": "scf-collector/docs/features/kline_management/implementation_logs/E3/S1/implementation_plan.html",
+    "type": "standard",
+    "service": "KLINE_MANAGEMENT",
+    "last_modified": "2026-05-17 17:21",
     "deprecated": false
   },
   {
@@ -64,43 +128,11 @@
     "deprecated": false
   },
   {
-    "title": "验收报告: [E4-S1] 跨源前复权价格一致性校验与动态视图发布",
-    "path": "scf-collector/docs/features/kline_management/implementation_logs/E4/S1/walkthrough.html",
-    "type": "standard",
-    "service": "KLINE_MANAGEMENT",
-    "last_modified": "2026-05-17 16:20",
-    "deprecated": false
-  },
-  {
-    "title": "实施方案: [E4-S1] 跨源前复权价格一致性校验 (100只股票全量历史审计)",
-    "path": "scf-collector/docs/features/kline_management/implementation_logs/E4/S1/implementation_plan.html",
-    "type": "standard",
-    "service": "KLINE_MANAGEMENT",
-    "last_modified": "2026-05-17 11:38",
-    "deprecated": false
-  },
-  {
     "title": "[E3-S1-T6] 复权因子内嵌合并与云端三层容灾自愈系统验收报告",
     "path": "scf-collector/docs/features/kline_management/implementation_logs/E3/S1/REPORT.html",
     "type": "standard",
     "service": "KLINE_MANAGEMENT",
     "last_modified": "2026-05-17 11:13",
-    "deprecated": false
-  },
-  {
-    "title": "实施方案: [E3-S1] 每日 K 线与复权因子采集任务调整",
-    "path": "scf-collector/docs/features/kline_management/implementation_logs/E3/S1/implementation_plan.html",
-    "type": "standard",
-    "service": "KLINE_MANAGEMENT",
-    "last_modified": "2026-05-17 11:04",
-    "deprecated": false
-  },
-  {
-    "title": "实施日志: [E2-S1] 因子 Forward-Fill 回填",
-    "path": "scf-collector/docs/features/kline_management/implementation_logs/E2/S1/walkthrough.html",
-    "type": "standard",
-    "service": "KLINE_MANAGEMENT",
-    "last_modified": "2026-05-17 10:01",
     "deprecated": false
   },
   {
@@ -149,38 +181,6 @@
     "type": "standard",
     "service": "KLINE_VALIDATION",
     "last_modified": "2026-05-15 23:09",
-    "deprecated": false
-  },
-  {
-    "title": "[E2] 历史数据回填 - 复权因子内嵌",
-    "path": "scf-collector/docs/features/kline_management/implementation_logs/E2/S1/implementation_plan.html",
-    "type": "standard",
-    "service": "KLINE_MANAGEMENT",
-    "last_modified": "2026-05-15 22:09",
-    "deprecated": false
-  },
-  {
-    "title": "task",
-    "path": "scf-collector/docs/features/kline_management/implementation_logs/E2/S1/task.html",
-    "type": "standard",
-    "service": "KLINE_MANAGEMENT",
-    "last_modified": "2026-05-15 22:09",
-    "deprecated": false
-  },
-  {
-    "title": "日线表内嵌复权因子设计方案",
-    "path": "docs/design/复权因子/Adjfactor-in-klineDaily.html",
-    "type": "standard",
-    "service": "GLOBAL",
-    "last_modified": "2026-05-15 21:57",
-    "deprecated": false
-  },
-  {
-    "title": "日线表内嵌复权因子设计方案",
-    "path": "scf-collector/docs/features/kline_management/design/Adjfactor-in-klineDaily.html",
-    "type": "standard",
-    "service": "KLINE_MANAGEMENT",
-    "last_modified": "2026-05-15 20:33",
     "deprecated": false
   },
   {
