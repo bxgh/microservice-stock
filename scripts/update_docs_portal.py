@@ -237,7 +237,7 @@ class PortalManager:
             svcs = domain_groups[domain_id]
             cards_html = ""
             for svc in svcs:
-                rel_url = os.path.relpath(svc["path"] / "index.html", GLOBAL_INDEX.parent)
+                rel_url = os.path.relpath(svc["path"] / "docs" / "index.html", GLOBAL_INDEX.parent)
                 # Count both standard docs and KB docs
                 total_docs = len(svc["docs"]) + sum(1 for d in self.kb_docs if d["service"] == svc["name"].upper())
                 cards_html += CARD_TEMPLATE.format(
@@ -286,7 +286,8 @@ class PortalManager:
     def render_local(self):
         """Render local index.html for each microservice."""
         for svc in self.services:
-            local_index = svc["path"] / "index.html"
+            local_index = svc["path"] / "docs" / "index.html"
+            local_index.parent.mkdir(parents=True, exist_ok=True)
             
             # Combine svc standard docs with relevant KB docs
             svc_kb = [d for d in self.kb_docs if d["service"] == svc["name"].upper()]
@@ -295,7 +296,7 @@ class PortalManager:
 
             doc_items_html = ""
             for doc in combined_docs:
-                rel_path = os.path.relpath(doc["path"], svc["path"])
+                rel_path = os.path.relpath(doc["path"], svc["path"] / "docs")
                 status_suffix = " ⚠️ [已废弃/过期]" if doc["deprecated"] else ""
                 
                 tag = doc["service"].upper()
@@ -317,7 +318,7 @@ class PortalManager:
             )
             
             # Use relative path back to global index
-            rel_to_hub = os.path.relpath(GLOBAL_INDEX, svc["path"])
+            rel_to_hub = os.path.relpath(GLOBAL_INDEX, svc["path"] / "docs")
             breadcrumb = '<div class="breadcrumb"><a href="{hub}">Project Hub</a> / {name}</div>'.format(
                 hub=rel_to_hub.replace("\\", "/"), 
                 name=svc['name'].upper()
