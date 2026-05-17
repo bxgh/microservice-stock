@@ -221,6 +221,69 @@ class TushareCollector(BaseCollector):
             return []
         return df.to_dict('records')
 
+    def _fetch_balancesheet_sync(self, ts_code: str) -> pd.DataFrame:
+        if not self.pro:
+            logger.error("[tushare] pro_api is not initialized.")
+            return pd.DataFrame()
+        try:
+            # report_type = '1' 表示合并报表
+            return self.pro.balancesheet(ts_code=ts_code, report_type='1')
+        except Exception as e:
+            logger.error(f"[tushare] fetch balancesheet error for {ts_code}: {e}")
+            raise
+
+    async def fetch_balancesheet(self, ts_code: str) -> List[Dict[str, Any]]:
+        """[E13-S4-T1] 异步获取资产负债表数据 (合并报表)"""
+        df = await asyncio.to_thread(self._fetch_balancesheet_sync, ts_code)
+        return df.to_dict('records') if df is not None and not df.empty else []
+
+    def _fetch_income_sync(self, ts_code: str) -> pd.DataFrame:
+        if not self.pro:
+            logger.error("[tushare] pro_api is not initialized.")
+            return pd.DataFrame()
+        try:
+            # report_type = '1' 表示合并报表
+            return self.pro.income(ts_code=ts_code, report_type='1')
+        except Exception as e:
+            logger.error(f"[tushare] fetch income error for {ts_code}: {e}")
+            raise
+
+    async def fetch_income(self, ts_code: str) -> List[Dict[str, Any]]:
+        """[E13-S4-T1] 异步获取利润表数据 (合并报表)"""
+        df = await asyncio.to_thread(self._fetch_income_sync, ts_code)
+        return df.to_dict('records') if df is not None and not df.empty else []
+
+    def _fetch_cashflow_sync(self, ts_code: str) -> pd.DataFrame:
+        if not self.pro:
+            logger.error("[tushare] pro_api is not initialized.")
+            return pd.DataFrame()
+        try:
+            # report_type = '1' 表示合并报表
+            return self.pro.cashflow(ts_code=ts_code, report_type='1')
+        except Exception as e:
+            logger.error(f"[tushare] fetch cashflow error for {ts_code}: {e}")
+            raise
+
+    async def fetch_cashflow(self, ts_code: str) -> List[Dict[str, Any]]:
+        """[E13-S4-T1] 异步获取现金流量表数据 (合并报表)"""
+        df = await asyncio.to_thread(self._fetch_cashflow_sync, ts_code)
+        return df.to_dict('records') if df is not None and not df.empty else []
+
+    def _fetch_fina_indicator_sync(self, ts_code: str) -> pd.DataFrame:
+        if not self.pro:
+            logger.error("[tushare] pro_api is not initialized.")
+            return pd.DataFrame()
+        try:
+            return self.pro.fina_indicator(ts_code=ts_code)
+        except Exception as e:
+            logger.error(f"[tushare] fetch fina_indicator error for {ts_code}: {e}")
+            raise
+
+    async def fetch_fina_indicator(self, ts_code: str) -> List[Dict[str, Any]]:
+        """[E13-S4-T1] 异步获取财务指标/关键比率数据"""
+        df = await asyncio.to_thread(self._fetch_fina_indicator_sync, ts_code)
+        return df.to_dict('records') if df is not None and not df.empty else []
+
     def normalize_data(self, df: pd.DataFrame, ts_code: str, trade_date: str) -> List[KLineModel]:
         results = []
         for _, row in df.iterrows():
