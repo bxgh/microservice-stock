@@ -18,14 +18,14 @@ TEMPLATE = """<!DOCTYPE html>
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Noto+Serif+SC:wght@400;700;900&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
     
-    <!-- Libraries -->
-    <script src="https://lib.baomitu.com/marked/11.1.1/marked.min.js"></script>
-    <link rel="stylesheet" href="https://lib.baomitu.com/github-markdown-css/5.5.0/github-markdown-dark.min.css">
-    <script src="https://lib.baomitu.com/mermaid/10.9.0/mermaid.min.js"></script>
+    <!-- Local Offline Libraries -->
+    <script src="{rel_marked_js}"></script>
+    <link rel="stylesheet" href="{rel_github_css}">
+    <script src="{rel_mermaid_js}"></script>
     
-    <!-- Syntax Highlighting -->
-    <link rel="stylesheet" href="https://lib.baomitu.com/highlight.js/11.9.0/styles/tokyo-night-dark.min.css">
-    <script src="https://lib.baomitu.com/highlight.js/11.9.0/highlight.min.js"></script>
+    <!-- Syntax Highlighting (Local) -->
+    <link rel="stylesheet" href="{rel_highlight_css}">
+    <script src="{rel_highlight_js}"></script>
     
     <style>
         :root {
@@ -393,11 +393,31 @@ def main():
     
     date_str = datetime.datetime.now().strftime("%Y-%m-%d %H:%M")
     
-    html_content = TEMPLATE.replace('{title}', display_title)\
-                           .replace('{display_title}', display_title)\
-                           .replace('{service}', service_name)\
-                           .replace('{date}', date_str)\
-                           .replace('__MD_CONTENT__', md_content)
+    # Calculate relative paths to local assets
+    project_root = Path(__file__).parent.parent.resolve()
+    assets_js = project_root / "docs" / "assets" / "js"
+    assets_css = project_root / "docs" / "assets" / "css"
+    html_dir = output_path.parent.resolve()
+    
+    rel_marked_js = os.path.relpath(assets_js / "marked.min.js", html_dir).replace('\\', '/')
+    rel_mermaid_js = os.path.relpath(assets_js / "mermaid.min.js", html_dir).replace('\\', '/')
+    rel_highlight_js = os.path.relpath(assets_js / "highlight.min.js", html_dir).replace('\\', '/')
+    
+    rel_github_css = os.path.relpath(assets_css / "github-markdown-dark.css", html_dir).replace('\\', '/')
+    rel_highlight_css = os.path.relpath(assets_css / "tokyo-night-dark.min.css", html_dir).replace('\\', '/')
+    
+    html_content = TEMPLATE.format(
+        title=display_title,
+        display_title=display_title,
+        service=service_name,
+        date=date_str,
+        md_content=md_content,
+        rel_marked_js=rel_marked_js,
+        rel_mermaid_js=rel_mermaid_js,
+        rel_highlight_js=rel_highlight_js,
+        rel_github_css=rel_github_css,
+        rel_highlight_css=rel_highlight_css
+    )
     
     with open(output_path, 'w', encoding='utf-8') as f:
         f.write(html_content)

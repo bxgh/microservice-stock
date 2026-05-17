@@ -79,6 +79,7 @@
 在正式开始任何 Story 的开发前，必须在 `implementation_plan.md` 中完成认证：
 - [ ] **需求解析**: 3句话描述核心逻辑。
 - [ ] **结构化设计**: 必须使用 `epic-story-doc` 生成 `draft_E{N}.{md,json}` 并存放于微服务 `docs/` 下。
+- [ ] **状态对齐**: 若本 Epic 已有前置 Story 完结，必须前置读取并完全对齐 `state_E{N}.json` 状态文件以恢复环境上下文（参考 5.7.8 节）。
 - [ ] **依赖认证**: 查实 `TABLES_INDEX.md` 及环境连通性。
 - [ ] **角色激活**: 显式声明激活的角色（参考 `docs/architecture/agent-skill-rules/ROLES.md`）。
 
@@ -95,7 +96,7 @@
 ### 5.3 验证“真源”准则
 - **物理查验**: 必须通过 `docker exec` 或 SQL 直连数据库确认真实记录，严禁盲目信任 API 返回值。
 - **存证要求**: `walkthrough.md` 必须包含真实的 SQL 结果块或日志片段。
-- **交付物闭环**: 每一项 Story (S) 开发完成后，必须在对应的 `implementation_logs/E{N}/S{M}/` 目录下生成 `REPORT.html` (技术报告/HTML版) 及 `API.md` (如有接口变更)。
+- **交付物闭环**: 每一项 Story (S) 开发完成后，必须在对应的 `implementation_logs/E{N}/S{M}/` 目录下生成 `REPORT.html` (技术报告/HTML版) 及 `API.md` (如有接口变更)。**同时，必须在 `implementation_logs/E{N}/` 目录下增量更新或新建 `state_E{N}.json` 状态存证文件**，以机器可读（AI-Native）的结构化形式记录当前物理产出与下游交接备注。
 
 ### 5.4 数据质量闭环 (QC Feedback Loop)
 
@@ -158,8 +159,15 @@
    - **过期强打标机制**: 一旦某历史文档（`*.pitfall.md` / `*.kb.md`）中的解决方案被新系统设计彻底推翻、重构或废弃，**必须**在该历史文档顶部以 GitHub Alerts 语法标记 `> [!WARNING] 本文档描述的方案/Bug 已在 E{X}-S{Y} 中被重构/废弃，最新方案参考 [新文档路径](file:///...)`。
    - **自动过滤机制**: 自动化门户更新脚本 `scripts/update_docs_portal.py` 在扫描发现包含 `> [!WARNING] *废弃*` 或 `*过期*` 标识的文档时，必须在 AI 友好索引 `docs_portal_index.json` 中自动将其标记为 `deprecated: true` 并排除在活跃知识库列表之外，防止 AI Agent 误吸入过时信息。
 
----
+8. **AI-to-AI 跨会话增量状态交接协议 (AI-to-AI Session Handoff Specification)**:
+   - **必要性**: 同一个 Epic 下的不同 Story 极可能跨越不同的对话会话（Chat Session）甚至由不同的 AI Agent 实例承接开发。由于 AI 本身无法继承历史会话的运行内存，依靠纯人类文档（Markdown）交接容易造成“上下文稀释”和状态盲区。
+   - **规范要求**: 在微服务目录 `docs/features/{feature_name}/implementation_logs/E{N}/` 下，必须建立且仅建立一个累加增量更新的状态文件 **`state_E{N}.json`**。
+   - **交接动作**: 
+     - **Story 实施前**: 必须将 `state_E{N}.json` 作为“唯一环境真源”读取并同步至系统内存，完成状态对齐。
+     - **Story 完结时**: 必须以结构化 JSON 对当前交付进行存证，增量写入已交付的物理列、新增接口以及后续 Story 实施的强置前置条件与明确交接备注（`handoff_notes`）。
+   - **数据结构定义**: 必须严格包含 `epic_id`、`last_updated`、`current_stage`、`completed_stories` (包含已交付物理资产及 downstream notes)、`active_system_state` 以及 `next_story_tasks` 等核心字段。
 
+---
 ## 6. 反模式清单 (自检)
 
 - ❌ 字段命名用 `stock_code` / `dt` (应为 `ts_code` / `trade_date`)
@@ -190,3 +198,5 @@
 | 2026-05-15 | v1.8 | 文档门户化: 引入 HTML 文档导航系统，要求所有报告产出 HTML 版并同步至 Portal。 |
 | 2026-05-15 | v1.9 | **SOP 闭环化**: 强制要求 Epic-Story 设计评审循环，实现全局+局部双级门户自动化。 |
 | 2026-05-17 | v2.0 | **敏捷与沉淀**: 优化临时需求免审通道，确立知识文档双轨后缀(*.kb.md/*.pitfall.md)，引入 Epic 终结总结、迭代演进目录及 AI-Native 自动索引规范。 |
+| 2026-05-17 | v2.1 | **交接标准化**: 引入 AI-to-AI 跨会话增量状态交接规范，在 implementation_logs/E{N}/ 下引入 state_E{N}.json 状态文件实现 Story 间机器级无缝衔接。 |
+
