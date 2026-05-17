@@ -405,19 +405,17 @@ def main():
     
     rel_github_css = os.path.relpath(assets_css / "github-markdown-dark.css", html_dir).replace('\\', '/')
     rel_highlight_css = os.path.relpath(assets_css / "tokyo-night-dark.min.css", html_dir).replace('\\', '/')
-    
-    html_content = TEMPLATE.format(
-        title=display_title,
-        display_title=display_title,
-        service=service_name,
-        date=date_str,
-        md_content=md_content,
-        rel_marked_js=rel_marked_js,
-        rel_mermaid_js=rel_mermaid_js,
-        rel_highlight_js=rel_highlight_js,
-        rel_github_css=rel_github_css,
-        rel_highlight_css=rel_highlight_css
-    )
+    html_content = TEMPLATE
+    html_content = html_content.replace("{title}", display_title)
+    html_content = html_content.replace("{display_title}", display_title)
+    html_content = html_content.replace("{service}", service_name)
+    html_content = html_content.replace("{date}", date_str)
+    html_content = html_content.replace("__MD_CONTENT__", md_content)
+    html_content = html_content.replace("{rel_marked_js}", rel_marked_js)
+    html_content = html_content.replace("{rel_mermaid_js}", rel_mermaid_js)
+    html_content = html_content.replace("{rel_highlight_js}", rel_highlight_js)
+    html_content = html_content.replace("{rel_github_css}", rel_github_css)
+    html_content = html_content.replace("{rel_highlight_css}", rel_highlight_css)
     
     with open(output_path, 'w', encoding='utf-8') as f:
         f.write(html_content)
