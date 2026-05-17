@@ -33,8 +33,8 @@ class Backfiller:
         self.cursor = self.conn.cursor()
 
     def get_all_ts_codes(self):
-        logger.info("Fetching list of all stocks from stock_basic_info...")
-        sql = "SELECT ts_code FROM stock_basic_info"
+        logger.info("Fetching list of all stocks from stock_kline_daily...")
+        sql = "SELECT DISTINCT ts_code FROM stock_kline_daily"
         self.cursor.execute(sql)
         return [row[0] for row in self.cursor.fetchall()]
 
