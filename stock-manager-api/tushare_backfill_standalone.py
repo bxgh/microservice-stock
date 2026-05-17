@@ -19,7 +19,7 @@ logging.basicConfig(
 )
 logger = logging.getLogger("StandaloneBackfill")
 
-# 环境参数 (适配 .env 中的 DB_* 命名)
+# 环境参数
 DB_HOST = os.getenv("DB_HOST", "localhost")
 DB_PORT = int(os.getenv("DB_PORT", 3306))
 DB_USER = os.getenv("DB_USER", "root")
@@ -31,17 +31,22 @@ THROTTLE_SLEEP = 1.2
 TASK_NAME = 'full_market_backfill'
 
 async def get_db_conn():
-    logger.info(f"Connecting to DB: {DB_HOST}:{DB_PORT}/{DB_NAME}")
-    return await aiomysql.connect(
-        host=DB_HOST, port=DB_PORT,
-        user=DB_USER, password=DB_PASSWORD,
-        db=DB_NAME, autocommit=True
-    )
+    """获取数据库连接"""
+    try:
+        return await aiomysql.connect(
+            host=DB_HOST, port=DB_PORT,
+            user=DB_USER, password=DB_PASSWORD,
+            db=DB_NAME, autocommit=True
+        )
+    except Exception as e:
+        logger.error(f"数据库连接失败: {e}")
+        return None
 
 async def get_trading_days(conn):
+    """获取所有交易日 (兼容 SSE 和 SH 口径)"""
     async with conn.cursor(aiomysql.DictCursor) as cur:
-        # 兼容 trade_cal 表
-        await cur.execute("SELECT cal_date FROM trade_cal WHERE is_open=1 AND exchange='SSE' ORDER BY cal_date ASC")
+        # 去掉 exchange='SSE' 的限制，使用 DISTINCT 确保唯一性
+        await cur.execute("SELECT DISTINCT cal_date FROM trade_cal WHERE is_open=1 ORDER BY cal_date ASC")
         rows = await cur.fetchall()
         return [r['cal_date'].strftime('%Y%m%d') if isinstance(r['cal_date'], datetime.date) else str(r['cal_date']).replace('-', '') for r in rows]
 
@@ -50,31 +55,46 @@ async def run_backfill():
     pro = ts.pro_api(TUSHARE_TOKEN)
     
     conn = await get_db_conn()
+    if not conn:
+        return
+
     all_days = await get_trading_days(conn)
     total_days = len(all_days)
     
-    logger.info(f">>> 启动独立回填引擎 | 目标日期: {total_days} <<<")
+    # 获取进度
+    async with conn.cursor(aiomysql.DictCursor) as cur:
+        await cur.execute("SELECT current_code FROM sync_progress WHERE task_name=%s", (TASK_NAME,))
+        prog_res = await cur.fetchone()
+        last_sync_day = prog_res['current_code'] if prog_res else "00000000"
+    
+    logger.info(f">>> 启动独立回填引擎 v1.5 (修复日历口径) | 目标日期: {total_days} | 上次进度: {last_sync_day} <<<")
 
     for idx, day in enumerate(all_days):
-        async with conn.cursor(aiomysql.DictCursor) as cur:
-            await cur.execute("SELECT status FROM sync_progress WHERE task_name=%s AND current_code=%s", (TASK_NAME, day))
-            res = await cur.fetchone()
-            if res and res['status'] == 'completed':
-                continue
-
-        biz_date = f"{day[:4]}-{day[4:6]}-{day[6:]}"
-        
-        # 进度条
-        progress = (idx + 1) / total_days
-        bar = '█' * int(20 * progress) + '-' * (20 - int(20 * progress))
-        print(f"\r进度: |{bar}| {progress*100:.1f}% [{idx+1}/{total_days}] 处理 {biz_date}", end="")
+        if day <= last_sync_day:
+            continue
 
         try:
-            # 抓取
+            # 1. 检查连接
+            try:
+                await conn.ping()
+            except:
+                logger.warning("数据库连接丢失，正在尝试重连...")
+                conn = await get_db_conn()
+                if not conn:
+                    await asyncio.sleep(10)
+                    continue
+
+            biz_date = f"{day[:4]}-{day[4:6]}-{day[6:]}"
+            
+            # 2. 打印进度条
+            progress = (idx + 1) / total_days
+            bar = '█' * int(20 * progress) + '-' * (20 - int(20 * progress))
+            print(f"\r进度: |{bar}| {progress*100:.1f}% [{idx+1}/{total_days}] 处理 {biz_date}", end="", flush=True)
+
+            # 3. 抓取
             df = pro.daily(trade_date=day)
             
             if not df.empty:
-                # 转换与批量入库
                 records = []
                 for _, row in df.iterrows():
                     records.append((
@@ -95,23 +115,28 @@ async def run_backfill():
                 async with conn.cursor() as cur:
                     await cur.executemany(sql_insert, records)
                 
-                # 记录进度
+                # 4. 更新进度
                 sql_prog = """
                 INSERT INTO sync_progress (task_name, current_code, status, last_index, total_count)
-                VALUES (%s, %s, 'completed', %s, %s)
-                ON DUPLICATE KEY UPDATE status='completed', last_index=%s, updated_at=CURRENT_TIMESTAMP
+                VALUES (%s, %s, %s, %s, %s)
+                ON DUPLICATE KEY UPDATE 
+                    status=VALUES(status), 
+                    current_code=VALUES(current_code),
+                    last_index=VALUES(last_index), 
+                    updated_at=CURRENT_TIMESTAMP
                 """
                 async with conn.cursor() as cur:
-                    await cur.execute(sql_prog, (TASK_NAME, day, idx + 1, total_days, idx + 1))
+                    await cur.execute(sql_prog, (TASK_NAME, day, 'completed', idx + 1, total_days))
             
             await asyncio.sleep(THROTTLE_SLEEP)
             
         except Exception as e:
-            print(f"\nError on {day}: {e}")
-            await asyncio.sleep(5)
+            print(f"\n[Error] {day} 发生异常: {e}")
+            await asyncio.sleep(10)
 
-    conn.close()
-    print("\n任务完成")
+    if conn:
+        conn.close()
+    logger.info("\n>>> 全量回填任务圆满结束 <<<")
 
 if __name__ == "__main__":
     if not TUSHARE_TOKEN:

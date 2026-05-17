@@ -1,55 +1,30 @@
-# Implementation Plan - E12-S1: 全量数据像素级对账方案 (修订版)
+# E12-S1 实施计划：全量完整性空洞审计
 
-## 目标描述
-针对 1991 年至今的 A 股 K 线与复权因子数据，建立一套高性能、可中断、高可见性的全量巡检体系。通过将 11,000+ 个交易日任务化，实现“日级”进度管理与“多进程”并行加速，彻底净化历史存量脏数据。
+本 Story 旨在对重采后的 2000 万+ 条 K 线数据进行彻底的完整性检查。我们将通过“理论应有量”与“数据库实有量”的对账，发现并记录所有缺失的 K 线数据。
 
-## 用户评审要求
+## 用户审核
+
 > [!IMPORTANT]
-> 本方案引入了 **日级进度表 (Checkpoint Table)** 概念，巡检不再依赖简单的 CLI 参数，而是通过数据库持久化每一个交易日的审计状态。这需要执行一次 DDL 变更。
+> **资源开销预警**：全量对账涉及对 1990 年至今所有个股上市状态的计算。为了不影响生产库性能，审计脚本将采用 **Chunking (分年/分月)** 模式执行，并在腾讯云 Docker 环境中运行。
 
-> [!WARNING]
-> 并行执行将显著增加 Tushare 积分消耗速率。建议在积分充足（>2000）或非交易时段执行。
+## 待办任务
 
-## 待决策问题
-1. **并发限制**：是否限制最大并行 Worker 数量（建议 3-5 个）？
-2. **审计范围**：是否需要优先审计特定年份（如 2024 年）？
+### [L2] 完整性审计器开发
 
----
+#### [NEW] [check_kline_holes.py](file:///home/ubuntu/microservice-stock/scf-collector/scripts/check_kline_holes.py)
+实现核心审计逻辑：
+- 加载交易日历与个股基础信息。
+- 计算每日理论股票池。
+- 执行快速 `GROUP BY` 筛查。
+- 执行深度 `set_diff` 审计，找出缺失 `ts_code`。
 
-## 拟定变更
-
-### 1. 基础设施 (Infrastructure)
-
-#### [NEW] [migrations/20260516_add_audit_progress_table.sql](file:///home/ubuntu/microservice-stock/migrations/20260516_add_audit_progress_table.sql)
-- 创建 `meta_audit_progress_day` 表：
-  - `cal_date`: DATE (PK)
-  - `audit_status`: ENUM('PENDING', 'RUNNING', 'COMPLETED', 'FAILED')
-  - `error_count`: INT (审计出的异常数)
-  - `last_run`: TIMESTAMP
-
-### 2. 巡检引擎重构 (Audit Engine Refactoring)
-
-#### [MODIFY] [kline_integrity_checker.py](file:///home/ubuntu/microservice-stock/scf-collector/scripts/audit/kline_integrity_checker.py)
-- **调度逻辑重写**：
-  - 从 `meta_audit_progress_day` 中动态认领 `PENDING` 任务。
-  - 支持分布式执行，利用 `SELECT ... FOR UPDATE SKIP LOCKED` 实现多进程安全。
-- **三阶探测集成**：
-  - 保留并优化“计数 -> 基准 -> 像素”三阶探测逻辑，作为单日审计的标准流程。
-
-### 3. 调度工具 (Orchestrator)
-
-#### [NEW] [scripts/audit/audit_orchestrator.py](file:///home/ubuntu/microservice-stock/scf-collector/scripts/audit/audit_orchestrator.py)
-- **初始化工具**：一次性将 1991 年至今的交易日填入进度表。
-- **监控面板**：实时统计全量进度的百分比、预计剩余时间 (ETA)。
-
----
+#### [NEW] [REPORT.html](file:///home/ubuntu/microservice-stock/scf-collector/docs/features/kline_validation/implementation_logs/E12/S1/REPORT.html)
+动态生成的审计报告，展示空洞分布热力图。
 
 ## 验证计划
 
-### 自动化测试
-- **任务分配测试**：启动 2 个 Worker，验证是否会出现重复审计同一天的情况。
-- **异常恢复测试**：在 Worker 运行时强杀，验证 `RUNNING` 状态的任务是否能正确回归或重置。
+### 自动化验证
+- 运行 `pytest tests/test_integrity_checker.py`：验证理论计数的正确性（选取已知停牌或退市个股作为测试用例）。
 
-### 手动校验
-- **2024 专项审计**：优先完成 2024 年的审计，对比修复前后的数据准确率。
-- **报告验证**：确保 `REPORT.html` 能够实时拉取进度表中的聚合数据。
+### 手动核验
+- 随机抽取报告中标记为“空洞”的一个 `ts_code` + `trade_date`，在 Tushare 官方网页版或 AkShare 接口中核实其真实性（排除停牌干扰）。
