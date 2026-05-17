@@ -2,6 +2,8 @@
 
 import os
 import datetime
+import json
+import re
 from pathlib import Path
 from config.portal_template import (
     HTML_TEMPLATE, SECTION_TEMPLATE, GRID_TEMPLATE, 
@@ -11,6 +13,7 @@ from config.portal_template import (
 # Configuration
 PROJECT_ROOT = Path(__file__).parent.parent
 GLOBAL_INDEX = PROJECT_ROOT / "docs" / "index.html"
+GLOBAL_AI_INDEX = PROJECT_ROOT / "docs" / "docs_portal_index.json"
 IGNORE_DIRS = {".git", ".agent", ".agents", "scripts", "migrations", "scratch", "logs"}
 
 # Domain Mapping
@@ -37,6 +40,49 @@ class PortalManager:
     def __init__(self):
         self.services = []
         self.all_docs = []
+        self.kb_docs = [] # To hold *.kb.html, *.pitfall.html, *.summary.html
+
+    def _extract_title_from_html(self, file_path):
+        """Extract title from HTML title tag or h1 tag."""
+        try:
+            with open(file_path, "r", encoding="utf-8") as f:
+                content = f.read()
+                # Try finding h1 content
+                h1_match = re.search(r"<h1[^>]*>(.*?)</h1>", content, re.IGNORECASE | re.DOTALL)
+                if h1_match:
+                    title = h1_match.group(1).strip()
+                    # Clean up emoji and tags
+                    title = re.sub(r"<[^>]+>", "", title)
+                    return title
+                # Try title tag
+                title_match = re.search(r"<title[^>]*>(.*?)</title>", content, re.IGNORECASE)
+                if title_match:
+                    return title_match.group(1).strip()
+        except Exception:
+            pass
+        return file_path.name
+
+    def _check_deprecation(self, file_path):
+        """Check if document has been deprecated/warnings in its markdown counterpart or html."""
+        try:
+            # Check Markdown first if it exists
+            md_path = file_path.with_suffix(".md")
+            if md_path.exists():
+                with open(md_path, "r", encoding="utf-8") as f:
+                    # Only check the first 800 characters for deprecation alerts
+                    header = f.read(800)
+                    if "[!WARNING]" in header and ("已废弃" in header or "被重构" in header or "已废弃" in header or "已过期" in header or "本方案已在" in header):
+                        return True
+            
+            # Check HTML
+            with open(file_path, "r", encoding="utf-8") as f:
+                header = f.read(1500)
+                # Check for explicit warning text about deprecation
+                if "WARNING" in header and ("已废弃" in header or "被重构" in header or "已过期" in header or "本方案已在" in header):
+                    return True
+        except Exception:
+            pass
+        return False
 
     def _scan_html_in_dir(self, directory, tag):
         """Helper to scan HTML files in a directory."""
@@ -56,20 +102,43 @@ class PortalManager:
                             current_tag = parts[idx + 1].upper()
                     elif "domains" in parts:
                         idx = parts.index("domains")
-                        # domains 下通常是 domain/feature_name，提取 feature_name
                         if len(parts) > idx + 2:
                             current_tag = parts[idx + 2].upper()
                         elif len(parts) > idx + 1:
                             current_tag = parts[idx + 1].upper()
 
+                    # Check KB / Pitfall / Summary suffix
+                    is_kb = False
+                    kb_type = None
+                    if file.endswith(".kb.html"):
+                        is_kb = True
+                        kb_type = "kb"
+                    elif file.endswith(".pitfall.html"):
+                        is_kb = True
+                        kb_type = "pitfall"
+                    elif file.endswith(".summary.html"):
+                        is_kb = True
+                        kb_type = "summary"
+
+                    title = self._extract_title_from_html(full_path)
+                    deprecated = self._check_deprecation(full_path)
+
                     doc_entry = {
-                        "title": file,
+                        "title": title,
+                        "filename": file,
                         "path": full_path,
                         "service": current_tag,
-                        "date": mtime.strftime("%Y-%m-%d %H:%M")
+                        "date": mtime.strftime("%Y-%m-%d %H:%M"),
+                        "is_kb": is_kb,
+                        "kb_type": kb_type,
+                        "deprecated": deprecated
                     }
-                    docs.append(doc_entry)
-                    self.all_docs.append(doc_entry)
+                    
+                    if is_kb:
+                        self.kb_docs.append(doc_entry)
+                    else:
+                        docs.append(doc_entry)
+                        self.all_docs.append(doc_entry)
         return docs
 
     def scan(self):
@@ -98,12 +167,30 @@ class PortalManager:
                     service_info["docs"].sort(key=lambda x: x["date"], reverse=True)
                     self.services.append(service_info)
         
-        # Sort global docs by date descending
+        # Sort docs
         self.all_docs.sort(key=lambda x: x["date"], reverse=True)
+        self.kb_docs.sort(key=lambda x: x["date"], reverse=True)
+
+    def generate_ai_index(self):
+        """Generate high-density machine-friendly docs_portal_index.json."""
+        index_data = []
+        for doc in self.kb_docs + self.all_docs:
+            rel_path = os.path.relpath(doc["path"], PROJECT_ROOT).replace("\\", "/")
+            index_data.append({
+                "title": doc["title"],
+                "path": rel_path,
+                "type": doc["kb_type"] if doc["is_kb"] else "standard",
+                "service": doc["service"],
+                "last_modified": doc["date"],
+                "deprecated": doc["deprecated"]
+            })
+        
+        with open(GLOBAL_AI_INDEX, "w", encoding="utf-8") as f:
+            json.dump(index_data, f, ensure_ascii=False, indent=2)
+        print(f"Generated AI-Native Index: {GLOBAL_AI_INDEX}")
 
     def render_global(self):
-        """Render the main docs/index.html with Domain grouping."""
-        # Group services by domain
+        """Render the main docs/index.html with Domain grouping and KB library."""
         domain_groups = {}
         for svc in self.services:
             domain = svc["domain"]
@@ -113,6 +200,34 @@ class PortalManager:
 
         content_html = ""
         
+        # Render KB/Pitfall/Summary Section
+        if self.kb_docs:
+            kb_items_html = ""
+            for doc in self.kb_docs:
+                # Filter out deprecated in human view if requested, or show warning
+                status_suffix = " ⚠️ [已废弃/过期]" if doc["deprecated"] else ""
+                rel_url = os.path.relpath(doc["path"], GLOBAL_INDEX.parent)
+                
+                type_badges = {
+                    "kb": "最佳实践",
+                    "pitfall": "排障避坑",
+                    "summary": "阶段总结"
+                }
+                badge = type_badges.get(doc["kb_type"], "技术知识")
+                
+                kb_items_html += DOC_ITEM_TEMPLATE.format(
+                    url=rel_url.replace("\\", "/"),
+                    date=doc["date"],
+                    tag=f"{doc['service']} · {badge}{status_suffix}",
+                    title=doc["title"]
+                )
+            
+            kb_list_html = DOC_LIST_TEMPLATE.format(items=kb_items_html)
+            content_html += SECTION_TEMPLATE.format(
+                title="📚 知识与避坑技术库 (Knowledge Base)",
+                body=kb_list_html
+            )
+
         # Render Domains
         icons = ["☁️", "📊", "🛡️", "🔗", "🤖", "📈", "⚙️"]
         icon_idx = 0
@@ -123,11 +238,13 @@ class PortalManager:
             cards_html = ""
             for svc in svcs:
                 rel_url = os.path.relpath(svc["path"] / "index.html", GLOBAL_INDEX.parent)
+                # Count both standard docs and KB docs
+                total_docs = len(svc["docs"]) + sum(1 for d in self.kb_docs if d["service"] == svc["name"].upper())
                 cards_html += CARD_TEMPLATE.format(
                     url=rel_url.replace("\\", "/"),
                     icon=icons[icon_idx % len(icons)],
                     title=svc['name'].upper(),
-                    desc=f"包含 {len(svc['docs'])} 份文档与实施日志"
+                    desc=f"包含 {total_docs} 份设计文档、最佳实践与实施日志"
                 )
                 icon_idx += 1
             
@@ -150,7 +267,7 @@ class PortalManager:
         
         recent_list_html = DOC_LIST_TEMPLATE.format(items=doc_items_html)
         content_html += SECTION_TEMPLATE.format(
-            title="项目全局最新文档",
+            title="项目全局最新标准文档",
             body=recent_list_html
         )
 
@@ -171,19 +288,31 @@ class PortalManager:
         for svc in self.services:
             local_index = svc["path"] / "index.html"
             
+            # Combine svc standard docs with relevant KB docs
+            svc_kb = [d for d in self.kb_docs if d["service"] == svc["name"].upper()]
+            combined_docs = svc_kb + svc["docs"]
+            combined_docs.sort(key=lambda x: x["date"], reverse=True)
+
             doc_items_html = ""
-            for doc in svc["docs"]:
+            for doc in combined_docs:
                 rel_path = os.path.relpath(doc["path"], svc["path"])
+                status_suffix = " ⚠️ [已废弃/过期]" if doc["deprecated"] else ""
+                
+                tag = doc["service"].upper()
+                if doc["is_kb"]:
+                    type_badges = {"kb": "最佳实践", "pitfall": "排障避坑", "summary": "阶段总结"}
+                    tag += f" · {type_badges.get(doc['kb_type'], 'KB')}"
+                
                 doc_items_html += DOC_ITEM_TEMPLATE.format(
                     url=rel_path.replace("\\", "/"),
                     date=doc["date"],
-                    tag=doc["service"].upper(),
+                    tag=tag + status_suffix,
                     title=doc["title"]
                 )
             
             list_html = DOC_LIST_TEMPLATE.format(items=doc_items_html)
             content_html = SECTION_TEMPLATE.format(
-                title=f"{svc['name'].upper()} 模块文档归档",
+                title=f"{svc['name'].upper()} 模块文档与技术资产归档",
                 body=list_html
             )
             
@@ -196,8 +325,8 @@ class PortalManager:
             
             full_html = HTML_TEMPLATE.format(
                 brand=svc['name'].upper() + " Portal",
-                subtitle="Local documentation index",
-                title=f"{svc['name']} Docs",
+                subtitle="Local documentation index & Knowledge assets",
+                title=f"{svc['name']} Docs Portal",
                 breadcrumb=breadcrumb,
                 content=content_html,
                 timestamp=datetime.datetime.now().strftime("%Y-%m-%d %H:%M")
@@ -208,6 +337,7 @@ class PortalManager:
 
     def run(self):
         self.scan()
+        self.generate_ai_index()
         self.render_global()
         self.render_local()
         print(f"Generated global portal: {GLOBAL_INDEX}")
