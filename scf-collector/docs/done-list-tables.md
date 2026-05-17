@@ -27,10 +27,15 @@
 
 | 表名 | 描述 | 采集频率 | 状态 | 云函数名称 (物理 ID) |
 |---|---|---|---|---|
-| `ods_policy_info` | 政策原文数据表 | 实时/定期 (半小时) | 🟢 生产就绪 | `scf-policy-monitor` |
+| `ods_policy_info` | 政策原文数据表 | 半小时 (高频定时) | 🟢 生产就绪 | `stock-policy-collector` |
+| `dwd_policy_analysis` | [NEW] AI 措辞提炼与重要性度量明细表 | 5分钟定时队列 | 🟢 生产就绪 | `stock-policy-analyzer` |
+| `dwd_policy_sector_impact` | [NEW] 板块申万影响明细表 | 5分钟定时队列 | 🟢 生产就绪 | `stock-policy-analyzer` |
+| `meta_llm_daily_cost` | [NEW] 大模型天级计费审计防爆表 | 实时写入审计 | 🟢 生产就绪 | `stock-policy-analyzer` |
+| `dim_policy_keyword_sector` | [NEW] 行业敏感词行业匹配规则表 (配置表) | 静态只读 (23条种子灌入) | 🟢 生产就绪 | (系统静态维表) |
 
 ---
 **更新记录**:
+- 2026-05-17: [Epic E14-S2 v2] 政策解耦部署与云端 v13 补丁依赖层激活。将单体采集拆分为：`stock-policy-collector` (高频采集去重)、`stock-policy-analyzer` (并发乐观分布式锁、LIMIT 5 队列、LLM 智能研报主引擎)、`stock-policy-notifier` (微信简报、删除线 HTML side-by-side 响应式投研邮件推送)。编译打包 Version 13 物理补丁层（集成 `exceptiongroup` 关键异步底座包），完美解决 Python 3.10 Cloud 容器下的 `anyio`、`httpx` 及 `openai` 库多米诺骨牌式崩溃，全链路级联 Invoke 100% 远程调试通车！
 - 2026-05-17: [Epic E14-S1] 数据采集层建设。新建独立云函数 `scf-policy-monitor` 抓取多源 JSON/HTML 数据接口，入库 `ods_policy_info`，实现了 URL/MD5 双重去重，并完美对接了 ServerChan 微信通知与 SMTP 邮件警报。
 - 2026-05-16: [Epic E12] K线数据质量保障体系完工。上线 S1(理论空洞审计)、S2(影子源对账/物理校验) 及 S3(任务化自动修复)，实现全量历史数据 100% 物理合规。
 - 2026-05-17: [Epic E3] 复权因子内嵌合并与云端三层容灾自愈系统完工。将 `DailyAdjFactor` 前移至交易日 `09:25`（Cron: `0 25 9 * * * *`），避免因子拉取与日 K 线采集任务冲突。日线采集支持极速本地合并及 Tushare 实时补货的第二层自愈，盘后 17:00 自动执行第三层脏数据热修补，完全杜绝脏数据。
@@ -40,5 +45,6 @@
 - 2026-05-13: [Epic E8-S1] 复权因子存储重构...
 - 2026-05-13: [Epic E7] 增强采集可靠性。已实现 S3 (字段契约强制) 及 S4 (完整性熔断与 AkShare 全量备份接管)，校验时点 17:00。
 - 2026-05-12: 初始化清单，记录已上线的 5 张核心表。
+
 
 

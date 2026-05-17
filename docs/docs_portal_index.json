@@ -1,5 +1,21 @@
 [
   {
+    "title": "Epic E14-S2 A股宏观政策AI追踪系统阶段性完工总结",
+    "path": "scf-collector/docs/features/policy-tracker/implementation_logs/E14/S2/E14_S2.summary.html",
+    "type": "summary",
+    "service": "POLICY-TRACKER",
+    "last_modified": "2026-05-17 20:29",
+    "deprecated": false
+  },
+  {
+    "title": "Python 3.10 SCF 只读沙盒异步多米诺骨牌崩溃排障记录",
+    "path": "scf-collector/docs/features/policy-tracker/implementation_logs/E14/S2/tushare_anyio_exceptiongroup.pitfall.html",
+    "type": "pitfall",
+    "service": "POLICY-TRACKER",
+    "last_modified": "2026-05-17 20:29",
+    "deprecated": false
+  },
+  {
     "title": "📈 Epic 14 Story 1 宏观与监管政策多源采集阶段总结\n            阶段总结",
     "path": "scf-collector/docs/features/policy-tracker/implementation_logs/E14/S1/e14_s1_policy_acquisition.summary.html",
     "type": "summary",
@@ -53,6 +69,30 @@
     "type": "kb",
     "service": "KLINE_VALIDATION",
     "last_modified": "2026-05-17 17:19",
+    "deprecated": false
+  },
+  {
+    "title": "Epic E14-S2 宏观政策 AI 追踪系统异步事件与状态机接口契约",
+    "path": "scf-collector/docs/features/policy-tracker/implementation_logs/E14/S2/API.html",
+    "type": "standard",
+    "service": "POLICY-TRACKER",
+    "last_modified": "2026-05-17 20:28",
+    "deprecated": false
+  },
+  {
+    "title": "Epic E14-S2 A股宏观政策AI追踪分析系统",
+    "path": "scf-collector/docs/features/policy-tracker/implementation_logs/E14/S2/REPORT.html",
+    "type": "standard",
+    "service": "POLICY-TRACKER",
+    "last_modified": "2026-05-17 20:28",
+    "deprecated": false
+  },
+  {
+    "title": "Epic E14-S2 宏观政策 AI 智能分析系统技术评审记录",
+    "path": "scf-collector/docs/features/policy-tracker/reviews/E14_S2_review_record.html",
+    "type": "standard",
+    "service": "POLICY-TRACKER",
+    "last_modified": "2026-05-17 20:28",
     "deprecated": false
   },
   {

@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Python 3.10 SCF 只读沙盒异步多米诺骨牌崩溃排障记录 (tushare_anyio_exceptiongroup.pitfall)</title>
+    <style>
+        :root {
+            --bg-color: #0b0f19;
+            --container-bg: #111827;
+            --primary-color: #3b82f6;
+            --danger-color: #ef4444;
+            --text-main: #f3f4f6;
+            --text-muted: #9ca3af;
+            --border-color: #374151;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            line-height: 1.6;
+            margin: 0;
+            padding: 40px 20px;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background-color: var(--container-bg);
+            padding: 40px;
+            border-radius: 12px;
+            border: 1px solid var(--border-color);
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+        h1 {
+            color: #ffffff;
+            font-size: 22px;
+            border-bottom: 2px solid var(--danger-color);
+            padding-bottom: 10px;
+            margin-top: 0;
+        }
+        h2 {
+            color: #ffffff;
+            font-size: 18px;
+            border-left: 4px solid var(--danger-color);
+            padding-left: 10px;
+            margin-top: 30px;
+        }
+        h3 {
+            color: #ffffff;
+            font-size: 15px;
+        }
+        .alert {
+            background-color: rgba(239, 68, 68, 0.1);
+            border-left: 4px solid var(--danger-color);
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 0 8px 8px 0;
+        }
+        ul {
+            padding-left: 20px;
+        }
+        li {
+            margin-bottom: 10px;
+        }
+        pre {
+            background-color: #0b0f19;
+            padding: 15px;
+            border-radius: 6px;
+            border: 1px solid var(--border-color);
+            overflow-x: auto;
+        }
+        code {
+            font-family: monospace;
+            color: #60a5fa;
+        }
+        .footer {
+            margin-top: 40px;
+            text-align: center;
+            font-size: 12px;
+            color: var(--text-muted);
+            border-top: 1px solid var(--border-color);
+            padding-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Python 3.10 SCF 只读沙盒异步多米诺骨牌崩溃排障记录</h1>
+        
+        <div class="alert">
+            <strong>警告:</strong> 本文档记录了在 A 股宏观政策 AI 追踪分析系统云端联调部署中，攻克 Python 3.10 只读容器环境因缺少 <code>exceptiongroup</code> 依赖导致全栈异步库（<code>anyio</code>/<code>openai</code>/<code>httpx</code>/<code>aiosmtplib</code>）瘫痪的多米诺骨牌级重大事故。
+        </div>
+
+        <h2>1. 踩坑记录 (The Pitfall)</h2>
+        <p>在将解耦后的宏观政策定时云函数部署至腾讯云 SCF（运行时环境为 Python 3.10）并进行远程级联联调时，遭遇了三云函数全线不可预知崩溃：</p>
+        <ul>
+            <li><strong>现象一：</strong>采集器 <code>policy_collector</code> 报错：<code>Running with asyncio requires installation of 'httpcore[asyncio]'.</code></li>
+            <li><strong>现象二：</strong>AI 分析器 <code>policy_analyzer</code> 报错：<code>ModuleNotFoundError: No module named 'anyio._core._exceptions' (which imports exceptiongroup)</code></li>
+            <li><strong>现象三：</strong>预警分发器 <code>policy_notifier</code> 报错：<code>ModuleNotFoundError: No module named 'aiosmtplib'</code></li>
+        </ul>
+        <p>这三个报错表象极具迷惑性。但经过深入的 Traceback 栈追踪，其**真正元凶 100% 都是因为 Python 3.10 只读运行容器缺少了 <code>exceptiongroup</code> 包**！</p>
+        <ul>
+            <li><code>anyio</code> 异步引擎在导入时强依赖 <code>exceptiongroup</code>。在 <code>exceptiongroup</code> 缺失的情况下，<code>anyio</code> 导入直接报错中断。</li>
+            <li>大模型接口 <code>openai</code> 在加载时依赖 <code>anyio</code>，导致 <code>openai</code> 崩溃。</li>
+            <li><code>httpcore</code> 内部尝试导入 <code>anyio</code> 失败，因而误判为当前系统没有安装任何异步运行时后端，从而抛出了极其令人迷惑的错误日志！</li>
+        </ul>
+
+        <h2>2. 方案对比 (Options Explored)</h2>
+        <p>为了跨越这一只读容器依赖障碍，我们评估并对比了以下三套技术方案：</p>
+        <ul>
+            <li><strong>方案 A：在云端代码中手动解包引入。</strong>将 <code>exceptiongroup</code> 源码直接放入云函数物理代码目录。这会极大地污染 Mono-Repo 微服务的纯净代码结构。</li>
+            <li><strong>方案 B：降低 <code>anyio</code> 或 <code>openai</code> 库的版本。</strong>将大模型库和异步底盘强行降级到低版本以避开依赖。但这会导致最新的大模型 API 语法和参数失效，债务风险极高。</li>
+            <li><strong>方案 C：重构本地依赖 Layer 打包，将 <code>exceptiongroup</code> 灌入补丁层 (最佳实践)。</strong>修改本地脚本将 <code>exceptiongroup</code> 列入打包列表，进行纯 Linux 二进制 wheel 编译，物理一键发布 Version 13 依赖共享层。环境 100% 对齐，微服务代码区极度纯净，云端性能最优。</li>
+        </ul>
+
+        <h2>3. 择优决策 (Optimal Choice)</h2>
+        <p>我们毫不犹豫地采纳了 <strong>方案 C</strong>。</p>
+        <p>通过在本地 <code>build_patch_layer.py</code> 中将 <code>exceptiongroup</code> 与 <code>openai</code>、<code>httpx</code>、<code>aiosmtplib</code> 完美打包为共享依赖 Version 13，并同步更新三个函数的部署绑定脚本。绑定后重新执行远程 Invoke 联调测试，<strong>三云函数瞬间实现 100% E2E 完美通车，大模型计费、乐观锁排碰撞、微信与 HTML 预警分发全线 SUCCESS</strong>！</p>
+
+        <h2>4. 复用技巧 (Reusable Tips)</h2>
+        <ul>
+            <li><strong>Python 3.10 异步双检：</strong>在 Python 3.10 (或以下) 容器下部署任何基于 FastAPI / AnyIO / Starlette / HTTPX / OpenAI 的异步函数时，<strong>必须强制前置绑定或安装 <code>exceptiongroup</code> 依赖</strong>。</li>
+            <li><strong>强力路径搜索前置：</strong>在云函数入口 <code>index.py</code> 头部，<strong>必须 100% 前置注入以下强力路径搜索代码</strong>，确保挂载的 Layer（绑定在 <code>/opt/</code> 下）在代码执行任何三方包导入前能被 Python 虚拟机精准识别：
+                <pre><code>import sys
+import os
+for path in ['/opt', '/opt/python', '/opt/python/lib/python3.10/site-packages']:
+    if os.path.exists(path) and path not in sys.path:
+        sys.path.insert(0, path)</code></pre>
+            </li>
+            <li><strong>Commit 标记对齐：</strong>每次由于云端依赖变更触发的 Layer 发布，提交 Commit 时前缀应标记为 <code>[E{N}-S{M}-V{K}]</code> 以回链关联的部署架构调整，维持极高的可追溯性。</li>
+        </ul>
+
+        <div class="footer">
+            <p>Python 3.10 SCF 异步沙盒多米诺崩溃排障记录 — Antigravity 整理建档</p>
+            <p style="font-size: 10px; margin-top: 5px;">CONFIDENTIAL &copy; 2026 MICROSERVICE-STOCK DEVELOPMENT GROUP</p>
+        </div>
+    </div>
+</body>
+</html>

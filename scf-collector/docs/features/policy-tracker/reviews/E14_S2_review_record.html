@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Epic E14-S2 宏观政策 AI 智能分析系统技术评审记录</title>
+    <style>
+        :root {
+            --primary-color: #2563eb;
+            --success-color: #10b981;
+            --warning-color: #f59e0b;
+            --text-color: #1f2937;
+            --bg-color: #f9fafb;
+            --card-bg: #ffffff;
+            --border-color: #e5e7eb;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            line-height: 1.6;
+            color: var(--text-color);
+            background-color: var(--bg-color);
+            margin: 0;
+            padding: 40px 20px;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: var(--card-bg);
+            padding: 40px;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            border: 1px solid var(--border-color);
+        }
+        h1 {
+            color: var(--primary-color);
+            font-size: 24px;
+            border-bottom: 2px solid var(--primary-color);
+            padding-bottom: 12px;
+            margin-top: 0;
+        }
+        h2 {
+            color: #374151;
+            font-size: 18px;
+            margin-top: 30px;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 8px;
+        }
+        h3 {
+            color: #4b5563;
+            font-size: 16px;
+        }
+        .alert {
+            background-color: #eff6ff;
+            border-left: 4px solid var(--primary-color);
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 0 8px 8px 0;
+        }
+        .status-badge {
+            background-color: var(--success-color);
+            color: white;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 14px;
+            font-weight: bold;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+        }
+        th, td {
+            border: 1px solid var(--border-color);
+            padding: 12px;
+            text-align: left;
+        }
+        th {
+            background-color: #f3f4f6;
+            color: #374151;
+        }
+        ul {
+            padding-left: 20px;
+        }
+        li {
+            margin-bottom: 8px;
+        }
+        .footer {
+            margin-top: 40px;
+            text-align: center;
+            font-size: 12px;
+            color: #9ca3af;
+            border-top: 1px solid var(--border-color);
+            padding-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Epic E14-S2 宏观政策 AI 智能分析系统技术评审记录</h1>
+        
+        <div class="alert">
+            <strong>评审结论：</strong> <span class="status-badge">🟢 APPROVED (通过并准入生产)</span>
+        </div>
+
+        <h2>1. 评审基本信息</h2>
+        <ul>
+            <li><strong>项目/特征域:</strong> <code>scf-collector</code> / <code>policy-tracker</code> (A 股宏观政策智能追踪系统)</li>
+            <li><strong>评审主题:</strong> 定时解耦微服务重构、AI 分析主逻辑与云端 Serverless 只读容器依赖部署</li>
+            <li><strong>评审日期:</strong> 2026-05-17</li>
+            <li><strong>Story 列表状态:</strong>
+                <ul>
+                    <li><code>E14-S2-P1</code> (大模型计费审计基建): <strong>ok</strong></li>
+                    <li><code>E14-S2-P2</code> (AI 措辞分析与申万融合): <strong>ok</strong></li>
+                    <li><code>E14-S2-P3</code> (定时云函数物理解耦与 HTML side-by-side 对比发送): <strong>ok</strong></li>
+                    <li><code>E14-S2-P4</code> (历史回填、CLS 可观测性与 Version 13 补丁依赖层部署): <strong>ok</strong></li>
+                </ul>
+            </li>
+        </ul>
+
+        <h2>2. 关键设计审查点与结论</h2>
+        
+        <h3>2.1 计费防爆与安全限额设计</h3>
+        <ul>
+            <li><strong>审查点：</strong>如何防止大模型（OpenAI/DeepSeek）在高频采集或历史回填时由于并发过多而造成超额扣费？</li>
+            <li><strong>设计结论：</strong>
+                <ul>
+                    <li>在 <code>llm_client.py</code> 底层集成 <code>meta_llm_daily_cost</code> 计费日志写入，每日调用前计算天级总开销。</li>
+                    <li>在增量历史回填中灌入前置 <strong><code>1.0 CNY</code></strong> 硬限额防火墙。一旦当天累计费用超限，立即主动挂起。</li>
+                </ul>
+            </li>
+        </ul>
+
+        <h3>2.2 Serverless 乐观防碰撞锁设计</h3>
+        <ul>
+            <li><strong>审查点：</strong>多定时触发器（如每 5 分钟）是否会导致多个 analyzer 云函数同时并发运行，从而竞争同一批政策导致 LLM 重复扣费？</li>
+            <li><strong>设计结论：</strong>
+                <ul>
+                    <li>基于 MySQL <code>meta_pipeline_run</code> 实现了<strong>分布式乐观排碰撞锁</strong>。</li>
+                    <li>启动前查询 10 分钟内是否有 <code>RUNNING</code> 实例，若存在则跳过本次执行；正常抢占锁后标记为 <code>RUNNING</code>，完工后 <code>ON DUPLICATE KEY UPDATE</code> 更新为 <code>SUCCESS</code> 并释放锁。</li>
+                </ul>
+            </li>
+        </ul>
+
+        <h3>2.3 只读云环境 Python 依赖补丁包设计</h3>
+        <ul>
+            <li><strong>审查点：</strong>腾讯云只读运行容器无法热装包，<code>openai</code> / <code>httpx</code> 在 Python 3.10 下因缺少异步底层依赖崩溃如何解决？</li>
+            <li><strong>设计结论：</strong>
+                <ul>
+                    <li>本地启动 Docker 编译环境（或强制指定 Linux x86_64 二进制 wheel 平台审计）排除 Windows 二进制 <code>.pyd</code> 文件混入。</li>
+                    <li>针对 Python 3.10 只读 Serverless 容器，我们在 <strong><code>stock-patch-layer</code> Version 13</strong> 依赖层中物理打包进 <code>exceptiongroup</code>。</li>
+                    <li>这彻底根治了 <code>anyio</code> 异步引擎的导入报错，进而完美自愈了 <code>httpcore[asyncio]</code>、<code>openai</code> 及 <code>aiosmtplib</code> 库的多米诺骨牌级崩溃红线。</li>
+                </ul>
+            </li>
+        </ul>
+
+        <h2>3. 反馈闭环与修改追踪</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>序号</th>
+                    <th>评审反馈意见</th>
+                    <th>状态</th>
+                    <th>落地位置与修改摘要</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>1</td>
+                    <td>板块影响方向 <code>impact_direction</code> 超长引发落库崩溃</td>
+                    <td><strong>已修复</strong></td>
+                    <td>物理执行 SQL 扩容 <code>dwd_policy_sector_impact.impact_direction</code> 为 <code>VARCHAR(50)</code>，并在 <code>policy_analyzer.py</code> 中对大模型输出进行归一化清洗拦截。</td>
+                </tr>
+                <tr>
+                    <td>2</td>
+                    <td>Windows CMD 控制台打印大写 <code>¥</code> 符号报错</td>
+                    <td><strong>已修复</strong></td>
+                    <td>将所有本地控制台与对账日志中的大写 <code>¥</code> 符号重构为 <code>CNY</code> 字符表示，完全规避了 Windows Console 的 GBK 局限。</td>
+                </tr>
+                <tr>
+                    <td>3</td>
+                    <td>三函数解耦后云端绑定 Version 12 不兼容</td>
+                    <td><strong>已修复</strong></td>
+                    <td>升级并重新发布补丁 Layer <strong>Version 13</strong>，将三个云函数的部署脚本统一刷新绑定为最新 v13 版本，已在云端级联测试成功。</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <div class="footer">
+            本记录由 AI Agent Antigravity 整理自动建档，已向全局导航门户同步。
+        </div>
+    </div>
+</body>
+</html>
