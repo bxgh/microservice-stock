@@ -3,175 +3,311 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>A A股盘后数据质量保障体系 (Epic E12) 阶段性总结</title>
+    <title>A股盘后数据质量保障体系 (Epic E12) 阶段性总结</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Noto+Serif+SC:wght@400;700;900&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    
+    <!-- Local Offline Libraries -->
+    <script src="../../../../../../docs/assets/js/marked.min.js"></script>
+    <link rel="stylesheet" href="../../../../../../docs/assets/css/github-markdown-dark.css">
+    
     <style>
         :root {
-            --bg-color: hsl(210, 20%, 98%);
-            --card-bg: hsl(0, 0%, 100%);
-            --text-main: hsl(220, 20%, 20%);
-            --text-muted: hsl(220, 10%, 45%);
-            --primary: hsl(210, 100%, 45%);
-            --success: hsl(150, 80%, 35%);
-            --warning: hsl(35, 90%, 45%);
-            --border-color: hsl(210, 15%, 90%);
+            --bg: #0a0a0a;
+            --surface: #121212;
+            --surface-hover: #1a1a1a;
+            --border: #222222;
+            --accent: #eab308;
+            --accent-glow: rgba(234, 179, 8, 0.2);
+            --text-primary: #f8fafc;
+            --text-secondary: #94a3b8;
+            --text-muted: #64748b;
+            --font-sans: 'Outfit', 'Inter', -apple-system, sans-serif;
+            --font-serif: 'Noto Serif SC', serif;
+            --font-mono: 'JetBrains Mono', monospace;
         }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
         body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-            background-color: var(--bg-color);
-            color: var(--text-main);
-            padding: 2rem 1.5rem;
+            background-color: var(--bg);
+            color: var(--text-primary);
+            font-family: var(--font-sans);
             line-height: 1.6;
+            -webkit-font-smoothing: antialiased;
+            overflow-x: hidden;
         }
+
+        /* Subtle background glow */
+        body::after {
+            content: '';
+            position: fixed;
+            top: 0;
+            right: 0;
+            width: 40vw;
+            height: 40vh;
+            background: radial-gradient(circle, var(--accent-glow) 0%, transparent 70%);
+            z-index: -1;
+            filter: blur(100px);
+            pointer-events: none;
+        }
+
         .container {
-            max-width: 960px;
+            max-width: 900px;
             margin: 0 auto;
-            background: var(--card-bg);
-            padding: 2.5rem;
-            border-radius: 16px;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.05);
-            border: 1px solid var(--border-color);
+            padding: 4rem 2rem;
+            animation: fadeIn 0.8s ease-out;
         }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        header {
+            margin-bottom: 4rem;
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 2rem;
+        }
+
+        .meta {
+            font-family: var(--font-mono);
+            font-size: 0.8rem;
+            color: var(--accent);
+            text-transform: uppercase;
+            letter-spacing: 0.15em;
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .meta::before {
+            content: '';
+            width: 24px;
+            height: 1px;
+            background-color: var(--accent);
+        }
+
         h1 {
-            font-size: 2rem;
-            color: hsl(220, 30%, 15%);
-            margin-top: 0;
-            padding-bottom: 1rem;
-            border-bottom: 2px solid var(--border-color);
+            font-family: var(--font-serif);
+            font-size: 3rem;
+            font-weight: 900;
+            line-height: 1.1;
+            margin-bottom: 1.5rem;
+            background: linear-gradient(135deg, #fff 0%, #a5a5a5 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
         }
-        h2 {
-            font-size: 1.4rem;
-            color: hsl(220, 25%, 25%);
-            margin-top: 2rem;
+
+        .markdown-body {
+            background: transparent !important;
+            color: var(--text-primary) !important;
+            font-family: var(--font-sans) !important;
+            font-size: 1.1rem !important;
         }
-        .alert-note {
-            background-color: hsl(210, 100%, 97%);
-            border-left: 4px solid var(--primary);
-            color: hsl(210, 80%, 25%);
-            padding: 1rem;
+
+        .markdown-body h2, .markdown-body h3, .markdown-body h4 {
+            font-family: var(--font-serif);
+            border-bottom: none !important;
+            color: var(--text-primary);
+            margin-top: 2.5rem !important;
+        }
+
+        .markdown-body h2 { font-size: 2rem; color: var(--accent); }
+        
+        .markdown-body pre {
+            background-color: var(--surface) !important;
+            border: 1px solid var(--border);
+            border-radius: 12px !important;
+            padding: 1.5rem !important;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+        }
+
+        .markdown-body code {
+            background-color: var(--surface-hover) !important;
+            color: var(--accent) !important;
+            font-family: var(--font-mono) !important;
             border-radius: 4px;
-            margin: 1.5rem 0;
+            padding: 0.2rem 0.4rem;
         }
-        table {
-            width: 100%;
+
+        .markdown-body pre code {
+            background-color: transparent !important;
+            padding: 0 !important;
+        }
+
+        .markdown-body blockquote {
+            border-left: 4px solid var(--accent) !important;
+            background: var(--surface);
+            padding: 1rem 1.5rem;
+            border-radius: 0 8px 8px 0;
+            color: var(--text-secondary);
+        }
+
+        .markdown-body table {
+            background: var(--surface);
             border-collapse: collapse;
-            margin: 1.5rem 0;
-        }
-        th, td {
-            padding: 0.8rem 1rem;
-            text-align: left;
-            border-bottom: 1px solid var(--border-color);
-        }
-        th {
-            background-color: hsl(210, 20%, 96%);
-            font-weight: 600;
-        }
-        .status-badge {
-            padding: 0.2rem 0.6rem;
-            border-radius: 9999px;
-            font-size: 0.85rem;
-            font-weight: bold;
-        }
-        .status-badge.success {
-            background-color: hsl(150, 80%, 95%);
-            color: var(--success);
-        }
-        .flowchart {
-            background-color: hsl(210, 20%, 97%);
-            padding: 1.5rem;
             border-radius: 8px;
-            font-family: monospace;
-            white-space: pre-wrap;
-            border: 1px solid var(--border-color);
-            margin: 1.5rem 0;
+            overflow: hidden;
+            width: 100%;
         }
-        ul {
-            padding-left: 1.5rem;
+
+        .markdown-body table th, .markdown-body table td {
+            border: 1px solid var(--border) !important;
+            padding: 1rem !important;
         }
-        li {
-            margin-bottom: 0.5rem;
+
+        .markdown-body table tr {
+            background: transparent !important;
         }
-        a {
-            color: var(--primary);
-            text-decoration: none;
+
+        .markdown-body table tr:nth-child(2n) {
+            background: rgba(255,255,255,0.02) !important;
         }
-        a:hover {
-            text-decoration: underline;
+
+        footer {
+            margin-top: 6rem;
+            padding-top: 2rem;
+            border-top: 1px solid var(--border);
+            color: var(--text-muted);
+            font-size: 0.9rem;
+            text-align: center;
+        }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: var(--bg); }
+        ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
+
+        /* TOC - Floating on larger screens */
+        @media (min-width: 1400px) {
+            .toc {
+                position: fixed;
+                left: 2rem;
+                top: 10rem;
+                width: 200px;
+                font-size: 0.8rem;
+                color: var(--text-muted);
+            }
+            .toc ul { list-style: none; }
+            .toc li { margin-bottom: 0.5rem; }
+            .toc a { color: inherit; text-decoration: none; transition: color 0.2s; }
+            .toc a:hover { color: var(--accent); }
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>🚀 A股盘后数据质量保障体系 (Epic E12) 阶段性总结</h1>
-        
-        <div class="alert-note">
-            <strong>阶段性总结</strong>: 本文档作为 Epic E12 的结项成果总结，详细记录了完备性审计 (S1)、影子源随机对账 (S2) 及自愈修复引擎 (S3) 建设的交付成果与指标达成情况。
-        </div>
+        <header>
+            <div class="meta">SCF-COLLECTOR | 2026-05-17 17:21</div>
+            <h1>A股盘后数据质量保障体系 (Epic E12) 阶段性总结</h1>
+        </header>
 
-        <h2>1. 交付背景与目标回顾</h2>
-        <p>为了确保 <code>stock_kline_daily</code> 重采后的 2000万+ 历史与增量数据纯净无暇，系统迫切需要由“一次性迁移校验”升级为“常态化质量巡检”。本 Epic 达成了完备性对齐、多源一致性验证、物理性红线闭环以及无监督自愈目标。</p>
+        <article id="content" class="markdown-body">
+            <!-- Loading indicator -->
+            <p style="color: var(--text-muted)">正在解析文档内容...</p>
+        </article>
 
-        <h2>2. 核心交付指标 (Metrics Dashboard)</h2>
-        <table>
-            <thead>
-                <tr>
-                    <th>质量维度</th>
-                    <th>覆盖范围</th>
-                    <th>实测指标</th>
-                    <th>结论</th>
-                </tr>
-            </thead>
-            <tbody>
-                <tr>
-                    <td><strong>完备率 (Integrity)</strong></td>
-                    <td>1991-present</td>
-                    <td>100% 审计，空洞全修复</td>
-                    <td><span class="status-badge success">🟢 生产就绪</span></td>
-                </tr>
-                <tr>
-                    <td><strong>影子对账 (S2)</strong></td>
-                    <td>每日 1% 随机抽样</td>
-                    <td>一致率 100% (2026-05-15)</td>
-                    <td><span class="status-badge success">🟢 生产就绪</span></td>
-                </tr>
-                <tr>
-                    <td><strong>物理红线 (S2)</strong></td>
-                    <td>最近 365 天全量数据</td>
-                    <td>异常率 0%</td>
-                    <td><span class="status-badge success">🟢 生产就绪</span></td>
-                </tr>
-                <tr>
-                    <td><strong>自愈解法 (S3)</strong></td>
-                    <td>2025-2026 年存量空洞</td>
-                    <td>已处理 1819 条，18条全网缺失</td>
-                    <td><span class="status-badge success">🟢 生产就绪</span></td>
-                </tr>
-            </tbody>
-        </table>
-
-        <h2>3. 自愈架构机制</h2>
-        <div class="flowchart">
-[三级校验拓扑]
-1. S1 笛卡尔积对账 ---> 锁定疑似空洞
-2. S2 影子源交叉比对 ---> 识别 PRICE_MISMATCH
-3. S2 物理约束硬核审计 ---> 监控 PHYSICAL_ERROR
-
-[三段式自愈管线]
-疑似空洞 / 差异 / 错误 ---> 注入任务队列(meta_task_queue)
-  ---> Tier 1: Tushare单日批量拉取
-  ---> Tier 2: suspend_d 停牌对仗排除 (标记已解决)
-  ---> Tier 3: AkShare 影子源单点回填
-  ---> 兜底: 判定为 FAILED 排除死锁
-        </div>
-
-        <h2>4. 标准资产路径</h2>
-        <ul>
-            <li><strong>设计真源</strong>：<a href="../../design/draft_E12.md">draft_E12.md</a></li>
-            <li><strong>审计引擎</strong>：<a href="../../../../../scripts/check_kline_holes.py">check_kline_holes.py</a></li>
-            <li><strong>物理审计</strong>：<a href="../../../../../scripts/internal_consistency_checker.py">internal_consistency_checker.py</a></li>
-            <li><strong>影子对账</strong>：<a href="../../../../../scripts/shadow_validator.py">shadow_validator.py</a></li>
-            <li><strong>修复引擎</strong>：<a href="../../../../../scripts/auto_repair_worker.py">auto_repair_worker.py</a></li>
-            <li><strong>可视化看板</strong>：<a href="../S1/REPORT.html">REPORT.html</a></li>
-        </ul>
+        <footer>
+            &copy; 2026 MicroStock Project Docs | Generated by Antigravity
+        </footer>
     </div>
+
+    <script id="markdown-raw" type="text/markdown"># A股盘后数据质量保障体系 (Epic E12) 阶段性总结
+
+> [!NOTE]
+> **终结总结**: 本文档作为 Epic E12 的终结性成果总结，详细记录了完备性审计 (S1)、影子源随机对账 (S2) 及自愈修复引擎 (S3) 建设的交付成果与指标达成情况。
+
+## 1. 交付背景与目标回顾
+为了确保 `stock_kline_daily` 重采后的 2000万+ 历史与增量数据纯净无暇，系统迫切需要由“一次性迁移校验”升级为“常态化质量巡检”。
+E12 Epic 达成了以下目标：
+- **完备性对齐**：全量识别历史与增量日线空洞（Holes）。
+- **多源一致性**：引入第三方影子数据源进行像素级对账，捕获数据价格偏离。
+- **物理性闭环**：执行 100% 行的价格逻辑序与零值边界自检。
+- **自动化修复**：实现任务队列驱动的无监督自愈闭环。
+
+---
+
+## 2. 核心交付指标 (Metrics Dashboard)
+
+### 2.1 统计总表
+| 质量维度 | 覆盖范围 | 实测指标 | 结论 |
+|---|---|---|---|
+| **完备率 (Integrity)** | 1991-present | 100% 审计，空洞全修复 | 🟢 生产就绪 |
+| **影子对账 (S2)** | 每日 1% 随机抽样 | 一致率 100% (2026-05-15) | 🟢 生产就绪 |
+| **物理红线 (S2)** | 最近 365 天全量数据 | 异常率 0% | 🟢 生产就绪 |
+| **自愈解法 (S3)** | 2025-2026 年存量空洞 | 已处理 1819 条，18条全网缺失 | 🟢 生产就绪 |
+
+### 2.2 数据修复分类明细
+*   **PENDING (待修复)**: 0 条（历史空洞已全部出清）
+*   **SUCCESS (修复成功)**: 1819 条
+*   **FAILED (全网真实缺失)**: 18 条 (经 Tushare 批量、单点、停牌对账、AkShare 双源五重检验，确认全网无交易记录，安全标注为 FAILED 避免死循环)
+
+---
+
+## 3. 技术方案与运作机制
+
+E12 构建了高可用的 **“三级校验 - 三段式自愈”** 闭环：
+
+```mermaid
+flowchart TD
+    subgraph 三级校验
+        A[S1 笛卡尔积完备审计] -->|输出: 疑似空洞| B(疑似空洞)
+        C[S2 影子源对账] -->|输出: PRICE_MISMATCH| D(价格不一致)
+        E[S2 物理约束红线] -->|输出: PHYSICAL_ERROR| F(物理逻辑错)
+    end
+    
+    subgraph 三段式修复
+        B & D & F -->|注入队列| Q[(meta_task_queue)]
+        Q -->|触发| R[Tier 1: Tushare批量重采]
+        R -->|未命中| S[Tier 2: suspend_d停牌对账]
+        S -->|非停牌| T[Tier 3: AkShare影子源单点回填]
+        T -->|仍无数据| U[Failed 状态落存避免死锁]
+    end
+```
+
+---
+
+## 4. 标准资产路径
+
+以下为 E12 全套交付物的物理存储索引，供后续运维及审计参考：
+- **设计真源**：[draft_E12.md](file:///home/ubuntu/microservice-stock/scf-collector/docs/features/kline_validation/design/draft_E12.md)
+- **审计引擎**：[check_kline_holes.py](file:///home/ubuntu/microservice-stock/scf-collector/scripts/check_kline_holes.py)
+- **物理审计**：[internal_consistency_checker.py](file:///home/ubuntu/microservice-stock/scf-collector/scripts/internal_consistency_checker.py)
+- **影子对账**：[shadow_validator.py](file:///home/ubuntu/microservice-stock/scf-collector/scripts/shadow_validator.py)
+- **修复引擎**：[auto_repair_worker.py](file:///home/ubuntu/microservice-stock/scf-collector/scripts/auto_repair_worker.py)
+- **每日可视化看板**：[REPORT.html](file:///home/ubuntu/microservice-stock/scf-collector/docs/features/kline_validation/implementation_logs/E12/S1/REPORT.html)
+</script>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', async () => {
+            const rawMd = document.getElementById('markdown-raw').textContent;
+            const contentEl = document.getElementById('content');
+            
+            // Set options for marked
+            marked.setOptions({
+                gfm: true,
+                breaks: true,
+                headerIds: true,
+                mangle: false
+            });
+
+            // Parse Markdown
+            contentEl.innerHTML = marked.parse(rawMd);
+            
+            // Re-render math if needed (not implemented here)
+            
+            // Optional: Highlight code blocks with Shiki
+            // Since Shiki is async and requires WASM, we'll keep it simple for now
+            // or just use marked's default highlighting
+        });
+    </script>
 </body>
 </html>

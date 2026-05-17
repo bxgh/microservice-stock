@@ -17,10 +17,9 @@ TEMPLATE = """<!DOCTYPE html>
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Noto+Serif+SC:wght@400;700;900&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
     
-    <!-- Libraries -->
-    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/github-markdown-css/github-markdown-dark.css">
-    <script src="https://cdn.jsdelivr.net/npm/shiki"></script>
+    <!-- Local Offline Libraries -->
+    <script src="{rel_js}"></script>
+    <link rel="stylesheet" href="{rel_css}">
     
     <style>
         :root {{
@@ -296,12 +295,23 @@ def main():
     # md_content_escaped = md_content.replace('`', '\\`').replace('$', '\\$')
     # Actually putting it in <script type="text/markdown"> is safer
     
+    # Calculate relative paths to local assets
+    project_root = Path(__file__).parent.parent.resolve()
+    js_path = project_root / "docs" / "assets" / "js" / "marked.min.js"
+    css_path = project_root / "docs" / "assets" / "css" / "github-markdown-dark.css"
+    html_dir = output_path.parent.resolve()
+    
+    rel_js = os.path.relpath(js_path, html_dir).replace('\\', '/')
+    rel_css = os.path.relpath(css_path, html_dir).replace('\\', '/')
+    
     html_content = TEMPLATE.format(
         title=display_title,
         display_title=display_title,
         service=service_name,
         date=date_str,
-        md_content=md_content
+        md_content=md_content,
+        rel_js=rel_js,
+        rel_css=rel_css
     )
     
     with open(output_path, 'w', encoding='utf-8') as f:
