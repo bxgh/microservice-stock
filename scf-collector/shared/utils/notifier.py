@@ -2,6 +2,7 @@ import os
 import logging
 import asyncio
 import datetime
+from zoneinfo import ZoneInfo
 from email.mime.text import MIMEText
 from email.header import Header
 from email.utils import formatdate
@@ -116,7 +117,7 @@ class EmailNotifier:
                         </tr>
                         <tr>
                             <td style="padding: 10px; border: 1px solid #dee2e6; background-color: #f8f9fa; font-weight: bold;">发生时间</td>
-                            <td style="padding: 10px; border: 1px solid #dee2e6;">{datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}</td>
+                            <td style="padding: 10px; border: 1px solid #dee2e6;">{datetime.datetime.now(ZoneInfo("Asia/Shanghai")).strftime('%Y-%m-%d %H:%M:%S')}</td>
                         </tr>
                         {details_html}
                     </table>

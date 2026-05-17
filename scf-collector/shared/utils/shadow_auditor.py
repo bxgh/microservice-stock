@@ -3,6 +3,7 @@ import logging
 import asyncio
 import pandas as pd
 from datetime import datetime
+from zoneinfo import ZoneInfo
 from typing import List, Dict, Any
 from shared.db.dao import StockDAO
 from shared.collectors.akshare_adapter import AkShareAdapter
@@ -146,7 +147,7 @@ class ShadowAuditor:
 
     def _generate_report_v2(self, date, df_p, df_s, merged, mae_res, outlier_count, status, src_type, baseline_n, coverage) -> str:
         """生成增强版 Markdown 报告"""
-        now_str = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        now_str = datetime.now(ZoneInfo("Asia/Shanghai")).strftime('%Y-%m-%d %H:%M:%S')
         
         # 提取价格异常样本预览
         outlier_sample = "无"

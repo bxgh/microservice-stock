@@ -4,6 +4,7 @@ import httpx
 import json
 from bs4 import BeautifulSoup
 from datetime import datetime
+from zoneinfo import ZoneInfo
 from typing import List, Dict, Any, Optional
 from shared.db.connection import execute_query
 
@@ -138,7 +139,7 @@ class GovCollector:
                 if len(publish_date) > 10:
                     publish_date = publish_date[:10]
             except:
-                publish_date = datetime.now().strftime("%Y-%m-%d")
+                publish_date = datetime.now(ZoneInfo("Asia/Shanghai")).strftime("%Y-%m-%d")
 
             # 入库
             sql = """
