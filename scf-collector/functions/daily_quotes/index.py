@@ -114,32 +114,87 @@ async def async_handler(event, context):
             return {"status": "error", "message": str(e), "request_id": request_id}
 
     if op == 'sync_kline_daily':
-        # 批量同步全 A 日 K 线 (不复权)
-        logger.info(f"[{request_id}] Starting batch K-line sync for {trade_date}...")
+        # 批量同步全 A 日 K 线并内嵌复权因子
+        logger.info(f"[{request_id}] Starting batch K-line sync with embedded factor for {trade_date}...")
         collector = COLLECTORS.get('tushare')
         try:
+            # 1. 主动校验今日 09:25 因子同步任务状态
+            adj_status = await StockDAO.get_pipeline_status("Adj-Factor", trade_date)
+            logger.info(f"[{request_id}] Morning Adj-Factor task status: {adj_status}")
+            
+            factors_dict = {}
+            fallback_triggered = False
+            raw_factors = None
+            
+            # 2. 选择拉取通道
+            if adj_status == "success":
+                # 【第一层】状态为成功：使用 100% 本地数据库因子极速关联合并 (0.02s)
+                logger.info(f"[{request_id}] Morning Adj-Factor task succeeded. Fetching factors from local DB...")
+                factors_dict = await StockDAO.get_all_latest_adj_factors()
+            else:
+                # 【第一层降级】状态为失败或未运行：触发云端实时拉取补货
+                logger.warning(f"[{request_id}] Morning Adj-Factor status is '{adj_status}'. Triggering Tushare API fallback...")
+                try:
+                    raw_factors = await collector.fetch_adj_factor(trade_date)
+                    if raw_factors:
+                        for item in raw_factors:
+                            ts_code = item.get('ts_code')
+                            factor = item.get('adj_factor')
+                            if ts_code and factor is not None:
+                                factors_dict[ts_code] = float(factor)
+                        fallback_triggered = True
+                        logger.info(f"[{request_id}] Successfully fetched {len(factors_dict)} factors from Tushare in fallback mode.")
+                    else:
+                        logger.error(f"[{request_id}] Tushare returned empty factors in fallback mode!")
+                except Exception as fe:
+                    logger.error(f"[{request_id}] Failed to fetch factors from Tushare in fallback mode: {fe}")
+            
+            # 3. 兜底策略：如果没拿到任何因子，从本地取一次最新的历史因子，防止完全 NULL
+            if not factors_dict:
+                logger.warning(f"[{request_id}] Factor dict is empty. Loading latest local factors as absolute fallback...")
+                factors_dict = await StockDAO.get_all_latest_adj_factors()
+            
+            # 4. 行情数据采集
             data = await collector.fetch_batch_daily_kline(trade_date)
             if data:
+                # 5. 内存合并：将因子内嵌到日 K 线中
+                for kline in data:
+                    ts_code = kline.ts_code
+                    kline.adj_factor = factors_dict.get(ts_code)
+                    if kline.adj_factor is None:
+                        logger.warning(f"[{request_id}] Stock {ts_code} has no factor for {trade_date}, default to 1.0")
+                        kline.adj_factor = 1.0
+                
+                # 6. 保存并更新状态
                 count = await StockDAO.save_kline_data(data)
                 await StockDAO.update_data_readiness(trade_date, "stock_kline_daily", len(data))
                 await StockDAO.log_pipeline_run("Daily-K-Line", "success", run_id=request_id, biz_date=trade_date)
                 
-                # 发送成功邮件 (增加表名)
-                await EmailNotifier.notify_success("日K线批量采集", trade_date, count, table_name="stock_kline_daily")
+                # 7. 【第二层自愈】后台静默补足事件并更新早晨任务状态为成功
+                if fallback_triggered and raw_factors:
+                    logger.info(f"[{request_id}] Triggering background self-healing to save factor events...")
+                    try:
+                        await StockDAO.save_adj_factor(raw_factors)
+                        await StockDAO.update_data_readiness(trade_date, "stock_adjust_factor", len(raw_factors))
+                        await StockDAO.log_pipeline_run("Adj-Factor", "success", run_id=request_id + "_healed", biz_date=trade_date)
+                        logger.info(f"[{request_id}] Background self-healing completed successfully.")
+                    except Exception as she:
+                        logger.error(f"[{request_id}] Background self-healing failed: {she}")
                 
+                # 发送成功邮件 (包含表名)
+                await EmailNotifier.notify_success("日K线批量合并采集", trade_date, count, table_name="stock_kline_daily")
                 return {"status": "success", "count": count, "request_id": request_id}
             else:
                 msg = "Tushare returned empty data (possibly non-trading day)."
                 logger.info(f"[{request_id}] {msg}")
                 return {"status": "empty", "count": 0, "request_id": request_id}
         except Exception as e:
-            err_msg = f"Batch K-line sync error: {str(e)}"
+            err_msg = f"Batch K-line sync with factor error: {str(e)}"
             logger.error(f"[{request_id}] {err_msg}")
             await StockDAO.log_pipeline_run("Daily-K-Line", "error", error_message=err_msg, run_id=request_id, biz_date=trade_date)
             
             # 发送失败邮件
-            await EmailNotifier.notify_failure("日K线批量采集", trade_date, err_msg)
-            
+            await EmailNotifier.notify_failure("日K线批量合并采集", trade_date, err_msg)
             return {"status": "error", "message": err_msg, "request_id": request_id}
 
     if op == 'sync_adj_factor':
@@ -254,6 +309,15 @@ async def async_handler(event, context):
                 except Exception as e:
                     logger.error(f"[{request_id}] Fail-over execution error: {e}")
                     await EmailNotifier.notify_failure("数据采集全面失效", trade_date, f"主备源均无法满足完整性要求。{str(e)}")
+
+        # 3.5. 【第三层容灾自愈】盘后对账审计与脏数据因子热修补
+        logger.info(f"[{request_id}] Executing third-layer factor self-healing audit...")
+        repaired = await StockDAO.repair_null_factors(trade_date)
+        if repaired > 0:
+            logger.info(f"[{request_id}] Third-layer self-healing successfully repaired {repaired} missing factors.")
+            # 重新获取当前入库数量，确保后续就绪信号行数准确
+            current_data = await StockDAO.get_kline_daily(trade_date)
+            current_n = len(current_data)
 
         # 4. 运行影子审计并同步 source_tag
         from shared.utils.shadow_auditor import ShadowAuditor

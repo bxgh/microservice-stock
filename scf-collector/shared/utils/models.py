@@ -16,6 +16,7 @@ class KLineModel(BaseModel):
     pct_chg: float = Field(0.0, description="涨跌幅 (小数, 如 0.05 代表 5%)")
     volume: float = Field(0.0, description="成交量 (单位: 手)")
     amount: float = Field(0.0, description="成交额 (单位: 元)")
+    adj_factor: Optional[float] = Field(None, description="内嵌累积复权因子")
 
     class Config:
         from_attributes = True
