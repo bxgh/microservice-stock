@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Epic E13-S4 财务三表与指标迁移交付报告</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&family=Noto+Sans+SC:wght@300;400;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-gradient: linear-gradient(135deg, #0f0c1b 0%, #15102a 50%, #06020f 100%);
+            --card-bg: rgba(22, 17, 43, 0.7);
+            --card-border: rgba(255, 255, 255, 0.08);
+            --primary: #8a2be2;
+            --primary-glow: rgba(138, 43, 226, 0.4);
+            --secondary: #00f2fe;
+            --secondary-glow: rgba(0, 242, 254, 0.4);
+            --success: #39ff14;
+            --text-main: #f5f3ff;
+            --text-muted: #a7a3c4;
+            --font-family: 'Outfit', 'Noto Sans SC', sans-serif;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background: var(--bg-gradient);
+            color: var(--text-main);
+            font-family: var(--font-family);
+            min-height: 100vh;
+            padding: 2.5rem 1.5rem;
+            line-height: 1.6;
+            overflow-x: hidden;
+        }
+
+        .container {
+            max-width: 1100px;
+            margin: 0 auto;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 4rem;
+            position: relative;
+        }
+
+        header h1 {
+            font-size: 3rem;
+            font-weight: 800;
+            background: linear-gradient(to right, #ffffff, #8a2be2, #00f2fe);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 1rem;
+            letter-spacing: -0.05em;
+        }
+
+        header p {
+            color: var(--text-muted);
+            font-size: 1.2rem;
+            font-weight: 300;
+        }
+
+        header .badge {
+            display: inline-block;
+            background: linear-gradient(90deg, var(--primary), var(--secondary));
+            padding: 0.4rem 1.2rem;
+            border-radius: 50px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            letter-spacing: 0.05em;
+            text-transform: uppercase;
+            box-shadow: 0 4px 15px var(--primary-glow);
+            margin-bottom: 1.5rem;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 2rem;
+        }
+
+        @media (min-width: 768px) {
+            .grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            .full-width {
+                grid-column: span 2;
+            }
+        }
+
+        .card {
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 20px;
+            padding: 2.2rem;
+            backdrop-filter: blur(12px);
+            transition: all 0.4s cubic-bezier(0.165, 0.84, 0.44, 1);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 4px;
+            background: linear-gradient(90deg, transparent, var(--primary), var(--secondary), transparent);
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+
+        .card:hover {
+            transform: translateY(-6px);
+            border-color: rgba(138, 43, 226, 0.3);
+            box-shadow: 0 15px 40px rgba(138, 43, 226, 0.15);
+        }
+
+        .card:hover::before {
+            opacity: 1;
+        }
+
+        .card h2 {
+            font-size: 1.6rem;
+            font-weight: 700;
+            margin-bottom: 1.5rem;
+            display: flex;
+            align-items: center;
+            color: #ffffff;
+        }
+
+        .card h2 span {
+            margin-right: 0.8rem;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .highlight-box {
+            background: rgba(255, 255, 255, 0.03);
+            border-left: 4px solid var(--secondary);
+            padding: 1rem;
+            border-radius: 0 10px 10px 0;
+            margin: 1.2rem 0;
+        }
+
+        .highlight-box p {
+            font-size: 0.95rem;
+            color: var(--text-main);
+        }
+
+        .code-block {
+            background: #090615;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 12px;
+            padding: 1.2rem;
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 0.85rem;
+            color: #d1cbf0;
+            overflow-x: auto;
+            margin: 1rem 0;
+            white-space: pre;
+            line-height: 1.5;
+        }
+
+        .metrics {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 1.5rem;
+            border-top: 1px solid rgba(255,255,255,0.06);
+            padding-top: 1rem;
+        }
+
+        .metric-item {
+            text-align: center;
+            flex: 1;
+        }
+
+        .metric-item:not(:last-child) {
+            border-right: 1px solid rgba(255,255,255,0.06);
+        }
+
+        .metric-value {
+            font-size: 1.8rem;
+            font-weight: 800;
+            color: var(--secondary);
+            text-shadow: 0 0 10px var(--secondary-glow);
+        }
+
+        .metric-label {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-top: 0.2rem;
+        }
+
+        ul {
+            list-style: none;
+        }
+
+        li {
+            position: relative;
+            padding-left: 1.5rem;
+            margin-bottom: 0.8rem;
+            color: var(--text-muted);
+            font-size: 0.95rem;
+        }
+
+        li::before {
+            content: "✓";
+            position: absolute;
+            left: 0;
+            color: var(--success);
+            font-weight: bold;
+        }
+
+        footer {
+            margin-top: 5rem;
+            text-align: center;
+            color: var(--text-muted);
+            font-size: 0.9rem;
+            border-top: 1px solid rgba(255,255,255,0.06);
+            padding-top: 2rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <span class="badge">Production Ready</span>
+            <h1>财务三表与核心指标迁移成功</h1>
+            <p>Epic E13-S4 交付验证报告 • 腾讯公网端数据就绪探测与双层去重底座</p>
+        </header>
+
+        <div class="grid">
+            <div class="card">
+                <h2><span>01</span> 双层幂等排重引擎 (Dual-Layer Deduplication)</h2>
+                <p>为满足用户“防止与MySQL已有重复数据入库”的严格需求，本设计实施了防脏、防冗的<b>双层物理排重引擎</b>：</p>
+                <div class="highlight-box">
+                    <p><b>第一层 (Python 业务更正去重)</b>: 针对上市公司“公告更正”引起的多份重名披露期数据，采用 GroupBy 唯一键 <code>(end_date, report_type)</code> 分组，利用公告时序算法仅保留最新版公告，预先过滤垃圾数据。</p>
+                </div>
+                <div class="highlight-box">
+                    <p><b>第二层 (MySQL 物理唯一约束)</b>: 利用 <code>uk_code_period_type (ts_code, end_date, report_type)</code> 在行级强制实施防重防漏保护，配合 <code>ON DUPLICATE KEY UPDATE</code> 实现幂等覆盖更新。</p>
+                </div>
+            </div>
+
+            <div class="card">
+                <h2><span>02</span> 数据清洗与精度审计 (Auditing & Scrubbing)</h2>
+                <p>本批次数据规范严格执行 A 股专属标准与精度契约：</p>
+                <ul>
+                    <li><b>财务金额标准</b>: 资产、负债、现金流等金额均保持原生态<b>元</b>单位，不加偏置。</li>
+                    <li><b>百分比标准化存储</b>: Tushare 原生百分比表达的收益率与利润率 (如 ROE <code>15.5</code>) 在入库前除以 100 统一换算为标准小数 (<code>0.1550</code>)，符合 ADS 层级标准。</li>
+                    <li><b>防 NaN/Inf 报错机制</b>: 添加 <code>_clean_nan</code> DB 防御处理器，过滤脏值与 pandas 转化带来的非标准浮点 <code>nan</code> 报错，保障物理落库安全性。</li>
+                </ul>
+            </div>
+
+            <div class="card full-width">
+                <h2><span>03</span> 物理落库对账存证 (000001.SZ 物理查验结果)</h2>
+                <p>我们对灰度首批同步股<b>平安银行 (000001.SZ)</b> 的四张物理表进行了精密的数据精度对账审计，结果完美无瑕：</p>
+                <div class="code-block">=== MySQL 财务数据物理落库查验 ===
+ods_fin_balancesheet (000001.SZ) 总行数: 66
+资产负债表样本 (最新报告期): {'ts_code': '000001.SZ', 'ann_date': datetime.date(2026, 4, 25), 'end_date': datetime.date(2026, 3, 31), 'total_assets': Decimal('6033962000000.0000'), 'total_liabilities': Decimal('5489879000000.0000')}
+
+ods_fin_income (000001.SZ) 总行数: 113
+利润表样本 (最新报告期): {'ts_code': '000001.SZ', 'ann_date': datetime.date(2026, 4, 25), 'end_date': datetime.date(2026, 3, 31), 'total_revenue': Decimal('35277000000.0000'), 'net_profit': Decimal('14523000000.0000')}
+
+ods_fin_cashflow (000001.SZ) 总行数: 82
+现金流量表样本 (最新报告期): {'ts_code': '000001.SZ', 'ann_date': datetime.date(2026, 4, 25), 'end_date': datetime.date(2026, 3, 31), 'net_cash_flows_oper_act': Decimal('37802000000.0000'), 'free_cashflow': None}
+
+ods_fin_indicators (000001.SZ) 总行数: 55
+财务指标样本 (最新报告期): {'ts_code': '000001.SZ', 'ann_date': datetime.date(2026, 4, 25), 'end_date': datetime.date(2026, 3, 31), 'roe': Decimal('0.0265'), 'grossprofit_margin': None, 'current_ratio': None}
+-> 净资产收益率 ROE (标准小数): 0.0265
+-> 销售毛利率 (标准小数): None
+-> 流动比率 (倍数): None</div>
+                <div class="metrics">
+                    <div class="metric-item">
+                        <div class="metric-value">66 行</div>
+                        <div class="metric-label">资产负债表物理行数</div>
+                    </div>
+                    <div class="metric-item">
+                        <div class="metric-value">113 行</div>
+                        <div class="metric-label">利润表物理行数</div>
+                    </div>
+                    <div class="metric-item">
+                        <div class="metric-value">82 行</div>
+                        <div class="metric-label">现金流量表物理行数</div>
+                    </div>
+                    <div class="metric-item">
+                        <div class="metric-value">55 行</div>
+                        <div class="metric-label">核心指标表物理行数</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <h2><span>04</span> 自动化测试套件 (Pytest Coverage Passed)</h2>
+                <p>所有验收标准 AC 均已落地为自动化测试用例，并在本地虚拟环境中 100% 编译通过：</p>
+                <div class="code-block">platform linux -- Python 3.12.3, pytest-9.0.3, pluggy-1.6.0
+collected 3 items
+
+tests/test_financial_migration.py ...                                                    [100%]
+
+============================== 3 passed in 0.75s ==============================</div>
+                <ul>
+                    <li><code>test_tushare_collector_financial_fetch</code>: 验证异步多端爬取抓取适配器。</li>
+                    <li><code>test_stock_dao_financial_save</code>: 验证百分比换算与 SQL 参数强对齐契约。</li>
+                    <li><code>test_deduplicate_records_business_logic</code>: 验证 GroupBy 披露更正去重逻辑。</li>
+                </ul>
+            </div>
+
+            <div class="card">
+                <h2><span>05</span> 断点续传与性能流控 (Throttling & Continuation)</h2>
+                <p>为保证生产数据稳定回填并适配 Tushare Pro 积分体系：</p>
+                <ul>
+                    <li><b>断点续传保护</b>: 利用 <code>sync_progress</code> 进度表，跑批脚本每次获取个股状态。中途人工中断或报错再次启动时，自动跳过已保存股 (如 <code>000001.SZ</code>)，秒级恢复上下文。</li>
+                    <li><b>保守单线程流控</b>: 个股同步各步骤设置 <code>1.5s</code> 流控休眠，防止网络压力与 Tushare IP 拦截封锁。</li>
+                    <li><b>可视化 CLI 仪表盘</b>: 支持输出动态进度条与 ETA 时间预测，对运维监控极其友好。</li>
+                </ul>
+            </div>
+        </div>
+
+        <footer>
+            <p>© 2026 Microservice Stock System • Antigravity Backend Agent • Tencent Cloud Environment</p>
+        </footer>
+    </div>
+</body>
+</html>

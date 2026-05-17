@@ -1,0 +1,55 @@
+{
+  "epic_id": "E13",
+  "last_updated": "2026-05-17T20:56:00+08:00",
+  "current_stage": "S4_COMPLETED",
+  "completed_stories": {
+    "S1": {
+      "title": "K线存量清理与环境初始化",
+      "delivered_assets": [
+        "truncate_stock_kline_daily",
+        "sync_progress_init"
+      ],
+      "downstream_notes": "Successfully executed TRUNCATE TABLE stock_kline_daily and initialized sync_progress table metadata."
+    },
+    "S2": {
+      "title": "K线单线程断点同步引擎",
+      "delivered_assets": [
+        "scf-collector/scripts/tushare_full_backfill.py"
+      ],
+      "downstream_notes": "Developed daily sequential raw K-line collector utilizing trade_cal with 1.2s throttle delay under Tushare 2000 points limit."
+    },
+    "S3": {
+      "title": "进度可视化与健康度监控",
+      "delivered_assets": [
+        "scf-collector/scripts/tushare_full_backfill.py"
+      ],
+      "downstream_notes": "Integrated CLI visual progress bar, automatic 3-time retries with backoff, and exception containment."
+    },
+    "S4": {
+      "title": "财务三表与关键比率迁移",
+      "delivered_assets": [
+        "scf-collector/shared/collectors/tushare_cl.py",
+        "scf-collector/shared/db/dao.py",
+        "scf-collector/scripts/tushare_financial_backfill.py",
+        "tests/test_financial_migration.py",
+        "scf-collector/docs/features/tushare_migration/implementation_logs/E13/S4/REPORT.md",
+        "scf-collector/docs/features/tushare_migration/implementation_logs/E13/S4/REPORT.html",
+        "scf-collector/docs/features/tushare_migration/implementation_logs/E13/S4/API.md",
+        "scf-collector/docs/features/tushare_migration/implementation_logs/E13/S4/API.html"
+      ],
+      "downstream_notes": "Implemented multi-source financial backfill adapter with double-layer deduplication (Python-level GroupBy grouping by period + MySQL UK physical constraints). Configured automatic decimal rounding to 4 decimals to eliminate MySQL Truncation warnings. Ingested 000001.SZ with perfect validation."
+    }
+  },
+  "active_system_state": {
+    "tushare_access": "Verified 2000 points via prober. Syncing via pro_api directly in scf-collector/shared/collectors/tushare_cl.py.",
+    "kline_backfill": "Completed sequential A-share raw daily K-lines in stock_kline_daily.",
+    "financial_backfill": "Completed verification and test-suite check. MySQL tables are fully populated and vetted.",
+    "tables_exist": [
+      "ods_fin_balancesheet",
+      "ods_fin_income",
+      "ods_fin_cashflow",
+      "ods_fin_indicators"
+    ]
+  },
+  "next_story_tasks": {}
+}

@@ -1,0 +1,398 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>E13-S4 财务数据内部接口设计参考手册</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&family=Noto+Sans+SC:wght@300;400;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-gradient: linear-gradient(135deg, #0a0816 0%, #110c22 50%, #030107 100%);
+            --card-bg: rgba(22, 17, 43, 0.7);
+            --card-border: rgba(255, 255, 255, 0.08);
+            --primary: #8a2be2;
+            --primary-glow: rgba(138, 43, 226, 0.4);
+            --secondary: #00f2fe;
+            --secondary-glow: rgba(0, 242, 254, 0.4);
+            --success: #39ff14;
+            --text-main: #f5f3ff;
+            --text-muted: #a7a3c4;
+            --font-family: 'Outfit', 'Noto Sans SC', sans-serif;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background: var(--bg-gradient);
+            color: var(--text-main);
+            font-family: var(--font-family);
+            min-height: 100vh;
+            padding: 2.5rem 1.5rem;
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+
+        header {
+            margin-bottom: 3.5rem;
+            border-left: 6px solid var(--primary);
+            padding-left: 1.5rem;
+        }
+
+        header h1 {
+            font-size: 2.5rem;
+            font-weight: 800;
+            letter-spacing: -0.04em;
+            margin-bottom: 0.5rem;
+            background: linear-gradient(to right, #ffffff, var(--secondary));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        header p {
+            color: var(--text-muted);
+            font-size: 1.1rem;
+            font-weight: 300;
+        }
+
+        .section {
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 20px;
+            padding: 2.2rem;
+            backdrop-filter: blur(12px);
+            margin-bottom: 2.5rem;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+        }
+
+        .section h2 {
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin-bottom: 1.2rem;
+            border-bottom: 1px solid rgba(255,255,255,0.06);
+            padding-bottom: 0.8rem;
+            color: #ffffff;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .section h2 span {
+            font-size: 0.8rem;
+            background: rgba(138, 43, 226, 0.2);
+            color: var(--secondary);
+            padding: 0.2rem 0.8rem;
+            border-radius: 50px;
+            border: 1px solid rgba(0, 242, 254, 0.2);
+        }
+
+        .code-block {
+            background: #060410;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 12px;
+            padding: 1.2rem;
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 0.9rem;
+            color: #c4bbf0;
+            overflow-x: auto;
+            margin: 1rem 0;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 1.5rem;
+            font-size: 0.9rem;
+        }
+
+        th, td {
+            padding: 1rem;
+            text-align: left;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+        }
+
+        th {
+            background: rgba(255,255,255,0.02);
+            color: #ffffff;
+            font-weight: 600;
+            text-transform: uppercase;
+            font-size: 0.8rem;
+            letter-spacing: 0.05em;
+        }
+
+        td {
+            color: var(--text-muted);
+        }
+
+        tr:hover td {
+            color: var(--text-main);
+            background: rgba(255,255,255,0.01);
+        }
+
+        .badge-type {
+            font-family: monospace;
+            background: rgba(0, 242, 254, 0.1);
+            color: var(--secondary);
+            padding: 0.15rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.8rem;
+        }
+
+        .highlight {
+            color: var(--success);
+            font-weight: bold;
+        }
+
+        footer {
+            margin-top: 4rem;
+            text-align: center;
+            color: var(--text-muted);
+            font-size: 0.85rem;
+            border-top: 1px solid rgba(255,255,255,0.06);
+            padding-top: 2rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>E13-S4 内部数据接口设计手册</h1>
+            <p>Tushare 数据源财务指标及三表持久化写入规范 (Internal API Guide)</p>
+        </header>
+
+        <div class="section">
+            <h2>1. 资产负债表持久化接口 <span>save_balancesheet</span></h2>
+            <p>对 A 股资产负债表（合并报表）的季度披露数据进行批量幂等落库，支持上市公司数据更正重写。</p>
+            <div class="code-block">
+@classmethod
+async def save_balancesheet(cls, data: List[Dict[str, Any]]) -> int:
+            </div>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Tushare 字段</th>
+                        <th>数据库字段</th>
+                        <th>数据类型</th>
+                        <th>说明</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>ts_code</td>
+                        <td>ts_code</td>
+                        <td><span class="badge-type">VARCHAR(12)</span></td>
+                        <td>股票代码 (唯一键索引分量)</td>
+                    </tr>
+                    <tr>
+                        <td>ann_date</td>
+                        <td>ann_date</td>
+                        <td><span class="badge-type">DATE</span></td>
+                        <td>首发公告日期</td>
+                    </tr>
+                    <tr>
+                        <td>f_ann_date</td>
+                        <td>f_ann_date</td>
+                        <td><span class="badge-type">DATE</span></td>
+                        <td>实际公告日期</td>
+                    </tr>
+                    <tr>
+                        <td>end_date</td>
+                        <td>end_date</td>
+                        <td><span class="badge-type">DATE</span></td>
+                        <td>报告期结束日期 (唯一键索引分量)</td>
+                    </tr>
+                    <tr>
+                        <td>report_type</td>
+                        <td>report_type</td>
+                        <td><span class="badge-type">VARCHAR(10)</span></td>
+                        <td>报表类型 (唯一键索引分量)</td>
+                    </tr>
+                    <tr>
+                        <td>total_assets</td>
+                        <td>total_assets</td>
+                        <td><span class="badge-type">DECIMAL(20,4)</span></td>
+                        <td>资产总计 (元)</td>
+                    </tr>
+                    <tr>
+                        <td>total_liab</td>
+                        <td>total_liabilities</td>
+                        <td><span class="badge-type">DECIMAL(20,4)</span></td>
+                        <td>负债合计 (元)</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="section">
+            <h2>2. 利润表持久化接口 <span>save_income</span></h2>
+            <p>对利润表进行批量写入，物理唯一主键保证披露期不发生重复倾泻。</p>
+            <div class="code-block">
+@classmethod
+async def save_income(cls, data: List[Dict[str, Any]]) -> int:
+            </div>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Tushare 字段</th>
+                        <th>数据库字段</th>
+                        <th>数据类型</th>
+                        <th>说明</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>ts_code</td>
+                        <td>ts_code</td>
+                        <td><span class="badge-type">VARCHAR(12)</span></td>
+                        <td>股票代码 (唯一键分量)</td>
+                    </tr>
+                    <tr>
+                        <td>end_date</td>
+                        <td>end_date</td>
+                        <td><span class="badge-type">DATE</span></td>
+                        <td>报告期结束日期 (唯一键分量)</td>
+                    </tr>
+                    <tr>
+                        <td>report_type</td>
+                        <td>report_type</td>
+                        <td><span class="badge-type">VARCHAR(10)</span></td>
+                        <td>报表类型 (唯一键分量)</td>
+                    </tr>
+                    <tr>
+                        <td>n_income</td>
+                        <td>net_profit</td>
+                        <td><span class="badge-type">DECIMAL(20,4)</span></td>
+                        <td>净利润 (元)</td>
+                    </tr>
+                    <tr>
+                        <td>total_revenue</td>
+                        <td>total_revenue</td>
+                        <td><span class="badge-type">DECIMAL(20,4)</span></td>
+                        <td>营业总收入 (元)</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="section">
+            <h2>3. 现金流量表持久化接口 <span>save_cashflow</span></h2>
+            <p>批量写入现金流量表数据，保障自由现金流计算对账的完整性。</p>
+            <div class="code-block">
+@classmethod
+async def save_cashflow(cls, data: List[Dict[str, Any]]) -> int:
+            </div>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Tushare 字段</th>
+                        <th>数据库字段</th>
+                        <th>数据类型</th>
+                        <th>说明</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>ts_code</td>
+                        <td>ts_code</td>
+                        <td><span class="badge-type">VARCHAR(12)</span></td>
+                        <td>股票代码</td>
+                    </tr>
+                    <tr>
+                        <td>end_date</td>
+                        <td>end_date</td>
+                        <td><span class="badge-type">DATE</span></td>
+                        <td>报告期</td>
+                    </tr>
+                    <tr>
+                        <td>n_cashflow_act</td>
+                        <td>net_cash_flows_oper_act</td>
+                        <td><span class="badge-type">DECIMAL(20,4)</span></td>
+                        <td>经营活动产生的现金流量净额</td>
+                    </tr>
+                    <tr>
+                        <td>n_cashflow_inv_act</td>
+                        <td>net_cash_flows_inv_act</td>
+                        <td><span class="badge-type">DECIMAL(20,4)</span></td>
+                        <td>投资活动产生的现金流量净额</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="section">
+            <h2>4. 财务关键指标持久化接口 <span>save_fina_indicator</span></h2>
+            <p>对收益率、利润率及变动杠杆等关键比率进行计算和保存。<b>百分比字段（如 ROE）会自动除以 100 转换并四舍五入保留 4 位小数。</b></p>
+            <div class="code-block">
+@classmethod
+async def save_fina_indicator(cls, data: List[Dict[str, Any]]) -> int:
+            </div>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Tushare 字段</th>
+                        <th>数据库字段</th>
+                        <th>数据类型</th>
+                        <th>清洗规则</th>
+                        <th>说明</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>ts_code</td>
+                        <td>ts_code</td>
+                        <td><span class="badge-type">VARCHAR(12)</span></td>
+                        <td>直接存储</td>
+                        <td>股票代码 (唯一主键)</td>
+                    </tr>
+                    <tr>
+                        <td>end_date</td>
+                        <td>end_date</td>
+                        <td><span class="badge-type">DATE</span></td>
+                        <td>格式化 YYYY-MM-DD</td>
+                        <td>报告期</td>
+                    </tr>
+                    <tr>
+                        <td>roe</td>
+                        <td>roe</td>
+                        <td><span class="badge-type">DECIMAL(10,4)</span></td>
+                        <td class="highlight">float(val) / 100.0</td>
+                        <td>净资产收益率 (标准小数)</td>
+                    </tr>
+                    <tr>
+                        <td>roe_dt</td>
+                        <td>roe_dt</td>
+                        <td><span class="badge-type">DECIMAL(10,4)</span></td>
+                        <td class="highlight">float(val) / 100.0</td>
+                        <td>扣非净资产收益率 (标准小数)</td>
+                    </tr>
+                    <tr>
+                        <td>grossprofit_margin</td>
+                        <td>grossprofit_margin</td>
+                        <td><span class="badge-type">DECIMAL(10,4)</span></td>
+                        <td class="highlight">float(val) / 100.0</td>
+                        <td>销售毛利率 (标准小数)</td>
+                    </tr>
+                    <tr>
+                        <td>debt_to_assets</td>
+                        <td>debt_to_assets</td>
+                        <td><span class="badge-type">DECIMAL(10,4)</span></td>
+                        <td class="highlight">float(val) / 100.0</td>
+                        <td>资产负债率 (标准小数)</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <footer>
+            <p>© 2026 Microservice Stock System • Antigravity Backend Agent • Tencent Cloud Environment</p>
+        </footer>
+    </div>
+</body>
+</html>
