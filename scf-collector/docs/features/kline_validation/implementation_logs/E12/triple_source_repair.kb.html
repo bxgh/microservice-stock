@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>A股盘后数据自愈修复与三级校验最佳实践</title>
+    <style>
+        :root {
+            --bg-color: hsl(210, 20%, 98%);
+            --card-bg: hsl(0, 0%, 100%);
+            --text-main: hsl(220, 20%, 20%);
+            --primary: hsl(150, 80%, 35%);
+            --border-color: hsl(210, 15%, 90%);
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            padding: 2rem 1.5rem;
+            line-height: 1.6;
+        }
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: var(--card-bg);
+            padding: 2.5rem;
+            border-radius: 16px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.05);
+            border: 1px solid var(--border-color);
+        }
+        h1 {
+            font-size: 1.8rem;
+            color: hsl(150, 70%, 25%);
+            border-bottom: 2px solid var(--border-color);
+            padding-bottom: 1rem;
+        }
+        .alert-tip {
+            background-color: hsl(150, 100%, 97%);
+            border-left: 4px solid var(--primary);
+            color: hsl(150, 80%, 25%);
+            padding: 1rem;
+            border-radius: 4px;
+            margin: 1.5rem 0;
+        }
+        h2 {
+            font-size: 1.3rem;
+            color: hsl(220, 20%, 25%);
+            margin-top: 2rem;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 0.5rem;
+        }
+        pre {
+            background-color: hsl(220, 15%, 15%);
+            color: hsl(220, 15%, 90%);
+            padding: 1rem;
+            border-radius: 6px;
+            overflow-x: auto;
+            font-size: 0.9rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>💡 A股盘后数据自愈修复与三级校验最佳实践</h1>
+        
+        <div class="alert-tip">
+            <strong>技术秘籍 (Best Practices)</strong>: 本文档沉淀了 Epic E12 研发过程中总结出的系统级最佳实践与核心技巧，为未来的数据同步系统设计提供高复用资产。
+        </div>
+
+        <h2>1. 理论空洞审计：笛卡尔积真源计算法</h2>
+        <p>在对账全市场数据完备性时，最忌讳使用“单股回填”对账，效率低下。我们提炼了 <strong>“笛卡尔积完备性审计法”</strong>：</p>
+        <pre><code>SELECT 
+    cal.cal_date,
+    basic.ts_code
+FROM meta_trading_calendar cal
+JOIN stock_basic_info basic 
+    ON basic.list_date &lt;= cal.cal_date 
+    AND (basic.delist_date IS NULL OR basic.delist_date &gt;= cal.cal_date)
+LEFT JOIN stock_kline_daily kline
+    ON kline.trade_date = cal.cal_date 
+    AND kline.ts_code = basic.ts_code
+WHERE cal.is_open = 1 
+  AND kline.ts_code IS NULL;</code></pre>
+
+        <h2>2. 三段式自愈补数机制 (Triple-Source Recovery Flow)</h2>
+        <p>针对三方金融数据 API 常出现的网络限流、单点数据丢失以及停牌不返回记录问题，应强制遵循以下三级自愈补数策略：</p>
+        <ul>
+            <li><strong>Tier 1</strong>: Tushare 批量日线接口拉取，覆盖 95%+ 以上数据。</li>
+            <li><strong>Tier 2</strong>: Tushare <code>suspend_d</code> 停牌比对排除假空洞，直接标记 <code>SUCCESS</code>。</li>
+            <li><strong>Tier 3</strong>: AkShare 影子源单点回填补偿。对于最终无法补齐的，标记为 <code>FAILED</code> 终止无限循环。</li>
+        </ul>
+
+        <h2>3. 影子随机对账采样算法</h2>
+        <p>为了防范金融数据发生系统性字段偏离（如开高低收价格被错误除权），系统盘后应自动执行 <strong>1% 影子随机对账</strong>，利用随机抽样算法比对开、高、低、收四价，使用 0.011 元的精度屏蔽判断偏离值。</p>
+    </div>
+</body>
+</html>
