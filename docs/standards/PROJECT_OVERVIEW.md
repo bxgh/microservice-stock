@@ -262,17 +262,17 @@ DDL 规则：所有 DDL 进 migrations/ 目录，使用 Alembic 或独立 SQL �
   - 任一仓修改跨仓表 schema(字段增删 / 类型变更 / 单位变更),必须在 `IMPLEMENTATION_FEEDBACK.md` 标注「跨仓 schema 变更:仓 A → 仓 B」并通知对侧
   - 字段命名 / 单位规范见第 2 节,跨仓不允许各自约定
 
-### 第 9 章 · 行情追溯与假设验证（观察点系统）
-
-**核心表**：`obs_observation_point`、`obs_hypothesis`、`obs_target_pool`（多对多绑定）、`obs_verification_window`、`obs_verification_result`
-
-**核心命题**：把交易直觉转化为可验证的假设，T+20 / T+30 数据校准市场认知
-
-**典型场景**：寒武纪涨停 → 假设 A（虹吸）vs 假设 B（带动板块）→ 20 日后用资金/涨跌幅/超额收益数据验证
-
-**依赖**：第 1-8 章（特别是 L8 异动池）
-
 **状态**：✅ 设计已交付 / 🚧 待开发
+
+### 第 14 章 · AI 政策监控系统
+
+**核心表**：`ods_policy_info`、`dwd_sector_mapping`
+
+**核心逻辑**：基于 AI 的政策摘要、措辞对比与行业映射。通过独立云函数 `scf-policy-monitor` 运行。
+
+**依赖**：无
+
+**状态**：⏳ 实施中 (feat/e14-policy-tracker)
 
 ### 横切：异动管线 v1.1 部署方案（2026-05-03）
 

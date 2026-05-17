@@ -21,8 +21,15 @@
 | `dim_sw_industry_member`| 申万行业成员 | 每日 18:00 | 🟢 生产就绪 | `stock-scf-meta` |
 | `ods_index_daily` | 指数行情 | 盘后 16:30 | 🟢 生产就绪 | `stock-serverless-collector` |
 
+## 3. 政策与 AI 监控 (Policy & AI)
+
+| 表名 | 描述 | 采集频率 | 状态 | 云函数名称 (物理 ID) |
+|---|---|---|---|---|
+| `ods_policy_info` | 政策原文数据表 | 实时/定期 (半小时) | 🟢 生产就绪 | `scf-policy-monitor` |
+
 ---
 **更新记录**:
+- 2026-05-17: [Epic E14-S1] 数据采集层建设。新建独立云函数 `scf-policy-monitor` 抓取 `gov.cn` 动态 JSON 数据接口，入库 `ods_policy_info`，实现了 URL/MD5 双重去重，并完美对接了 ServerChan 微信通知与 SMTP 邮件警报。
 - 2026-05-16: [Epic E13-S2] 全市场 K 线源迁移。彻底废弃 BaoStock 源，完成 `stock_kline_daily` 清空并在云端服务器启动 Tushare 单线程全量回填，保障行情数据“不复权”纯净性。
 - 2026-05-15: [Epic E400-S1] 复权因子内嵌...
 - 2026-05-13: [Epic E8-S1] 复权因子存储重构...

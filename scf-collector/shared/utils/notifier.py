@@ -5,10 +5,57 @@ import datetime
 from email.mime.text import MIMEText
 from email.header import Header
 from email.utils import formatdate
+import httpx
 from typing import Dict, Any, Optional
 import aiosmtplib
 
 logger = logging.getLogger(__name__)
+
+class WeChatNotifier:
+    """
+    微信通知模块：支持 Server酱 (SCT) 和 企业微信 Webhook
+    """
+    
+    @staticmethod
+    async def send_msg(title: str, content: str):
+        """
+        发送微信通知
+        """
+        # 1. 尝试 Server酱 (SCT_KEY)
+        sct_key = os.getenv("SCT_KEY")
+        if sct_key:
+            try:
+                async with httpx.AsyncClient() as client:
+                    resp = await client.post(
+                        f"https://sctapi.ftqq.com/{sct_key}.send",
+                        data={"title": title, "desp": content}
+                    )
+                    if resp.status_code == 200:
+                        logger.info(f"ServerChan notification sent: {title}")
+                        return True
+            except Exception as e:
+                logger.error(f"Failed to send ServerChan notification: {e}")
+
+        # 2. 尝试 企业微信 Webhook (WX_WEBHOOK)
+        wx_webhook = os.getenv("WX_WEBHOOK")
+        if wx_webhook:
+            try:
+                async with httpx.AsyncClient() as client:
+                    data = {
+                        "msgtype": "markdown",
+                        "markdown": {
+                            "content": f"### {title}\n{content}"
+                        }
+                    }
+                    resp = await client.post(wx_webhook, json=data)
+                    if resp.status_code == 200:
+                        logger.info(f"WorkWeChat notification sent: {title}")
+                        return True
+            except Exception as e:
+                logger.error(f"Failed to send WorkWeChat notification: {e}")
+        
+        logger.warning("WeChat notification keys are missing or failed.")
+        return False
 
 class EmailNotifier:
     """

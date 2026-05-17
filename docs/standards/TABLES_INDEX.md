@@ -97,11 +97,11 @@
 | ods_st_change | (ts_code, change_date) | old_status / new_status / reason | T+0 18:00 | Tushare 计算 | ST 状态差分;⚠️ 跨周末 / 长假需先做「name 包含 ST」全表对照后再差分 |
 | ods_investigation | (ts_code, ann_date) | reason / authority | T+0 18:00 | Tushare | 立案调查 |
 
-### 第 7 章 · L7 跨市场
+### 第 14 章 · 政策监控
 
 | 表名 | 主键 | 关键字段 | 频率 | 上游 | 说明 |
 |---|---|---|---|---|---|
-| ods_index_global_daily | (ts_code, trade_date) | close / pct_chg | T+1(因时差) | 长桥 / Tushare | 海外指数 6 个 |
+| ods_policy_info | id | ts_code / title / publish_date / source_url / content_md5 | T+0 实时 | gov.cn / pbc / csrc | 原始政策信息库；使用 MD5 强去重 |
 
 ---
 
@@ -155,10 +155,6 @@
 | train_decision_item | (decision_id, field_id) | value (JSON) | 决策日志明细 |
 | train_weekly_review | (user_id, week_start) | content (JSON) / pattern_summary | 周末复盘 |
 
-校验方法 `validator_method ∈ {threshold_mapping, json_intersection, manual_review, outcome_inference}`
-
-版本档位 `version_tier ∈ {entry, intermediate, full}`,5 项 / 8 项 / 12 项,解锁条件见 PROJECT_OVERVIEW 第 5 节第 8 章。
-
 ---
 
 ## 8. legacy 表(存量,新开发禁用)
@@ -181,12 +177,12 @@
 
 | 字段 / 表 | 陷阱 | 处理 |
 |---|---|---|
-| 全库 `pct_chg` | 上游可能为百分比 | 采集层 `/100`,入库一律小数 |
+| 全库 `pct_chg` | 上游可能为百分比 | 采集层统一 /100,入库一律小数 |
 | `holdertrade.change_ratio` | 上游有时百分比有时小数 | 采集层规范化为小数 |
 | ETF `share_chg` | 单位「亿份」 | 净申购 = `share_chg × nav × 1e8` |
 | `yield_pct`(国债收益率) | 上游为百分比 | 采集层 `/100`,一律小数 |
 | `amount`(成交额) | 上游可能是千元 / 万元 | 采集层统一为元 |
-| 涨跌停阈值 | 主板 9.7% / 创业板 19.7% / ST 4.7% / 北交所 29.7% | 当前简化版 9.7%,**前端必须注明** |
+| 涨跌停阈值 | 主板 9.7% / 创业板 19.7% / 科创板 19.7% / ST 4.7% / 北交所 29.7% | 当前简化版 9.7%,**前端必须注明** |
 | 个股北向 | 2024-08-19 后无盘中数据 | 跨期不可比,放弃个股北向 |
 | `is_deleted` | 软删除字段 | 默认 0,查询必须过滤 `is_deleted = 0` |
 | `stock_adjust_factor` | `fore_adjust_factor` 数据漂移 | **已废弃**。统一使用 `adjust_factor` 作为累积因子进行动态计算 |
@@ -246,4 +242,5 @@ ads_l1 + l2 + l3 + l4 + l5 + l6 + l7 ──→ app_daily_brief (7)
 | 日期 | 版本 | 变更 | 作者 |
 |---|---|---|---|
 | 2026-05-05 | v0.1 | 骨架初版,基于 PROJECT_OVERVIEW.md / IMPLEMENTATION_FEEDBACK.md 提取 | Claude 协助 |
-| 2026-05-05 | v0.2 | 核对版,包括腾讯云mysql数据库和内网ck数据库
+| 2026-05-05 | v0.2 | 核对版,包括腾讯云mysql数据库和内网ck数据库 | Gemini 协助 |
+| 2026-05-16 | v0.3 | 新增第 14 章政策监控表 ods_policy_info | Antigravity |

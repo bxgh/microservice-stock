@@ -7,3 +7,5 @@ cryptography
 python-dotenv
 easyquotation
 aiosmtplib
+httpx
+beautifulsoup4

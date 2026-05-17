@@ -40,6 +40,12 @@ class DBManager:
             password = os.getenv("MYSQL_PASSWORD", "")
             db = os.getenv("MYSQL_DB", "stock")
 
+            # 针对本地 Windows 开发环境自动切换到公网端点
+            if os.name == 'nt' and host == '172.17.0.10':
+                logger.info("Local Windows environment detected. Redirecting to public database endpoint.")
+                host = "sh-cdb-h7flpxu4.sql.tencentcdb.com"
+                port = 26300
+
             logger.info(f"Connecting to MySQL at {host}:{port}...")
             
             # 连接重试逻辑
