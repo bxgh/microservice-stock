@@ -513,3 +513,297 @@ class StockDAO:
             updated_at = CURRENT_TIMESTAMP
         """
         return await execute_query(sql, data, is_select=False)
+
+    @classmethod
+    def _format_date(cls, date_str: Any) -> Optional[str]:
+        if not date_str:
+            return None
+        s = str(date_str).strip()
+        if len(s) == 8:
+            return f"{s[:4]}-{s[4:6]}-{s[6:]}"
+        return s
+
+    @classmethod
+    def _clean_nan(cls, item: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        [Backend Engineer] 辅助方法：清除财务数据中的 NaN/Inf 浮点数，
+        将其转换为 MySQL 支持 of None (对应数据库中的 NULL)，以防发生 "nan can not be used with MySQL" 报错。
+        同时为了防止 MySQL DECIMAL 精度截断警告，自动将浮点数保留 4 位小数。
+        """
+        import math
+        import pandas as pd
+        cleaned = {}
+        for k, v in item.items():
+            if v is None:
+                cleaned[k] = None
+            elif isinstance(v, float):
+                if math.isnan(v) or math.isinf(v):
+                    cleaned[k] = None
+                else:
+                    cleaned[k] = round(v, 4)
+            elif pd.isna(v):
+                cleaned[k] = None
+            else:
+                cleaned[k] = v
+        return cleaned
+
+    @classmethod
+    async def save_balancesheet(cls, data: List[Dict[str, Any]]) -> int:
+        """
+        [E13-S4-T2] 批量保存资产负债表数据 (幂等插入)
+        """
+        if not data:
+            return 0
+
+        mapping = {
+            "total_liab": "total_liabilities",
+            "st_borr": "short_term_borrow",
+            "lt_borr": "long_term_borrow"
+        }
+
+        sql = """
+        INSERT INTO ods_fin_balancesheet (
+            ts_code, ann_date, f_ann_date, end_date, report_type, comp_type,
+            total_assets, total_liabilities, total_hldr_eqy_exc_min_int, total_hldr_eqy_inc_min_int,
+            monetary_funds, notes_receiv, accounts_receiv, inventory, goodwill,
+            short_term_borrow, long_term_borrow, is_deleted
+        ) VALUES (
+            %(ts_code)s, %(ann_date)s, %(f_ann_date)s, %(end_date)s, %(report_type)s, %(comp_type)s,
+            %(total_assets)s, %(total_liabilities)s, %(total_hldr_eqy_exc_min_int)s, %(total_hldr_eqy_inc_min_int)s,
+            %(monetary_funds)s, %(notes_receiv)s, %(accounts_receiv)s, %(inventory)s, %(goodwill)s,
+            %(short_term_borrow)s, %(long_term_borrow)s, 0
+        ) ON DUPLICATE KEY UPDATE 
+            ann_date = VALUES(ann_date),
+            f_ann_date = VALUES(f_ann_date),
+            total_assets = VALUES(total_assets),
+            total_liabilities = VALUES(total_liabilities),
+            total_hldr_eqy_exc_min_int = VALUES(total_hldr_eqy_exc_min_int),
+            total_hldr_eqy_inc_min_int = VALUES(total_hldr_eqy_inc_min_int),
+            monetary_funds = VALUES(monetary_funds),
+            notes_receiv = VALUES(notes_receiv),
+            accounts_receiv = VALUES(accounts_receiv),
+            inventory = VALUES(inventory),
+            goodwill = VALUES(goodwill),
+            short_term_borrow = VALUES(short_term_borrow),
+            long_term_borrow = VALUES(long_term_borrow),
+            is_deleted = 0,
+            updated_at = CURRENT_TIMESTAMP
+        """
+
+        count = 0
+        for item in data:
+            item_copy = cls._clean_nan(dict(item))
+            # 1. 字段映射
+            for ts_key, db_key in mapping.items():
+                if ts_key in item_copy:
+                    item_copy[db_key] = item_copy.pop(ts_key)
+            
+            # 2. 日期转换
+            for d_key in ["ann_date", "f_ann_date", "end_date"]:
+                item_copy[d_key] = cls._format_date(item_copy.get(d_key))
+
+            # 3. 补齐缺省字段
+            for col in ["ann_date", "f_ann_date", "end_date", "report_type", "comp_type",
+                        "total_assets", "total_liabilities", "total_hldr_eqy_exc_min_int", "total_hldr_eqy_inc_min_int",
+                        "monetary_funds", "notes_receiv", "accounts_receiv", "inventory", "goodwill",
+                        "short_term_borrow", "long_term_borrow"]:
+                if col not in item_copy:
+                    item_copy[col] = None
+
+            res = await execute_query(sql, item_copy, is_select=False)
+            count += res
+        
+        logger.info(f"Successfully saved {len(data)} records to ods_fin_balancesheet (affected: {count}).")
+        return count
+
+    @classmethod
+    async def save_income(cls, data: List[Dict[str, Any]]) -> int:
+        """
+        [E13-S4-T2] 批量保存利润表数据 (幂等插入)
+        """
+        if not data:
+            return 0
+
+        mapping = {
+            "n_income": "net_profit"
+        }
+
+        sql = """
+        INSERT INTO ods_fin_income (
+            ts_code, ann_date, f_ann_date, end_date, report_type, comp_type,
+            basic_eps, diluted_eps, total_revenue, revenue, total_cogs, oper_cost,
+            sell_exp, admin_exp, fin_exp, operate_profit, total_profit, net_profit, 
+            n_income_attr_p, is_deleted
+        ) VALUES (
+            %(ts_code)s, %(ann_date)s, %(f_ann_date)s, %(end_date)s, %(report_type)s, %(comp_type)s,
+            %(basic_eps)s, %(diluted_eps)s, %(total_revenue)s, %(revenue)s, %(total_cogs)s, %(oper_cost)s,
+            %(sell_exp)s, %(admin_exp)s, %(fin_exp)s, %(operate_profit)s, %(total_profit)s, %(net_profit)s,
+            %(n_income_attr_p)s, 0
+        ) ON DUPLICATE KEY UPDATE 
+            ann_date = VALUES(ann_date),
+            f_ann_date = VALUES(f_ann_date),
+            basic_eps = VALUES(basic_eps),
+            diluted_eps = VALUES(diluted_eps),
+            total_revenue = VALUES(total_revenue),
+            revenue = VALUES(revenue),
+            total_cogs = VALUES(total_cogs),
+            oper_cost = VALUES(oper_cost),
+            sell_exp = VALUES(sell_exp),
+            admin_exp = VALUES(admin_exp),
+            fin_exp = VALUES(fin_exp),
+            operate_profit = VALUES(operate_profit),
+            total_profit = VALUES(total_profit),
+            net_profit = VALUES(net_profit),
+            n_income_attr_p = VALUES(n_income_attr_p),
+            is_deleted = 0,
+            updated_at = CURRENT_TIMESTAMP
+        """
+
+        count = 0
+        for item in data:
+            item_copy = cls._clean_nan(dict(item))
+            # 1. 字段映射
+            for ts_key, db_key in mapping.items():
+                if ts_key in item_copy:
+                    item_copy[db_key] = item_copy.pop(ts_key)
+            
+            # 2. 日期转换
+            for d_key in ["ann_date", "f_ann_date", "end_date"]:
+                item_copy[d_key] = cls._format_date(item_copy.get(d_key))
+
+            # 3. 补齐缺省字段
+            for col in ["ann_date", "f_ann_date", "end_date", "report_type", "comp_type",
+                        "basic_eps", "diluted_eps", "total_revenue", "revenue", "total_cogs", "oper_cost",
+                        "sell_exp", "admin_exp", "fin_exp", "operate_profit", "total_profit", "net_profit", "n_income_attr_p"]:
+                if col not in item_copy:
+                    item_copy[col] = None
+
+            res = await execute_query(sql, item_copy, is_select=False)
+            count += res
+        
+        logger.info(f"Successfully saved {len(data)} records to ods_fin_income (affected: {count}).")
+        return count
+
+    @classmethod
+    async def save_cashflow(cls, data: List[Dict[str, Any]]) -> int:
+        """
+        [E13-S4-T2] 批量保存现金流量表数据 (幂等插入)
+        """
+        if not data:
+            return 0
+
+        mapping = {
+            "n_cashflow_act": "net_cash_flows_oper_act",
+            "n_cashflow_inv_act": "net_cash_flows_inv_act",
+            "n_cash_flows_fnc_act": "net_cash_flows_fnc_act"
+        }
+
+        sql = """
+        INSERT INTO ods_fin_cashflow (
+            ts_code, ann_date, f_ann_date, end_date, report_type, comp_type,
+            net_cash_flows_oper_act, net_cash_flows_inv_act, net_cash_flows_fnc_act, free_cashflow, is_deleted
+        ) VALUES (
+            %(ts_code)s, %(ann_date)s, %(f_ann_date)s, %(end_date)s, %(report_type)s, %(comp_type)s,
+            %(net_cash_flows_oper_act)s, %(net_cash_flows_inv_act)s, %(net_cash_flows_fnc_act)s, %(free_cashflow)s, 0
+        ) ON DUPLICATE KEY UPDATE 
+            ann_date = VALUES(ann_date),
+            f_ann_date = VALUES(f_ann_date),
+            net_cash_flows_oper_act = VALUES(net_cash_flows_oper_act),
+            net_cash_flows_inv_act = VALUES(net_cash_flows_inv_act),
+            net_cash_flows_fnc_act = VALUES(net_cash_flows_fnc_act),
+            free_cashflow = VALUES(free_cashflow),
+            is_deleted = 0,
+            updated_at = CURRENT_TIMESTAMP
+        """
+
+        count = 0
+        for item in data:
+            item_copy = cls._clean_nan(dict(item))
+            # 1. 字段映射
+            for ts_key, db_key in mapping.items():
+                if ts_key in item_copy:
+                    item_copy[db_key] = item_copy.pop(ts_key)
+            
+            # 2. 日期转换
+            for d_key in ["ann_date", "f_ann_date", "end_date"]:
+                item_copy[d_key] = cls._format_date(item_copy.get(d_key))
+
+            # 3. 补齐缺省字段
+            for col in ["ann_date", "f_ann_date", "end_date", "report_type", "comp_type",
+                        "net_cash_flows_oper_act", "net_cash_flows_inv_act", "net_cash_flows_fnc_act", "free_cashflow"]:
+                if col not in item_copy:
+                    item_copy[col] = None
+
+            res = await execute_query(sql, item_copy, is_select=False)
+            count += res
+        
+        logger.info(f"Successfully saved {len(data)} records to ods_fin_cashflow (affected: {count}).")
+        return count
+
+    @classmethod
+    async def save_fina_indicator(cls, data: List[Dict[str, Any]]) -> int:
+        """
+        [E13-S4-T2] 批量保存财务指标数据 (幂等插入，百分比除以 100 转换)
+        """
+        if not data:
+            return 0
+
+        sql = """
+        INSERT INTO ods_fin_indicators (
+            ts_code, ann_date, end_date, eps, dt_eps, total_revenue_ps, revenue_ps,
+            capital_rese_ps, undist_profit_ps, roe, roe_dt, roa, netprofit_margin,
+            grossprofit_margin, debt_to_assets, current_ratio, quick_ratio, is_deleted
+        ) VALUES (
+            %(ts_code)s, %(ann_date)s, %(end_date)s, %(eps)s, %(dt_eps)s, %(total_revenue_ps)s, %(revenue_ps)s,
+            %(capital_rese_ps)s, %(undist_profit_ps)s, %(roe)s, %(roe_dt)s, %(roa)s, %(netprofit_margin)s,
+            %(grossprofit_margin)s, %(debt_to_assets)s, %(current_ratio)s, %(quick_ratio)s, 0
+        ) ON DUPLICATE KEY UPDATE 
+            ann_date = VALUES(ann_date),
+            eps = VALUES(eps),
+            dt_eps = VALUES(dt_eps),
+            total_revenue_ps = VALUES(total_revenue_ps),
+            revenue_ps = VALUES(revenue_ps),
+            capital_rese_ps = VALUES(capital_rese_ps),
+            undist_profit_ps = VALUES(undist_profit_ps),
+            roe = VALUES(roe),
+            roe_dt = VALUES(roe_dt),
+            roa = VALUES(roa),
+            netprofit_margin = VALUES(netprofit_margin),
+            grossprofit_margin = VALUES(grossprofit_margin),
+            debt_to_assets = VALUES(debt_to_assets),
+            current_ratio = VALUES(current_ratio),
+            quick_ratio = VALUES(quick_ratio),
+            is_deleted = 0,
+            updated_at = CURRENT_TIMESTAMP
+        """
+
+        count = 0
+        for item in data:
+            item_copy = cls._clean_nan(dict(item))
+            
+            # 1. 百分比字段除以 100 换算为标准小数
+            percent_cols = ['roe', 'roe_dt', 'roa', 'netprofit_margin', 'grossprofit_margin', 'debt_to_assets']
+            for col in percent_cols:
+                val = item_copy.get(col)
+                if val is not None:
+                    try:
+                        item_copy[col] = round(float(val) / 100.0, 4)
+                    except (ValueError, TypeError):
+                        item_copy[col] = None
+
+            # 2. 日期转换
+            for d_key in ["ann_date", "end_date"]:
+                item_copy[d_key] = cls._format_date(item_copy.get(d_key))
+
+            # 3. 补齐缺省字段
+            for col in ["ann_date", "end_date", "eps", "dt_eps", "total_revenue_ps", "revenue_ps",
+                        "capital_rese_ps", "undist_profit_ps", "roe", "roe_dt", "roa", "netprofit_margin",
+                        "grossprofit_margin", "debt_to_assets", "current_ratio", "quick_ratio"]:
+                if col not in item_copy:
+                    item_copy[col] = None
+
+            res = await execute_query(sql, item_copy, is_select=False)
+            count += res
+        
+        logger.info(f"Successfully saved {len(data)} records to ods_fin_indicators (affected: {count}).")
+        return count
