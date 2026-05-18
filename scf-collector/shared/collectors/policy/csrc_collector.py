@@ -79,10 +79,10 @@ class CsrcCollector:
             
             soup = BeautifulSoup(resp.text, 'html.parser')
             # 证监会正文容器通常为 .content, 也有可能存在 .pages_content 或 .article-content
-            content_div = soup.select_one(".content") or \
-                          soup.select_one(".pages_content") or \
-                          soup.select_one("#UCAP-CONTENT") or \
-                          soup.select_one(".article-content")
+            content_div = soup.find(class_="content") or \
+                          soup.find(class_="pages_content") or \
+                          soup.find(id="UCAP-CONTENT") or \
+                          soup.find(class_="article-content")
             
             if content_div:
                 # 移除脚本和样式
