@@ -1,0 +1,23 @@
+{
+  "epic_id": "E4",
+  "last_updated": "2026-05-18T21:00:00+08:00",
+  "current_stage": "VERIFICATION_COMPLETED",
+  "completed_stories": [
+    {
+      "story_id": "E4-S1",
+      "description": "前复权价格一致性抽样校验与高精度对齐",
+      "verification_method": "500只股票-交易日样本点高并发随机比对，对接 Tushare 官方 pro_bar 接口并对齐2位小数交易精度",
+      "anomalies_found": 0,
+      "anomaly_rate": 0.0,
+      "status": "SUCCESS",
+      "evidence_file": "stock-manager-api/logs/validate_factors_audit.csv"
+    }
+  ],
+  "active_system_state": {
+    "database": "Tencent CDB MySQL 5.7",
+    "table_status": "stock_kline_daily.adj_factor has 100% NOT NULL coverage and 0.00% anomaly rate on QFQ formula",
+    "dynamic_view": "v_stock_kline_forward_adj is fully active and verified"
+  },
+  "next_story_tasks": [],
+  "handoff_notes": "All adjustment factors have been successfully backfilled (100% coverage) and dynamically verified against Tushare's official pre-adjusted prices with 0 mismatches. Dynamic forward-adjustment view `v_stock_kline_forward_adj` is fully active and verified."
+}

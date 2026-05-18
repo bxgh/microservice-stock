@@ -209,7 +209,34 @@ class MarketDataService:
                 data = resp.json().get("data", [])
 
             if data:
-                # 1. 过滤掉非核心 A 股标的
+                # 1.1 同时拉取对应范围的复权因子
+                factors = []
+                try:
+                    logger.info(f"正在通过 Tushare 同步复权因子: {ts_code or trade_date}")
+                    factor_url = f"{self.tushare_url}/api/v1/stock/adj_factor"
+                    factor_params = {
+                        "ts_code": ts_code,
+                        "trade_date": trade_date.replace("-", ""),
+                        "start_date": start_date.replace("-", ""),
+                        "end_date": end_date.replace("-", "")
+                    }
+                    async with httpx.AsyncClient(timeout=30.0) as client:
+                        f_resp = await client.get(factor_url, params=factor_params)
+                        f_resp.raise_for_status()
+                        factors = f_resp.json().get("data", [])
+                except Exception as fe:
+                    logger.warning(f"拉取复权因子异常: {fe}，将使用历史最新因子兜底")
+
+                factor_map = {}
+                for f in factors:
+                    f_code = f.get("ts_code")
+                    f_date = f.get("trade_date")
+                    f_val = f.get("adj_factor")
+                    if f_code and f_date and f_val is not None:
+                        f_date_str = f"{f_date[:4]}-{f_date[4:6]}-{f_date[6:8]}" if len(f_date) == 8 else f_date
+                        factor_map[(f_code, f_date_str)] = float(f_val)
+
+                # 1.2 过滤掉非核心 A 股标的
                 valid_codes = set(await self._get_valid_a_share_codes())
                 
                 # 2. 分批处理以节省内存 (每 1000 条处理一次)
@@ -218,7 +245,7 @@ class MarketDataService:
                 for i in range(0, len(data), batch_size):
                     batch = [item for item in data[i:i+batch_size] if item.get("ts_code") in valid_codes]
                     if batch:
-                        await self._save_stock_daily_to_db(batch)
+                        await self._save_stock_daily_to_db(batch, factor_map)
                         total_synced += len(batch)
                 
                 logger.info(f"Tushare 同步股票日线完成: {total_synced} 条")
@@ -243,19 +270,16 @@ class MarketDataService:
             logger.error(f"Tushare 同步异常: {e}, 触发 BaoStock 降级机制")
             return await self._sync_stock_daily_baostock_fallback(trade_date)
 
-    async def _save_stock_daily_to_db(self, data: List[Dict[str, Any]]):
-        """统一将 Tushare 格式的日线保存到数据库 (内存优化版)"""
-        query = """
-            INSERT IGNORE INTO stock_kline_daily (
-                ts_code, trade_date, open, high, low, close,
-                pre_close, pct_chg, volume, amount
-            ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-        """
+    async def _save_stock_daily_to_db(self, data: List[Dict[str, Any]], factor_map: Dict[tuple, float] = None):
+        """统一将 Tushare 格式 of 日线保存到数据库 (内存优化版，包含复权因子并支持 ON DUPLICATE KEY UPDATE)"""
+        if factor_map is None:
+            factor_map = {}
+
         # 1. 转换日期格式并预处理 (直接转换为校验器需要的格式)
         transformed_data = []
         for i in data:
             d = i.get("trade_date")
-            dt_str = f"{d[:4]}-{d[4:6]}-{d[6:8]}"
+            dt_str = f"{d[:4]}-{d[4:6]}-{d[6:8]}" if len(d) == 8 else d
             transformed_data.append({
                 "ts_code": i.get("ts_code"),
                 "trade_date": dt_str,
@@ -280,12 +304,72 @@ class MarketDataService:
         if not passed:
             return
 
-        # 3. 构造参数并执行批量写入
-        args = [
-            (i["ts_code"], i["trade_date"], i["open"], i["high"], i["low"], 
-             i["close"], i["pre_close"], i["pct_chg"], i["volume"], i["amount"])
-            for i in passed
-        ]
+        # 3. 针对 factor_map 中缺失的标的进行批量历史因子获取作为兜底
+        missing_codes = []
+        for i in passed:
+            key = (i["ts_code"], i["trade_date"])
+            if key not in factor_map:
+                missing_codes.append(i["ts_code"])
+        
+        fallback_map = {}
+        if missing_codes:
+            unique_missing = list(set(missing_codes))
+            # 每 500 个标的分批查询以防 SQL 占位符超限
+            for chunk_start in range(0, len(unique_missing), 500):
+                chunk = unique_missing[chunk_start:chunk_start+500]
+                placeholders = ",".join(["%s"] * len(chunk))
+                fallback_sql = f"""
+                    SELECT k.ts_code, k.adj_factor 
+                    FROM stock_kline_daily k
+                    JOIN (
+                        SELECT ts_code, MAX(trade_date) as max_date 
+                        FROM stock_kline_daily 
+                        WHERE ts_code IN ({placeholders})
+                        GROUP BY ts_code
+                    ) m ON k.ts_code = m.ts_code AND k.trade_date = m.max_date
+                """
+                try:
+                    rows = await db.execute(fallback_sql, tuple(chunk))
+                    for r in rows:
+                        fallback_map[r[0]] = float(r[1]) if r[1] is not None else 1.0
+                except Exception as db_err:
+                    logger.error(f"批量查询兜底复权因子异常: {db_err}")
+
+        # 4. 构造参数并执行批量写入 (支持 ON DUPLICATE KEY UPDATE 以便同步时能幂等覆盖最新数据)
+        query = """
+            INSERT INTO stock_kline_daily (
+                ts_code, trade_date, open, high, low, close,
+                pre_close, pct_chg, volume, amount, adj_factor
+            ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+            ON DUPLICATE KEY UPDATE
+                open = VALUES(open),
+                high = VALUES(high),
+                low = VALUES(low),
+                close = VALUES(close),
+                pre_close = VALUES(pre_close),
+                pct_chg = VALUES(pct_chg),
+                volume = VALUES(volume),
+                amount = VALUES(amount),
+                adj_factor = VALUES(adj_factor)
+        """
+        args = []
+        for i in passed:
+            key = (i["ts_code"], i["trade_date"])
+            adj_factor = factor_map.get(key)
+            if adj_factor is None:
+                adj_factor = fallback_map.get(i["ts_code"])
+                if adj_factor is None:
+                    adj_factor = 1.000000
+                    logger.info(f"{i['ts_code']} {i['trade_date']} 未找到复权因子且无历史记录，设为兜底值 1.000000")
+                else:
+                    logger.warning(f"{i['ts_code']} {i['trade_date']} 因子未同步，已使用历史最新因子 {adj_factor} 兜底写入")
+
+            args.append((
+                i["ts_code"], i["trade_date"], i["open"], i["high"], i["low"], 
+                i["close"], i["pre_close"], i["pct_chg"], i["volume"], i["amount"],
+                adj_factor
+            ))
+
         await db.execute_many(query, args)
 
     async def _log_rejected_data(self, rejected: List[Dict[str, Any]]):

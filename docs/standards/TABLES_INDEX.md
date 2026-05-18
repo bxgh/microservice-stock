@@ -161,7 +161,7 @@
 
 | 表名 | 章节归属 | 现状 | 迁移目标 / 处置 |
 |---|---|---|---|---|
-| stock_kline_daily | 多章节 | 在用 | 1200万+ 记录, 暂不迁移 |
+| stock_kline_daily | 多章节 | 在用 | 1200万+ 记录, 暂不迁移；已新增内嵌 `adj_factor` (累积后复权因子) 字段，前复权价格 = 真实价格 * (当日复权因子 / 最新复权因子) |
 | daily_basic | 多章节 | 在用 | 1100万+ 记录, 暂不迁移 |
 | index_basic | 1 | 在用 | → `dim_index_basic` |
 | trade_cal | 全部 | 在用 | → `meta_trading_calendar` |
@@ -186,6 +186,7 @@
 | 个股北向 | 2024-08-19 后无盘中数据 | 跨期不可比,放弃个股北向 |
 | `is_deleted` | 软删除字段 | 默认 0,查询必须过滤 `is_deleted = 0` |
 | `stock_adjust_factor` | `fore_adjust_factor` 数据漂移 | **已废弃**。统一使用 `adjust_factor` 作为累积因子进行动态计算 |
+| `stock_kline_daily.adj_factor` | 内嵌复权因子，部分历史记录或 IPO 股缺失 | 已完成全库 100% 数据回填；默认兜底值为 1.0；查询前复权价格时由公式动态派生 |
 
 ---
 

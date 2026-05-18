@@ -284,6 +284,38 @@ class TushareCollector(BaseCollector):
         df = await asyncio.to_thread(self._fetch_fina_indicator_sync, ts_code)
         return df.to_dict('records') if df is not None and not df.empty else []
 
+    def _fetch_daily_basic_sync(self, date_str: str) -> pd.DataFrame:
+        if not self.pro:
+            logger.error("[tushare] pro_api is not initialized.")
+            return pd.DataFrame()
+        try:
+            return self.pro.daily_basic(trade_date=date_str)
+        except Exception as e:
+            logger.error(f"[tushare] fetch daily_basic error for {date_str}: {e}")
+            raise
+
+    async def fetch_daily_basic(self, trade_date: str) -> List[Dict[str, Any]]:
+        """[E13-S5-T1] 异步获取单日全市场估值指标"""
+        date_str = self._convert_date(trade_date)
+        df = await asyncio.to_thread(self._fetch_daily_basic_sync, date_str)
+        return df.to_dict('records') if df is not None and not df.empty else []
+
+    def _fetch_margin_detail_sync(self, date_str: str) -> pd.DataFrame:
+        if not self.pro:
+            logger.error("[tushare] pro_api is not initialized.")
+            return pd.DataFrame()
+        try:
+            return self.pro.margin_detail(trade_date=date_str)
+        except Exception as e:
+            logger.error(f"[tushare] fetch margin_detail error for {date_str}: {e}")
+            raise
+
+    async def fetch_margin_detail(self, trade_date: str) -> List[Dict[str, Any]]:
+        """[E13-S5-T2] 异步获取单日全市场融资融券明细"""
+        date_str = self._convert_date(trade_date)
+        df = await asyncio.to_thread(self._fetch_margin_detail_sync, date_str)
+        return df.to_dict('records') if df is not None and not df.empty else []
+
     def normalize_data(self, df: pd.DataFrame, ts_code: str, trade_date: str) -> List[KLineModel]:
         results = []
         for _, row in df.iterrows():
