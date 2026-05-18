@@ -171,9 +171,9 @@ async def async_handler(event, context):
             intensity_change = row['intensity_change']
             ts_code = row['ts_code']
             
-            # 3. 门警规则过滤：我们仅对重要性评级 >= 3，或者是人行 (PBC) 发布的高优先级宏观政策进行推送
-            # 低评级且非核心发布方的记录，直接在后台标为 notified 跳过，避免日常频繁轰炸
-            if importance_level < 3 and ts_code != "PBC":
+            # 3. 门警规则过滤：我们仅对重要性评级 >= 4（重要/重磅）的突发政策进行推送
+            # 任何低于 4 星的常规政策直接在后台标为 notified 跳过，将核心注意力留给重磅事件
+            if importance_level < 4:
                 logger.info(f"[{request_id}] Skipping low importance notify for ID {analysis_id} (Level: {importance_level})")
                 await execute_query(
                     "UPDATE dwd_policy_analysis SET analysis_status = 'notified' WHERE id = %s",
@@ -240,19 +240,11 @@ async def async_handler(event, context):
                 email_level = "WARN" # 高亮红色预警主题色
                 
             email_title = f"📢 政策追踪预警: {title} ({importance_level}级研报)"
-            
-            # 6. 分级分发通知 (Differentiated Notification Triggers)
-            # Email: 宽口径 (Level >= 3 或 PBC 政策) 投研异步深读，保留全面信息流
-            # WeChat: 窄口径 (Level >= 4 重要政策，或 Level >= 3 PBC 央行宏观变动) 手机同步强预警，坚决杜绝日常消息轰炸
-            should_send_wechat = (importance_level >= 4) or (ts_code == "PBC" and importance_level >= 3)
-            
-            if should_send_wechat:
-                await WeChatNotifier.send_msg(wechat_title, wechat_content)
-                logger.info(f"[{request_id}] WeChat notification sent for ID {analysis_id}.")
-            else:
-                logger.info(f"[{request_id}] WeChat notification bypassed for ID {analysis_id} (Level {importance_level}, non-PBC) to prevent mobile alert fatigue.")
-                
+            # 6. 统一分发通知 (Unified Notification Triggers)
+            # 由于主入口门禁已统一拉齐为 Level >= 4，此处对通过过滤的重要/重磅政策同时进行微信与邮件全渠道分发
+            await WeChatNotifier.send_msg(wechat_title, wechat_content)
             await EmailNotifier.send_report(email_level, email_title, email_context)
+            logger.info(f"[{request_id}] Notification sent successfully to both WeChat and Email for ID {analysis_id}.")
             
             # 7. 标记状态为已发送 (notified)
             await execute_query(
