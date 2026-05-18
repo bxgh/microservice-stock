@@ -85,16 +85,18 @@ class LLMClient:
         is_off_peak: bool = False
     ) -> float:
         """
-        依据 DeepSeek 官方计费协议对 token 进行高精度分级计算 (单位：元/CNY)
+        依据 DeepSeek 官方最新发布的 V4 (Mix-of-Experts) 计费协议进行高精度计算 (单位：元/CNY)
+        - deepseek-v4-flash: 输入(未命中) 1元/百万, 输入(命中) 0.2元/百万, 输出 2元/百万
+        - deepseek-v4-pro (Reasoner): 输入(未命中) 3元/百万, 输入(命中) 0.3元/百万, 输出 6元/百万
         """
         if mode == "pro-thinking":
-            # deepseek-reasoner
-            input_cost = (cache_hit_tokens * 0.000002) + (cache_miss_tokens * 0.000008)
-            output_cost = output_tokens * 0.000016
+            # deepseek-v4-pro / deepseek-reasoner
+            input_cost = (cache_hit_tokens * 0.0000003) + (cache_miss_tokens * 0.000003)
+            output_cost = output_tokens * 0.000006
         else:
-            # deepseek-chat (flash & pro)
-            input_cost = (cache_hit_tokens * 0.000001) + (cache_miss_tokens * 0.000004)
-            output_cost = output_tokens * 0.000008
+            # deepseek-v4-flash / deepseek-chat
+            input_cost = (cache_hit_tokens * 0.0000002) + (cache_miss_tokens * 0.000001)
+            output_cost = output_tokens * 0.000002
             
         base_cost = input_cost + output_cost
         if is_off_peak:

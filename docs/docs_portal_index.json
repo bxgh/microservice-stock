@@ -1,18 +1,18 @@
 [
   {
+    "title": "A股宏观政策AI分析结果及板块映射深度审计报告",
+    "path": "scf-collector/docs/features/policy-tracker/implementation_logs/E14/S2/policy_tracker_analysis_report.kb.html",
+    "type": "kb",
+    "service": "POLICY-TRACKER",
+    "last_modified": "2026-05-18 18:07",
+    "deprecated": false
+  },
+  {
     "title": "避坑秘籍：多级路由分级调度 staged_analyzer 的避坑与物理熔断实践",
     "path": "scf-collector/docs/features/policy-tracker/implementation_logs/E15/S1/iterations/v2/staged_routing_failsafe.pitfall.html",
     "type": "pitfall",
     "service": "POLICY-TRACKER",
     "last_modified": "2026-05-18 10:56",
-    "deprecated": false
-  },
-  {
-    "title": "A股宏观政策AI分析结果及板块映射深度审计报告",
-    "path": "scf-collector/docs/features/policy-tracker/implementation_logs/E14/S2/policy_tracker_analysis_report.kb.html",
-    "type": "kb",
-    "service": "POLICY-TRACKER",
-    "last_modified": "2026-05-17 21:13",
     "deprecated": false
   },
   {
