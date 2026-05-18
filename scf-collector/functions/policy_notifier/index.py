@@ -241,8 +241,17 @@ async def async_handler(event, context):
                 
             email_title = f"📢 政策追踪预警: {title} ({importance_level}级研报)"
             
-            # 6. 发送通知 (WeChat + Email)
-            await WeChatNotifier.send_msg(wechat_title, wechat_content)
+            # 6. 分级分发通知 (Differentiated Notification Triggers)
+            # Email: 宽口径 (Level >= 3 或 PBC 政策) 投研异步深读，保留全面信息流
+            # WeChat: 窄口径 (Level >= 4 重要政策，或 Level >= 3 PBC 央行宏观变动) 手机同步强预警，坚决杜绝日常消息轰炸
+            should_send_wechat = (importance_level >= 4) or (ts_code == "PBC" and importance_level >= 3)
+            
+            if should_send_wechat:
+                await WeChatNotifier.send_msg(wechat_title, wechat_content)
+                logger.info(f"[{request_id}] WeChat notification sent for ID {analysis_id}.")
+            else:
+                logger.info(f"[{request_id}] WeChat notification bypassed for ID {analysis_id} (Level {importance_level}, non-PBC) to prevent mobile alert fatigue.")
+                
             await EmailNotifier.send_report(email_level, email_title, email_context)
             
             # 7. 标记状态为已发送 (notified)
