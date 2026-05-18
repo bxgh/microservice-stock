@@ -253,6 +253,11 @@ class PolicyAnalyzer:
             
         input_truncated = 1 if len(segment_used) < len(content_text) else 0
         
+        # E6-S1: 计算核心段落的 simhash 指纹
+        from shared.utils.simhash import compute_simhash
+        core_segment_simhash = compute_simhash(segment_used)
+
+        
         # 4. 追溯相同分类上一期基准
         contrast_baseline_id = None
         previous_baseline = await self._find_previous_baseline(ts_code, policy_type, publish_date)
@@ -376,7 +381,8 @@ class PolicyAnalyzer:
                 "summary": triage_summary or summary_three or "未生成摘要。",
                 "importance_level": analysis_data.get("importance_level", 3),
                 "intensity_change": analysis_data.get("intensity_change", "N/A"),
-                "cost_cny": llm_result["cost_cny"]
+                "cost_cny": llm_result["cost_cny"],
+                "core_segment_simhash": core_segment_simhash
             }
             
         # 8. 执行物理表数据落库/更新至 dwd_policy_analysis (联合唯一索引防重入)
@@ -403,9 +409,10 @@ class PolicyAnalyzer:
             implication, contrast_baseline_id, segment_used, segment_extracted, 
             input_truncated, prompt_name, prompt_version, model_name, 
             thinking_enabled, reasoning_effort, input_cache_hit_tokens, 
-            input_cache_miss_tokens, output_tokens, reasoning_tokens, cost_cny
+            input_cache_miss_tokens, output_tokens, reasoning_tokens, cost_cny,
+            core_segment_simhash
         ) VALUES (
-            %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s
+            %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s
         ) ON DUPLICATE KEY UPDATE 
             analysis_path = VALUES(analysis_path),
             analysis_stage = VALUES(analysis_stage),
@@ -427,6 +434,7 @@ class PolicyAnalyzer:
             output_tokens = VALUES(output_tokens),
             reasoning_tokens = VALUES(reasoning_tokens),
             cost_cny = VALUES(cost_cny),
+            core_segment_simhash = VALUES(core_segment_simhash),
             updated_at = CURRENT_TIMESTAMP
         """
         
@@ -451,7 +459,7 @@ class PolicyAnalyzer:
             intensity_change, key_diff_str, implication_str, contrast_baseline_id,
             segment_used, segment_extracted, input_truncated, prompt_name, prompt_version,
             llm_result["model_name"], thinking_enabled, reasoning_effort or ("medium" if thinking_enabled else None),
-            cache_hit_tok, cache_miss_tok, out_tok, reas_tok, cost_val
+            cache_hit_tok, cache_miss_tok, out_tok, reas_tok, cost_val, core_segment_simhash
         )
         
         # 物理灌入明细
@@ -509,6 +517,7 @@ class PolicyAnalyzer:
             "summary": summary_str,
             "importance_level": importance_level,
             "intensity_change": intensity_change,
-            "cost_cny": cost_val
+            "cost_cny": cost_val,
+            "core_segment_simhash": core_segment_simhash
         }
 

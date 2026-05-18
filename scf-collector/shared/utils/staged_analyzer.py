@@ -12,6 +12,7 @@ from typing import Dict, Any, Optional
 
 from shared.db.connection import execute_query
 from shared.utils.policy_analyzer import PolicyAnalyzer
+from shared.utils.simhash import compute_simhash, hamming_distance
 from shared.extractors.rule_based.lpr_extractor import LPRExtractor
 from shared.extractors.rule_based.omo_extractor import OMOExtractor
 from shared.extractors.rule_based.mlf_extractor import MLFExtractor
@@ -24,6 +25,72 @@ class StagedAnalyzer:
     """
     分级政策分析调度主控
     """
+    async def find_similar_previous_policy(
+        self, 
+        current_policy_id: int, 
+        current_ts_code: str, 
+        current_policy_type: str, 
+        current_publish_date: Any, 
+        current_simhash: str
+    ) -> Optional[Dict[str, Any]]:
+        """
+        E6-S1: 在 dwd_policy_analysis 中查找同 ts_code 和 policy_type 且距离最近的已分析历史政策。
+        返回包含最相似记录、汉明距离及相似度分类的字典，若未找到则返回 None。
+        """
+        if not current_simhash or current_simhash == "0000000000000000":
+            return None
+
+        # 查询同 ts_code 与 policy_type 的历史记录 (按发布时间倒序，取前 5 条以做汉明距离比对，找到最相似的一条)
+        sql = """
+        SELECT a.id, a.policy_id, a.core_segment_simhash, o.title, o.publish_date
+        FROM dwd_policy_analysis a
+        JOIN ods_policy_info o ON a.policy_id = o.id
+        WHERE o.ts_code = %s
+          AND o.policy_type = %s
+          AND o.id != %s
+          AND o.publish_date <= %s
+          AND a.core_segment_simhash IS NOT NULL
+          AND o.is_deleted = 0
+        ORDER BY o.publish_date DESC
+        LIMIT 5
+        """
+        try:
+            rows = await execute_query(sql, (current_ts_code, current_policy_type, current_policy_id, current_publish_date), is_select=True)
+            if not rows:
+                return None
+                
+            best_match = None
+            min_distance = 64
+            
+            for row in rows:
+                hist_hash = row["core_segment_simhash"]
+                distance = hamming_distance(current_simhash, hist_hash)
+                if distance < min_distance:
+                    min_distance = distance
+                    best_match = row
+                    
+            if best_match:
+                # 判定相似度等级
+                if min_distance <= 3:
+                    rating = "high"
+                elif min_distance <= 8:
+                    rating = "moderate"
+                else:
+                    rating = "low"
+                    
+                return {
+                    "matched_policy_id": best_match["policy_id"],
+                    "matched_analysis_id": best_match["id"],
+                    "matched_title": best_match["title"],
+                    "matched_publish_date": best_match["publish_date"],
+                    "hamming_distance": min_distance,
+                    "similarity_rating": rating
+                }
+        except Exception as e:
+            logger.error(f"Failed to find similar previous policy: {e}")
+            
+        return None
+
     def __init__(self):
         self.analyzer = PolicyAnalyzer()
         # 初始化 5 大零成本提取器
@@ -187,11 +254,45 @@ class StagedAnalyzer:
  
         # Case 4: 没有任何规则匹配上 -> 执行 E15-S2 初筛分级路由
         if os.getenv('STAGED_ANALYSIS_ENABLED', 'true').lower() == 'false':
-            return await self.analyzer.analyze_policy(
+            from shared.utils.segment_extractor import extract_key_segment
+            from shared.utils.policy_classifier import classify_policy
+            
+            policy_type = row.get('policy_type')
+            if not policy_type or policy_type == "other":
+                policy_type = await classify_policy(title, content_text)
+                
+            segment_used = extract_key_segment(title, content_text, policy_type)
+            current_simhash = compute_simhash(segment_used)
+            
+            similar_info = await self.find_similar_previous_policy(
+                current_policy_id=policy_id,
+                current_ts_code=ts_code,
+                current_policy_type=policy_type,
+                current_publish_date=publish_date,
+                current_simhash=current_simhash
+            )
+            
+            if similar_info:
+                dist = similar_info["hamming_distance"]
+                rating = similar_info["similarity_rating"]
+                logger.info(
+                    f"[Similarity Check] Found similar historical policy (ID: {similar_info['matched_policy_id']}, "
+                    f"Title: '{similar_info['matched_title']}'). Hamming Distance: {dist}, Rating: {rating}"
+                )
+                if rating == "high":
+                    logger.warning(
+                        f"[Similarity Alert] Highly similar policy detected (Distance: {dist} <= 3)! "
+                        f"Targeting for future E6-S2 Diff route."
+                    )
+            
+            res = await self.analyzer.analyze_policy(
                 row,
                 analysis_path='llm',
                 analysis_stage='triage_and_deep'
             )
+            if similar_info:
+                res["similarity_detection"] = similar_info
+            return res
  
         logger.info("No rule extractors matched. Initiating Stage 1: Triage Classification...")
         
@@ -212,11 +313,36 @@ class StagedAnalyzer:
             from shared.utils.policy_classifier import classify_policy
             policy_type = await classify_policy(title, content_text)
 
+        # E6-S1: 进行相似度前置检测
+        current_simhash = triage_res.get("core_segment_simhash")
+        similar_info = await self.find_similar_previous_policy(
+            current_policy_id=policy_id,
+            current_ts_code=ts_code,
+            current_policy_type=policy_type,
+            current_publish_date=publish_date,
+            current_simhash=current_simhash
+        )
+        
+        if similar_info:
+            dist = similar_info["hamming_distance"]
+            rating = similar_info["similarity_rating"]
+            logger.info(
+                f"[Similarity Check] Found similar historical policy (ID: {similar_info['matched_policy_id']}, "
+                f"Title: '{similar_info['matched_title']}'). Hamming Distance: {dist}, Rating: {rating}"
+            )
+            if rating == "high":
+                logger.warning(
+                    f"[Similarity Alert] Highly similar policy detected (Distance: {dist} <= 3)! "
+                    f"Targeting for future E6-S2 Diff route."
+                )
+
         if importance <= 3 and confidence > 0.8:
             logger.info("[Token Saved] Low importance policy blocked by triage. Skipping deep analysis.")
             triage_res['routing_path'] = 'triage_only'
             # 简化版：直接落库
             await self._write_triage_to_db(row, triage_res)
+            if similar_info:
+                triage_res["similarity_detection"] = similar_info
             return triage_res
             
         elif importance == 4 or (importance <= 3 and confidence <= 0.8):
@@ -229,6 +355,8 @@ class StagedAnalyzer:
                 analysis_stage='triage_and_deep'
             )
             res['routing_path'] = 'triage_and_deep'
+            if similar_info:
+                res["similarity_detection"] = similar_info
             return res
             
         else:
@@ -256,6 +384,8 @@ class StagedAnalyzer:
                     analysis_stage='triage_and_deep'
                 )
                 res['routing_path'] = 'triage_and_deep'
+                if similar_info:
+                    res["similarity_detection"] = similar_info
                 return res
             
             # 取第一票作为兜底
@@ -269,17 +399,28 @@ class StagedAnalyzer:
                 best_res['intensity_change'] = Counter(intensities).most_common(1)[0][0]
                 
             await self._write_triage_to_db(row, best_res)
+            if similar_info:
+                best_res["similarity_detection"] = similar_info
             return best_res
 
     async def _write_triage_to_db(self, row, triage_res):
         """简单落库逻辑"""
         target_table = "dwd_policy_analysis"
+        
+        # E6-S1: 保证获取并落库 simhash
+        core_segment_simhash = triage_res.get("core_segment_simhash")
+        if not core_segment_simhash:
+            from shared.utils.segment_extractor import extract_key_segment
+            segment_used = extract_key_segment(row['title'], row['content_text'], row.get('policy_type', 'other'))
+            core_segment_simhash = compute_simhash(segment_used)
+            triage_res["core_segment_simhash"] = core_segment_simhash
+
         sql = f"""
         INSERT INTO {target_table} (
             policy_id, analysis_path, analysis_stage, summary, importance_level, importance_reason,
-            intensity_change, updated_at
+            intensity_change, core_segment_simhash, updated_at
         ) VALUES (
-            %s, 'llm', 'triage_only', %s, %s, %s, %s, CURRENT_TIMESTAMP
+            %s, 'llm', 'triage_only', %s, %s, %s, %s, %s, CURRENT_TIMESTAMP
         ) ON DUPLICATE KEY UPDATE 
             analysis_path = VALUES(analysis_path),
             analysis_stage = VALUES(analysis_stage),
@@ -287,6 +428,7 @@ class StagedAnalyzer:
             importance_level = VALUES(importance_level),
             importance_reason = VALUES(importance_reason),
             intensity_change = VALUES(intensity_change),
+            core_segment_simhash = VALUES(core_segment_simhash),
             updated_at = CURRENT_TIMESTAMP
         """
         params = (
@@ -294,7 +436,8 @@ class StagedAnalyzer:
             triage_res.get('triage_summary', triage_res.get('summary', '')),
             triage_res.get('importance_level', 3),
             '【初筛】' + triage_res.get('importance_reason', ''),
-            triage_res.get('intensity_change', 'neutral')
+            triage_res.get('intensity_change', 'neutral'),
+            core_segment_simhash
         )
         try:
             from shared.db.connection import execute_query
@@ -321,6 +464,12 @@ class StagedAnalyzer:
         
         model_name = f"rule-based-{extractor_name}-v{extractor.VERSION}"
         
+        # E6-S1: 计算核心段落的 simhash
+        from shared.utils.segment_extractor import extract_key_segment
+        policy_type = row.get("policy_type", "macro_policy")
+        segment_used_extracted = extract_key_segment(title, content_text, policy_type)
+        core_segment_simhash = compute_simhash(segment_used_extracted)
+        
         sql = f"""
         INSERT INTO {target_table} (
             policy_id, analysis_path, analysis_stage, summary, importance_level, importance_reason, 
@@ -328,9 +477,10 @@ class StagedAnalyzer:
             implication, contrast_baseline_id, segment_used, segment_extracted, 
             input_truncated, prompt_name, prompt_version, model_name, 
             thinking_enabled, reasoning_effort, input_cache_hit_tokens, 
-            input_cache_miss_tokens, output_tokens, reasoning_tokens, cost_cny
+            input_cache_miss_tokens, output_tokens, reasoning_tokens, cost_cny,
+            core_segment_simhash
         ) VALUES (
-            %s, 'rule', 'triage_and_deep', %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s
+            %s, 'rule', 'triage_and_deep', %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s
         ) ON DUPLICATE KEY UPDATE 
             analysis_path = VALUES(analysis_path),
             analysis_stage = VALUES(analysis_stage),
@@ -351,6 +501,7 @@ class StagedAnalyzer:
             output_tokens = VALUES(output_tokens),
             reasoning_tokens = VALUES(reasoning_tokens),
             cost_cny = VALUES(cost_cny),
+            core_segment_simhash = VALUES(core_segment_simhash),
             updated_at = CURRENT_TIMESTAMP
         """
         
@@ -359,7 +510,7 @@ class StagedAnalyzer:
             json.dumps(sectors_positive, ensure_ascii=False), json.dumps(sectors_negative, ensure_ascii=False),
             intensity_change, "[]", "零成本规则路径直切，无二次措辞比对提示。", None,
             content_text[:3000], 1, 0, "RULE_DIRECT_BYPASS", f"v{extractor.VERSION}",
-            model_name, 0, None, 0, 0, 0, 0, 0.000000
+            model_name, 0, None, 0, 0, 0, 0, 0.000000, core_segment_simhash
         )
         
         await execute_query(sql, params, is_select=False)
