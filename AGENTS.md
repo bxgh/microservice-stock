@@ -81,21 +81,25 @@
 - [ ] **结构化设计**: 必须使用 `epic-story-doc` 生成 `draft_E{N}.{md,json}` 并存放于微服务 `docs/` 下。
 - [ ] **依赖认证**: 查实 `TABLES_INDEX.md` 及环境连通性。
 - [ ] **角色激活**: 显式声明激活的角色（参考 `docs/architecture/agent-skill-rules/ROLES.md`）。
+- [ ] **提示词蓝图**: 在 `implementation_plan.md` 中包含 `## AI 实施蓝图与提示词` 章节，写入供 AI/Subagent 执行的硬性提示词指令，作为 "Plan-as-Prompt" 的执行准则。
 
 ### 5.2 实施过程规范
 1. **禁止无文档开发 (Docs-First)**: 严禁未经本地 `implementation_plan.md` 和 `task.md` 存证直接编写代码。
 2. **Task ID 进 Commit**: 每个 Task 对应一个 Commit，前缀 `[E1-S1-T1]`。
 3. **验收前必跑 AC**: 所有验收标准 (AC) 必须转为可执行测试。
 4. **采集清单同步**: 每一项云函数采集开发完成后，必须同步更新该微服务下的 `docs/done-list-tables.md`，记录已落地的表名、采集频率及关键 AC 达成情况。
-5. **HTML 文档导航 (Portal)**: 
-   - 所有的需求设计、技术文档、完成报告必须额外产出 **HTML 格式** 副本。
-   - 完成任何 HTML 交付物后，必须运行 `python scripts/update_docs_portal.py` 更新全局与局部门户。
+5. **Markdown 唯一真源与 HTML 自动编译 (Portal)**: 
+   - **严禁手写或由 AI 重复生成 HTML 文本**。所有的需求设计、技术文档、完成报告真源**必须是唯一的 Markdown (`.md`) 格式**。
+   - 任何交付文档（如 `draft_E{N}.md`、`walkthrough.md`、`*.kb.md`、`*.pitfall.md`）在提交或更新时，必须通过 `python scripts/md_to_html_premium.py <path_to_md>` 全自动编译出对应的同名 `.html` 副本。
+   - 编译完成后，运行 `python scripts/update_docs_portal.py` 更新全局与局部门户。
    - 全局门户: [docs/index.html](file:///e:/gitee/microservice-stock/docs/index.html)；局部门户: `{service}/index.html`。
 
-### 5.3 验证“真源”准则
+### 5.3 验证“真源”准则与交付闭环
 - **物理查验**: 必须通过 `docker exec` 或 SQL 直连数据库确认真实记录，严禁盲目信任 API 返回值。
 - **存证要求**: `walkthrough.md` 必须包含真实的 SQL 结果块或日志片段。
-- **交付物闭环**: 每一项 Story (S) 开发完成后，必须在对应的 `implementation_logs/E{N}/S{M}/` 目录下生成 `REPORT.html` (技术报告/HTML版) 及 `API.md` (如有接口变更)。
+- **交付物闭环 (废除 REPORT.html)**: 
+  - 每一项 Story (S) 开发完成后，必须在对应的 `implementation_logs/E{N}/S{M}/` 目录下将 `walkthrough.md` 编译为 `walkthrough.html` 副本，**废除原先重复多余的 `REPORT.html`**，保持交付物的精简和唯一真源。
+  - 如有接口变更，需包含 `API.md`（并同样编译为 `API.html`）。
 
 ### 5.4 数据质量闭环 (QC Feedback Loop)
 
@@ -132,10 +136,10 @@
    - **规范要求**: 在 Story 交付物中，强制增设对于开发中遇到的诡异 Bug、性能瓶颈、网络/权限受阻等踩坑记录的沉淀。
    - **记录要素**: 必须包含 **踩坑记录 (The Pitfall)**、**方案对比 (Options Explored)**、**择优决策 (Optimal Choice)**、**复用技巧 (Reusable Tips)**。
 3. **知识与避坑文档双轨命名规范 (Knowledge Suffix Naming Standard)**:
-   - **双轨专属后缀**: 为了便于全局搜索与工具链自动检索，所有具有知识意义的总结、技术技巧、排障避坑文档，其文件名必须强制使用结构化的双后缀：
-     - **排障避坑/方案决策**: 使用 **`*.pitfall.md`**（对应的 HTML 副本为 `*.pitfall.html`）。*示例*: `tushare_ip_block.pitfall.md`
-     - **技术秘籍/最佳实践**: 使用 **`*.kb.md`**（对应的 HTML 副本为 `*.kb.html`）。*示例*: `scf_memory_tuning.kb.md`
-     - **终结/阶段性总结**: 使用 **`*.summary.md`**（对应的 HTML 副本为 `*.summary.html`）。*示例*: `e12_kline_healing.summary.md`
+   - **双轨专属后缀**: 为了便于全局搜索与工具链自动检索，所有具有知识意义的总结、技术技巧、排障避坑文档，其文件名必须强制使用结构化的双后缀。所有 HTML 副本由编译脚本自动生成，严禁手写。
+     - **排障避坑/方案决策**: 使用 **`*.pitfall.md`**（编译为 `*.pitfall.html`）。*示例*: `tushare_ip_block.pitfall.md`
+     - **技术秘籍/最佳实践**: 使用 **`*.kb.md`**（编译为 `*.kb.html`）。*示例*: `scf_memory_tuning.kb.md`
+     - **终结/阶段性总结**: 使用 **`*.summary.md`**（编译为 `*.summary.html`）。*示例*: `e12_kline_healing.summary.md`
 4. **AI 友好索引与自动门户集成 (AI-Native Indexing & Portal Integration)**:
    - **双规自动集成**:
      - 自动化门户更新脚本 `scripts/update_docs_portal.py` 将自动扫描微服务目录下所有的 `*.kb.html`、`*.pitfall.html` 和 `*.summary.html` 文件。

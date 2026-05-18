@@ -15,8 +15,10 @@ from shared.utils.llm_client import LLMClient
 from shared.utils.policy_classifier import classify_policy
 from shared.utils.segment_extractor import extract_key_segment
 import shared.utils.prompts as prompts
+from shared.utils.schemas import GeneralSummaryOutput, WordingContrastOutput
 
 logger = logging.getLogger(__name__)
+
 
 class PolicyAnalyzer:
     """
@@ -149,9 +151,10 @@ class PolicyAnalyzer:
                 
         return list(merged_map.values())
 
-    def _robust_parse_json(self, raw_content: str) -> Dict[str, Any]:
+    def _robust_parse_json(self, raw_content: str, model_class: Any) -> Dict[str, Any]:
         """
-        [E14-S2-P2-T4] 强力 Regex JSON 提纯解析器，杜绝 Markdown 被包裹包裹及 thinking 杂音导致崩溃
+        [E14-S2-P2-T4] 强力 Regex JSON 提纯解析器，杜绝 Markdown 被包裹及 thinking 杂音导致崩溃
+        引入 Pydantic 强校验支持，并保留极其顽强的退化兜底防死锁！
         """
         if not raw_content:
             return {}
@@ -161,25 +164,33 @@ class PolicyAnalyzer:
         json_str = match.group(1) if match else raw_content
         
         try:
-            return json.loads(json_str)
+            # 优先采用 Pydantic 强校验与字段填充
+            validated_obj = model_class.model_validate_json(json_str)
+            return validated_obj.model_dump()
         except Exception as e:
-            logger.error(f"JSON loads failed: {e}. Attempting second stage regex property cleanup...")
-            # 第二阶段兜底：高级提取 key-value 规则
+            logger.warning(f"Pydantic strong validation failed: {e}. Attempting basic JSON parsing fallback...")
             try:
                 # 尝试剥除一些常见的反斜杠转义
                 fixed_str = json_str.encode('utf-8').decode('unicode_escape')
                 match_2 = re.search(r"(\{.*\})", fixed_str, re.DOTALL)
                 if match_2:
-                    return json.loads(match_2.group(1))
+                    validated_obj_2 = model_class.model_validate_json(match_2.group(1))
+                    return validated_obj_2.model_dump()
             except Exception as e2:
-                logger.error(f"Second stage cleanup also failed: {e2}")
+                logger.error(f"Second stage Pydantic validation also failed: {e2}")
                 
-            # 底层默认降级，防止系统崩溃
+            # 第三层极速退化大防线：退回最基础的 JSON 解析，跳过校验，防止大模型幻觉引起的 Validation 报错导致崩库
+            try:
+                logger.info("Triggering raw JSON load as a final bypass fallback...")
+                return json.loads(json_str)
+            except Exception as raw_e:
+                logger.error(f"Raw JSON loads also failed: {raw_e}")
+
+            # 最终降级字典，防止系统崩溃
             return {
                 "summary_three_sentences": "AI 措辞解析发生异常，已退化为基础降级模式。",
                 "importance_level": 3,
-                "key_differences": [],
-                "intensity_change": "N/A",
+                "key_points": [],
                 "sectors": []
             }
 
@@ -224,7 +235,7 @@ class PolicyAnalyzer:
         previous_baseline = await self._find_previous_baseline(ts_code, policy_type, publish_date)
         
         mode = "flash"
-        system_prompt = prompts.GENERAL_SUMMARY_SYSTEM
+        system_prompt = prompts.GENERAL_SUMMARY_SYSTEM_V3
         
         if previous_baseline:
             contrast_baseline_id = previous_baseline['id']
@@ -233,26 +244,26 @@ class PolicyAnalyzer:
             
             # 升级为 deepseek-reasoner (思维链高阶分析)
             mode = "pro-thinking"
-            system_prompt = prompts.WORDING_CONTRAST_SYSTEM
+            system_prompt = prompts.WORDING_CONTRAST_SYSTEM_V3
             user_prompt = (
                 f"请对比以下两期政策：\n"
                 f"【上期政策】\n{previous_segment}\n\n"
                 f"【本期政策】\n{segment_used}"
             )
-            prompt_name = "WORDING_CONTRAST_V2"
-            prompt_version = "2.0"
+            prompt_name = "WORDING_CONTRAST_V3"
+            prompt_version = "3.0"
             logger.info(f"Baseline policy anchored (ID: {contrast_baseline_id}). Upgrading model to 'pro-thinking'...")
         else:
             # 通用单期摘要模式
             mode = "flash"
-            system_prompt = prompts.GENERAL_SUMMARY_SYSTEM
+            system_prompt = prompts.GENERAL_SUMMARY_SYSTEM_V3
             user_prompt = (
                 f"请分析以下政策：\n"
                 f"【标题】{title}\n"
                 f"【正文】\n{segment_used}"
             )
-            prompt_name = "GENERAL_SUMMARY_V2"
-            prompt_version = "2.0"
+            prompt_name = "GENERAL_SUMMARY_V3"
+            prompt_version = "3.0"
             logger.info("No baseline policy found. Running standard summary mode via 'flash'...")
 
         # 5. 调用大模型客户端并进行成本审计 (CLS 可观测性日志闭环)
@@ -306,7 +317,8 @@ class PolicyAnalyzer:
             raise e
         
         # 6. 正则防崩提纯 JSON
-        analysis_data = self._robust_parse_json(llm_result.get("content", ""))
+        target_model = WordingContrastOutput if previous_baseline else GeneralSummaryOutput
+        analysis_data = self._robust_parse_json(llm_result.get("content", ""), target_model)
         
         # 7. 提取与融合申万板块影响
         llm_sectors = analysis_data.get("sectors", [])

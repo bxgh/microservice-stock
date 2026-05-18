@@ -1,42 +1,18 @@
 [
   {
-    "title": "腾讯云 SCF Serverless 环境 naive datetime.now() 引起的 8小时时区偏差排障避坑指南",
-    "path": "scf-collector/docs/features/policy-tracker/implementation_logs/E14/S2/scf_timezone_utc.pitfall.html",
+    "title": "避坑秘籍：多级路由分级调度 staged_analyzer 的避坑与物理熔断实践",
+    "path": "scf-collector/docs/features/policy-tracker/implementation_logs/E15/S1/iterations/v2/staged_routing_failsafe.pitfall.html",
     "type": "pitfall",
     "service": "POLICY-TRACKER",
-    "last_modified": "2026-05-17 20:36",
+    "last_modified": "2026-05-18 10:56",
     "deprecated": false
   },
   {
-    "title": "Epic E14-S2 A股宏观政策AI追踪系统阶段性完工总结",
-    "path": "scf-collector/docs/features/policy-tracker/implementation_logs/E14/S2/E14_S2.summary.html",
-    "type": "summary",
+    "title": "A股宏观政策AI分析结果及板块映射深度审计报告",
+    "path": "scf-collector/docs/features/policy-tracker/implementation_logs/E14/S2/policy_tracker_analysis_report.kb.html",
+    "type": "kb",
     "service": "POLICY-TRACKER",
-    "last_modified": "2026-05-17 20:29",
-    "deprecated": false
-  },
-  {
-    "title": "Python 3.10 SCF 只读沙盒异步多米诺骨牌崩溃排障记录",
-    "path": "scf-collector/docs/features/policy-tracker/implementation_logs/E14/S2/tushare_anyio_exceptiongroup.pitfall.html",
-    "type": "pitfall",
-    "service": "POLICY-TRACKER",
-    "last_modified": "2026-05-17 20:29",
-    "deprecated": false
-  },
-  {
-    "title": "📈 Epic 14 Story 1 宏观与监管政策多源采集阶段总结\n            阶段总结",
-    "path": "scf-collector/docs/features/policy-tracker/implementation_logs/E14/S1/e14_s1_policy_acquisition.summary.html",
-    "type": "summary",
-    "service": "POLICY-TRACKER",
-    "last_modified": "2026-05-17 17:33",
-    "deprecated": false
-  },
-  {
-    "title": "⚠️ 央行官网 WAF 屏蔽避坑与国务院政策库动态映射决策\n            排障避坑",
-    "path": "scf-collector/docs/features/policy-tracker/implementation_logs/E14/S1/pbc_waf_bypass.pitfall.html",
-    "type": "pitfall",
-    "service": "POLICY-TRACKER",
-    "last_modified": "2026-05-17 17:32",
+    "last_modified": "2026-05-17 21:13",
     "deprecated": false
   },
   {
@@ -44,7 +20,7 @@
     "path": "scf-collector/docs/features/kline_management/implementation_logs/E4/S1/factor_duplicate_pollution.pitfall.html",
     "type": "pitfall",
     "service": "KLINE_MANAGEMENT",
-    "last_modified": "2026-05-17 17:19",
+    "last_modified": "2026-05-17 21:03",
     "deprecated": false
   },
   {
@@ -52,7 +28,7 @@
     "path": "scf-collector/docs/features/kline_management/implementation_logs/E4/S1/high_performance_db_backfill.kb.html",
     "type": "kb",
     "service": "KLINE_MANAGEMENT",
-    "last_modified": "2026-05-17 17:19",
+    "last_modified": "2026-05-17 21:03",
     "deprecated": false
   },
   {
@@ -60,7 +36,7 @@
     "path": "scf-collector/docs/features/kline_validation/implementation_logs/E12/kline_audit_troubleshoot.pitfall.html",
     "type": "pitfall",
     "service": "KLINE_VALIDATION",
-    "last_modified": "2026-05-17 17:19",
+    "last_modified": "2026-05-17 21:03",
     "deprecated": false
   },
   {
@@ -68,7 +44,7 @@
     "path": "scf-collector/docs/features/kline_validation/implementation_logs/E12/kline_healing.summary.html",
     "type": "summary",
     "service": "KLINE_VALIDATION",
-    "last_modified": "2026-05-17 17:19",
+    "last_modified": "2026-05-17 21:03",
     "deprecated": false
   },
   {
@@ -76,31 +52,95 @@
     "path": "scf-collector/docs/features/kline_validation/implementation_logs/E12/triple_source_repair.kb.html",
     "type": "kb",
     "service": "KLINE_VALIDATION",
-    "last_modified": "2026-05-17 17:19",
+    "last_modified": "2026-05-17 21:03",
     "deprecated": false
   },
   {
-    "title": "Epic E14-S2 宏观政策 AI 追踪系统异步事件与状态机接口契约",
-    "path": "scf-collector/docs/features/policy-tracker/implementation_logs/E14/S2/API.html",
-    "type": "standard",
+    "title": "📈 Epic 14 Story 1 宏观与监管政策多源采集阶段总结\n            阶段总结",
+    "path": "scf-collector/docs/features/policy-tracker/implementation_logs/E14/S1/e14_s1_policy_acquisition.summary.html",
+    "type": "summary",
     "service": "POLICY-TRACKER",
-    "last_modified": "2026-05-17 20:28",
+    "last_modified": "2026-05-17 20:38",
     "deprecated": false
   },
   {
-    "title": "Epic E14-S2 A股宏观政策AI追踪分析系统",
-    "path": "scf-collector/docs/features/policy-tracker/implementation_logs/E14/S2/REPORT.html",
-    "type": "standard",
+    "title": "⚠️ 央行官网 WAF 屏蔽避坑与国务院政策库动态映射决策\n            排障避坑",
+    "path": "scf-collector/docs/features/policy-tracker/implementation_logs/E14/S1/pbc_waf_bypass.pitfall.html",
+    "type": "pitfall",
     "service": "POLICY-TRACKER",
-    "last_modified": "2026-05-17 20:28",
+    "last_modified": "2026-05-17 20:38",
     "deprecated": false
   },
   {
-    "title": "Epic E14-S2 宏观政策 AI 智能分析系统技术评审记录",
-    "path": "scf-collector/docs/features/policy-tracker/reviews/E14_S2_review_record.html",
+    "title": "Epic E14-S2 A股宏观政策AI追踪系统阶段性完工总结",
+    "path": "scf-collector/docs/features/policy-tracker/implementation_logs/E14/S2/E14_S2.summary.html",
+    "type": "summary",
+    "service": "POLICY-TRACKER",
+    "last_modified": "2026-05-17 20:38",
+    "deprecated": false
+  },
+  {
+    "title": "腾讯云 SCF Serverless 环境 naive datetime.now() 引起的 8小时时区偏差排障避坑指南",
+    "path": "scf-collector/docs/features/policy-tracker/implementation_logs/E14/S2/scf_timezone_utc.pitfall.html",
+    "type": "pitfall",
+    "service": "POLICY-TRACKER",
+    "last_modified": "2026-05-17 20:38",
+    "deprecated": false
+  },
+  {
+    "title": "Python 3.10 SCF 只读沙盒异步多米诺骨牌崩溃排障记录",
+    "path": "scf-collector/docs/features/policy-tracker/implementation_logs/E14/S2/tushare_anyio_exceptiongroup.pitfall.html",
+    "type": "pitfall",
+    "service": "POLICY-TRACKER",
+    "last_modified": "2026-05-17 20:38",
+    "deprecated": false
+  },
+  {
+    "title": "[E15-M1-Patch (v2)] 统一分级调度分析与防裸奔 MOps 实测对账总结报告",
+    "path": "scf-collector/docs/features/policy-tracker/implementation_logs/E15/S1/iterations/v2/walkthrough.html",
     "type": "standard",
     "service": "POLICY-TRACKER",
-    "last_modified": "2026-05-17 20:28",
+    "last_modified": "2026-05-18 11:21",
+    "deprecated": false
+  },
+  {
+    "title": "E15-S1 迭代纪要 (v2: M1-Patch 深度补漏与防裸奔加固)",
+    "path": "scf-collector/docs/features/policy-tracker/implementation_logs/E15/S1/iterations/v2/ITERATION_NOTE.html",
+    "type": "standard",
+    "service": "POLICY-TRACKER",
+    "last_modified": "2026-05-18 10:56",
+    "deprecated": false
+  },
+  {
+    "title": "M1-Patch 深度补漏验收清单看板",
+    "path": "scf-collector/docs/features/policy-tracker/implementation_logs/E15/S1/iterations/v2/task.html",
+    "type": "standard",
+    "service": "POLICY-TRACKER",
+    "last_modified": "2026-05-18 10:56",
+    "deprecated": false
+  },
+  {
+    "title": "Walkthrough - E15-S1: 零成本 Bypass 与 Caching 基础架构落地 (v1.2 加固版)",
+    "path": "scf-collector/docs/features/policy-tracker/implementation_logs/E15/S1/walkthrough.html",
+    "type": "standard",
+    "service": "POLICY-TRACKER",
+    "last_modified": "2026-05-18 10:41",
+    "deprecated": false
+  },
+  {
+    "title": "E15: AI 政策分析引擎效率与成本优化实施方案",
+    "path": "scf-collector/docs/features/policy-tracker/design/E15_AI_Efficiency_Cost_Optimization_v1.0.html",
+    "type": "standard",
+    "service": "POLICY-TRACKER",
+    "last_modified": "2026-05-18 10:23",
+    "deprecated": false
+  },
+  {
+    "title": "日线表内嵌复权因子设计方案",
+    "path": "docs/design/复权因子/Adjfactor-in-klineDaily.html",
+    "type": "standard",
+    "service": "GLOBAL",
+    "last_modified": "2026-05-17 21:03",
     "deprecated": false
   },
   {
@@ -108,55 +148,31 @@
     "path": "scf-collector/docs/done-list-tables.html",
     "type": "standard",
     "service": "scf-collector",
-    "last_modified": "2026-05-17 17:19",
+    "last_modified": "2026-05-17 21:03",
     "deprecated": false
   },
   {
-    "title": "实施方案: [E3-S1] 每日 K 线与复权因子采集任务调整",
-    "path": "scf-collector/docs/features/kline_management/implementation_logs/E3/S1/implementation_plan.html",
+    "title": "日线表内嵌复权因子设计方案",
+    "path": "scf-collector/docs/features/kline_management/design/Adjfactor-in-klineDaily.html",
     "type": "standard",
     "service": "KLINE_MANAGEMENT",
-    "last_modified": "2026-05-17 17:19",
+    "last_modified": "2026-05-17 21:03",
     "deprecated": false
   },
   {
-    "title": "[E3-S1-T6] 复权因子内嵌合并与云端三层容灾自愈系统验收报告",
-    "path": "scf-collector/docs/features/kline_management/implementation_logs/E3/S1/REPORT.html",
+    "title": "[E2] 历史数据回填 - 复权因子内嵌",
+    "path": "scf-collector/docs/features/kline_management/implementation_logs/E2/S1/implementation_plan.html",
     "type": "standard",
     "service": "KLINE_MANAGEMENT",
-    "last_modified": "2026-05-17 17:19",
+    "last_modified": "2026-05-17 21:03",
     "deprecated": false
   },
   {
-    "title": "数据库接口设计文档: [E4-S1] 动态前复权价格数据视图 (MySQL 5.7 兼容)",
-    "path": "scf-collector/docs/features/kline_management/implementation_logs/E4/S1/API.html",
+    "title": "task",
+    "path": "scf-collector/docs/features/kline_management/implementation_logs/E2/S1/task.html",
     "type": "standard",
     "service": "KLINE_MANAGEMENT",
-    "last_modified": "2026-05-17 17:19",
-    "deprecated": false
-  },
-  {
-    "title": "实施方案: [E4-S1] 跨源前复权价格一致性校验 (100只股票全量历史审计)",
-    "path": "scf-collector/docs/features/kline_management/implementation_logs/E4/S1/implementation_plan.html",
-    "type": "standard",
-    "service": "KLINE_MANAGEMENT",
-    "last_modified": "2026-05-17 17:19",
-    "deprecated": false
-  },
-  {
-    "title": "验收报告: [E4-S1] 跨源前复权价格一致性校验与动态视图发布",
-    "path": "scf-collector/docs/features/kline_management/implementation_logs/E4/S1/REPORT.html",
-    "type": "standard",
-    "service": "KLINE_MANAGEMENT",
-    "last_modified": "2026-05-17 17:19",
-    "deprecated": false
-  },
-  {
-    "title": "验收报告: [E4-S1] 跨源前复权价格一致性校验与动态视图发布",
-    "path": "scf-collector/docs/features/kline_management/implementation_logs/E4/S1/walkthrough.html",
-    "type": "standard",
-    "service": "KLINE_MANAGEMENT",
-    "last_modified": "2026-05-17 17:19",
+    "last_modified": "2026-05-17 21:03",
     "deprecated": false
   },
   {
@@ -164,7 +180,55 @@
     "path": "scf-collector/docs/features/kline_management/implementation_logs/E2/S1/walkthrough.html",
     "type": "standard",
     "service": "KLINE_MANAGEMENT",
-    "last_modified": "2026-05-17 17:14",
+    "last_modified": "2026-05-17 21:03",
+    "deprecated": false
+  },
+  {
+    "title": "实施方案: [E3-S1] 每日 K 线与复权因子采集任务调整",
+    "path": "scf-collector/docs/features/kline_management/implementation_logs/E3/S1/implementation_plan.html",
+    "type": "standard",
+    "service": "KLINE_MANAGEMENT",
+    "last_modified": "2026-05-17 21:03",
+    "deprecated": false
+  },
+  {
+    "title": "数据库接口设计文档: [E4-S1] 动态前复权价格数据视图 (MySQL 5.7 兼容)",
+    "path": "scf-collector/docs/features/kline_management/implementation_logs/E4/S1/API.html",
+    "type": "standard",
+    "service": "KLINE_MANAGEMENT",
+    "last_modified": "2026-05-17 21:03",
+    "deprecated": false
+  },
+  {
+    "title": "实施方案: [E4-S1] 跨源前复权价格一致性校验 (100只股票全量历史审计)",
+    "path": "scf-collector/docs/features/kline_management/implementation_logs/E4/S1/implementation_plan.html",
+    "type": "standard",
+    "service": "KLINE_MANAGEMENT",
+    "last_modified": "2026-05-17 21:03",
+    "deprecated": false
+  },
+  {
+    "title": "验收报告: [E4-S1] 跨源前复权价格一致性校验与动态视图发布",
+    "path": "scf-collector/docs/features/kline_management/implementation_logs/E4/S1/walkthrough.html",
+    "type": "standard",
+    "service": "KLINE_MANAGEMENT",
+    "last_modified": "2026-05-17 21:03",
+    "deprecated": false
+  },
+  {
+    "title": "[E3-S1-T6] 复权因子内嵌合并与云端三层容灾自愈系统验收报告",
+    "path": "scf-collector/docs/features/kline_management/implementation_logs/E3/S1/REPORT.html",
+    "type": "standard",
+    "service": "KLINE_MANAGEMENT",
+    "last_modified": "2026-05-17 20:38",
+    "deprecated": false
+  },
+  {
+    "title": "验收报告: [E4-S1] 跨源前复权价格一致性校验与动态视图发布",
+    "path": "scf-collector/docs/features/kline_management/implementation_logs/E4/S1/REPORT.html",
+    "type": "standard",
+    "service": "KLINE_MANAGEMENT",
+    "last_modified": "2026-05-17 20:38",
     "deprecated": false
   },
   {
@@ -172,7 +236,7 @@
     "path": "scf-collector/docs/features/kline_validation/implementation_logs/E12/CONCLUSION.html",
     "type": "standard",
     "service": "KLINE_VALIDATION",
-    "last_modified": "2026-05-17 17:13",
+    "last_modified": "2026-05-17 20:38",
     "deprecated": false
   },
   {
@@ -180,7 +244,23 @@
     "path": "scf-collector/docs/features/kline_validation/implementation_logs/E12/S1/REPORT.html",
     "type": "standard",
     "service": "KLINE_VALIDATION",
-    "last_modified": "2026-05-17 17:13",
+    "last_modified": "2026-05-17 20:38",
+    "deprecated": false
+  },
+  {
+    "title": "Epic 14: AI-Driven Policy Tracking System (MVP)",
+    "path": "scf-collector/docs/features/policy-tracker/design/draft_E14.html",
+    "type": "standard",
+    "service": "POLICY-TRACKER",
+    "last_modified": "2026-05-17 20:38",
+    "deprecated": false
+  },
+  {
+    "title": "Epic-Story 评审台",
+    "path": "scf-collector/docs/features/policy-tracker/design/review_Epic_14__AI-Dri_20260516.html",
+    "type": "standard",
+    "service": "POLICY-TRACKER",
+    "last_modified": "2026-05-17 20:38",
     "deprecated": false
   },
   {
@@ -188,7 +268,31 @@
     "path": "scf-collector/docs/features/policy-tracker/implementation_logs/E14/S1/REPORT.html",
     "type": "standard",
     "service": "POLICY-TRACKER",
-    "last_modified": "2026-05-17 10:42",
+    "last_modified": "2026-05-17 20:38",
+    "deprecated": false
+  },
+  {
+    "title": "Epic E14-S2 宏观政策 AI 追踪系统异步事件与状态机接口契约",
+    "path": "scf-collector/docs/features/policy-tracker/implementation_logs/E14/S2/API.html",
+    "type": "standard",
+    "service": "POLICY-TRACKER",
+    "last_modified": "2026-05-17 20:38",
+    "deprecated": false
+  },
+  {
+    "title": "Epic E14-S2 A股宏观政策AI追踪分析系统",
+    "path": "scf-collector/docs/features/policy-tracker/implementation_logs/E14/S2/REPORT.html",
+    "type": "standard",
+    "service": "POLICY-TRACKER",
+    "last_modified": "2026-05-17 20:38",
+    "deprecated": false
+  },
+  {
+    "title": "Epic E14-S2 宏观政策 AI 智能分析系统技术评审记录",
+    "path": "scf-collector/docs/features/policy-tracker/reviews/E14_S2_review_record.html",
+    "type": "standard",
+    "service": "POLICY-TRACKER",
+    "last_modified": "2026-05-17 20:38",
     "deprecated": false
   },
   {
@@ -213,22 +317,6 @@
     "type": "standard",
     "service": "scf-collector",
     "last_modified": "2026-05-17 10:18",
-    "deprecated": false
-  },
-  {
-    "title": "Epic 14: AI-Driven Policy Tracking System (MVP)",
-    "path": "scf-collector/docs/features/policy-tracker/design/draft_E14.html",
-    "type": "standard",
-    "service": "POLICY-TRACKER",
-    "last_modified": "2026-05-16 22:35",
-    "deprecated": false
-  },
-  {
-    "title": "Epic-Story 评审台",
-    "path": "scf-collector/docs/features/policy-tracker/design/review_Epic_14__AI-Dri_20260516.html",
-    "type": "standard",
-    "service": "POLICY-TRACKER",
-    "last_modified": "2026-05-16 22:35",
     "deprecated": false
   },
   {
@@ -1416,14 +1504,6 @@
     "deprecated": false
   },
   {
-    "title": "日线表内嵌复权因子设计方案",
-    "path": "docs/design/复权因子/Adjfactor-in-klineDaily.html",
-    "type": "standard",
-    "service": "GLOBAL",
-    "last_modified": "2026-05-16 19:06",
-    "deprecated": false
-  },
-  {
     "title": "第 1-2 章 · 盘后数据体系技术总结 (Final)",
     "path": "docs/design/复盘/CHAPTER_1_2_TECHNICAL_REPORT.html",
     "type": "standard",
@@ -2120,32 +2200,8 @@
     "deprecated": false
   },
   {
-    "title": "日线表内嵌复权因子设计方案",
-    "path": "scf-collector/docs/features/kline_management/design/Adjfactor-in-klineDaily.html",
-    "type": "standard",
-    "service": "KLINE_MANAGEMENT",
-    "last_modified": "2026-05-16 19:06",
-    "deprecated": false
-  },
-  {
     "title": "[Epic E7] SCF 采集链路可靠性与审计校验增强",
     "path": "scf-collector/docs/features/kline_management/design/E7_Reliability_Validation.html",
-    "type": "standard",
-    "service": "KLINE_MANAGEMENT",
-    "last_modified": "2026-05-16 19:06",
-    "deprecated": false
-  },
-  {
-    "title": "[E2] 历史数据回填 - 复权因子内嵌",
-    "path": "scf-collector/docs/features/kline_management/implementation_logs/E2/S1/implementation_plan.html",
-    "type": "standard",
-    "service": "KLINE_MANAGEMENT",
-    "last_modified": "2026-05-16 19:06",
-    "deprecated": false
-  },
-  {
-    "title": "task",
-    "path": "scf-collector/docs/features/kline_management/implementation_logs/E2/S1/task.html",
     "type": "standard",
     "service": "KLINE_MANAGEMENT",
     "last_modified": "2026-05-16 19:06",

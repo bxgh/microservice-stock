@@ -68,7 +68,8 @@ class LLMClient:
         mode: Literal["flash", "pro", "pro-thinking"], 
         cache_hit_tokens: int, 
         cache_miss_tokens: int, 
-        output_tokens: int
+        output_tokens: int,
+        is_off_peak: bool = False
     ) -> float:
         """
         依据 DeepSeek 官方计费协议对 token 进行高精度分级计算 (单位：元/CNY)
@@ -82,6 +83,8 @@ class LLMClient:
            - 缓存命中：0.000002元/token (¥2/百万)
            - 缓存未命中：0.000008元/token (¥8/百万)
            - 输出 token (含推理)：0.000016元/token (¥16/百万)
+        
+        错峰折扣：在 is_off_peak 为 True (00:30-08:30) 时，官方提供折半优惠。
         """
         if mode == "pro-thinking":
             # deepseek-reasoner
@@ -92,7 +95,12 @@ class LLMClient:
             input_cost = (cache_hit_tokens * 0.000001) + (cache_miss_tokens * 0.000004)
             output_cost = output_tokens * 0.000008
             
-        return round(input_cost + output_cost, 6)
+        base_cost = input_cost + output_cost
+        if is_off_peak:
+            logger.info("Applying off-peak 50% discount to local cost auditing.")
+            base_cost *= 0.5
+            
+        return round(base_cost, 6)
 
     async def chat(
         self,
@@ -114,10 +122,15 @@ class LLMClient:
             "reasoning_tokens": int,
             "cost_cny": float,              # 人民币实际计费价格
             "model_name": str,
-            "duration_ms": int              # 耗时
+            "duration_ms": int,             # 耗时
+            "is_off_peak": bool             # 是否为错峰计费时段
         }
         """
-        # 1. 预算配额前置安全审计
+        # 1. 自动计算当前是否为错峰时段 (北京时间 00:30 - 08:30)
+        now_time = datetime.datetime.now().time()
+        is_off_peak = datetime.time(0, 30) <= now_time <= datetime.time(8, 30)
+
+        # 2. 预算配额前置安全审计
         today_str = datetime.date.today().strftime("%Y-%m-%d")
         current_daily_cost = await self.get_daily_cost(today_str)
         if current_daily_cost >= self.daily_cost_limit:
@@ -192,7 +205,7 @@ class LLMClient:
                     reasoning_tokens = getattr(usage.completion_tokens_details, 'reasoning_tokens', 0)
                 
                 # 4. 高精度成本测算
-                cost = self.calculate_cost(mode, cache_hit_tokens, cache_miss_tokens, output_tokens)
+                cost = self.calculate_cost(mode, cache_hit_tokens, cache_miss_tokens, output_tokens, is_off_peak=is_off_peak)
                 
                 # 5. 线程安全持久化天级账单
                 await self._update_daily_cost(today_str, cost, input_tokens, output_tokens)
@@ -208,7 +221,8 @@ class LLMClient:
                     "reasoning_tokens": reasoning_tokens,
                     "cost_cny": cost,
                     "model_name": model,
-                    "duration_ms": duration_ms
+                    "duration_ms": duration_ms,
+                    "is_off_peak": is_off_peak
                 }
                 
             except asyncio.TimeoutError as e:

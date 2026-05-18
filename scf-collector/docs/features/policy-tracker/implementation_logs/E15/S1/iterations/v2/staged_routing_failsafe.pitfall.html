@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>避坑秘籍：多级路由分级调度 staged_analyzer 的避坑与物理熔断实践</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Noto+Serif+SC:wght@400;700;900&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    
+    <!-- Libraries -->
+    <script src="https://lib.baomitu.com/marked/11.1.1/marked.min.js"></script>
+    <link rel="stylesheet" href="https://lib.baomitu.com/github-markdown-css/5.5.0/github-markdown-dark.min.css">
+    <script src="https://lib.baomitu.com/mermaid/10.9.0/mermaid.min.js"></script>
+    
+    <!-- Syntax Highlighting -->
+    <link rel="stylesheet" href="https://lib.baomitu.com/highlight.js/11.9.0/styles/tokyo-night-dark.min.css">
+    <script src="https://lib.baomitu.com/highlight.js/11.9.0/highlight.min.js"></script>
+    
+    <style>
+        :root {
+            --bg: #0a0a0a;
+            --surface: #121212;
+            --surface-hover: #1a1a1a;
+            --border: #222222;
+            --accent: #eab308;
+            --accent-glow: rgba(234, 179, 8, 0.1);
+            --text-primary: #f1f5f9;
+            --text-secondary: #94a3b8;
+            --text-muted: #64748b;
+            --font-sans: 'Outfit', 'Noto Sans SC', -apple-system, sans-serif;
+            --font-serif: 'Noto Serif SC', serif;
+            --font-mono: 'JetBrains Mono', monospace;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background-color: var(--bg);
+            color: var(--text-primary);
+            font-family: var(--font-sans);
+            line-height: 1.7;
+            -webkit-font-smoothing: antialiased;
+            overflow-x: hidden;
+        }
+
+        /* Subtle background glow */
+        body::after {
+            content: '';
+            position: fixed;
+            top: 0;
+            right: 0;
+            width: 40vw;
+            height: 40vh;
+            background: radial-gradient(circle, var(--accent-glow) 0%, transparent 70%);
+            z-index: -1;
+            filter: blur(100px);
+            pointer-events: none;
+        }
+
+        .sidebar {
+            width: 260px;
+            height: 100vh;
+            position: fixed;
+            left: 0;
+            top: 0;
+            border-right: 1px solid var(--border);
+            background: var(--bg);
+            padding: 1.5rem;
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+            overflow-y: auto;
+            z-index: 100;
+        }
+
+        .nav-link {
+            color: var(--text-muted);
+            text-decoration: none;
+            font-size: 0.85rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            transition: color 0.2s;
+            padding: 0.5rem;
+            border-radius: 6px;
+        }
+        .nav-link:hover { color: var(--accent); background: var(--surface); }
+
+        .toc-title {
+            font-family: var(--font-serif);
+            font-size: 1rem;
+            color: var(--text-primary);
+            margin-bottom: 0.8rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding-left: 0.5rem;
+        }
+        .toc-title::before {
+            content: '';
+            width: 3px;
+            height: 1rem;
+            background: var(--accent);
+            border-radius: 2px;
+        }
+
+        .toc-list {
+            list-style: none;
+            display: flex;
+            flex-direction: column;
+            gap: 0.4rem;
+        }
+        .toc-item {
+            font-size: 0.8rem;
+            line-height: 1.3;
+        }
+        .toc-item a {
+            color: var(--text-muted);
+            text-decoration: none;
+            transition: all 0.2s;
+            display: block;
+            padding: 0.4rem 0.5rem;
+            border-radius: 4px;
+        }
+        .toc-item a:hover { color: var(--accent); background: var(--surface); }
+        .toc-item.level-3 { margin-left: 0.8rem; border-left: 1px solid var(--border); }
+
+        .container {
+            max-width: 860px;
+            margin: 0 auto 0 260px;
+            padding: 3rem 4rem;
+            animation: fadeIn 0.6s ease-out;
+        }
+
+        @media (max-width: 1024px) {
+            .sidebar { width: 220px; padding: 1rem; }
+            .container { margin-left: 220px; padding: 2rem; }
+        }
+
+        @media (max-width: 800px) {
+            .sidebar { position: static; width: 100%; height: auto; border-right: none; border-bottom: 1px solid var(--border); }
+            .container { margin-left: 0; padding: 1.5rem; }
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(5px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        header {
+            margin-bottom: 3rem;
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 1.5rem;
+        }
+
+        .meta {
+            font-family: var(--font-mono);
+            font-size: 0.75rem;
+            color: var(--accent);
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            margin-bottom: 0.8rem;
+            display: flex;
+            align-items: center;
+            gap: 0.8rem;
+        }
+
+        .meta::before {
+            content: '';
+            width: 20px;
+            height: 1px;
+            background-color: var(--accent);
+        }
+
+        h1 {
+            font-family: var(--font-serif);
+            font-size: 2.2rem;
+            font-weight: 900;
+            line-height: 1.2;
+            margin-bottom: 1rem;
+            color: var(--text-primary);
+        }
+
+        .markdown-body {
+            background: transparent !important;
+            color: var(--text-primary) !important;
+            font-family: var(--font-sans) !important;
+            font-size: 0.95rem !important;
+        }
+
+        .markdown-body h2 {
+            font-family: var(--font-serif);
+            font-size: 1.5rem !important;
+            color: var(--accent) !important;
+            border-bottom: 1px solid var(--border) !important;
+            padding-bottom: 0.5rem !important;
+            margin-top: 2.5rem !important;
+            scroll-margin-top: 1rem;
+        }
+
+        .markdown-body h3 {
+            font-family: var(--font-serif);
+            font-size: 1.25rem !important;
+            color: var(--text-primary) !important;
+            margin-top: 2rem !important;
+            scroll-margin-top: 1rem;
+        }
+
+        .markdown-body p, .markdown-body li {
+            font-size: 0.95rem !important;
+            color: var(--text-primary) !important;
+        }
+        
+        .markdown-body pre {
+            background-color: #1a1b26 !important; /* Match Tokyo Night Dark */
+            border: 1px solid var(--border);
+            border-radius: 8px !important;
+            padding: 0 !important; /* Code internal handles padding */
+            margin: 1.2rem 0 !important;
+            overflow: hidden;
+        }
+
+        .markdown-body pre code {
+            background-color: transparent !important;
+            padding: 1.2rem !important;
+            display: block;
+            font-family: var(--font-mono) !important;
+            font-size: 0.85rem !important;
+            line-height: 1.5;
+        }
+
+        .markdown-body blockquote {
+            border-left: 3px solid var(--accent) !important;
+            background: var(--surface);
+            padding: 0.8rem 1.2rem;
+            color: var(--text-secondary) !important;
+            margin: 1.2rem 0 !important;
+        }
+
+        .markdown-body table {
+            background: var(--surface);
+            font-size: 0.85rem !important;
+            margin: 1.2rem 0 !important;
+        }
+
+        footer {
+            margin-top: 4rem;
+            padding-top: 1.5rem;
+            border-top: 1px solid var(--border);
+            color: var(--text-muted);
+            font-size: 0.8rem;
+            text-align: center;
+        }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar { width: 5px; }
+        ::-webkit-scrollbar-track { background: var(--bg); }
+        ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+    </style>
+</head>
+<body>
+    <aside class="sidebar">
+        <a href="index.html" class="nav-link">
+            <span>←</span> 返回目录门户
+        </a>
+        
+        <div class="toc-container">
+            <h3 class="toc-title">文档导航</h3>
+            <ul class="toc-list" id="toc">
+                <!-- TOC items will be injected here -->
+            </ul>
+        </div>
+    </aside>
+
+    <div class="container">
+        <header>
+            <div class="meta">SCF-COLLECTOR | 2026-05-18 10:56</div>
+            <h1>避坑秘籍：多级路由分级调度 staged_analyzer 的避坑与物理熔断实践</h1>
+        </header>
+
+        <article id="content" class="markdown-body">
+            <!-- Loading indicator -->
+            <p style="color: var(--text-muted)">正在解析文档内容...</p>
+        </article>
+
+        <footer>
+            &copy; 2026 MicroStock Project Docs | Generated by Antigravity
+        </footer>
+    </div>
+
+    <script id="markdown-raw" type="text/markdown"># 避坑秘籍：多级路由分级调度 staged_analyzer 的避坑与物理熔断实践
+
+> 本文档记录了在实施 `scf-collector` M1-Patch (v2 Iteration) 期间遭遇的诡异 Bug、性能瓶颈、网络/权限受阻等踩坑记录，遵循双轨制高价值技术沉淀规范。
+
+---
+
+## 坑位一：Windows PowerShell 终端 GBK 编码崩溃 (UnicodeEncodeError)
+
+### 踩坑记录 (The Pitfall)
+在 Windows 本地环境下运行 `verify_prompt_consistency.py` 物理对账审计时，当 Python 尝试在 Console 打印漂亮的宽字符 Emoji（如 `✅`）时，突然抛出致命的 `UnicodeEncodeError: 'gbk' codec can't encode character` 报错，导致整个审计脚本在本地终端崩溃。
+
+### 方案对比 (Options Explored)
+*   **方案 A (强制终端设置 UTF-8)**: 通过 `chcp 65001` 命令临时改变 Windows 控制台编码。
+    *   *弊端*: 需要额外的系统配置或批处理脚本干预，对 AI 自动化执行或无头脚本不够友好。
+*   **方案 B (Python 统一 ASCII 指示词)**: 在代码层面彻底弃用 Emoji，使用 `[OK]`、`[WARNING]`、`[HEALTH]`、`[ERROR]` 等纯 ASCII 符号进行日志格式化。
+    *   *优势*: 没有任何跨平台依赖，在 Windows (GBK/UTF-8) 或 Linux 容器 (UTF-8) 下都能 100% 稳定运行。
+
+### 择优决策 (Optimal Choice)
+采用 **方案 B**。物理运维与测试脚本在终端输出时必须保持极简，避免宽字符污染以防在各种非标操作系统环境下运行中断。
+
+---
+
+## 坑位二：历史 Prompt 重构遗留的 API 常量割裂 (AttributeError)
+
+### 踩坑记录 (The Pitfall)
+在前人对系统 Prompt 完成了 V3 版本前缀冻结后，未能将调用端 `policy_analyzer.py` 的引用同步改写。导致线上调度器或 OMO 逆回购政策在拉起大模型分析时，尝试访问 `prompts.GENERAL_SUMMARY_SYSTEM` 会直接引发属性错误崩溃 `AttributeError: module 'shared.utils.prompts' has no attribute 'GENERAL_SUMMARY_SYSTEM'`。
+
+### 方案对比 (Options Explored)
+*   **方案 A (在 prompts.py 中保留旧常量引用)**: 保持兼容，把旧常量的变量名指向新常量。
+    *   *弊端*: 会导致 prompts.py 极度臃肿，产生大面积的重复常量和技术债。
+*   **方案 B (物理全局一键 Patch 并同步升级)**: 自研精准全局替换运维补丁，强行将所有的旧常量替换为最新的 `GENERAL_SUMMARY_SYSTEM_V3`，并同步将数据库中的 `prompt_name` 与 `prompt_version` 标志提级为 `"GENERAL_SUMMARY_V3"` 和 `"3.0"`。
+    *   *优势*: 保持了代码库的绝对干净与强版本对齐，杜绝了老数据对新库的“隐形污染”。
+
+### 择优决策 (Optimal Choice)
+采用 **方案 B**。编写 `scratch/patch_policy_analyzer.py`，成功实现了该核心引擎的一键安全升维，彻底扫荡了该重大潜在崩溃漏洞。
+
+---
+
+## 坑位三：Mock 提取数据与真实提取器契约脱节 (KeyError)
+
+### 踩坑记录 (The Pitfall)
+在编写 `test_staged_analyzer.py` 熔断兜底的正常落库测试时，手动 Mock 的 OMO 字典没有对齐 `OMOExtractor.generate_summary` 所严格规定的顶级 key 契约（如缺少 `'amount_cny_100m'` 等），导致调用时在 `generate_summary` 发生 `KeyError`。
+
+### 方案对比 (Options Explored)
+*   **方案 A (将所有 extractor 宽进严出化)**: 在各个规则提取器中大量增加 `get(key, 0)` 等兼容代码。
+    *   *弊端*: 会削弱金融级字段提取的严密性判定，使异常数据被错误写入主库而无法捕获。
+*   **方案 B (保持强类型约束，利用 MonkeyPatch 精准测试)**:
+    *   正常落库时，mock 数据结构必须对齐真实提取字典。
+    *   异常熔断测试时，利用 Python 内置的 `MonkeyPatch` 特性拦截具体的 `extract` 接口，故意返回不包含核心 key 的错乱数据（如 `{"bad_key": True}`），强迫其抛出 `KeyError`，从而完美验证 `[FAILSAFE-FALLBACK]` 降级引擎。
+
+### 择优决策 (Optimal Choice)
+采用 **方案 B**。这是最顶级的软件工程测试实践，既保护了金融表前缀字段约束的强健性，又在测试中实现了对异常兜底大底座的 100% 真实物理覆盖！
+
+---
+
+## 复用技巧与最佳实践 (Reusable Tips)
+
+1.  **大底座兜底防线**：设计多级路由或直切（production）模式时，在 try 块内部不仅需要拦截数据库异常，更应该在直切写入前捕捉任何可能由于正则表达式在极端环境下解析非标数据所抛出的异常（如 IndexError, KeyError）。一旦发现，立刻触发 `[FAILSAFE-FALLBACK]` 并注入 `bypass_failed=1`，强制退流大模型，确保服务绝对不停机。
+2.  **大模型 Token 缓存预热技巧**：在使用 DeepSeek API 时，只要 System Prompt 及其前缀完全静态一致，官方会自动在底层做内存级 Caching（`input_cache_hit_tokens`）。日间运行或物理审计时，应确保没有诸如系统时间戳、动态 session_id 注入到 system 中，从而充分释放 90% 的降本潜力。
+</script>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', async () => {
+            const rawMd = document.getElementById('markdown-raw').textContent;
+            const contentEl = document.getElementById('content');
+            const tocEl = document.getElementById('toc');
+            
+            // Set options for marked
+            marked.setOptions({
+                gfm: true,
+                breaks: true,
+                headerIds: true,
+                mangle: false,
+                highlight: function(code, lang) {
+                    const language = hljs.getLanguage(lang) ? lang : 'plaintext';
+                    return hljs.highlight(code, { language }).value;
+                }
+            });
+
+            // Parse Markdown
+            contentEl.innerHTML = marked.parse(rawMd);
+            
+            // Generate TOC
+            const headings = contentEl.querySelectorAll('h2, h3');
+            headings.forEach((h, index) => {
+                if (!h.id) h.id = 'heading-' + index;
+                
+                const li = document.createElement('li');
+                li.className = 'toc-item level-' + h.tagName.toLowerCase().charAt(1);
+                
+                const a = document.createElement('a');
+                a.href = '#' + h.id;
+                a.textContent = h.textContent;
+                
+                li.appendChild(a);
+                tocEl.appendChild(li);
+            });
+
+            // Handle Mermaid
+            if (window.mermaid) {
+                mermaid.initialize({ startOnLoad: false, theme: 'dark', useWorker: false });
+                document.querySelectorAll('pre code.language-mermaid').forEach(el => {
+                    const pre = el.parentElement;
+                    const div = document.createElement('div');
+                    div.className = 'mermaid';
+                    div.textContent = el.textContent;
+                    pre.parentElement.replaceChild(div, pre);
+                });
+                mermaid.run();
+            }
+        });
+    </script>
+</body>
+</html>
