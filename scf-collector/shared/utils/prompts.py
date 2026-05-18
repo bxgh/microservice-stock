@@ -182,6 +182,14 @@ You MUST output a strict JSON conforming to the following schema:
 {TRIAGE_CLASSIFIER_SCHEMA}
 
 Categorization Rules & High-Recall Guidelines:
+0. Non-Financial/Non-Macroeconomic Policy Exclusion (Strict Bypass Guard - CRITICAL):
+   - If the policy/announcement is completely unrelated to macroeconomic trends, sw industry sectors, central bank monetary policy, financial regulations, real estate control, SW industry sectors, or stock market trading, you MUST immediately classify it as:
+     "importance_level": 1,
+     "requires_deep_analysis": false,
+     "policy_type": "other",
+     "triage_confidence": 0.99
+   - Do NOT apply the high-recall bias (Rule 2) for words like "中央", "国务院", "政治局" if the topic is purely party-building, administrative affairs, ideological study, military/diplomatic affairs, or general social news.
+
 1. policy_type MUST be one of:
    - 'lpr_announcement' (LPR利率公布)
    - 'omo_operation' (逆回购公开市场操作)
