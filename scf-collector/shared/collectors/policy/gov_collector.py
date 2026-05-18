@@ -88,9 +88,9 @@ class GovCollector:
 
             
             # 常见正文容器：.pages_content, #UCAP-CONTENT, .article-content
-            content_div = soup.select_one(".pages_content") or \
-                          soup.select_one("#UCAP-CONTENT") or \
-                          soup.select_one(".article-content")
+            content_div = soup.find(class_="pages_content") or \
+                          soup.find(id="UCAP-CONTENT") or \
+                          soup.find(class_="article-content")
             
             if content_div:
                 # 移除脚本和样式
