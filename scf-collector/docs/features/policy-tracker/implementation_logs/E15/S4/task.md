@@ -1,0 +1,22 @@
+# E15-E4: Prefix-Freeze 缓存改造 Checklist
+
+- [x] `llm_client.py` 隐藏 Bug 修复与消息结构锁死 (E4-S1)
+  - [x] 修复 `llm_client.py` 针对 `deepseek-chat` 调用时 `messages` 未定义的 NameError 缺陷
+  - [x] 在 `llm_client.py` 中引入 `is_heartbeat` 机制与参数透传，支持在 `_update_daily_cost` 记账时剥离心跳开销
+  - [x] 确保 `messages` 装配以“静态 System Prompt + 动态 User Message”的标准格式组装，以触发 DeepSeek Prompt Caching 绝对前缀匹配
+- [x] 影子模式验证 (E4-S2)
+  - [x] 跑通双版本/多环境对比验证，确认缓存前缀锁死后，LLM 解析语义一致性及命中标志
+- [x] 缓存预热保活脚本 `keep_alive.py` 开发 (E4-S4)
+  - [x] 在 `scratch/keep_alive.py` 中编写保活机制：每 30 分钟发起一次静默心跳
+  - [x] 集成 `OffPeakScheduler.is_off_peak()`，在北京时间 `00:30 - 08:30` 错峰优惠时段自动暂停保活，防止无谓损耗
+  - [x] 心跳调用时仅更新 `meta_llm_daily_cost` Token 与计费统计，不写入 `dwd_policy_analysis` 物理业务表，保持业务净度
+- [x] 缓存生存期探测脚本 `detect_cache_ttl.py` 开发 (E4-S4)
+  - [x] 在 `scratch/detect_cache_ttl.py` 中编写驱逐时效自动测试探针
+  - [x] 分时段休眠并再次调用，输出缓存生存期 (TTL) 探测图表与报告，数据化支撑保活频率决策
+- [x] 错峰时段调度集成与自动化监控测试 (E4-S3 / E4-S5)
+  - [x] 在 `tests/test_prefix_freeze.py` 中编写 Given-When-Then 单元测试与集成测试
+  - [x] 验证 `deepseek-chat` 调用不崩溃，心跳保活脚本自动绕过错峰，以及缓存第二次调用命中时单次计费归零
+- [x] 文档与交付物完整编译 (AC-Deliver)
+  - [x] 编写 `walkthrough.md` 真实 SQL 审计及日志片段存证
+  - [x] 对所有新增/修改 of markdown 运行 `md_to_html_premium.py`，全自动编译出对应的 HTML 副本
+  - [x] 运行 `update_docs_portal.py` 更新全局与局部导航门户，完成 AI-Native 自动索引集成

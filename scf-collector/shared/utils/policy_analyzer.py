@@ -381,6 +381,7 @@ class PolicyAnalyzer:
                 "summary": triage_summary or summary_three or "未生成摘要。",
                 "importance_level": analysis_data.get("importance_level", 3),
                 "intensity_change": analysis_data.get("intensity_change", "N/A"),
+                "triage_confidence": analysis_data.get("triage_confidence", 1.0),
                 "cost_cny": llm_result["cost_cny"],
                 "core_segment_simhash": core_segment_simhash
             }

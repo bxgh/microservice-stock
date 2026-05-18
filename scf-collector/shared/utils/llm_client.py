@@ -111,7 +111,8 @@ class LLMClient:
         temperature: float = 0.2,
         reasoning_effort: Optional[str] = None,
         prompt_name: str = "DEFAULT_PROMPT",
-        prompt_version: str = "1.0"
+        prompt_version: str = "1.0",
+        is_heartbeat: bool = False
     ) -> Dict[str, Any]:
         """
         大模型异步请求主入口
@@ -123,20 +124,21 @@ class LLMClient:
         model = self.reasoner_model if mode == "pro-thinking" else self.chat_model
         timeout = 60.0 if mode == "pro-thinking" else 30.0
 
-        # 3. 拦截应用层缓存
+        # 3. 拦截应用层缓存 (心跳保活强制穿透)
         cache_key = ResponseCache.generate_key(prompt_name, prompt_version, model, user_prompt)
-        cached_res = await ResponseCache.get(cache_key)
-        if cached_res:
-            logger.info(f"[ResponseCache HIT] Bypassing physical API call for key: {cache_key}")
-            # 对齐高精度字段契约，覆盖消耗为 0
-            cached_res["cost_cny"] = 0.000000
-            cached_res["input_cache_hit_tokens"] = 0
-            cached_res["input_cache_miss_tokens"] = 0
-            cached_res["output_tokens"] = 0
-            cached_res["reasoning_tokens"] = 0
-            cached_res["is_cache_hit"] = True
-            cached_res["duration_ms"] = 0
-            return cached_res
+        if not is_heartbeat:
+            cached_res = await ResponseCache.get(cache_key)
+            if cached_res:
+                logger.info(f"[ResponseCache HIT] Bypassing physical API call for key: {cache_key}")
+                # 对齐高精度字段契约，覆盖消耗为 0
+                cached_res["cost_cny"] = 0.000000
+                cached_res["input_cache_hit_tokens"] = 0
+                cached_res["input_cache_miss_tokens"] = 0
+                cached_res["output_tokens"] = 0
+                cached_res["reasoning_tokens"] = 0
+                cached_res["is_cache_hit"] = True
+                cached_res["duration_ms"] = 0
+                return cached_res
 
         # 4. 预算配额前置安全审计
         today_str = OffPeakScheduler.get_beijing_now().strftime("%Y-%m-%d")
@@ -157,6 +159,10 @@ class LLMClient:
             ]
         else:
             kwargs = {"temperature": temperature}
+            messages = [
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_prompt}
+            ]
 
         start_time = datetime.datetime.now()
         
@@ -164,7 +170,7 @@ class LLMClient:
         last_exception = None
         for attempt in range(3):
             try:
-                logger.info(f"LLM request starting (Model: {model}, Mode: {mode}, Attempt: {attempt + 1}, reasoning_effort: {reasoning_effort})...")
+                logger.info(f"LLM request starting (Model: {model}, Mode: {mode}, Attempt: {attempt + 1}, reasoning_effort: {reasoning_effort}, is_heartbeat: {is_heartbeat})...")
                 response = await asyncio.wait_for(
                     self.client.chat.completions.create(
                         model=model,
@@ -223,10 +229,10 @@ class LLMClient:
                     "is_off_peak": is_off_peak
                 }
 
-                # 9. 静默保存结果到物理缓存，以备下次拦截
-                # 复制一份用于缓存，避免将 is_cache_hit 等字段本身存入
-                save_dict = result.copy()
-                await ResponseCache.set(cache_key, prompt_name, prompt_version, model, save_dict)
+                # 9. 静默保存结果到物理缓存，以备下次拦截 (心跳保活不存入缓存)
+                if not is_heartbeat:
+                    save_dict = result.copy()
+                    await ResponseCache.set(cache_key, prompt_name, prompt_version, model, save_dict)
                 
                 return result
                 

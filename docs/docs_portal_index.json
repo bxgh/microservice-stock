@@ -96,6 +96,38 @@
     "deprecated": false
   },
   {
+    "title": "股东数据 数据库结构",
+    "path": "scf-collector/docs/mysql-data/database_schema.html",
+    "type": "standard",
+    "service": "scf-collector",
+    "last_modified": "2026-05-18 15:18",
+    "deprecated": false
+  },
+  {
+    "title": "E15-E4: Prefix-Freeze 缓存改造 Checklist",
+    "path": "scf-collector/docs/features/policy-tracker/implementation_logs/E15/S4/task.html",
+    "type": "standard",
+    "service": "POLICY-TRACKER",
+    "last_modified": "2026-05-18 15:13",
+    "deprecated": false
+  },
+  {
+    "title": "Walkthrough - E15-E4: Prefix-Freeze 缓存改造",
+    "path": "scf-collector/docs/features/policy-tracker/implementation_logs/E15/S4/walkthrough.html",
+    "type": "standard",
+    "service": "POLICY-TRACKER",
+    "last_modified": "2026-05-18 15:13",
+    "deprecated": false
+  },
+  {
+    "title": "Implementation Plan - E15-E4: Prefix-Freeze 缓存改造",
+    "path": "scf-collector/docs/features/policy-tracker/implementation_logs/E15/S4/implementation_plan.html",
+    "type": "standard",
+    "service": "POLICY-TRACKER",
+    "last_modified": "2026-05-18 15:05",
+    "deprecated": false
+  },
+  {
     "title": "已就绪采集表清单 (Done List Tables)",
     "path": "scf-collector/docs/features/policy-tracker/done-list-tables.html",
     "type": "standard",

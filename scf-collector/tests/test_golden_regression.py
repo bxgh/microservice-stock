@@ -51,7 +51,7 @@ async def test_golden_regression_flow(mock_chat, mock_policy_db, mock_staged_db)
     mock_staged_db.side_effect = mock_db_side_effect
     mock_policy_db.side_effect = mock_db_side_effect
 
-    def chat_side_effect(system_prompt, user_prompt, mode, temperature=0.1):
+    def chat_side_effect(system_prompt, user_prompt, mode, temperature=0.1, reasoning_effort=None, prompt_name="DEFAULT_PROMPT", prompt_version="1.0", is_heartbeat=False):
         if "Please classify this policy" in user_prompt:
             if "存款准备金" in user_prompt or "降准" in user_prompt:
                 return {
@@ -75,7 +75,7 @@ async def test_golden_regression_flow(mock_chat, mock_policy_db, mock_staged_db)
                 "duration_ms": 200
             }
 
-        if "全国统一大市场" in user_prompt:
+        if "统一大市场" in user_prompt:
             if mode == "flash":
                 return {
                     "content": '{"importance_level": 5, "policy_type": "executive_meeting", "requires_deep_analysis": true, "triage_confidence": 0.99, "triage_summary": "建设全国统一大市场。"}',
@@ -99,7 +99,7 @@ async def test_golden_regression_flow(mock_chat, mock_policy_db, mock_staged_db)
                     "duration_ms": 300
                 }
 
-        if "加强退市监管" in user_prompt:
+        if "退市" in user_prompt:
             if mode == "flash":
                 return {
                     "content": '{"importance_level": 3, "policy_type": "regulation_release", "requires_deep_analysis": false, "triage_confidence": 0.65, "triage_summary": "加强退市监管工作。"}',
