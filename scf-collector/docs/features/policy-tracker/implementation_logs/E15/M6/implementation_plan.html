@@ -280,7 +280,7 @@
 
     <div class="container">
         <header>
-            <div class="meta">SCF-COLLECTOR | 2026-05-18 13:13</div>
+            <div class="meta">SCF-COLLECTOR | 2026-05-18 16:16</div>
             <h1>Implementation Plan - E15-M6: 思考预算精细化 (E3-S3) + 响应缓存 (E5) + 错峰调度 (E4-S5) 落地</h1>
         </header>
 
@@ -297,7 +297,7 @@
     <script id="markdown-raw" type="text/markdown"># Implementation Plan - E15-M6: 思考预算精细化 (E3-S3) + 响应缓存 (E5) + 错峰调度 (E4-S5) 落地
 
 本方案针对 AI 政策分析引擎的 Milestone M6（里程碑 6）进行详细设计与实施规划。该里程碑包含三个可并行的提效降本 Story：
-1. **E3-S3 思考预算精细化**：根据政策类型与重要性分级动态调度大模型思考档位（reasoning_effort），避免无节制空转。
+1. **E3-S3 思考预算精细化**：根据政策类型与重要性分级动态调度大模型思考档位（`reasoning_effort`），避免无节制空转。
 2. **E5 应用层响应缓存 (E5-S1)**：对相同 Prompt 签名和政策内容的请求通过 MySQL 执行秒级直接命中缓存，阻断重复计费。
 3. **E4-S5 错峰时段调度**：为历史回填等非实时批处理任务增加 localized 北京时间错峰识别，自动在 00:30 - 08:30 时段自动调度并结算 50% 折扣。
 
@@ -305,7 +305,7 @@
 
 ## 需求解析与核心逻辑 (3句话)
 
-1. **精细化思考调度**：将默认一刀切的 reasoning 档位重构为基于 `(policy_type, importance_level)` 二维矩阵的动态查找配置，为常规公告自动匹配 `high`（低消耗）而仅为超重磅宏观政策解锁 `max`（高火力）。
+1. **精细化思考调度**：将默认一刀切的 reasoning 档位重构为基于 `(policy_type, importance_level)` 二维矩阵 of 动态查找配置，为常规公告自动匹配 `high`（低消耗）而仅为超重磅宏观政策解锁 `max`（高火力）。
 2. **高精度缓存拦截**：实现基于 MD5 签名的 MySQL 应用层缓存器，拦截相同的 LLM 提问并返回完整缓存响应（包括思考链），同时将 `analysis_path` 设为 `cache` 且成本归零。
 3. **北京时间错峰执行**：利用 `pytz` 严格锁定 `Asia/Shanghai` 时区校验，在 00:30-08:30 时段内自动更新 `meta_llm_daily_cost` 记录的 `is_off_peak`，并令批处理任务在此优惠窗口内无缝休眠与触发。
 
@@ -473,9 +473,9 @@
 ### Manual Verification
 *   在 sandbox 运行环境设置 `OFF_PEAK_SCHEDULING_ENABLED=true` 运行 `python scripts/backfill_policy_analysis.py`。
 *   人工检查日志，核实其在白天运行时是否成功被 `OffPeakScheduler` 拦截并显示“*Currently in peak hours. Sleeping... until off-peak...*”。
-*   使用 DBeaver/Datagrip 直连腾讯云 CDB 物理开发数据库：
+*   使用 DBeaver/Datagrip 直连开发数据库：
     *   查询 `meta_response_cache` 确认生成的 `cache_key` 格式正确且 `response_content` 包含完整的 json 结构。
-    *   查询 `meta_llm_daily_cost` 验证当天产生了 `is_off_peak=0` 与 `is_off_peak=1` 两条分立账单流水。
+    *   查询 `meta_llm_daily_cost` 验证当天产生了 `is_off_peak=0` 与 `is_off_peak=1` 条分立账单流水。
 </script>
 
     <script>

@@ -348,6 +348,42 @@ class StagedAnalyzer:
         elif importance == 4 or (importance <= 3 and confidence <= 0.8):
             logger.info("Upgrading to triage_and_deep path.")
             effort = self._resolve_reasoning_effort(policy_type, importance)
+            
+            # Check for Diff route: rating == "high" and environmental configuration enabled
+            diff_enabled = os.getenv('DIFF_ANALYSIS_ENABLED', 'true').lower() == 'true'
+            if diff_enabled and similar_info and similar_info.get("similarity_rating") == "high":
+                matched_analysis_id = similar_info.get("matched_analysis_id")
+                if matched_analysis_id:
+                    sql_diff = "SELECT summary, segment_used FROM dwd_policy_analysis WHERE id = %s"
+                    try:
+                        hist_rows = await execute_query(sql_diff, (matched_analysis_id,), is_select=True)
+                        if hist_rows:
+                            hist_summary = hist_rows[0]["summary"]
+                            hist_segment = hist_rows[0]["segment_used"]
+                            
+                            from shared.utils.segment_extractor import extract_key_segment
+                            segment_used = extract_key_segment(title, content_text, policy_type)
+                            
+                            from shared.utils.diff_helper import generate_text_diff
+                            diff_text = generate_text_diff(hist_segment, segment_used)
+                            
+                            logger.info(f"[Diff Analysis] High similarity rating (Hamming dist: {similar_info['hamming_distance']}). Invoking diff_only mode...")
+                            res = await self.analyzer.analyze_policy(
+                                row,
+                                force_deep_mode='diff_only',
+                                reasoning_effort=effort,
+                                analysis_path='llm_diff',
+                                analysis_stage='triage_and_deep',
+                                previous_summary=hist_summary,
+                                diff_text=diff_text,
+                                contrast_baseline_id=similar_info["matched_policy_id"]
+                            )
+                            res['routing_path'] = 'triage_and_diff'
+                            res["similarity_detection"] = similar_info
+                            return res
+                    except Exception as ex:
+                        logger.error(f"Failed to load previous policy analysis or generate diff: {ex}. Fallbacking to standard triage_and_deep...")
+            
             res = await self.analyzer.analyze_policy(
                 row,
                 reasoning_effort=effort,
@@ -440,7 +476,6 @@ class StagedAnalyzer:
             core_segment_simhash
         )
         try:
-            from shared.db.connection import execute_query
             await execute_query(sql, params)
         except Exception as e:
             logger.error(f"DB Write failed: {e}")

@@ -1,5 +1,5 @@
-# 场景化大模型思考预算矩阵映射表
-# DeepSeek V4 映射规范: 5星重磅 -> max; 4星普通/关键比对 -> high; 默认 -> high
+# 场景化大模型思考档位矩阵映射表
+# DeepSeek V4 映射规范: 5星重磅 -> max; 4星普通/措辞对比 -> high; 默认 -> high
 monetary_policy_report:
   4: "high"
   5: "max"

@@ -96,6 +96,54 @@
     "deprecated": false
   },
   {
+    "title": "Implementation Plan - E15-M7: E6 增量(Diff)分析落地与集成",
+    "path": "scf-collector/docs/features/policy-tracker/implementation_logs/E15/M7/implementation_plan.html",
+    "type": "standard",
+    "service": "POLICY-TRACKER",
+    "last_modified": "2026-05-18 16:25",
+    "deprecated": false
+  },
+  {
+    "title": "Task Checklist - E15-M7: E6 增量(Diff)分析落地与集成",
+    "path": "scf-collector/docs/features/policy-tracker/implementation_logs/E15/M7/task.html",
+    "type": "standard",
+    "service": "POLICY-TRACKER",
+    "last_modified": "2026-05-18 16:25",
+    "deprecated": false
+  },
+  {
+    "title": "E15-M7: E6 增量(Diff)分析落地与集成交付报告",
+    "path": "scf-collector/docs/features/policy-tracker/implementation_logs/E15/M7/walkthrough.html",
+    "type": "standard",
+    "service": "POLICY-TRACKER",
+    "last_modified": "2026-05-18 16:25",
+    "deprecated": false
+  },
+  {
+    "title": "Implementation Plan - E15-M6: 思考预算精细化 (E3-S3) + 响应缓存 (E5) + 错峰调度 (E4-S5) 落地",
+    "path": "scf-collector/docs/features/policy-tracker/implementation_logs/E15/M6/implementation_plan.html",
+    "type": "standard",
+    "service": "POLICY-TRACKER",
+    "last_modified": "2026-05-18 16:16",
+    "deprecated": false
+  },
+  {
+    "title": "Task Checklist - E15-M6: 思考预算精细化 (E3-S3) + 响应缓存 (E5) + 错峰调度 (E4-S5)",
+    "path": "scf-collector/docs/features/policy-tracker/implementation_logs/E15/M6/task.html",
+    "type": "standard",
+    "service": "POLICY-TRACKER",
+    "last_modified": "2026-05-18 16:16",
+    "deprecated": false
+  },
+  {
+    "title": "Walkthrough - E15-M6: 思考预算精细化 (E3-S3) + 响应缓存 (E5) + 错峰调度 (E4-S5) 落地总结",
+    "path": "scf-collector/docs/features/policy-tracker/implementation_logs/E15/M6/walkthrough.html",
+    "type": "standard",
+    "service": "POLICY-TRACKER",
+    "last_modified": "2026-05-18 16:16",
+    "deprecated": false
+  },
+  {
     "title": "规则直切影子对照对账审计报告 (Policy Bypass Audit Report)",
     "path": "scf-collector/docs/features/policy-tracker/implementation_logs/E15/S3/audit_report.html",
     "type": "standard",
@@ -197,30 +245,6 @@
     "type": "standard",
     "service": "POLICY-TRACKER",
     "last_modified": "2026-05-18 14:34",
-    "deprecated": false
-  },
-  {
-    "title": "Implementation Plan - E15-M6: 思考预算精细化 (E3-S3) + 响应缓存 (E5) + 错峰调度 (E4-S5) 落地",
-    "path": "scf-collector/docs/features/policy-tracker/implementation_logs/E15/M6/implementation_plan.html",
-    "type": "standard",
-    "service": "POLICY-TRACKER",
-    "last_modified": "2026-05-18 13:13",
-    "deprecated": false
-  },
-  {
-    "title": "Task Checklist - E15-M6: 思考预算精细化 (E3-S3) + 响应缓存 (E5) + 错峰调度 (E4-S5)",
-    "path": "scf-collector/docs/features/policy-tracker/implementation_logs/E15/M6/task.html",
-    "type": "standard",
-    "service": "POLICY-TRACKER",
-    "last_modified": "2026-05-18 13:13",
-    "deprecated": false
-  },
-  {
-    "title": "E15-M6 实施与交付总结报告 (Walkthrough)",
-    "path": "scf-collector/docs/features/policy-tracker/implementation_logs/E15/M6/walkthrough.html",
-    "type": "standard",
-    "service": "POLICY-TRACKER",
-    "last_modified": "2026-05-18 13:13",
     "deprecated": false
   },
   {

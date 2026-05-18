@@ -216,7 +216,10 @@ class PolicyAnalyzer:
         disable_db_write: bool = False,
         reasoning_effort: Optional[str] = None,
         analysis_path: str = 'llm',
-        analysis_stage: str = 'triage_and_deep'
+        analysis_stage: str = 'triage_and_deep',
+        previous_summary: Optional[str] = None,
+        diff_text: Optional[str] = None,
+        contrast_baseline_id: Optional[int] = None
     ) -> Dict[str, Any]:
         """
         核心分析逻辑
@@ -259,8 +262,11 @@ class PolicyAnalyzer:
 
         
         # 4. 追溯相同分类上一期基准
-        contrast_baseline_id = None
-        previous_baseline = await self._find_previous_baseline(ts_code, policy_type, publish_date)
+        # 如果是 diff 模式，上一期基准 ID 已通过入参传递，不需要重复检索
+        if force_deep_mode != 'diff_only':
+            previous_baseline = await self._find_previous_baseline(ts_code, policy_type, publish_date)
+        else:
+            previous_baseline = None
         
         if force_deep_mode == 'triage_only':
             mode = "flash"
@@ -271,38 +277,50 @@ class PolicyAnalyzer:
             previous_baseline = None
             analysis_stage = "triage_only"
             logger.info("Executing Stage 1: Triage Classification...")
+            
+        elif force_deep_mode == 'diff_only':
+            mode = "pro-thinking" if reasoning_effort else "deep"
+            system_prompt = prompts.WORDING_DIFF_SYSTEM_V1
+            user_prompt = (
+                f"【上期分析摘要】\n{previous_summary or '暂无上期摘要。'}\n\n"
+                f"【本期文本变化(Diff)】\n{diff_text or '【无文本差异】'}"
+            )
+            prompt_name = "WORDING_DIFF_V1"
+            prompt_version = "1.0"
+            logger.info(f"Running diff-based marginal analysis via '{mode}' with prompt WORDING_DIFF_V1...")
+            
         else:
             mode = "flash"
             system_prompt = prompts.GENERAL_SUMMARY_SYSTEM_V3
 
-        if previous_baseline:
-            contrast_baseline_id = previous_baseline['id']
-            # 对上期文本也做一次提取，防止超长
-            previous_segment = extract_key_segment(previous_baseline['title'], previous_baseline['content_text'], policy_type)
-            
-            # 升级为 deepseek-reasoner (思维链高阶分析)
-            mode = "pro-thinking"
-            system_prompt = prompts.WORDING_CONTRAST_SYSTEM_V3
-            user_prompt = (
-                f"请对比以下两期政策：\n"
-                f"【上期政策】\n{previous_segment}\n\n"
-                f"【本期政策】\n{segment_used}"
-            )
-            prompt_name = "WORDING_CONTRAST_V3"
-            prompt_version = "3.0"
-            logger.info(f"Baseline policy anchored (ID: {contrast_baseline_id}). Upgrading model to 'pro-thinking'...")
-        elif force_deep_mode != 'triage_only':
-            # 通用单期摘要模式
-            mode = "deep"
-            system_prompt = prompts.GENERAL_SUMMARY_SYSTEM_V3
-            user_prompt = (
-                f"请分析以下政策：\n"
-                f"【标题】{title}\n"
-                f"【正文】\n{segment_used}"
-            )
-            prompt_name = "GENERAL_SUMMARY_V3"
-            prompt_version = "3.0"
-            logger.info("No baseline policy found. Running standard summary mode via 'deep'...")
+            if previous_baseline:
+                contrast_baseline_id = previous_baseline['id']
+                # 对上期文本也做一次提取，防止超长
+                previous_segment = extract_key_segment(previous_baseline['title'], previous_baseline['content_text'], policy_type)
+                
+                # 升级为 deepseek-reasoner (思维链高阶分析)
+                mode = "pro-thinking"
+                system_prompt = prompts.WORDING_CONTRAST_SYSTEM_V3
+                user_prompt = (
+                    f"请对比以下两期政策：\n"
+                    f"【上期政策】\n{previous_segment}\n\n"
+                    f"【本期政策】\n{segment_used}"
+                )
+                prompt_name = "WORDING_CONTRAST_V3"
+                prompt_version = "3.0"
+                logger.info(f"Baseline policy anchored (ID: {contrast_baseline_id}). Upgrading model to 'pro-thinking'...")
+            else:
+                # 通用单期摘要模式
+                mode = "deep"
+                system_prompt = prompts.GENERAL_SUMMARY_SYSTEM_V3
+                user_prompt = (
+                    f"请分析以下政策：\n"
+                    f"【标题】{title}\n"
+                    f"【正文】\n{segment_used}"
+                )
+                prompt_name = "GENERAL_SUMMARY_V3"
+                prompt_version = "3.0"
+                logger.info("No baseline policy found. Running standard summary mode via 'deep'...")
 
         # 5. 调用大模型客户端并进行成本审计 (CLS 可观测性日志闭环)
         try:
@@ -362,6 +380,8 @@ class PolicyAnalyzer:
         if force_deep_mode == 'triage_only':
             from shared.utils.schemas import TriageOutput
             target_model = TriageOutput
+        elif force_deep_mode == 'diff_only':
+            target_model = WordingContrastOutput
         else:
             target_model = WordingContrastOutput if previous_baseline else GeneralSummaryOutput
         analysis_data = self._robust_parse_json(llm_result.get("content", ""), target_model)
@@ -374,12 +394,15 @@ class PolicyAnalyzer:
         if disable_db_write:
             triage_summary = analysis_data.get("triage_summary")
             summary_three = analysis_data.get("summary_three_sentences")
+            imp_lvl = analysis_data.get("importance_level")
+            if imp_lvl is None:
+                imp_lvl = 4 if (force_deep_mode == 'diff_only' or analysis_path == 'llm_diff') else 3
             return {
                 "policy_id": policy_id,
                 "analysis_id": None,
                 "policy_type": policy_type,
                 "summary": triage_summary or summary_three or "未生成摘要。",
-                "importance_level": analysis_data.get("importance_level", 3),
+                "importance_level": imp_lvl,
                 "intensity_change": analysis_data.get("intensity_change", "N/A"),
                 "triage_confidence": analysis_data.get("triage_confidence", 1.0),
                 "cost_cny": llm_result["cost_cny"],
@@ -389,7 +412,9 @@ class PolicyAnalyzer:
         # 8. 执行物理表数据落库/更新至 dwd_policy_analysis (联合唯一索引防重入)
         # 对齐数据契约列名
         summary_str = analysis_data.get("summary_three_sentences", "未生成摘要。")
-        importance_level = analysis_data.get("importance_level", 3)
+        importance_level = analysis_data.get("importance_level")
+        if importance_level is None:
+            importance_level = 4 if (force_deep_mode == 'diff_only' or analysis_path == 'llm_diff') else 3
         importance_reason = analysis_data.get("importance_reason", "无特定理由。")
         intensity_change = analysis_data.get("intensity_change", "N/A")
         

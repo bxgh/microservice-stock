@@ -1,21 +1,21 @@
 # Task Checklist - E15-M6: 思考预算精细化 (E3-S3) + 响应缓存 (E5) + 错峰调度 (E4-S5)
 
-- `[ ]` **E3-S3 思考预算精细化**
-    - `[ ]` 创建思考预算矩阵 `scf-collector/shared/utils/reasoning_effort_matrix.yaml`
-    - `[ ]` 升级 `llm_client.py` 以支持 `reasoning_effort` 参数并透传 Completions API
-    - `[ ]` 升级 `policy_analyzer.py` 的 `analyze_policy()` 接收与透传 `reasoning_effort`
-    - `[ ]` 升级 `staged_analyzer.py`，根据分类及初筛星级通过矩阵决策最合适思考档位
-- `[ ]` **E5 应用层响应缓存**
-    - `[ ]` 创建并执行 DDL 迁移 `migrations/V2.0_E15_M6_Off_Peak_Daily_Cost.sql` (升级 `meta_llm_daily_cost` 复合主键)
-    - `[ ]` 编写 `scf-collector/shared/utils/response_cache.py` 缓存器 (带归一化、MD5签名、完整序列化与 30 天冷数据清理)
-    - `[ ]` 升级 `llm_client.py` 的 `chat()`，集成缓存前置拦截（覆盖成本为 0）与未命中静默写入
-    - `[ ]` 更新 `policy_analyzer.py` 落库时若命缓存则标记 `analysis_path='cache'` 且耗费清零
-- `[ ]` **E4-S5 错峰时段调度**
-    - `[ ]` 编写 `scf-collector/shared/utils/off_peak_scheduler.py` (北京时区安全比对与精准秒级时差休眠等待)
-    - `[ ]` 升级 `llm_client.py` 每日成本统计时使用 `OffPeakScheduler` 安全区分，并支持账单复合主键安全合并
-    - `[ ]` 在回填脚本 `scripts/backfill_policy_analysis.py` 注入 `wait_for_off_peak()` 错峰休眠检查
-- `[ ]` **系统集成测试与验证**
-    - `[ ]` 编写高厚度 Given-When-Then 集成测试套件 `scf-collector/tests/test_m6_features.py`
-    - `[ ]` 运行 pytest 测试用例全数通过
-    - `[ ]` 运行回填脚本进行人工校验与数据库存证
-    - `[ ]` 输出 `walkthrough.md` / `walkthrough.html` 总结报告并刷新全局文档门户
+- `[x]` **E3-S3 思考预算精细化**
+    - `[x]` 创建思考预算矩阵 `scf-collector/shared/utils/reasoning_effort_matrix.yaml`
+    - `[x]` 升级 `llm_client.py` 以支持 `reasoning_effort` 参数并透传 Completions API
+    - `[x]` 升级 `policy_analyzer.py` 的 `analyze_policy()` 接收与透传 `reasoning_effort`
+    - `[x]` 升级 `staged_analyzer.py`，根据分类及初筛星级通过矩阵决策最合适思考档位
+- `[x]` **E5 应用层响应缓存**
+    - `[x]` 创建并执行 DDL 迁移 `migrations/V2.0_E15_M6_Off_Peak_Daily_Cost.sql` (升级 `meta_llm_daily_cost` 复合主键)
+    - `[x]` 编写 `scf-collector/shared/utils/response_cache.py` 缓存器 (带归一化、MD5签名、完整序列化与 30 天冷数据清理)
+    - `[x]` 升级 `llm_client.py` 的 `chat()`，集成缓存前置拦截（覆盖成本为 0）与未命中静默写入
+    - `[x]` 更新 `policy_analyzer.py` 落库时若命中缓存则标记 `analysis_path='cache'` 且耗费清零
+- `[x]` **E4-S5 错峰时段调度**
+    - `[x]` 编写 `scf-collector/shared/utils/off_peak_scheduler.py` (北京时区安全比对与精准秒级时差休眠等待)
+    - `[x]` 升级 `llm_client.py` 每日成本统计时使用 `OffPeakScheduler` 安全区分，并支持账单复合主键安全合并
+    - `[x]` 在回填脚本 `scripts/backfill_policy_analysis.py` 注入 `wait_for_off_peak()` 错峰休眠检查
+- `[x]` **系统集成测试与验证**
+    - `[x]` 编写高厚度 Given-When-Then 集成测试套件 `scf-collector/tests/test_m6_features.py`
+    - `[x]` 运行 pytest 测试用例全数通过
+    - `[x]` 运行回填脚本进行人工校验与数据库存证
+    - `[x]` 输出 `walkthrough.md` / `walkthrough.html` 总结报告并刷新全局文档门户
