@@ -1,0 +1,498 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Implementation Plan - E15-E2: 二阶段分析与 5 星政策 Self-Consistency 投票落地</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Noto+Serif+SC:wght@400;700;900&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    
+    <!-- Libraries -->
+    <script src="https://lib.baomitu.com/marked/11.1.1/marked.min.js"></script>
+    <link rel="stylesheet" href="https://lib.baomitu.com/github-markdown-css/5.5.0/github-markdown-dark.min.css">
+    <script src="https://lib.baomitu.com/mermaid/10.9.0/mermaid.min.js"></script>
+    
+    <!-- Syntax Highlighting -->
+    <link rel="stylesheet" href="https://lib.baomitu.com/highlight.js/11.9.0/styles/tokyo-night-dark.min.css">
+    <script src="https://lib.baomitu.com/highlight.js/11.9.0/highlight.min.js"></script>
+    
+    <style>
+        :root {
+            --bg: #0a0a0a;
+            --surface: #121212;
+            --surface-hover: #1a1a1a;
+            --border: #222222;
+            --accent: #eab308;
+            --accent-glow: rgba(234, 179, 8, 0.1);
+            --text-primary: #f1f5f9;
+            --text-secondary: #94a3b8;
+            --text-muted: #64748b;
+            --font-sans: 'Outfit', 'Noto Sans SC', -apple-system, sans-serif;
+            --font-serif: 'Noto Serif SC', serif;
+            --font-mono: 'JetBrains Mono', monospace;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background-color: var(--bg);
+            color: var(--text-primary);
+            font-family: var(--font-sans);
+            line-height: 1.7;
+            -webkit-font-smoothing: antialiased;
+            overflow-x: hidden;
+        }
+
+        /* Subtle background glow */
+        body::after {
+            content: '';
+            position: fixed;
+            top: 0;
+            right: 0;
+            width: 40vw;
+            height: 40vh;
+            background: radial-gradient(circle, var(--accent-glow) 0%, transparent 70%);
+            z-index: -1;
+            filter: blur(100px);
+            pointer-events: none;
+        }
+
+        .sidebar {
+            width: 260px;
+            height: 100vh;
+            position: fixed;
+            left: 0;
+            top: 0;
+            border-right: 1px solid var(--border);
+            background: var(--bg);
+            padding: 1.5rem;
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+            overflow-y: auto;
+            z-index: 100;
+        }
+
+        .nav-link {
+            color: var(--text-muted);
+            text-decoration: none;
+            font-size: 0.85rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            transition: color 0.2s;
+            padding: 0.5rem;
+            border-radius: 6px;
+        }
+        .nav-link:hover { color: var(--accent); background: var(--surface); }
+
+        .toc-title {
+            font-family: var(--font-serif);
+            font-size: 1rem;
+            color: var(--text-primary);
+            margin-bottom: 0.8rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding-left: 0.5rem;
+        }
+        .toc-title::before {
+            content: '';
+            width: 3px;
+            height: 1rem;
+            background: var(--accent);
+            border-radius: 2px;
+        }
+
+        .toc-list {
+            list-style: none;
+            display: flex;
+            flex-direction: column;
+            gap: 0.4rem;
+        }
+        .toc-item {
+            font-size: 0.8rem;
+            line-height: 1.3;
+        }
+        .toc-item a {
+            color: var(--text-muted);
+            text-decoration: none;
+            transition: all 0.2s;
+            display: block;
+            padding: 0.4rem 0.5rem;
+            border-radius: 4px;
+        }
+        .toc-item a:hover { color: var(--accent); background: var(--surface); }
+        .toc-item.level-3 { margin-left: 0.8rem; border-left: 1px solid var(--border); }
+
+        .container {
+            max-width: 860px;
+            margin: 0 auto 0 260px;
+            padding: 3rem 4rem;
+            animation: fadeIn 0.6s ease-out;
+        }
+
+        @media (max-width: 1024px) {
+            .sidebar { width: 220px; padding: 1rem; }
+            .container { margin-left: 220px; padding: 2rem; }
+        }
+
+        @media (max-width: 800px) {
+            .sidebar { position: static; width: 100%; height: auto; border-right: none; border-bottom: 1px solid var(--border); }
+            .container { margin-left: 0; padding: 1.5rem; }
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(5px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        header {
+            margin-bottom: 3rem;
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 1.5rem;
+        }
+
+        .meta {
+            font-family: var(--font-mono);
+            font-size: 0.75rem;
+            color: var(--accent);
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            margin-bottom: 0.8rem;
+            display: flex;
+            align-items: center;
+            gap: 0.8rem;
+        }
+
+        .meta::before {
+            content: '';
+            width: 20px;
+            height: 1px;
+            background-color: var(--accent);
+        }
+
+        h1 {
+            font-family: var(--font-serif);
+            font-size: 2.2rem;
+            font-weight: 900;
+            line-height: 1.2;
+            margin-bottom: 1rem;
+            color: var(--text-primary);
+        }
+
+        .markdown-body {
+            background: transparent !important;
+            color: var(--text-primary) !important;
+            font-family: var(--font-sans) !important;
+            font-size: 0.95rem !important;
+        }
+
+        .markdown-body h2 {
+            font-family: var(--font-serif);
+            font-size: 1.5rem !important;
+            color: var(--accent) !important;
+            border-bottom: 1px solid var(--border) !important;
+            padding-bottom: 0.5rem !important;
+            margin-top: 2.5rem !important;
+            scroll-margin-top: 1rem;
+        }
+
+        .markdown-body h3 {
+            font-family: var(--font-serif);
+            font-size: 1.25rem !important;
+            color: var(--text-primary) !important;
+            margin-top: 2rem !important;
+            scroll-margin-top: 1rem;
+        }
+
+        .markdown-body p, .markdown-body li {
+            font-size: 0.95rem !important;
+            color: var(--text-primary) !important;
+        }
+        
+        .markdown-body pre {
+            background-color: #1a1b26 !important; /* Match Tokyo Night Dark */
+            border: 1px solid var(--border);
+            border-radius: 8px !important;
+            padding: 0 !important; /* Code internal handles padding */
+            margin: 1.2rem 0 !important;
+            overflow: hidden;
+        }
+
+        .markdown-body pre code {
+            background-color: transparent !important;
+            padding: 1.2rem !important;
+            display: block;
+            font-family: var(--font-mono) !important;
+            font-size: 0.85rem !important;
+            line-height: 1.5;
+        }
+
+        .markdown-body blockquote {
+            border-left: 3px solid var(--accent) !important;
+            background: var(--surface);
+            padding: 0.8rem 1.2rem;
+            color: var(--text-secondary) !important;
+            margin: 1.2rem 0 !important;
+        }
+
+        .markdown-body table {
+            background: var(--surface);
+            font-size: 0.85rem !important;
+            margin: 1.2rem 0 !important;
+        }
+
+        footer {
+            margin-top: 4rem;
+            padding-top: 1.5rem;
+            border-top: 1px solid var(--border);
+            color: var(--text-muted);
+            font-size: 0.8rem;
+            text-align: center;
+        }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar { width: 5px; }
+        ::-webkit-scrollbar-track { background: var(--bg); }
+        ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+    </style>
+</head>
+<body>
+    <aside class="sidebar">
+        <a href="index.html" class="nav-link">
+            <span>←</span> 返回目录门户
+        </a>
+        
+        <div class="toc-container">
+            <h3 class="toc-title">文档导航</h3>
+            <ul class="toc-list" id="toc">
+                <!-- TOC items will be injected here -->
+            </ul>
+        </div>
+    </aside>
+
+    <div class="container">
+        <header>
+            <div class="meta">SCF-COLLECTOR | 2026-05-18 11:27</div>
+            <h1>Implementation Plan - E15-E2: 二阶段分析与 5 星政策 Self-Consistency 投票落地</h1>
+        </header>
+
+        <article id="content" class="markdown-body">
+            <!-- Loading indicator -->
+            <p style="color: var(--text-muted)">正在解析文档内容...</p>
+        </article>
+
+        <footer>
+            &copy; 2026 MicroStock Project Docs | Generated by Antigravity
+        </footer>
+    </div>
+
+    <script id="markdown-raw" type="text/markdown"># Implementation Plan - E15-E2: 二阶段分析与 5 星政策 Self-Consistency 投票落地
+
+本方案针对 AI 政策分析引擎开展二阶段分流（Staged Analysis）与高价值（5星）政策的多路投票（Self-Consistency Voting）设计与实施，旨在大幅削减非必要大模型流量开销（月度预算从 ¥15 降至 ≤ ¥2，降低 87%），同时通过置信度双保险和召回偏置机制确保零漏报，并针对 5 星政策引入高可靠多数投票算法保障核心质量不退化。
+
+## 需求解析与核心逻辑 (3句话)
+
+1. **初筛低星阻断**：所有非规则路径的政策在入库后，首先由极低成本的 `deepseek-chat` (Flash模式，非思考) 进行极速初筛与分类，对 1-3 星且置信度达标的政策直接使用初筛摘要落库并终结流程。
+2. **高星深度透传**：对判定为 4-5 星或初筛置信度不足（< 0.70）的模糊政策，强制触发第二阶段 `deepseek-reasoner` (Pro-Thinking 模式) 深度分析与措辞对比。
+3. **5星投票与偏置**：对于初筛锁定的 5 星重磅政策，拉起 3 路并行推理大模型执行 Self-Consistency 多数投票与板块交集提取，若严重分歧则自动触发人工介入告警，并融入“高召回率”关键词偏置机制确保不漏报任何政策拐点。
+
+---
+
+## 激活角色说明
+
+*   `[Macro Policy Architect] (宏观政策架构师)`：负责统筹分级路由控制流及金融分析契约的严密性。
+*   `[Data Integrity Steward] (数据质量掌门人)`：负责投票决策的一致性、板块取交集合并算法、以及灰度与质量回归。
+*   `[Senior Python Backend Engineer] (资深异步后端工程师)`：负责高效的 `asyncio.gather` 并行调用、Pydantic v2 强契约解析、及熔断兜底。
+
+---
+
+## User Review Required
+
+> [!IMPORTANT]
+> **1. 召回偏置与置信度双保险**
+> *   **宁杀错不放过**：对于包含“结构性”、“系统性”、“重大改革”等 14 个核心宏观关键词的标题/内容，强制要求初筛模型或代码层锁定 `importance_level >= 4`。
+> *   **置信度升级**：一旦大模型吐出的 `triage_confidence` 低于 `0.70`，即使其打分为 1-3 星，代码层必须无条件升级到第二阶段深度推理分析，防止模型的边缘判定幻觉。
+> 
+> **2. 5 星政策的 3 路并行成本评估**
+> *   5 星政策每月生产量极低（预估 5-10 条），3 路并行 `deepseek-reasoner` 单词调用单条累计成本约为 `¥0.042 * 3 = ¥0.126`，月增加开销仅 `¥0.6-1.3`，ROI（投入产出比）极高，设计完全采纳。
+>
+> **3. 灰度与回滚开关**
+> *   引入 `STAGED_ANALYSIS_ENABLED` 环境变量作为一键回滚总闸（设为 `false` 则退化为 v2.0 的“100%大模型全量分析”）。
+> *   引入 `STAGED_ANALYSIS_GRAYSCALE_PCT` 环境变量（0-100）支持基于 `policy_id % 100` 的平滑采样控制。
+
+---
+
+## Open Questions
+
+> [!NOTE]
+> **Q1: 1-3星初筛摘要是否需要极简输出？**
+> *   **决策**：是的。为了保持 DWD 层 `summary` 字段的非空强契约，初筛模型的 JSON 契约中新增了 `triage_summary`（≤ 40 字）字段。对于 triage_only 的政策，该字段将直接作为最终摘要，从而实现全链路仅一次 Flash 调用（耗时 < 1.5s，单条成本 < ¥0.0005）。
+
+---
+
+## Proposed Changes
+
+### Component: Policy Ingestion & Analysis Dispatcher
+
+---
+
+#### [MODIFY] [schemas.py](file:///e:/gitee/microservice-stock/scf-collector/shared/utils/schemas.py)
+*   **修改内容**：新增 `TriageOutput` Pydantic v2 模型，定义初筛分流的标准 JSON 契约。
+*   **代码结构**：
+    ```python
+    class TriageOutput(BaseModel):
+        importance_level: int = Field(description="政策重要性评级，1 到 5 星整数，按重大宏观转折至普通例行行政安排评定。")
+        policy_type: str = Field(description="政策细分类型，必须是以下枚举之一：'lpr_announcement', 'omo_operation', 'mlf_operation', 'rrr_announcement', 'monetary_policy_report', 'regulation_release', 'personnel_announcement', 'holiday_notice', 'other'")
+        requires_deep_analysis: bool = Field(description="是否需要进入第二阶段大模型深度分析或措辞强度对比。对于重要（>=4星）或政策拐点，必须为 true。")
+        triage_confidence: float = Field(description="初筛置信度评分，0.0 到 1.0 的浮点数。若存在模糊、歧义、或难以确定重要性，置信度应给出 < 0.70。")
+        triage_summary: str = Field(description="针对普通非重要政策（1-3星），生成一句极其简短的中文政策摘要（不超过 40 字）。")
+    ```
+
+---
+
+#### [MODIFY] [prompts.py](file:///e:/gitee/microservice-stock/scf-collector/shared/utils/prompts.py)
+*   **修改内容**：
+    1. 引入 `TRIAGE_CLASSIFIER_SCHEMA` 静态字符串。
+    2. 新增 `TRIAGE_CLASSIFIER_SYSTEM_V1` 静态系统 Prompt，内嵌多样本 Few-shot，注入强制高召回偏置关键词，强制模型在置信度不足时输出低分数。
+*   **主要结构**：
+    ```python
+    TRIAGE_CLASSIFIER_SYSTEM_V1 = """You are an ultra-fast macroeconomic triage agent...
+    Strict keywords forcing importance_level >= 4 or requires_deep_analysis = true:
+    - 结构性, 系统性, 重大改革, 重要部署, 首次, 全面, 加快推进, 转向, 中央, 国务院, 政治局, 整顿, 专项整治, 风险防范
+    ...
+    """
+    ```
+
+---
+
+#### [MODIFY] [policy_analyzer.py](file:///e:/gitee/microservice-stock/scf-collector/shared/utils/policy_analyzer.py)
+*   **修改内容**：
+    1. 为 `analyze_policy` 增加可选入参 `force_deep_mode: Optional[str] = None` 与 `disable_db_write: bool = False`。
+    2. 当 `force_deep_mode` 传入时，强制覆盖 `mode`；当 `disable_db_write=True` 时，仅执行 LLM 调用与板块融合计算并返回结果字典，完全跳过数据库写入及 ODS 状态变更，供投票器并行调用。
+
+---
+
+#### [MODIFY] [staged_analyzer.py](file:///e:/gitee/microservice-stock/scf-collector/shared/utils/staged_analyzer.py)
+*   **修改内容**：
+    1. **重构** `analyze_policy` 核心判定树。
+    2. 若规则未命中且 `STAGED_ANALYSIS_ENABLED` 为真，则进入二阶段路由逻辑。
+    3. 执行灰度采样（`policy_id % 100 < STAGED_ANALYSIS_GRAYSCALE_PCT`），未中灰度者退回 standard LLM path。
+    4. 灰度内用户，执行 `_run_triage_classifier(row)`（使用 Flash 模式调用 `TRIAGE_CLASSIFIER_SYSTEM_V1`）。
+    5. **召回偏置兜底**：代码层双重过滤：若标题/正文前300字命中召回偏置关键词，强制设为需要深度分析。
+    6. **判定路由**：
+        *   **Stage 1 终结 (triage_only)**：若 `importance_level < 4` 且 `triage_confidence >= 0.70`。直接封装 triage_summary，落库主表 `dwd_policy_analysis`（单条成本约 0 元），完成分析。
+        *   **Stage 2 深度分析 (triage_and_deep)**：若为 4 星，或置信度不足强制升级（`triage_borderline=1`）。调用 `self.analyzer.analyze_policy(row)` 执行标准 Pro 级深入分析。
+        *   **Stage 2 投票决策 (triage_and_voting)**：若为 5 星重磅政策，触发 `_run_self_consistency_voting(row)` 机制。
+    7. **实现 `_run_self_consistency_voting`**：
+        *   使用 `asyncio.gather` 并行派生 3 个 `self.analyzer.analyze_policy(row, force_deep_mode="pro-thinking", disable_db_write=True)` 异步任务。
+        *   执行多数投票（Majority Vote）对齐 `intensity_change` 及 `importance_level`；对板块交集 `sectors_positive` / `sectors_negative` 提取 >= 2 次重合的板块。
+        *   计算一致率 `voting_consistency_rate`。若 3 次输出完全分歧，标记 `requires_human_review=1` 并在日志中抛出 ERROR 触发警报。
+        *   聚合最优投票结果，一次性写入物理表并更新 ODS。
+
+---
+
+#### [NEW] [test_staged_analysis.py](file:///e:/gitee/microservice-stock/scf-collector/tests/test_staged_analysis.py)
+*   **修改内容**：全新 Given-When-Then 二阶段分析与 5 星投票自动化集成测试。
+*   **验证情景**：
+    1. 行业一般性放行通告（3星，置信度 0.95）-> 触发 triage_only 直接落库，不执行 Pro-thinking，成本低于 ¥0.001。
+    2. 货币政策委员会季度例会（4星）-> 触发 triage_and_deep 深度分析。
+    3. 置信度模糊边界通告（3星，置信度 0.50）-> 自动强制升级至 triage_and_deep，`triage_borderline=1`。
+    4. 降准重大决策（5星）-> 触发 3 路并行投票合并，验证一致率及人工介入标记。
+
+---
+
+#### [NEW] [test_golden_regression.py](file:///e:/gitee/microservice-stock/scf-collector/tests/test_golden_regression.py)
+*   **修改内容**：金标准回归测试工具。
+*   **核心职责**：加载 `tests/data/golden_policies.json` 的标准测试集，对比初筛模型预测出的 `importance_level`，验证是否满足漏报率为 0%（假阴性率 = 0%）的强力高召回要求。
+
+---
+
+## AI 实施蓝图与提示词 (Plan-as-Prompt)
+
+> [!IMPORTANT]
+> **Subagent 执行指南 (必读)**
+> 1.  **Pydantic v2 标准**：在 `schemas.py` 中新加 `TriageOutput`，必须严格继承 `BaseModel`。
+> 2.  **不污染 ODS 原表**：在 `PolicyAnalyzer` 内部提供 `disable_db_write` 逻辑时，确保在此标志为 True 时完全拦截任何 `execute_query("UPDATE ods_policy_info...")` 的操作，仅有最终合并写入时方可更新 ODS 状态。
+> 3.  **多路投票并行性**：在 `staged_analyzer.py` 的 `_run_self_consistency_voting` 中，必须使用 `asyncio.gather` 并行拉起 3 个任务，绝对不能串行等待，以保证处理时效性。
+> 4.  **HTML 自动编译**：所有修改 or 新增的 markdown 文档均须执行 `python scripts/md_to_html_premium.py <file>` 编译 HTML 并自动集成 Portal 门户。
+
+---
+
+## Verification Plan
+
+### Automated Tests
+*   **本地二阶段集成测试**：
+    ```bash
+    $env:PYTHONPATH="."; pytest tests/test_staged_analysis.py -s -v
+    ```
+*   **回归召回率核对**：
+    ```bash
+    $env:PYTHONPATH="."; python tests/test_golden_regression.py
+    ```
+
+### Manual Verification
+*   在 `sandbox` 环境临时配置 `STAGED_ANALYSIS_GRAYSCALE_PCT=100` 与 `RULE_BASED_PATH_ENABLED=production`，发入多条不同特性的 mock 政策数据。
+*   直连腾讯云 CDB 物理开发数据库，查询 `dwd_policy_analysis`，人工抽检 `analysis_stage`、`triage_confidence`、`triage_borderline` 及 `voting_consistency_rate` 的落库特征是否完美对齐金融语义。
+</script>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', async () => {
+            const rawMd = document.getElementById('markdown-raw').textContent;
+            const contentEl = document.getElementById('content');
+            const tocEl = document.getElementById('toc');
+            
+            // Set options for marked
+            marked.setOptions({
+                gfm: true,
+                breaks: true,
+                headerIds: true,
+                mangle: false,
+                highlight: function(code, lang) {
+                    const language = hljs.getLanguage(lang) ? lang : 'plaintext';
+                    return hljs.highlight(code, { language }).value;
+                }
+            });
+
+            // Parse Markdown
+            contentEl.innerHTML = marked.parse(rawMd);
+            
+            // Generate TOC
+            const headings = contentEl.querySelectorAll('h2, h3');
+            headings.forEach((h, index) => {
+                if (!h.id) h.id = 'heading-' + index;
+                
+                const li = document.createElement('li');
+                li.className = 'toc-item level-' + h.tagName.toLowerCase().charAt(1);
+                
+                const a = document.createElement('a');
+                a.href = '#' + h.id;
+                a.textContent = h.textContent;
+                
+                li.appendChild(a);
+                tocEl.appendChild(li);
+            });
+
+            // Handle Mermaid
+            if (window.mermaid) {
+                mermaid.initialize({ startOnLoad: false, theme: 'dark', useWorker: false });
+                document.querySelectorAll('pre code.language-mermaid').forEach(el => {
+                    const pre = el.parentElement;
+                    const div = document.createElement('div');
+                    div.className = 'mermaid';
+                    div.textContent = el.textContent;
+                    pre.parentElement.replaceChild(div, pre);
+                });
+                mermaid.run();
+            }
+        });
+    </script>
+</body>
+</html>

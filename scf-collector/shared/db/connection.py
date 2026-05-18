@@ -61,6 +61,7 @@ class DBManager:
                         minsize=1,
                         maxsize=5,
                         connect_timeout=10,
+                        charset='utf8mb4',
                         # 核心配置：回收超过 1 小时的连接，防止 Broken Pipe
                         pool_recycle=3600
                     )

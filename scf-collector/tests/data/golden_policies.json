@@ -1,0 +1,57 @@
+[
+  {
+    "id": 201,
+    "title": "中共中央 国务院印发关于加快建设全国统一大市场的意见",
+    "content_text": "建设全国统一大市场是构建新发展格局的极其重要的系统性、重大改革部署...",
+    "ts_code": "GOV",
+    "publish_date": "2026-05-18",
+    "expected_stage": "deep_or_voting",
+    "expected_importance_level": 5,
+    "has_bias_keyword": true,
+    "description": "中央、国务院重磅系统性改革文件，由于包含'系统性'、'重大改革'等偏置词，高召回必须升级"
+  },
+  {
+    "id": 202,
+    "title": "中国人民银行决定下调金融机构存款准备金率",
+    "content_text": "为支持实体经济发展，促进综合融资成本稳中有降，中国人民银行决定于2026年5月20日下调金融机构存款准备金率0.25个百分点...",
+    "ts_code": "PBC",
+    "publish_date": "2026-05-18",
+    "expected_stage": "rule_based_rrr",
+    "expected_importance_level": 4,
+    "has_bias_keyword": false,
+    "description": "央行降准大招，匹配 RRRExtractor，触发专家混合链路"
+  },
+  {
+    "id": 203,
+    "title": "关于2026年春节放假安排的通知",
+    "content_text": "根据国务院办公厅通知，现将2026年春节放假调休日期的具体安排通知如下...",
+    "ts_code": "GOV",
+    "publish_date": "2026-01-10",
+    "expected_stage": "rule_based_holiday",
+    "expected_importance_level": 3,
+    "has_bias_keyword": false,
+    "description": "放假休市行政通知，由 HolidayExtractor 零成本零Token直接阻断"
+  },
+  {
+    "id": 204,
+    "title": "证监会发布关于加强退市监管的实施意见",
+    "content_text": "为进一步规范上市公司退市行为，防范系统性金融风险，证监会首次全面提出...",
+    "ts_code": "CSRC",
+    "publish_date": "2026-05-18",
+    "expected_stage": "deep_or_voting",
+    "expected_importance_level": 4,
+    "has_bias_keyword": true,
+    "description": "包含'首次'、'全面'、'系统性'、'风险防范'等偏置关键词，强制升级深度分析"
+  },
+  {
+    "id": 205,
+    "title": "地方非税收入日常核查及常规征管通报",
+    "content_text": "本次核查属于常规性财务数据抽检，要求各级单位日常合规，做好表册核对即可...",
+    "ts_code": "GOV",
+    "publish_date": "2026-05-18",
+    "expected_stage": "triage_only",
+    "expected_importance_level": 2,
+    "has_bias_keyword": false,
+    "description": "常规性低重要性通知，初筛打回，跳过深度解读节省 Token"
+  }
+]

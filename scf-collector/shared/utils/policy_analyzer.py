@@ -15,8 +15,10 @@ from shared.utils.llm_client import LLMClient
 from shared.utils.policy_classifier import classify_policy
 from shared.utils.segment_extractor import extract_key_segment
 import shared.utils.prompts as prompts
+from shared.utils.schemas import GeneralSummaryOutput, WordingContrastOutput
 
 logger = logging.getLogger(__name__)
+
 
 class PolicyAnalyzer:
     """
@@ -149,9 +151,10 @@ class PolicyAnalyzer:
                 
         return list(merged_map.values())
 
-    def _robust_parse_json(self, raw_content: str) -> Dict[str, Any]:
+    def _robust_parse_json(self, raw_content: str, model_class: Any) -> Dict[str, Any]:
         """
-        [E14-S2-P2-T4] 强力 Regex JSON 提纯解析器，杜绝 Markdown 被包裹包裹及 thinking 杂音导致崩溃
+        [E14-S2-P2-T4] 强力 Regex JSON 提纯解析器，杜绝 Markdown 被包裹及 thinking 杂音导致崩溃
+        引入 Pydantic 强校验支持，并保留极其顽强的退化兜底防死锁！
         """
         if not raw_content:
             return {}
@@ -161,29 +164,63 @@ class PolicyAnalyzer:
         json_str = match.group(1) if match else raw_content
         
         try:
-            return json.loads(json_str)
+            # 优先采用 Pydantic 强校验与字段填充
+            validated_obj = model_class.model_validate_json(json_str)
+            dumped_dict = validated_obj.model_dump()
+            try:
+                raw_dict = json.loads(json_str)
+                if isinstance(raw_dict, dict):
+                    # 混合合并：保留大模型输出的所有非 Pydantic 额外字段（如 intensity_change 等）
+                    return {**raw_dict, **dumped_dict}
+            except Exception:
+                pass
+            return dumped_dict
         except Exception as e:
-            logger.error(f"JSON loads failed: {e}. Attempting second stage regex property cleanup...")
-            # 第二阶段兜底：高级提取 key-value 规则
+            logger.warning(f"Pydantic strong validation failed: {e}. Attempting basic JSON parsing fallback...")
             try:
                 # 尝试剥除一些常见的反斜杠转义
                 fixed_str = json_str.encode('utf-8').decode('unicode_escape')
                 match_2 = re.search(r"(\{.*\})", fixed_str, re.DOTALL)
                 if match_2:
-                    return json.loads(match_2.group(1))
+                    validated_obj_2 = model_class.model_validate_json(match_2.group(1))
+                    dumped_dict_2 = validated_obj_2.model_dump()
+                    try:
+                        raw_dict_2 = json.loads(match_2.group(1))
+                        if isinstance(raw_dict_2, dict):
+                            return {**raw_dict_2, **dumped_dict_2}
+                    except Exception:
+                        pass
+                    return dumped_dict_2
             except Exception as e2:
-                logger.error(f"Second stage cleanup also failed: {e2}")
+                logger.error(f"Second stage Pydantic validation also failed: {e2}")
                 
-            # 底层默认降级，防止系统崩溃
+            # 第三层极速退化大防线：退回最基础的 JSON 解析，跳过校验，防止大模型幻觉引起的 Validation 报错导致崩库
+            try:
+                logger.info("Triggering raw JSON load as a final bypass fallback...")
+                return json.loads(json_str)
+            except Exception as raw_e:
+                logger.error(f"Raw JSON loads also failed: {raw_e}")
+
+            # 最终降级字典，防止系统崩溃
             return {
                 "summary_three_sentences": "AI 措辞解析发生异常，已退化为基础降级模式。",
                 "importance_level": 3,
-                "key_differences": [],
-                "intensity_change": "N/A",
+                "key_points": [],
                 "sectors": []
             }
 
-    async def analyze_policy(self, policy_id_or_row: Any) -> Dict[str, Any]:
+    async def analyze_policy(
+        self, 
+        policy_id_or_row: Any, 
+        force_deep_mode: str = None, 
+        disable_db_write: bool = False,
+        reasoning_effort: Optional[str] = None,
+        analysis_path: str = 'llm',
+        analysis_stage: str = 'triage_and_deep',
+        previous_summary: Optional[str] = None,
+        diff_text: Optional[str] = None,
+        contrast_baseline_id: Optional[int] = None
+    ) -> Dict[str, Any]:
         """
         核心分析逻辑
         """
@@ -219,41 +256,71 @@ class PolicyAnalyzer:
             
         input_truncated = 1 if len(segment_used) < len(content_text) else 0
         
+        # E6-S1: 计算核心段落的 simhash 指纹
+        from shared.utils.simhash import compute_simhash
+        core_segment_simhash = compute_simhash(segment_used)
+
+        
         # 4. 追溯相同分类上一期基准
-        contrast_baseline_id = None
-        previous_baseline = await self._find_previous_baseline(ts_code, policy_type, publish_date)
-        
-        mode = "flash"
-        system_prompt = prompts.GENERAL_SUMMARY_SYSTEM
-        
-        if previous_baseline:
-            contrast_baseline_id = previous_baseline['id']
-            # 对上期文本也做一次提取，防止超长
-            previous_segment = extract_key_segment(previous_baseline['title'], previous_baseline['content_text'], policy_type)
-            
-            # 升级为 deepseek-reasoner (思维链高阶分析)
-            mode = "pro-thinking"
-            system_prompt = prompts.WORDING_CONTRAST_SYSTEM
-            user_prompt = (
-                f"请对比以下两期政策：\n"
-                f"【上期政策】\n{previous_segment}\n\n"
-                f"【本期政策】\n{segment_used}"
-            )
-            prompt_name = "WORDING_CONTRAST_V2"
-            prompt_version = "2.0"
-            logger.info(f"Baseline policy anchored (ID: {contrast_baseline_id}). Upgrading model to 'pro-thinking'...")
+        # 如果是 diff 模式，上一期基准 ID 已通过入参传递，不需要重复检索
+        if force_deep_mode != 'diff_only':
+            previous_baseline = await self._find_previous_baseline(ts_code, policy_type, publish_date)
         else:
-            # 通用单期摘要模式
+            previous_baseline = None
+        
+        if force_deep_mode == 'triage_only':
             mode = "flash"
-            system_prompt = prompts.GENERAL_SUMMARY_SYSTEM
+            system_prompt = getattr(prompts, 'TRIAGE_CLASSIFIER_SYSTEM_V1', prompts.GENERAL_SUMMARY_SYSTEM_V3)
+            user_prompt = f"请初筛分类以下政策：\n【标题】{title}\n【正文】\n{segment_used}"
+            prompt_name = "TRIAGE_CLASSIFIER_V1"
+            prompt_version = "1.0"
+            previous_baseline = None
+            analysis_stage = "triage_only"
+            logger.info("Executing Stage 1: Triage Classification...")
+            
+        elif force_deep_mode == 'diff_only':
+            mode = "pro-thinking" if reasoning_effort else "deep"
+            system_prompt = prompts.WORDING_DIFF_SYSTEM_V1
             user_prompt = (
-                f"请分析以下政策：\n"
-                f"【标题】{title}\n"
-                f"【正文】\n{segment_used}"
+                f"【上期分析摘要】\n{previous_summary or '暂无上期摘要。'}\n\n"
+                f"【本期文本变化(Diff)】\n{diff_text or '【无文本差异】'}"
             )
-            prompt_name = "GENERAL_SUMMARY_V2"
-            prompt_version = "2.0"
-            logger.info("No baseline policy found. Running standard summary mode via 'flash'...")
+            prompt_name = "WORDING_DIFF_V1"
+            prompt_version = "1.0"
+            logger.info(f"Running diff-based marginal analysis via '{mode}' with prompt WORDING_DIFF_V1...")
+            
+        else:
+            mode = "flash"
+            system_prompt = prompts.GENERAL_SUMMARY_SYSTEM_V3
+
+            if previous_baseline:
+                contrast_baseline_id = previous_baseline['id']
+                # 对上期文本也做一次提取，防止超长
+                previous_segment = extract_key_segment(previous_baseline['title'], previous_baseline['content_text'], policy_type)
+                
+                # 升级为 deepseek-reasoner (思维链高阶分析)
+                mode = "pro-thinking"
+                system_prompt = prompts.WORDING_CONTRAST_SYSTEM_V3
+                user_prompt = (
+                    f"请对比以下两期政策：\n"
+                    f"【上期政策】\n{previous_segment}\n\n"
+                    f"【本期政策】\n{segment_used}"
+                )
+                prompt_name = "WORDING_CONTRAST_V3"
+                prompt_version = "3.0"
+                logger.info(f"Baseline policy anchored (ID: {contrast_baseline_id}). Upgrading model to 'pro-thinking'...")
+            else:
+                # 通用单期摘要模式
+                mode = "deep"
+                system_prompt = prompts.GENERAL_SUMMARY_SYSTEM_V3
+                user_prompt = (
+                    f"请分析以下政策：\n"
+                    f"【标题】{title}\n"
+                    f"【正文】\n{segment_used}"
+                )
+                prompt_name = "GENERAL_SUMMARY_V3"
+                prompt_version = "3.0"
+                logger.info("No baseline policy found. Running standard summary mode via 'deep'...")
 
         # 5. 调用大模型客户端并进行成本审计 (CLS 可观测性日志闭环)
         try:
@@ -261,7 +328,10 @@ class PolicyAnalyzer:
                 system_prompt=system_prompt,
                 user_prompt=user_prompt,
                 mode=mode,
-                temperature=0.1
+                temperature=0.1,
+                reasoning_effort=reasoning_effort,
+                prompt_name=prompt_name,
+                prompt_version=prompt_version
             )
             # CLS 成功结构化日志
             cls_log = {
@@ -279,7 +349,8 @@ class PolicyAnalyzer:
                 "reasoning_tokens": llm_result["reasoning_tokens"],
                 "cost_cny": llm_result["cost_cny"],
                 "duration_ms": llm_result["duration_ms"],
-                "status": "success"
+                "status": "success",
+                "is_cache_hit": llm_result.get("is_cache_hit", False)
             }
             logger.info(f"CLS_STRUCTURED_LOG: {json.dumps(cls_log, ensure_ascii=False)}")
         except Exception as e:
@@ -306,17 +377,44 @@ class PolicyAnalyzer:
             raise e
         
         # 6. 正则防崩提纯 JSON
-        analysis_data = self._robust_parse_json(llm_result.get("content", ""))
+        if force_deep_mode == 'triage_only':
+            from shared.utils.schemas import TriageOutput
+            target_model = TriageOutput
+        elif force_deep_mode == 'diff_only':
+            target_model = WordingContrastOutput
+        else:
+            target_model = WordingContrastOutput if previous_baseline else GeneralSummaryOutput
+        analysis_data = self._robust_parse_json(llm_result.get("content", ""), target_model)
         
         # 7. 提取与融合申万板块影响
         llm_sectors = analysis_data.get("sectors", [])
         rule_sectors = await self._get_rule_based_sectors(segment_used)
         merged_sectors = self._merge_sectors(llm_sectors, rule_sectors)
         
-        # 8. ORM 幂等落库至 dwd_policy_analysis (联合唯一索引防重入)
+        if disable_db_write:
+            triage_summary = analysis_data.get("triage_summary")
+            summary_three = analysis_data.get("summary_three_sentences")
+            imp_lvl = analysis_data.get("importance_level")
+            if imp_lvl is None:
+                imp_lvl = 4 if (force_deep_mode == 'diff_only' or analysis_path == 'llm_diff') else 3
+            return {
+                "policy_id": policy_id,
+                "analysis_id": None,
+                "policy_type": policy_type,
+                "summary": triage_summary or summary_three or "未生成摘要。",
+                "importance_level": imp_lvl,
+                "intensity_change": analysis_data.get("intensity_change", "N/A"),
+                "triage_confidence": analysis_data.get("triage_confidence", 1.0),
+                "cost_cny": llm_result["cost_cny"],
+                "core_segment_simhash": core_segment_simhash
+            }
+            
+        # 8. 执行物理表数据落库/更新至 dwd_policy_analysis (联合唯一索引防重入)
         # 对齐数据契约列名
         summary_str = analysis_data.get("summary_three_sentences", "未生成摘要。")
-        importance_level = analysis_data.get("importance_level", 3)
+        importance_level = analysis_data.get("importance_level")
+        if importance_level is None:
+            importance_level = 4 if (force_deep_mode == 'diff_only' or analysis_path == 'llm_diff') else 3
         importance_reason = analysis_data.get("importance_reason", "无特定理由。")
         intensity_change = analysis_data.get("intensity_change", "N/A")
         
@@ -327,17 +425,23 @@ class PolicyAnalyzer:
         key_diff_str = json.dumps(analysis_data.get("contrast_details", []), ensure_ascii=False)
         implication_str = analysis_data.get("implication", "市场暂无明显指引。")
         
+        # 若发生缓存拦截命中，改写 analysis_path 并覆盖所有的消费/token 数据为 0
+        final_analysis_path = 'cache' if llm_result.get("is_cache_hit") else analysis_path
+        
         sql_analysis = """
         INSERT INTO dwd_policy_analysis (
-            policy_id, summary, importance_level, importance_reason, 
+            policy_id, analysis_path, analysis_stage, summary, importance_level, importance_reason, 
             sectors_positive, sectors_negative, intensity_change, key_differences, 
             implication, contrast_baseline_id, segment_used, segment_extracted, 
             input_truncated, prompt_name, prompt_version, model_name, 
             thinking_enabled, reasoning_effort, input_cache_hit_tokens, 
-            input_cache_miss_tokens, output_tokens, reasoning_tokens, cost_cny
+            input_cache_miss_tokens, output_tokens, reasoning_tokens, cost_cny,
+            core_segment_simhash
         ) VALUES (
-            %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s
+            %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s
         ) ON DUPLICATE KEY UPDATE 
+            analysis_path = VALUES(analysis_path),
+            analysis_stage = VALUES(analysis_stage),
             summary = VALUES(summary),
             importance_level = VALUES(importance_level),
             importance_reason = VALUES(importance_reason),
@@ -356,18 +460,32 @@ class PolicyAnalyzer:
             output_tokens = VALUES(output_tokens),
             reasoning_tokens = VALUES(reasoning_tokens),
             cost_cny = VALUES(cost_cny),
+            core_segment_simhash = VALUES(core_segment_simhash),
             updated_at = CURRENT_TIMESTAMP
         """
         
         thinking_enabled = 1 if mode == "pro-thinking" else 0
+        
+        if llm_result.get("is_cache_hit"):
+            cache_hit_tok = 0
+            cache_miss_tok = 0
+            out_tok = 0
+            reas_tok = 0
+            cost_val = 0.000000
+        else:
+            cache_hit_tok = llm_result["input_cache_hit_tokens"]
+            cache_miss_tok = llm_result["input_cache_miss_tokens"]
+            out_tok = llm_result["output_tokens"]
+            reas_tok = llm_result["reasoning_tokens"]
+            cost_val = llm_result["cost_cny"]
+
         params_analysis = (
-            policy_id, summary_str, importance_level, importance_reason,
+            policy_id, final_analysis_path, analysis_stage, summary_str, importance_level, importance_reason,
             json.dumps(pos_sectors, ensure_ascii=False), json.dumps(neg_sectors, ensure_ascii=False),
             intensity_change, key_diff_str, implication_str, contrast_baseline_id,
             segment_used, segment_extracted, input_truncated, prompt_name, prompt_version,
-            llm_result["model_name"], thinking_enabled, "medium" if thinking_enabled else None,
-            llm_result["input_cache_hit_tokens"], llm_result["input_cache_miss_tokens"],
-            llm_result["output_tokens"], llm_result["reasoning_tokens"], llm_result["cost_cny"]
+            llm_result["model_name"], thinking_enabled, reasoning_effort or ("medium" if thinking_enabled else None),
+            cache_hit_tok, cache_miss_tok, out_tok, reas_tok, cost_val, core_segment_simhash
         )
         
         # 物理灌入明细
@@ -409,7 +527,7 @@ class PolicyAnalyzer:
                     is_select=False
                 )
                 
-        logger.info(f"--- Policy Analysis Completed [ID: {policy_id}] Analysis ID: {analysis_id} Cost: ¥{llm_result['cost_cny']:.6f} ---")
+        logger.info(f"--- Policy Analysis Completed [ID: {policy_id}] Analysis ID: {analysis_id} Cost: ¥{cost_val:.6f} ---")
         
         # 更新 policy 状态为已分析就绪
         await execute_query(
@@ -425,5 +543,7 @@ class PolicyAnalyzer:
             "summary": summary_str,
             "importance_level": importance_level,
             "intensity_change": intensity_change,
-            "cost_cny": llm_result["cost_cny"]
+            "cost_cny": cost_val,
+            "core_segment_simhash": core_segment_simhash
         }
+
