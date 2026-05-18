@@ -99,6 +99,11 @@ class LLMClient:
             output_cost = output_tokens * 0.000002
             
         base_cost = input_cost + output_cost
+        
+        # 注入三方大模型聚合商价格折扣因子，校准实际物理扣费口径
+        discount_factor = float(os.getenv("LLM_COST_DISCOUNT_FACTOR", 1.0))
+        base_cost *= discount_factor
+        
         if is_off_peak:
             logger.info("Applying off-peak 50% discount to local cost auditing.")
             base_cost *= 0.5
