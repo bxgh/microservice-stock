@@ -102,15 +102,24 @@ class StagedAnalyzer:
             "RRRExtractor": RRRExtractor()
         }
         
-        # 加载思考预算配置矩阵
-        import yaml
+        # 加载思考预算配置矩阵 (优先用零外部依赖的 native json，其次 Fallback 到 yaml)
         self.reasoning_matrix = {}
-        matrix_path = os.path.join(os.path.dirname(__file__), "reasoning_effort_matrix.yaml")
-        if os.path.exists(matrix_path):
+        json_path = os.path.join(os.path.dirname(__file__), "reasoning_effort_matrix.json")
+        yaml_path = os.path.join(os.path.dirname(__file__), "reasoning_effort_matrix.yaml")
+        
+        if os.path.exists(json_path):
             try:
-                with open(matrix_path, "r", encoding="utf-8") as f:
+                with open(json_path, "r", encoding="utf-8") as f:
+                    self.reasoning_matrix = json.load(f) or {}
+                logger.info(f"Successfully loaded reasoning effort matrix config from {json_path}")
+            except Exception as e:
+                logger.error(f"Failed to parse reasoning_effort_matrix.json: {e}")
+        elif os.path.exists(yaml_path):
+            try:
+                import yaml
+                with open(yaml_path, "r", encoding="utf-8") as f:
                     self.reasoning_matrix = yaml.safe_load(f) or {}
-                logger.info(f"Successfully loaded reasoning effort matrix config from {matrix_path}")
+                logger.info(f"Successfully loaded reasoning effort matrix config from {yaml_path}")
             except Exception as e:
                 logger.error(f"Failed to parse reasoning_effort_matrix.yaml: {e}")
 
@@ -125,7 +134,7 @@ class StagedAnalyzer:
         if not type_config:
             type_config = self.reasoning_matrix.get("default", {})
             
-        return type_config.get(importance)
+        return type_config.get(str(importance)) or type_config.get(importance)
 
     async def analyze_policy(self, policy_id_or_row: Any) -> Dict[str, Any]:
         """
@@ -440,7 +449,7 @@ class StagedAnalyzer:
             return best_res
 
     async def _write_triage_to_db(self, row, triage_res):
-        """简单落库逻辑"""
+        """简单落库逻辑 (对齐 MySQL 5.7 非空字段门禁约束)"""
         target_table = "dwd_policy_analysis"
         
         # E6-S1: 保证获取并落库 simhash
@@ -451,12 +460,27 @@ class StagedAnalyzer:
             core_segment_simhash = compute_simhash(segment_used)
             triage_res["core_segment_simhash"] = core_segment_simhash
 
+        segment_used_txt = row['content_text'][:3000]
+
         sql = f"""
         INSERT INTO {target_table} (
             policy_id, analysis_path, analysis_stage, summary, importance_level, importance_reason,
-            intensity_change, core_segment_simhash, updated_at
+            intensity_change, core_segment_simhash,
+            sectors_positive, sectors_negative, key_differences, implication,
+            segment_used, segment_extracted, input_truncated,
+            prompt_name, prompt_version, model_name,
+            thinking_enabled, reasoning_effort, input_cache_hit_tokens,
+            input_cache_miss_tokens, output_tokens, reasoning_tokens, cost_cny,
+            updated_at
         ) VALUES (
-            %s, 'llm', 'triage_only', %s, %s, %s, %s, %s, CURRENT_TIMESTAMP
+            %s, 'llm', 'triage_only', %s, %s, %s,
+            %s, %s,
+            '[]', '[]', '[]', '[]',
+            %s, 1, 0,
+            %s, %s, %s,
+            0, NULL, %s,
+            %s, %s, %s, %s,
+            CURRENT_TIMESTAMP
         ) ON DUPLICATE KEY UPDATE 
             analysis_path = VALUES(analysis_path),
             analysis_stage = VALUES(analysis_stage),
@@ -465,18 +489,44 @@ class StagedAnalyzer:
             importance_reason = VALUES(importance_reason),
             intensity_change = VALUES(intensity_change),
             core_segment_simhash = VALUES(core_segment_simhash),
+            segment_used = VALUES(segment_used),
+            prompt_name = VALUES(prompt_name),
+            prompt_version = VALUES(prompt_version),
+            model_name = VALUES(model_name),
+            input_cache_hit_tokens = VALUES(input_cache_hit_tokens),
+            input_cache_miss_tokens = VALUES(input_cache_miss_tokens),
+            output_tokens = VALUES(output_tokens),
+            reasoning_tokens = VALUES(reasoning_tokens),
+            cost_cny = VALUES(cost_cny),
             updated_at = CURRENT_TIMESTAMP
         """
+        
         params = (
             row['id'], 
             triage_res.get('triage_summary', triage_res.get('summary', '')),
             triage_res.get('importance_level', 3),
-            '【初筛】' + triage_res.get('importance_reason', ''),
+            '【初筛】' + triage_res.get('importance_reason', '低重要性行政/党务通知，智能自动阻断深挖。'),
             triage_res.get('intensity_change', 'neutral'),
-            core_segment_simhash
+            core_segment_simhash,
+            segment_used_txt,
+            triage_res.get('prompt_name', 'TRIAGE_CLASSIFIER_V1'),
+            triage_res.get('prompt_version', '1.0'),
+            triage_res.get('model_name', 'deepseek-v4-flash'),
+            triage_res.get('input_cache_hit_tokens', 0),
+            triage_res.get('input_cache_miss_tokens', 0),
+            triage_res.get('output_tokens', 0),
+            triage_res.get('reasoning_tokens', 0),
+            triage_res.get('cost_cny', 0.0)
         )
         try:
             await execute_query(sql, params)
+            # 2. 物理更新 ODS 状态为 'analyzed'，宣告分析终结，阻止下个周期重复拉取！
+            await execute_query(
+                "UPDATE ods_policy_info SET analysis_status = 'analyzed' WHERE id = %s",
+                (row['id'],),
+                is_select=False
+            )
+            logger.info(f"Successfully archived triage-only policy ID {row['id']} to DB and closed ODS queue status.")
         except Exception as e:
             logger.error(f"DB Write failed: {e}")
 

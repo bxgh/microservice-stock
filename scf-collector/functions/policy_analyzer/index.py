@@ -40,7 +40,7 @@ logger.setLevel(logging.INFO)
 # 引入模块
 from shared.db.connection import execute_query, DBManager
 from shared.db.dao import StockDAO
-from shared.utils.policy_analyzer import PolicyAnalyzer
+from shared.utils.staged_analyzer import StagedAnalyzer
 
 async def async_handler(event, context):
     request_id = getattr(context, 'request_id', f"analy_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}")
@@ -100,7 +100,7 @@ async def async_handler(event, context):
                 "request_id": request_id
             }
             
-        analyzer = PolicyAnalyzer()
+        analyzer = StagedAnalyzer()
         success_ids = []
         failed_ids = []
         total_cost = 0.0
