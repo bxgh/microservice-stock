@@ -31,9 +31,14 @@ logger = logging.getLogger("backfill")
 
 from shared.db.connection import execute_query, DBManager
 from shared.utils.policy_analyzer import PolicyAnalyzer
+from shared.utils.off_peak_scheduler import wait_for_off_peak
 
 async def main():
     logger.info("====== STARTING POLICY ANALYSIS BACKFILL SCRIPT ======")
+    
+    # 错时错峰调度：如果是核心交易时段，自动挂起直到进入低谷时段
+    logger.info("Auditing trade hours timezone-safely to protect API bandwidth...")
+    await wait_for_off_peak()
     
     # 预算上限设定，支持通过环境变量重写，默认 ¥1.0 元硬防线限制
     BUDGET_LIMIT = float(os.getenv("BACKFILL_BUDGET_LIMIT", 1.0))

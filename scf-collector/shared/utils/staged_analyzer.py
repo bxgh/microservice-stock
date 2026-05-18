@@ -34,6 +34,31 @@ class StagedAnalyzer:
             "LPRExtractor": LPRExtractor(),
             "RRRExtractor": RRRExtractor()
         }
+        
+        # 加载思考预算配置矩阵
+        import yaml
+        self.reasoning_matrix = {}
+        matrix_path = os.path.join(os.path.dirname(__file__), "reasoning_effort_matrix.yaml")
+        if os.path.exists(matrix_path):
+            try:
+                with open(matrix_path, "r", encoding="utf-8") as f:
+                    self.reasoning_matrix = yaml.safe_load(f) or {}
+                logger.info(f"Successfully loaded reasoning effort matrix config from {matrix_path}")
+            except Exception as e:
+                logger.error(f"Failed to parse reasoning_effort_matrix.yaml: {e}")
+
+    def _resolve_reasoning_effort(self, policy_type: str, importance: int) -> Optional[str]:
+        """
+        根据政策分类与初筛重要性星级从配置矩阵中决策大模型推理档位 (high / max / None)
+        """
+        if not self.reasoning_matrix:
+            return None
+        
+        type_config = self.reasoning_matrix.get(policy_type)
+        if not type_config:
+            type_config = self.reasoning_matrix.get("default", {})
+            
+        return type_config.get(importance)
 
     async def analyze_policy(self, policy_id_or_row: Any) -> Dict[str, Any]:
         """
@@ -44,10 +69,10 @@ class StagedAnalyzer:
             row = await self.analyzer._get_policy_row(policy_id_or_row)
         else:
             row = policy_id_or_row
-
+ 
         if not row:
             raise ValueError("Target policy row is empty or deleted!")
-
+ 
         policy_id = row['id']
         title = row['title']
         content_text = row['content_text']
@@ -55,16 +80,16 @@ class StagedAnalyzer:
         publish_date = row['publish_date']
         
         logger.info(f"--- [StagedAnalyzer] Starting analysis for Policy ID: {policy_id} Title: '{title}' ---")
-
+ 
         # 智能获取调度路径配置，默认为 shadow 影子跑，防止裸奔
         route_enabled = os.getenv("RULE_BASED_PATH_ENABLED", "shadow").lower().strip()
         logger.info(f"Current Staged Routing Mode: '{route_enabled}'")
-
+ 
         # 2. 依次遍历提取器进行零成本匹配
         matched_extractor_name = None
         matched_data = None
         matched_extractor = None
-
+ 
         for name, extractor in self.extractors.items():
             try:
                 data = extractor.extract(title, content_text)
@@ -76,7 +101,7 @@ class StagedAnalyzer:
                     break
             except Exception as e:
                 logger.error(f"Rule extractor '{name}' encountered error during extract: {e}")
-
+ 
         # 3. 分级路由核心判定树
         if matched_extractor_name is not None:
             # Case 3.1: 如果是放假/休市行政通知 (HolidayExtractor) -> 直接零 Token 阻断！
@@ -89,7 +114,7 @@ class StagedAnalyzer:
                     extracted_data=matched_data,
                     target_table="dwd_policy_analysis"
                 )
-
+ 
             # Case 3.2: 如果是存款准备金率 (RRRExtractor) -> 执行 rule_then_llm 专家混合链路！
             elif matched_extractor_name == "RRRExtractor":
                 logger.info("[Hybrid Route] RRR cut identified. Triggering 'rule_then_llm' expert-hybrid flow...")
@@ -98,13 +123,17 @@ class StagedAnalyzer:
                     extracted_data=matched_data,
                     extractor=matched_extractor
                 )
-
+ 
             # Case 3.3: 如果是常规业务货政 (OMO, MLF, LPR) -> 根据环境变量进行路由
             else:
                 if route_enabled == "disabled":
                     logger.info("Rule-based path is 'disabled'. Routing to standard LLM path.")
-                    return await self.analyzer.analyze_policy(row)
-
+                    return await self.analyzer.analyze_policy(
+                        row, 
+                        analysis_path='llm', 
+                        analysis_stage='triage_and_deep'
+                    )
+ 
                 elif route_enabled == "shadow":
                     logger.info("[Shadow Dual-Run] Routing to parallel write. Rule result -> Shadow Table, LLM result -> Prod Table.")
                     # 1. 规则提取静默落入影子对照表
@@ -121,8 +150,12 @@ class StagedAnalyzer:
                         logger.error(f"[Shadow Write Fail-Safe] Shadow database insert failed: {e}")
                     
                     # 2. 主线依然拉起原大模型全路径，保证生产环境不受任何格式或内容泄漏污染
-                    return await self.analyzer.analyze_policy(row)
-
+                    return await self.analyzer.analyze_policy(
+                        row, 
+                        analysis_path='llm', 
+                        analysis_stage='triage_and_deep'
+                    )
+ 
                 elif route_enabled == "production":
                     logger.info("[Production Cut-Through] Direct cutting to rule-based path! Saving LLM tokens.")
                     try:
@@ -137,24 +170,48 @@ class StagedAnalyzer:
                         # P0 防御大底座：如果规则落库在 production 下不幸报错，立刻 fallback 兜底回大模型全链路！
                         logger.error(f"[FAILSAFE-FALLBACK] Production rule write failed: {e}. Fallbacking to full LLM route!")
                         # 强力回流，并在返回数据中注入 bypass_failed=1 标志
-                        res = await self.analyzer.analyze_policy(row)
+                        res = await self.analyzer.analyze_policy(
+                            row,
+                            analysis_path='llm',
+                            analysis_stage='triage_and_deep'
+                        )
                         res["bypass_failed"] = 1
                         return res
                 else:
                     logger.warning(f"Unknown routing mode '{route_enabled}'. Defaulting to LLM path.")
-                    return await self.analyzer.analyze_policy(row)
-
+                    return await self.analyzer.analyze_policy(
+                        row,
+                        analysis_path='llm',
+                        analysis_stage='triage_and_deep'
+                    )
+ 
         # Case 4: 没有任何规则匹配上 -> 执行 E15-S2 初筛分级路由
         if os.getenv('STAGED_ANALYSIS_ENABLED', 'true').lower() == 'false':
-            return await self.analyzer.analyze_policy(row)
-
+            return await self.analyzer.analyze_policy(
+                row,
+                analysis_path='llm',
+                analysis_stage='triage_and_deep'
+            )
+ 
         logger.info("No rule extractors matched. Initiating Stage 1: Triage Classification...")
         
         # 为了兼容旧代码，这里直接调用原分析器。实际 E15-S2 会拉起 triage_only
-        triage_res = await self.analyzer.analyze_policy(row, force_deep_mode='triage_only', disable_db_write=True)
+        triage_res = await self.analyzer.analyze_policy(
+            row, 
+            force_deep_mode='triage_only', 
+            disable_db_write=True,
+            analysis_path='llm',
+            analysis_stage='triage_only'
+        )
         importance = triage_res.get('importance_level', 3)
         confidence = triage_res.get('triage_confidence', 1.0)
         
+        # 智能补齐政策分类
+        policy_type = row.get('policy_type')
+        if not policy_type or policy_type == "other":
+            from shared.utils.policy_classifier import classify_policy
+            policy_type = await classify_policy(title, content_text)
+
         if importance <= 3 and confidence > 0.8:
             logger.info("[Token Saved] Low importance policy blocked by triage. Skipping deep analysis.")
             triage_res['routing_path'] = 'triage_only'
@@ -164,20 +221,40 @@ class StagedAnalyzer:
             
         elif importance == 4 or (importance <= 3 and confidence <= 0.8):
             logger.info("Upgrading to triage_and_deep path.")
-            res = await self.analyzer.analyze_policy(row)
+            effort = self._resolve_reasoning_effort(policy_type, importance)
+            res = await self.analyzer.analyze_policy(
+                row,
+                reasoning_effort=effort,
+                analysis_path='llm',
+                analysis_stage='triage_and_deep'
+            )
             res['routing_path'] = 'triage_and_deep'
             return res
             
         else:
             logger.info("Upgrading to triage_and_voting path (5-star policy).")
             import asyncio
-            coros = [self.analyzer.analyze_policy(row, force_deep_mode='deep_only', disable_db_write=True) for _ in range(3)]
+            effort = self._resolve_reasoning_effort(policy_type, importance)
+            coros = [
+                self.analyzer.analyze_policy(
+                    row, 
+                    force_deep_mode='deep_only', 
+                    disable_db_write=True,
+                    reasoning_effort=effort,
+                    analysis_path='llm',
+                    analysis_stage='triage_and_voting'
+                ) for _ in range(3)
+            ]
             results = await asyncio.gather(*coros, return_exceptions=True)
             valid_results = [r for r in results if not isinstance(r, Exception)]
             
             if not valid_results:
                 logger.warning("All 3 voting branches failed with exceptions! Fallbacking to standard.")
-                res = await self.analyzer.analyze_policy(row)
+                res = await self.analyzer.analyze_policy(
+                    row,
+                    analysis_path='llm',
+                    analysis_stage='triage_and_deep'
+                )
                 res['routing_path'] = 'triage_and_deep'
                 return res
             
@@ -199,11 +276,13 @@ class StagedAnalyzer:
         target_table = "dwd_policy_analysis"
         sql = f"""
         INSERT INTO {target_table} (
-            policy_id, summary, importance_level, importance_reason,
+            policy_id, analysis_path, analysis_stage, summary, importance_level, importance_reason,
             intensity_change, updated_at
         ) VALUES (
-            %s, %s, %s, %s, %s, CURRENT_TIMESTAMP
+            %s, 'llm', 'triage_only', %s, %s, %s, %s, CURRENT_TIMESTAMP
         ) ON DUPLICATE KEY UPDATE 
+            analysis_path = VALUES(analysis_path),
+            analysis_stage = VALUES(analysis_stage),
             summary = VALUES(summary),
             importance_level = VALUES(importance_level),
             importance_reason = VALUES(importance_reason),
@@ -244,15 +323,17 @@ class StagedAnalyzer:
         
         sql = f"""
         INSERT INTO {target_table} (
-            policy_id, summary, importance_level, importance_reason, 
+            policy_id, analysis_path, analysis_stage, summary, importance_level, importance_reason, 
             sectors_positive, sectors_negative, intensity_change, key_differences, 
             implication, contrast_baseline_id, segment_used, segment_extracted, 
             input_truncated, prompt_name, prompt_version, model_name, 
             thinking_enabled, reasoning_effort, input_cache_hit_tokens, 
             input_cache_miss_tokens, output_tokens, reasoning_tokens, cost_cny
         ) VALUES (
-            %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s
+            %s, 'rule', 'triage_and_deep', %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s
         ) ON DUPLICATE KEY UPDATE 
+            analysis_path = VALUES(analysis_path),
+            analysis_stage = VALUES(analysis_stage),
             summary = VALUES(summary),
             importance_level = VALUES(importance_level),
             importance_reason = VALUES(importance_reason),
@@ -361,7 +442,11 @@ class StagedAnalyzer:
         logger.info(f"Injecting expert-hybrid data into user title: '{hybrid_title}'")
         
         # 4. 派发给标准 PolicyAnalyzer
-        res = await self.analyzer.analyze_policy(hybrid_row)
+        res = await self.analyzer.analyze_policy(
+            hybrid_row,
+            analysis_path='rule_then_llm',
+            analysis_stage='triage_and_deep'
+        )
         res["routing_path"] = "rule_then_llm_hybrid"
         
         # 5. 可选：在最终落库记录中，将 model_name 改写为 hybrid 标打，以便于后续审计

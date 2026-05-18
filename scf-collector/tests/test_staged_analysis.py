@@ -77,7 +77,7 @@ async def test_triage_and_deep_path(mock_chat, mock_policy_db, mock_staged_db, s
     mock_staged_db.side_effect = mock_db_side_effect
     mock_policy_db.side_effect = mock_db_side_effect
 
-    def chat_side_effect(system_prompt, user_prompt, mode, temperature=0.1):
+    def chat_side_effect(system_prompt, user_prompt, mode, temperature=0.1, **kwargs):
         if mode == "flash":
             return {
                 "content": '{"importance_level": 4, "policy_type": "regulation_release", "requires_deep_analysis": true, "triage_confidence": 0.90, "triage_summary": "重要规范出台。"}',
@@ -137,7 +137,7 @@ async def test_triage_and_voting_path(mock_chat, mock_policy_db, mock_staged_db,
 
     call_count = {"deep": 0}
 
-    def chat_side_effect(system_prompt, user_prompt, mode, temperature=0.1):
+    def chat_side_effect(system_prompt, user_prompt, mode, temperature=0.1, **kwargs):
         if mode == "flash":
             return {
                 "content": '{"importance_level": 5, "policy_type": "executive_meeting", "requires_deep_analysis": true, "triage_confidence": 0.99, "triage_summary": "超重磅会议。"}',

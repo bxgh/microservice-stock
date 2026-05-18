@@ -1,0 +1,83 @@
+# E15-M6 实施与交付总结报告 (Walkthrough)
+
+> [!NOTE]
+> 本报告记录了 **E15-M6 (思考预算精细化、应用层响应缓存、错峰时段调度)** 的设计落地、代码开发及完整 Given-When-Then 单元/集成测试的验证情况。
+
+---
+
+## 1. 核心改进成果概述
+
+本项目在云端 Serverless (SCF) 的 A 股政策 AI 追踪分析系统中，成功闭环落地了以下三项生产级关键特性，兼顾大模型推理能力与硬预算安全性：
+
+1. **E3-S3 大模型思考预算精细化 (Thinking Budget Fine-tuning)**
+   - **机制**: 引入了结构化的场景配置矩阵 `reasoning_effort_matrix.yaml`。对于 5 星超重磅政策（如货币政策报告、政府工作报告），自动升级并拉满思考预算，采用 `deepseek-reasoner` 路由，并指定 `reasoning_effort = "max"`；对于 4 星级普通及关键对比，指定为 `"high"`；对于其余常规政策，则降级为轻量级模型或默认调用，实现预算高精度精细化控制。
+2. **E5 应用层响应缓存 (Application-layer MD5 Caching)**
+   - **机制**: 在物理层引进了高性能缓存管理器 `ResponseCache`。利用正则去除多余空白/换行归一化 Prompt，生成唯一 MD5 签名作为 Key，并在 MySQL 缓存完整 JSON（包含 `reasoning_content` 及元数据）。当发生缓存拦截命中时，直接还原响应，并将最终计费及 Token 消耗强力改写为 **0**，落库时打标为 `analysis_path = "cache"`。
+3. **E4-S5 北京时区安全错峰时段调度 (Beijing Timezone-Safe Off-Peak Scheduling)**
+   - **机制**: 设计并编写了时区安全的 `OffPeakScheduler`，在工作日 09:00 - 15:30 盘中时段自动将大批量历史回填批处理任务挂起挂慢，仅允许在 **00:30 - 08:30** 错峰低谷期安全恢复并发采集。每日硬预算消耗表增加 `is_off_peak` 区分，保障物理主键更新幂等并实现错峰计费。
+
+---
+
+## 2. 物理变更清单 (Created & Modified Files)
+
+### 2.1 新建核心文件
+* **思考预算矩阵**: [reasoning_effort_matrix.yaml](file:///e:/gitee/microservice-stock/scf-collector/shared/utils/reasoning_effort_matrix.yaml) (定义各政策大类及重要性星级的思考档位)
+* **响应缓存器**: [response_cache.py](file:///e:/gitee/microservice-stock/scf-collector/shared/utils/response_cache.py) (北京时区安全的 Redis/MySQL 级缓存)
+* **错峰调度器**: [off_peak_scheduler.py](file:///e:/gitee/microservice-stock/scf-collector/shared/utils/off_peak_scheduler.py) (支持秒级精确避让与时区比对)
+* **Given-When-Then 测试集**: [test_m6_features.py](file:///e:/gitee/microservice-stock/scf-collector/tests/test_m6_features.py) (全功能集成与单元测试)
+
+### 2.2 修改核心组件
+* [llm_client.py](file:///e:/gitee/microservice-stock/scf-collector/shared/utils/llm_client.py)
+  - 接入缓存拦截机制，命中缓存直接拦截返回零扣费。
+  - 支持每日账单依 `cost_date` 与 `is_off_peak` 拆分聚合及 upsert 覆盖。
+* [policy_analyzer.py](file:///e:/gitee/microservice-stock/scf-collector/shared/utils/policy_analyzer.py)
+  - 接入缓存命中覆盖与 `analysis_path='cache'` 打标，并在 `disable_db_write=True` 时确保返回字典 schema 完全兼容（防止 KeyError）。
+  - 合并 Pydantic validated output 和原始 JSON，既支持 Pydantic 强校验又完美保留 extra 字段（如 `intensity_change`）。
+* [staged_analyzer.py](file:///e:/gitee/microservice-stock/scf-collector/shared/utils/staged_analyzer.py)
+  - 正式依分类及星级加载思考预算档位，向 LLMClient 传递最精确推理预算。
+* [backfill_policy_analysis.py](file:///e:/gitee/microservice-stock/scripts/backfill_policy_analysis.py)
+  - 在大批量回填的开始注入错时避让检查，确保自动挂起避让盘中高频时段。
+
+---
+
+## 3. 验证测试结果与存证证据
+
+我们在本地 Python 3.11 环境中，对所有新特性及旧逻辑回归进行了高密度的自动化运行与比对，结果获得全胜：
+
+### 3.1 单元与集成测试运行实证 (pytest)
+
+```bash
+$env:PYTHONPATH="."; python -m pytest tests/test_m6_features.py tests/test_staged_analysis.py -v
+```
+
+**测试通过日志输出截图证据**:
+```text
+============================= test session starts =============================
+platform win32 -- Python 3.11.5, pytest-8.4.1, pluggy-1.6.0 -- D:\Program Files\Python311\python.exe
+cachedir: .pytest_cache
+rootdir: E:\gitee\microservice-stock\scf-collector
+plugins: anyio-3.7.1, asyncio-1.1.0
+asyncio: mode=Mode.STRICT, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collecting ... collected 8 items
+
+tests/test_m6_features.py::test_off_peak_scheduler_logic PASSED          [ 12%]
+tests/test_m6_features.py::test_calculate_wait_seconds PASSED            [ 25%]
+tests/test_m6_features.py::test_cache_normalization_and_hit PASSED       [ 37%]
+tests/test_m6_features.py::test_staged_analyzer_reasoning_effort PASSED  [ 50%]
+tests/test_m6_features.py::test_policy_analyzer_cache_hit_zero_cost PASSED [ 62%]
+tests/test_staged_analysis.py::test_triage_only_path PASSED              [ 75%]
+tests/test_staged_analysis.py::test_triage_and_deep_path PASSED          [ 87%]
+tests/test_staged_analysis.py::test_triage_and_voting_path PASSED        [100%]
+
+============================= 8 passed in 38.06s ==============================
+```
+
+> [!TIP]
+> 无论是思考预算、缓存拦截零费用、归一化 MD5，还是三阶段投票表决、初筛回归，**8 个测试用例全部以 100% 成功率无错通过**！
+
+---
+
+## 4. 灰度与回填安全性保障
+
+1. **预算上限限制**: [backfill_policy_analysis.py](file:///e:/gitee/microservice-stock/scripts/backfill_policy_analysis.py) 中仍牢牢锁死 `BUDGET_LIMIT` ¥1.0 元硬防护带。
+2. **优雅的错峰控制**: 在执行离线回填任务时，通过 `OFF_PEAK_SCHEDULING_ENABLED` 控制开关可以无缝关闭/开启错峰调度（默认开启），在非错峰时段启动会显示精准的剩余等待秒数，防止瞬间吞食主力算力。
