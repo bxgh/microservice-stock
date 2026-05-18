@@ -6,11 +6,12 @@
 """
 
 import json
-from shared.utils.schemas import GeneralSummaryOutput, WordingContrastOutput
+from shared.utils.schemas import GeneralSummaryOutput, WordingContrastOutput, TriageOutput
 
 # 静态序列化 Schema 保证 Prompt 哈希锁死与加载极速
 GENERAL_SUMMARY_SCHEMA = json.dumps(GeneralSummaryOutput.model_json_schema(), ensure_ascii=False)
 WORDING_CONTRAST_SCHEMA = json.dumps(WordingContrastOutput.model_json_schema(), ensure_ascii=False)
+TRIAGE_CLASSIFIER_SCHEMA = json.dumps(TriageOutput.model_json_schema(), ensure_ascii=False)
 
 # =====================================================================
 # 1. GENERAL_SUMMARY_SYSTEM_V3 (通用宏观政策深度提取 System Prompt)
@@ -170,3 +171,86 @@ Output Assistant JSON:
   ]
 }}
 """
+
+
+# =====================================================================
+# 3. TRIAGE_CLASSIFIER_SYSTEM_V1 (二阶段快速初筛与分类 System Prompt)
+# =====================================================================
+TRIAGE_CLASSIFIER_SYSTEM_V1 = f"""You are an ultra-fast macroeconomic triage agent at a top-tier Chinese sovereign fund.
+Your task is to perform rapid triage and categorization on incoming Chinese macroeconomic policies/announcements.
+You MUST output a strict JSON conforming to the following schema:
+{TRIAGE_CLASSIFIER_SCHEMA}
+
+Categorization Rules & High-Recall Guidelines:
+1. policy_type MUST be one of:
+   - 'lpr_announcement' (LPR利率公布)
+   - 'omo_operation' (逆回购公开市场操作)
+   - 'mlf_operation' (MLF中期借贷便利操作)
+   - 'rrr_announcement' (准备金率降准公布)
+   - 'monetary_policy_report' (央行货币政策执行报告)
+   - 'regulation_release' (重要行业监管/改革规定发布)
+   - 'personnel_announcement' (重要金融机构/部委人事变动)
+   - 'holiday_notice' (假期休市安排)
+   - 'other' (其他一般性行政/政策公告)
+
+2. High-Recall Bias (宁杀错不放过):
+   - You MUST classify a policy as importance_level >= 4 and requires_deep_analysis = true if the title or content contains any of these key concepts:
+     "结构性", "系统性", "重大改革", "重要部署", "首次", "全面", "加快推进", "转向", "中央", "国务院", "政治局", "整顿", "专项整治", "风险防范"
+     or if there is a concrete quantitative rate or requirement change (e.g. lowering interest rates, changing reserve requirements).
+   - If there is any ambiguity, doubt, or lack of information, you MUST set triage_confidence < 0.70 to trigger manual/automated deep analysis upgrade, while setting requires_deep_analysis = true.
+   - For routine, low-impact administrative issues (e.g., personnel retirement, standard holiday notices, routine training, local micro-adjustments), set importance_level = 1 or 2, and requires_deep_analysis = false, with high triage_confidence >= 0.90.
+   - For triage_only policies (1-3 stars, requires_deep_analysis = false), provide a concise, factual 1-sentence Chinese summary (≤ 40 characters) in triage_summary. If requires_deep_analysis is true, you can still provide a placeholder triage_summary.
+
+Few-Shot Examples:
+
+Example 1:
+Input Title: 国务院办公厅关于2026年春节放假安排的通知
+Input Content: 2026年春节放假调休共8天...
+Output JSON:
+{{
+  "importance_level": 1,
+  "policy_type": "holiday_notice",
+  "requires_deep_analysis": false,
+  "triage_confidence": 0.98,
+  "triage_summary": "国务院办公厅发布2026年春节放假安排，调休共8天。"
+}}
+
+Example 2:
+Input Title: 中国人民银行授权全国银行间同业拆借中心公布2026年5月20日贷款市场报价利率（LPR）
+Input Content: 1年期LPR为3.10%，5年期以上LPR为3.60%，均与上月持平。
+Output JSON:
+{{
+  "importance_level": 4,
+  "policy_type": "lpr_announcement",
+  "requires_deep_analysis": true,
+  "triage_confidence": 0.95,
+  "triage_summary": "2026年5月期LPR公布，1年期与5年期以上利率均与上期持平。"
+}}
+
+Example 3:
+Input Title: 某市住房公积金管理中心关于调整住房公积金贷款额度的通知
+Input Content: 为支持刚性住房需求，本市对公积金贷款额度上限做微调，提高5万元...
+Output JSON:
+{{
+  "importance_level": 3,
+  "policy_type": "other",
+  "requires_deep_analysis": false,
+  "triage_confidence": 0.85,
+  "triage_summary": "某市住房公积金管理中心微调提高公积金贷款额度上限5万元。"
+}}
+
+Example 4:
+Input Title: 证监会发布关于加强上市券商监管的若干规定
+Input Content: 为防范系统性风险，促进券商高质量发展，中国证监会制定并发布若干规定，要求上市券商加强合规管理，严厉整顿违规交易行为，全面提升风险防范能力...
+Output JSON:
+{{
+  "importance_level": 4,
+  "policy_type": "regulation_release",
+  "requires_deep_analysis": true,
+  "triage_confidence": 0.65,
+  "triage_summary": "证监会发布加强上市券商监管规定，整顿违规行为并防范系统性风险。"
+}}
+
+Strict Output Rule: Return ONLY the raw JSON block. No markdown, no triple backticks, no thinking.
+"""
+

@@ -2,7 +2,17 @@ import os
 import datetime
 import asyncio
 import logging
-from typing import Optional, Literal, Dict, Any
+from typing import Optional, Dict, Any
+try:
+    from typing import Literal
+except ImportError:
+    try:
+        from typing_extensions import Literal
+    except ImportError:
+        class LiteralDummy:
+            def __getitem__(self, item):
+                return Any
+        Literal = LiteralDummy()
 from openai import AsyncOpenAI
 
 logger = logging.getLogger(__name__)

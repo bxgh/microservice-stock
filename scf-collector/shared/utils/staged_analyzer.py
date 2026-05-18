@@ -144,9 +144,84 @@ class StagedAnalyzer:
                     logger.warning(f"Unknown routing mode '{route_enabled}'. Defaulting to LLM path.")
                     return await self.analyzer.analyze_policy(row)
 
-        # Case 4: 没有任何规则匹配上 -> 100% 回退原大模型分析引擎
-        logger.info("No rule extractors matched. Routing to standard LLM analyzer.")
-        return await self.analyzer.analyze_policy(row)
+        # Case 4: 没有任何规则匹配上 -> 执行 E15-S2 初筛分级路由
+        if os.getenv('STAGED_ANALYSIS_ENABLED', 'true').lower() == 'false':
+            return await self.analyzer.analyze_policy(row)
+
+        logger.info("No rule extractors matched. Initiating Stage 1: Triage Classification...")
+        
+        # 为了兼容旧代码，这里直接调用原分析器。实际 E15-S2 会拉起 triage_only
+        triage_res = await self.analyzer.analyze_policy(row, force_deep_mode='triage_only', disable_db_write=True)
+        importance = triage_res.get('importance_level', 3)
+        confidence = triage_res.get('triage_confidence', 1.0)
+        
+        if importance <= 3 and confidence > 0.8:
+            logger.info("[Token Saved] Low importance policy blocked by triage. Skipping deep analysis.")
+            triage_res['routing_path'] = 'triage_only'
+            # 简化版：直接落库
+            await self._write_triage_to_db(row, triage_res)
+            return triage_res
+            
+        elif importance == 4 or (importance <= 3 and confidence <= 0.8):
+            logger.info("Upgrading to triage_and_deep path.")
+            res = await self.analyzer.analyze_policy(row)
+            res['routing_path'] = 'triage_and_deep'
+            return res
+            
+        else:
+            logger.info("Upgrading to triage_and_voting path (5-star policy).")
+            import asyncio
+            coros = [self.analyzer.analyze_policy(row, force_deep_mode='deep_only', disable_db_write=True) for _ in range(3)]
+            results = await asyncio.gather(*coros, return_exceptions=True)
+            valid_results = [r for r in results if not isinstance(r, Exception)]
+            
+            if not valid_results:
+                logger.warning("All 3 voting branches failed with exceptions! Fallbacking to standard.")
+                res = await self.analyzer.analyze_policy(row)
+                res['routing_path'] = 'triage_and_deep'
+                return res
+            
+            # 取第一票作为兜底
+            best_res = valid_results[0]
+            best_res['routing_path'] = 'triage_and_voting'
+            
+            # 计算 majority intensity
+            from collections import Counter
+            intensities = [r.get('intensity_change') for r in valid_results if r.get('intensity_change')]
+            if intensities:
+                best_res['intensity_change'] = Counter(intensities).most_common(1)[0][0]
+                
+            await self._write_triage_to_db(row, best_res)
+            return best_res
+
+    async def _write_triage_to_db(self, row, triage_res):
+        """简单落库逻辑"""
+        target_table = "dwd_policy_analysis"
+        sql = f"""
+        INSERT INTO {target_table} (
+            policy_id, summary, importance_level, importance_reason,
+            intensity_change, updated_at
+        ) VALUES (
+            %s, %s, %s, %s, %s, CURRENT_TIMESTAMP
+        ) ON DUPLICATE KEY UPDATE 
+            summary = VALUES(summary),
+            importance_level = VALUES(importance_level),
+            importance_reason = VALUES(importance_reason),
+            intensity_change = VALUES(intensity_change),
+            updated_at = CURRENT_TIMESTAMP
+        """
+        params = (
+            row['id'], 
+            triage_res.get('triage_summary', triage_res.get('summary', '')),
+            triage_res.get('importance_level', 3),
+            '【初筛】' + triage_res.get('importance_reason', ''),
+            triage_res.get('intensity_change', 'neutral')
+        )
+        try:
+            from shared.db.connection import execute_query
+            await execute_query(sql, params)
+        except Exception as e:
+            logger.error(f"DB Write failed: {e}")
 
     async def _write_rule_result_to_db(self, row: Dict[str, Any], extractor_name: str, extractor: Any, extracted_data: Dict[str, Any], target_table: str) -> Dict[str, Any]:
         """

@@ -194,7 +194,7 @@ class PolicyAnalyzer:
                 "sectors": []
             }
 
-    async def analyze_policy(self, policy_id_or_row: Any) -> Dict[str, Any]:
+    async def analyze_policy(self, policy_id_or_row: Any, force_deep_mode: str = None, disable_db_write: bool = False) -> Dict[str, Any]:
         """
         核心分析逻辑
         """
@@ -234,9 +234,18 @@ class PolicyAnalyzer:
         contrast_baseline_id = None
         previous_baseline = await self._find_previous_baseline(ts_code, policy_type, publish_date)
         
-        mode = "flash"
-        system_prompt = prompts.GENERAL_SUMMARY_SYSTEM_V3
-        
+        if force_deep_mode == 'triage_only':
+            mode = "flash"
+            system_prompt = getattr(prompts, 'TRIAGE_CLASSIFIER_SYSTEM_V1', prompts.GENERAL_SUMMARY_SYSTEM_V3)
+            user_prompt = f"请初筛分类以下政策：\n【标题】{title}\n【正文】\n{segment_used}"
+            prompt_name = "TRIAGE_CLASSIFIER_V1"
+            prompt_version = "1.0"
+            previous_baseline = None
+            logger.info("Executing Stage 1: Triage Classification...")
+        else:
+            mode = "flash"
+            system_prompt = prompts.GENERAL_SUMMARY_SYSTEM_V3
+
         if previous_baseline:
             contrast_baseline_id = previous_baseline['id']
             # 对上期文本也做一次提取，防止超长
@@ -317,7 +326,11 @@ class PolicyAnalyzer:
             raise e
         
         # 6. 正则防崩提纯 JSON
-        target_model = WordingContrastOutput if previous_baseline else GeneralSummaryOutput
+        if force_deep_mode == 'triage_only':
+            from shared.utils.schemas import TriageOutput
+            target_model = TriageOutput
+        else:
+            target_model = WordingContrastOutput if previous_baseline else GeneralSummaryOutput
         analysis_data = self._robust_parse_json(llm_result.get("content", ""), target_model)
         
         # 7. 提取与融合申万板块影响
@@ -325,7 +338,10 @@ class PolicyAnalyzer:
         rule_sectors = await self._get_rule_based_sectors(segment_used)
         merged_sectors = self._merge_sectors(llm_sectors, rule_sectors)
         
-        # 8. ORM 幂等落库至 dwd_policy_analysis (联合唯一索引防重入)
+        if disable_db_write:
+            return analysis_data
+            
+        # 8. 执行物理表数据落库/更新至 dwd_policy_analysis (联合唯一索引防重入)
         # 对齐数据契约列名
         summary_str = analysis_data.get("summary_three_sentences", "未生成摘要。")
         importance_level = analysis_data.get("importance_level", 3)

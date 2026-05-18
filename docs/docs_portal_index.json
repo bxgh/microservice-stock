@@ -96,6 +96,22 @@
     "deprecated": false
   },
   {
+    "title": "Walkthrough - E15-E2: 二阶段分析与 5 星政策 Self-Consistency 投票落地",
+    "path": "scf-collector/docs/features/policy-tracker/implementation_logs/E15/S2/walkthrough.html",
+    "type": "standard",
+    "service": "POLICY-TRACKER",
+    "last_modified": "2026-05-18 11:38",
+    "deprecated": false
+  },
+  {
+    "title": "Implementation Plan - E15-E2: 二阶段分析与 5 星政策 Self-Consistency 投票落地",
+    "path": "scf-collector/docs/features/policy-tracker/implementation_logs/E15/S2/implementation_plan.html",
+    "type": "standard",
+    "service": "POLICY-TRACKER",
+    "last_modified": "2026-05-18 11:27",
+    "deprecated": false
+  },
+  {
     "title": "[E15-M1-Patch (v2)] 统一分级调度分析与防裸奔 MOps 实测对账总结报告",
     "path": "scf-collector/docs/features/policy-tracker/implementation_logs/E15/S1/iterations/v2/walkthrough.html",
     "type": "standard",
