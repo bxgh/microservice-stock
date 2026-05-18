@@ -99,6 +99,12 @@ def sync_config():
             kv.Key = v
             kv.Value = str(val)
             req.Environment.Variables.append(kv)
+            
+    # 强制注入 TZ=Asia/Shanghai 时区环境变量，锁定东八区北京时间
+    tz_var = models.Variable()
+    tz_var.Key = "TZ"
+    tz_var.Value = "Asia/Shanghai"
+    req.Environment.Variables.append(tz_var)
     
     # 强制同步 VPC 和开启公网访问
     vpc_id = os.environ.get('VPC_ID')

@@ -65,8 +65,9 @@ async def async_handler(event, context):
 
     op = event.get('op', 'collect')
     ts_code = event.get('ts_code', '600519.SH')
-    # 如果没传日期，默认为当天
-    trade_date = event.get('trade_date', datetime.datetime.now().strftime('%Y-%m-%d'))
+    # 如果没传日期，默认为当天 (CST北京时间)
+    from zoneinfo import ZoneInfo
+    trade_date = event.get('trade_date', datetime.datetime.now(ZoneInfo('Asia/Shanghai')).strftime('%Y-%m-%d'))
     request_id = getattr(context, 'request_id', 'local_test')
 
     # [E7-S5-T4] 交易日准入校验
