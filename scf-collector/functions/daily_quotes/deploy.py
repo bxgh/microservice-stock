@@ -121,36 +121,50 @@ def sync_config():
         print(f"[Config] Error syncing env vars: {e}")
 
 def setup_triggers():
-    """自动化配置定时触发器"""
+    """自动化配置定时触发器 (修复 UTC 时区差，并自动重建触发器更新配置)"""
     import json
     cred = credential.Credential(secret_id, secret_key)
     client = scf_client.ScfClient(cred, region)
     
+    # 腾讯云 SCF 定时触发器采用 UTC 时间，北京时间 (CST) 需减去 8 小时
     triggers = [
         {
             "name": "DailyKline",
-            "cron": "0 30 16 * * * *",
+            "cron": "0 30 8 * * * *",  # 对应北京时间 16:30 CST
             "payload": {"op": "sync_kline_daily"}
         },
         {
             "name": "DailyAdjFactor",
-            "cron": "0 25 9 * * * *",
+            "cron": "0 25 1 * * * *",  # 对应北京时间 09:25 CST (标准盘前因子同步)
             "payload": {"op": "sync_adj_factor"}
         },
         {
             "name": "DailyIndex",
-            "cron": "0 40 16 * * * *",
+            "cron": "0 40 8 * * * *",  # 对应北京时间 16:40 CST
             "payload": {"op": "sync_index_daily"}
         },
         {
             "name": "IntegrityFailOver",
-            "cron": "0 0 17 * * * *",
+            "cron": "0 0 9 * * * *",   # 对应北京时间 17:00 CST
             "payload": {"op": "validate_and_failover"}
         }
     ]
     
     print(f"[Trigger] Syncing triggers for {func_name}...")
     for t in triggers:
+        # 1. 尝试删除已存在的触发器以允许更新 Cron 表达式
+        try:
+            del_req = models.DeleteTriggerRequest()
+            del_req.FunctionName = func_name
+            del_req.TriggerName = t["name"]
+            del_req.Type = "timer"
+            client.DeleteTrigger(del_req)
+            print(f"[Trigger] Deleted existing trigger: {t['name']}")
+        except Exception as de:
+            # 忽略不存在触发器时的异常
+            pass
+
+        # 2. 创建新触发器
         req = models.CreateTriggerRequest()
         req.FunctionName = func_name
         req.TriggerName = t["name"]
@@ -162,10 +176,7 @@ def setup_triggers():
             client.CreateTrigger(req)
             print(f"Success: Trigger {t['name']} created ({t['cron']})")
         except Exception as e:
-            if "ResourceInUse" in str(e) or "AlreadyExists" in str(e):
-                print(f"Info: Trigger {t['name']} already exists. Skipping creation.")
-            else:
-                print(f"Error: Failed to setup trigger {t['name']}: {e}")
+            print(f"Error: Failed to setup trigger {t['name']}: {e}")
 
 if __name__ == "__main__":
     deploy()
