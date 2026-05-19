@@ -1,5 +1,13 @@
 [
   {
+    "title": "SQL 占位符格式化与空值转换踩坑记录 (String Placeholder & NoneType Conversion)",
+    "path": "scf-collector/docs/features/v0.2_data_onboarding/implementation_logs/E15/S1/string_placeholder_formatting.pitfall.html",
+    "type": "pitfall",
+    "service": "V0.2_DATA_ONBOARDING",
+    "last_modified": "2026-05-20 00:10",
+    "deprecated": false
+  },
+  {
     "title": "踩坑记录：Python re.sub 模板替换中的反斜杠二次解析与 JavaScript 注入白屏故障",
     "path": "wxch-gateway/docs/features/wechat-gateway/design/implementation_logs/E23/re_sub_backslash_unescape.pitfall.html",
     "type": "pitfall",
@@ -128,16 +136,16 @@
     "deprecated": false
   },
   {
-    "title": "Implementation Plan - E15-S1: P0级行情池与两融指标采集模块",
-    "path": "scf-collector/docs/features/v0.2_data_onboarding/implementation_logs/E15/S1/implementation_plan.html",
+    "title": "Walkthrough - E15-S1: P0级行情池与两融指标采集模块",
+    "path": "scf-collector/docs/features/v0.2_data_onboarding/implementation_logs/E15/S1/walkthrough.html",
     "type": "standard",
     "service": "V0.2_DATA_ONBOARDING",
-    "last_modified": "2026-05-19 23:56",
+    "last_modified": "2026-05-20 00:14",
     "deprecated": false
   },
   {
-    "title": "Walkthrough - E15-S1: P0级行情池与两融指标采集模块",
-    "path": "scf-collector/docs/features/v0.2_data_onboarding/implementation_logs/E15/S1/walkthrough.html",
+    "title": "Implementation Plan - E15-S1: P0级行情池与两融指标采集模块",
+    "path": "scf-collector/docs/features/v0.2_data_onboarding/implementation_logs/E15/S1/implementation_plan.html",
     "type": "standard",
     "service": "V0.2_DATA_ONBOARDING",
     "last_modified": "2026-05-19 23:56",

@@ -1044,7 +1044,7 @@ class StockDAO:
                 SUM(CASE WHEN pct_chg <= -0.09 THEN 1 ELSE 0 END) as down_9pct_count
             FROM stock_kline_daily
             WHERE trade_date = %s
-            AND ts_code NOT LIKE '900%' AND ts_code NOT LIKE '200%'
+            AND ts_code NOT LIKE '900%%' AND ts_code NOT LIKE '200%%'
         """
         res_agg = await execute_query(sql_agg, (target_date,), is_select=True)
         if not res_agg or not res_agg[0]['count']:
@@ -1065,7 +1065,7 @@ class StockDAO:
         sql_count = """
             SELECT COUNT(*) as cnt FROM stock_basic_info
             WHERE list_status = 'L' AND list_date <= DATE_SUB(%s, INTERVAL 60 DAY)
-            AND ts_code NOT LIKE '900%' AND ts_code NOT LIKE '200%'
+            AND ts_code NOT LIKE '900%%' AND ts_code NOT LIKE '200%%'
         """
         res_total = await execute_query(sql_count, (target_date,), is_select=True)
         total_count = res_total[0]['cnt'] if res_total else 0
@@ -1100,14 +1100,15 @@ class StockDAO:
                 f_code = r['ts_code']
                 f_date = r['adjust_date']
                 f_factor = r['back_adjust_factor']
+                f_factor_val = float(f_factor) if f_factor is not None else 1.0
                 if f_code not in f_map:
                     f_map[f_code] = []
                 # 兼容 date 与 datetime
                 if isinstance(f_date, datetime.date):
-                    f_map[f_code].append((f_date, float(f_factor)))
+                    f_map[f_code].append((f_date, f_factor_val))
                 else:
                     d_parsed = datetime.datetime.strptime(str(f_date)[:10], '%Y-%m-%d').date()
-                    f_map[f_code].append((d_parsed, float(f_factor)))
+                    f_map[f_code].append((d_parsed, f_factor_val))
 
             # 获取该批次股票的 K 线窗口
             sql_k = f"SELECT ts_code, trade_date, close FROM stock_kline_daily WHERE ts_code IN ({placeholders}) AND trade_date >= %s AND trade_date <= %s ORDER BY ts_code, trade_date"
@@ -1126,7 +1127,8 @@ class StockDAO:
             for r in k_res:
                 kd = r['trade_date']
                 kd_obj = datetime.datetime.strptime(str(kd)[:10], '%Y-%m-%d').date() if not isinstance(kd, datetime.date) else kd
-                k_list.append((r['ts_code'], kd_obj, float(r['close'])))
+                close_val = float(r['close']) if r['close'] is not None else 0.0
+                k_list.append((r['ts_code'], kd_obj, close_val))
 
             for code, group in itertools.groupby(k_list, key=lambda x: x[0]):
                 rows = list(group)
