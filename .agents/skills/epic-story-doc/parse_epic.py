@@ -183,7 +183,8 @@ def parse_epic(md_path, template_path=None):
     with open(template_path, 'r', encoding='utf-8') as f:
         template = f.read()
     
-    html = template.replace('{{EPIC_DATA}}', json.dumps(data, ensure_ascii=False))
+    # 使用正则进行健壮替换，支持 {{EPIC_DATA}} 和 {{ EPIC_DATA }} 等不同空格形式
+    html = re.sub(r'{{\s*EPIC_DATA\s*}}', json.dumps(data, ensure_ascii=False), template)
     
     output_dir = os.path.join(os.path.dirname(md_path), f"implementation_logs/{data['epic_id']}")
     os.makedirs(output_dir, exist_ok=True)
