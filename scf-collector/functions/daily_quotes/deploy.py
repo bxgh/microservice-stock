@@ -158,6 +158,26 @@ def setup_triggers():
             "name": "DailyFinancialSheets",
             "cron": "0 0 18 * * * *",   # 对应北京时间 18:00 CST
             "payload": {"op": "sync_financial_sheets"}
+        },
+        {
+            "name": "DailySuspendCalendar",
+            "cron": "0 0 9 * * * *",    # 对应北京时间 09:00 CST
+            "payload": {"op": "sync_suspend_calendar"}
+        },
+        {
+            "name": "DailyLimitPool",
+            "cron": "0 45 15 * * * *",   # 对应北京时间 15:45 CST
+            "payload": {"op": "sync_limit_pool"}
+        },
+        {
+            "name": "DailyMarketBreadth",
+            "cron": "0 30 17 * * * *",   # 对应北京时间 17:30 CST
+            "payload": {"op": "derive_market_breadth"}
+        },
+        {
+            "name": "DailyMarginData",
+            "cron": "0 0 21 * * * *",    # 对应北京时间 21:00 CST
+            "payload": {"op": "sync_margin_data"}
         }
     ]
     

@@ -1,0 +1,106 @@
+# Implementation Plan - E15-S1: P0级行情池与两融指标采集模块
+
+> **Epic**: E15 | **Story**: S1 | **微服务**: `scf-collector`
+> **最后更新**: 2026-05-19
+> **当前状态**: 计划制定中 (Planning)
+
+---
+
+## 需求解析
+
+本 Story 旨在为 A 股盘后分析系统 v0.2 构建极其稳固的行情基盘与两融（融资融券）数据采集组件。
+通过编写高效且流控安全的 Tushare API 采集模块，获取每日涨跌停板详情、停复牌数据及市场与个股两融明细。
+在盘后完全基于本地 K 线与停牌状态自主派生全市场涨跌家数与大盘广度指标，确保无损幂等落库，规避外部 API 频次超限。
+
+---
+
+## 激活角色
+
+根据 `docs/architecture/agent-skill-rules/ROLES.md`，本次规划与实施共激活以下核心虚拟角色：
+- **`[Requirement Architect]`**: 负责进行 Given-When-Then 的 AC 设计、TBD 销账及整体方案的高可用性、降级防御性设计。
+- **`[Workflow Guard]`**: 负责实施准入（Readiness Check）、任务分工（Task ID 进 Commit）及交付证据链审查。
+- **`[DB Auditor]`**: 负责进行 DDL 审计、MySQL 5.7 兼容性审查、字段与主键规范化管控。
+- **`[Backend Engineer]`**: 负责异步并发安全性、连接池复用与 SCF 运行时生命周期资源闭环管理。
+- **`[Data Quality Steward]`**: 负责数据清洗、百分比标准化转换、映射矩阵对齐与灰度先行 QC 流程。
+- **`[QA/Test Engineer]`**: 负责 Given-When-Then 可执行集成测试的编写与边界覆盖。
+
+---
+
+## User Review Required
+
+> [!IMPORTANT]
+> **关键设计决策与评审要点**:
+> 1. **新增 DDL 迁移**:
+>    由于 Tushare 官方 `margin` 接口（全市场两融每日汇总数据）需要落库，已设计并规划 `migrations/20260519_create_ods_margin_total.sql` DDL。该表联合主键为 `(trade_date, exchange_id)`。
+> 2. **断点增量续传**:
+>    `sync_margin_data` 启动时，引擎自动从物理库中查出 `MAX(trade_date)`，以此为起点向后拉取缺失日期的两融数据（包含个股明细与全市场汇总），支持历史补跑与自动续跑。
+> 3. **两融 API 频次流控**:
+>    Tushare 的 `margin_detail` 和 `margin` 接口具有积分与频次限制，拉取时需保证串行单线程执行，并且在循环补跑多日数据时内置 `await asyncio.sleep(0.5)` 保护机制。
+
+---
+
+## Open Questions
+
+无。各接口契约、物理字段映射、防重复插入机制均已明确。
+
+---
+
+## Proposed Changes
+
+### 1. Database Migrations
+#### [NEW] [20260519_create_ods_margin_total.sql](file:///e:/gitee/microservice-stock/migrations/20260519_create_ods_margin_total.sql)
+- 编写两融全市场每日汇总表 `ods_margin_total` 的 DDL，包含主键 `(trade_date, exchange_id)`，尾部三件套 `created_at`, `updated_at`, `is_deleted`，以及索引。
+
+### 2. Collector shared components
+#### [MODIFY] [tushare_cl.py](file:///e:/gitee/microservice-stock/scf-collector/shared/collectors/tushare_cl.py)
+- 在 `TushareCollector` 中新增 `fetch_margin(trade_date)` 异步方法，包装 `self.pro.margin(trade_date)`。
+- 对齐及加固 `fetch_margin_detail(trade_date)`。
+- 确认 `fetch_suspensions(trade_date)` 异步方法用于每日停牌信息抓取。
+
+#### [MODIFY] [dao.py](file:///e:/gitee/microservice-stock/scf-collector/shared/db/dao.py)
+- 在 `StockDAO` 中新增：
+  - `save_limit_pool(data)`: 批量保存涨跌停、炸板、连板池记录。使用 `ON DUPLICATE KEY UPDATE`，且强制更新 `updated_at = CURRENT_TIMESTAMP`。
+  - `save_margin_total(data)`: 保存每日两融全市场汇总。
+  - `save_margin_detail(data)`: 保存个股两融明细。
+  - `derive_market_breadth(trade_date)`: 盘后本地聚合 `stock_kline_daily` 与 `ods_suspend_d`，派生出 `ods_market_breadth_daily` 数据（全 A 股家数、涨/跌/平盘/停牌家数、涨跌幅分段区间、60d/250d新高新低）。
+
+### 3. Cloud Function Entrypoint
+#### [MODIFY] [index.py](file:///e:/gitee/microservice-stock/scf-collector/functions/daily_quotes/index.py)
+- 在 `async_handler` 分流中，增设以下 `op` 操作调度：
+  - `op == 'sync_limit_pool'`: 同步涨跌停池。
+  - `op == 'sync_suspend_calendar'`: 同步停牌日历。
+  - `op == 'sync_margin_data'`: 同步两融数据（断点续传，流控平滑）。
+  - `op == 'derive_market_breadth'`: 基于本地行情完成大盘广度面包线派生。
+- **资源闭环**：确保所有的 `op` 流程均在 `finally` 块中通过 `await DBManager.close_pool()` 安全释放连接池。
+
+---
+
+## AI 实施蓝图与提示词
+
+为了确保 downstream AI/Subagent 在长上下文对话中严格遵循系统规约，其执行提示词（AI Blueprints）定义如下：
+
+```text
+你是一个资深 Python 后端与数据库审计专家。请你严格遵循 AGENTS.md 与 python-coding-standards.md 中的开发规约执行 E15-S1 的编码与测试任务：
+1. 【角色激活】：显式激活 [DB Auditor], [Backend Engineer], [Data Quality Steward], [QA/Test Engineer] 并严格遵守其核心禁令。
+2. 【MySQL 5.7 兼容与 DDL】：在 migrations/ 目录下编写 20260519_create_ods_margin_total.sql DDL。禁止在 MySQL 5.7 中使用窗口函数或 CTE。所有的 SQL INSERT/UPDATE 必须添加 `updated_at = CURRENT_TIMESTAMP` 保证触发更新时间。
+3. 【两融断点增量与流控】：在执行两融数据同步时，先通过 DAO 层查询已落库的 MAX(trade_date)，实现无损断点续传。在循环拉取多日数据时，添加 `await asyncio.sleep(0.5)` 的时间间隔防流控。
+4. 【无损幂等与小数转换】：写入统一使用 `ON DUPLICATE KEY UPDATE`。百分比字段（如 pct_chg, turnover_rate 等）必须在入库前除以 100.0 转为标准小数；金额一律换算对齐为"元"（Tushare 原始单位如万元需乘 10000）。
+5. 【本地广度派生】：在本地通过 stock_kline_daily 进行聚合计算，up_count 为 pct_chg > 0，down_count 为 pct_chg < 0，结合停牌数汇总为 ods_market_breadth_daily。
+6. 【测试验收】：在 Docker 环境中运行集成测试，确保满足 Given-When-Then。
+```
+
+---
+
+## Verification Plan
+
+### Automated Integration Tests
+
+#### 1. AC1: 两融断点无损校验 (Given-When-Then)
+- **Given**: `ods_margin_detail` 与 `ods_margin_total` 表中已有 `2026-05-18` 的历史两融数据。
+- **When**: 触发 `sync_margin_data` 任务。
+- **Then**: 引擎自动运行 SQL `SELECT MAX(trade_date) FROM ods_margin_total` 并定位到 `2026-05-18`。随后，仅拉取并同步 `2026-05-19` 及以后的增量数据，原有历史数据 100% 完整，且绝不被暴力清空。
+
+#### 2. AC2: 涨跌停池唯一性与幂等覆盖 (Given-When-Then)
+- **Given**: `ods_event_limit_pool` 中已经存在股票 `600519.SH` 在 `2026-05-19` 的涨停池 (`zt`) 记录。
+- **When**: 因补跑、重试或周期重复，再次运行 `sync_limit_pool` 触发相同联合唯一主键 `(trade_date, ts_code, pool_type)` 的写入。
+- **Then**: 数据库以 `ON DUPLICATE KEY UPDATE` 替代抛出唯一性约束冲突，旧有行被无损覆盖，`updated_at` 刷新为当前时间，不产生多行脏数据重影。

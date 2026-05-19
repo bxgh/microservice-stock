@@ -1,0 +1,29 @@
+{
+  "epic_id": "E15",
+  "last_updated": "2026-05-19",
+  "current_stage": "S1_COMPLETED",
+  "completed_stories": [
+    {
+      "story_id": "S1",
+      "title": "P0级行情池与两融指标采集模块",
+      "completed_at": "2026-05-19",
+      "delivered_assets": [
+        "ods_event_limit_pool",
+        "stock_suspensions",
+        "ods_margin_detail",
+        "ods_margin_total",
+        "ods_market_breadth_daily"
+      ]
+    }
+  ],
+  "active_system_state": {
+    "mysql_tables": [
+      "ods_event_limit_pool",
+      "stock_suspensions",
+      "ods_margin_detail",
+      "ods_margin_total",
+      "ods_market_breadth_daily"
+    ]
+  },
+  "next_story_tasks": []
+}

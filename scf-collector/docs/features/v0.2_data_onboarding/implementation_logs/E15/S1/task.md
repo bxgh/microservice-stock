@@ -1,0 +1,21 @@
+# Task Checklist - E15-S1: P0级行情池与两融指标采集模块
+
+- `[x]` **E15-S1-T1: 编写 `sync_limit_pool` 采集接口**
+  - `[x]` 编写 `ods_event_limit_pool` 的幂等入库 DAO 函数 `save_limit_pool`
+  - `[x]` 接入 `index.py` 的 `sync_limit_pool` 操作分支
+  - `[x]` 实现首条 API vs DB 对比矩阵核验
+- `[x]` **E15-S1-T2: 编写 `sync_suspend_calendar` 每日盘前停牌更新**
+  - `[x]` 实现 `StockDAO` 中的停牌数据保存逻辑
+  - `[x]` 接入 `index.py` 的 `sync_suspend_calendar` 操作分支
+- `[x]` **E15-S1-T3: 编写 `sync_margin_data` 盘后两融数据同步与断点续传**
+  - `[x]` 编写 `migrations/20260519_create_ods_margin_total.sql` 迁移脚本
+  - `[x]` 实现 `TushareCollector` 中的 `fetch_margin` 方法
+  - `[x]` 实现 `StockDAO` 中的两融数据最新日期查询、保存汇总与保存明细逻辑
+  - `[x]` 接入 `index.py` 的 `sync_margin_data` 操作分支，支持循环断点拉取与流控保护
+- `[x]` **E15-S1-T4: 实现本地 `ods_market_breadth_daily` 面包线派生**
+  - `[x]` 编写 `StockDAO` 中的 `derive_market_breadth` 方法，完全基于本地行情和停牌表做聚合计算，规避频次限制
+  - `[x]` 接入 `index.py` 的 `derive_market_breadth` 操作分支
+- `[x]` **Story 交付与测试验收**
+  - `[x]` 在 Docker 环境下执行端到端集成测试，核验 Given-When-Then
+  - `[x]` 编写 `walkthrough.md` 并使用 `md_to_html_premium.py` 进行高保真 HTML 副本编译
+  - `[x]` 运行 `update_docs_portal.py` 更新全局 Portal 并保存 `state_E15.json` 机器可读存证

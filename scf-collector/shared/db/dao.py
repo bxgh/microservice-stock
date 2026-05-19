@@ -1,5 +1,6 @@
 import json
 import logging
+import datetime
 from typing import List, Dict, Any, Optional
 from .connection import execute_query
 
@@ -808,3 +809,404 @@ class StockDAO:
         
         logger.info(f"Successfully saved {len(data)} records to ods_fin_indicators (affected: {count}).")
         return count
+
+    @classmethod
+    async def save_limit_pool(cls, data: List[Dict[str, Any]]) -> int:
+        """
+        [E15-S1-T1] 批量保存涨跌停/炸板/连板池数据 (幂等插入)
+        """
+        if not data:
+            return 0
+
+        sql = """
+        INSERT INTO ods_event_limit_pool (
+            trade_date, ts_code, name, pool_type, close, pct_chg,
+            amount, circ_mv, turnover_rate, first_limit_time,
+            last_limit_time, board_height, seal_money, seal_count,
+            open_times, industry, data_source
+        ) VALUES (
+            %(trade_date)s, %(ts_code)s, %(name)s, %(pool_type)s, %(close)s, %(pct_chg)s,
+            %(amount)s, %(circ_mv)s, %(turnover_rate)s, %(first_limit_time)s,
+            %(last_limit_time)s, %(board_height)s, %(seal_money)s, %(seal_count)s,
+            %(open_times)s, %(industry)s, %(data_source)s
+        ) ON DUPLICATE KEY UPDATE 
+            name = VALUES(name),
+            close = VALUES(close),
+            pct_chg = VALUES(pct_chg),
+            amount = VALUES(amount),
+            circ_mv = VALUES(circ_mv),
+            turnover_rate = VALUES(turnover_rate),
+            first_limit_time = VALUES(first_limit_time),
+            last_limit_time = VALUES(last_limit_time),
+            board_height = VALUES(board_height),
+            seal_money = VALUES(seal_money),
+            seal_count = VALUES(seal_count),
+            open_times = VALUES(open_times),
+            industry = VALUES(industry),
+            data_source = VALUES(data_source),
+            updated_at = CURRENT_TIMESTAMP
+        """
+
+        count = 0
+        for item in data:
+            item_copy = cls._clean_nan(dict(item))
+            
+            # 日期格式化
+            item_copy['trade_date'] = cls._format_date(item_copy.get('trade_date'))
+            
+            # 百分比转换 (安全处理)
+            for col in ['pct_chg', 'turnover_rate']:
+                val = item_copy.get(col)
+                if val is not None:
+                    if abs(float(val)) > 1.0:
+                        item_copy[col] = round(float(val) / 100.0, 6)
+                    else:
+                        item_copy[col] = round(float(val), 6)
+
+            # 封单金额处理 (元)
+            seal_money = item_copy.get('seal_money') or item_copy.get('fd_amount')
+            if seal_money is not None:
+                item_copy['seal_money'] = round(float(seal_money), 2)
+            else:
+                item_copy['seal_money'] = None
+
+            # 字段补齐
+            for col in ['amount', 'circ_mv', 'first_limit_time', 'last_limit_time', 
+                        'board_height', 'seal_count', 'open_times', 'industry', 'data_source']:
+                if col not in item_copy:
+                    item_copy[col] = None
+                    
+            if not item_copy.get('data_source'):
+                item_copy['data_source'] = 'tushare'
+
+            res = await execute_query(sql, item_copy, is_select=False)
+            count += res
+        
+        logger.info(f"Successfully saved {len(data)} records to ods_event_limit_pool (affected: {count}).")
+        return count
+
+    @classmethod
+    async def save_suspend_calendar(cls, data: List[Dict[str, Any]]) -> int:
+        """
+        [E15-S1-T2] 批量保存每日停复牌数据 (幂等插入)
+        """
+        if not data:
+            return 0
+
+        sql = """
+        INSERT INTO stock_suspensions (
+            ts_code, trade_date, is_suspended, reason
+        ) VALUES (
+            %(ts_code)s, %(trade_date)s, %(is_suspended)s, %(reason)s
+        ) ON DUPLICATE KEY UPDATE 
+            is_suspended = VALUES(is_suspended),
+            reason = VALUES(reason),
+            updated_at = CURRENT_TIMESTAMP
+        """
+
+        count = 0
+        for item in data:
+            item_copy = cls._clean_nan(dict(item))
+            item_copy['trade_date'] = cls._format_date(item_copy.get('trade_date'))
+            item_copy['is_suspended'] = 1
+            
+            if 'reason' not in item_copy:
+                item_copy['reason'] = None
+                
+            res = await execute_query(sql, item_copy, is_select=False)
+            count += res
+            
+        logger.info(f"Successfully saved {len(data)} records to stock_suspensions (affected: {count}).")
+        return count
+
+    @classmethod
+    async def get_latest_margin_date(cls) -> Optional[str]:
+        """
+        [E15-S1-T3] 查询已落库的最大两融交易日期，用于断点续传
+        """
+        sql = "SELECT MAX(trade_date) as max_date FROM ods_margin_detail WHERE is_deleted = 0"
+        rows = await execute_query(sql, is_select=True)
+        if rows and rows[0]['max_date']:
+            d = rows[0]['max_date']
+            if isinstance(d, datetime.date):
+                return d.strftime('%Y-%m-%d')
+            return str(d)
+        return None
+
+    @classmethod
+    async def save_margin_total(cls, data: List[Dict[str, Any]]) -> int:
+        """
+        [E15-S1-T3] 批量保存全市场与分市场两融每日汇总数据 (幂等插入)
+        """
+        if not data:
+            return 0
+
+        sql = """
+        INSERT INTO ods_margin_total (
+            trade_date, exchange_id, rzye, rzmre, rqye, rqyl, rzrqye
+        ) VALUES (
+            %(trade_date)s, %(exchange_id)s, %(rzye)s, %(rzmre)s, %(rqye)s, %(rqyl)s, %(rzrqye)s
+        ) ON DUPLICATE KEY UPDATE 
+            rzye = VALUES(rzye),
+            rzmre = VALUES(rzmre),
+            rqye = VALUES(rqye),
+            rqyl = VALUES(rqyl),
+            rzrqye = VALUES(rzrqye),
+            is_deleted = 0,
+            updated_at = CURRENT_TIMESTAMP
+        """
+
+        count = 0
+        for item in data:
+            item_copy = cls._clean_nan(dict(item))
+            item_copy['trade_date'] = cls._format_date(item_copy.get('trade_date'))
+            
+            for col in ['rzye', 'rzmre', 'rqye', 'rqyl', 'rzrqye']:
+                val = item_copy.get(col)
+                item_copy[col] = float(val) if val is not None else None
+                
+            if 'exchange_id' not in item_copy:
+                item_copy['exchange_id'] = 'ALL'
+
+            res = await execute_query(sql, item_copy, is_select=False)
+            count += res
+            
+        logger.info(f"Successfully saved {len(data)} records to ods_margin_total (affected: {count}).")
+        return count
+
+    @classmethod
+    async def save_margin_detail(cls, data: List[Dict[str, Any]]) -> int:
+        """
+        [E15-S1-T3] 批量保存个股每日两融明细 (幂等插入)
+        """
+        if not data:
+            return 0
+
+        sql = """
+        INSERT INTO ods_margin_detail (
+            ts_code, trade_date, name, rzye, rzmre, rzche, rqye, rqyl, rqchl, rqmcl, rzrqye
+        ) VALUES (
+            %(ts_code)s, %(trade_date)s, %(name)s, %(rzye)s, %(rzmre)s, %(rzche)s, %(rqye)s, %(rqyl)s, %(rqchl)s, %(rqmcl)s, %(rzrqye)s
+        ) ON DUPLICATE KEY UPDATE 
+            name = VALUES(name),
+            rzye = VALUES(rzye),
+            rzmre = VALUES(rzmre),
+            rzche = VALUES(rzche),
+            rqye = VALUES(rqye),
+            rqyl = VALUES(rqyl),
+            rqchl = VALUES(rqchl),
+            rqmcl = VALUES(rqmcl),
+            rzrqye = VALUES(rzrqye),
+            is_deleted = 0,
+            updated_at = CURRENT_TIMESTAMP
+        """
+
+        count = 0
+        for item in data:
+            item_copy = cls._clean_nan(dict(item))
+            item_copy['trade_date'] = cls._format_date(item_copy.get('trade_date'))
+            
+            for col in ['rzye', 'rzmre', 'rzche', 'rqye', 'rqyl', 'rqchl', 'rqmcl', 'rzrqye']:
+                val = item_copy.get(col)
+                item_copy[col] = float(val) if val is not None else None
+                
+            if 'name' not in item_copy:
+                item_copy['name'] = None
+
+            res = await execute_query(sql, item_copy, is_select=False)
+            count += res
+            
+        logger.info(f"Successfully saved {len(data)} records to ods_margin_detail (affected: {count}).")
+        return count
+
+    @classmethod
+    async def derive_market_breadth(cls, trade_date: str) -> bool:
+        """
+        [E15-S1-T4] 派生当日市场广度指标并入库 ods_market_breadth_daily
+        """
+        import itertools
+        import bisect
+        import datetime
+        
+        target_date = cls._format_date(trade_date)
+        logger.info(f"Starting derive_market_breadth for {target_date}...")
+        
+        # 1. 基础涨跌家数统计
+        sql_agg = """
+            SELECT
+                COUNT(*) as count,
+                SUM(CASE WHEN pct_chg > 0 THEN 1 ELSE 0 END) as up_count,
+                SUM(CASE WHEN pct_chg < 0 THEN 1 ELSE 0 END) as down_count,
+                SUM(CASE WHEN pct_chg = 0 THEN 1 ELSE 0 END) as flat_count,
+                SUM(CASE WHEN pct_chg >= 0.05 THEN 1 ELSE 0 END) as up_5pct_count,
+                SUM(CASE WHEN pct_chg <= -0.05 THEN 1 ELSE 0 END) as down_5pct_count,
+                SUM(CASE WHEN pct_chg >= 0.09 THEN 1 ELSE 0 END) as up_9pct_count,
+                SUM(CASE WHEN pct_chg <= -0.09 THEN 1 ELSE 0 END) as down_9pct_count
+            FROM stock_kline_daily
+            WHERE trade_date = %s
+            AND ts_code NOT LIKE '900%' AND ts_code NOT LIKE '200%'
+        """
+        res_agg = await execute_query(sql_agg, (target_date,), is_select=True)
+        if not res_agg or not res_agg[0]['count']:
+            logger.warning(f"No stock_kline_daily data found for {target_date}, cannot compute breadth.")
+            return False
+
+        row = res_agg[0]
+        curr_count = row['count']
+        up_count = row['up_count'] or 0
+        down_count = row['down_count'] or 0
+        flat_count = row['flat_count'] or 0
+        up_5pct = row['up_5pct_count'] or 0
+        down_5pct = row['down_5pct_count'] or 0
+        up_9pct = row['up_9pct_count'] or 0
+        down_9pct = row['down_9pct_count'] or 0
+
+        # 获取上市超60天的股票总数 (用于计算停牌数)
+        sql_count = """
+            SELECT COUNT(*) as cnt FROM stock_basic_info
+            WHERE list_status = 'L' AND list_date <= DATE_SUB(%s, INTERVAL 60 DAY)
+            AND ts_code NOT LIKE '900%' AND ts_code NOT LIKE '200%'
+        """
+        res_total = await execute_query(sql_count, (target_date,), is_select=True)
+        total_count = res_total[0]['cnt'] if res_total else 0
+        suspended_count = max(0, total_count - curr_count)
+
+        # 2. 计算 60/250 日新高新低
+        sql_date_250 = "SELECT DISTINCT trade_date FROM stock_kline_daily WHERE trade_date < %s ORDER BY trade_date DESC LIMIT 249, 1"
+        res_250 = await execute_query(sql_date_250, (target_date,), is_select=True)
+        start_date_250 = res_250[0]['trade_date'] if res_250 else '1970-01-01'
+
+        sql_date_60 = "SELECT DISTINCT trade_date FROM stock_kline_daily WHERE trade_date < %s ORDER BY trade_date DESC LIMIT 59, 1"
+        res_60 = await execute_query(sql_date_60, (target_date,), is_select=True)
+        start_date_60 = res_60[0]['trade_date'] if res_60 else '1970-01-01'
+
+        high_60d, low_60d, high_250d, low_250d = 0, 0, 0, 0
+
+        # 分批获取股票列表进行计算以节省内存
+        sql_all_codes = "SELECT DISTINCT ts_code FROM stock_kline_daily WHERE trade_date = %s"
+        codes_res = await execute_query(sql_all_codes, (target_date,), is_select=True)
+        all_codes = [r['ts_code'] for r in codes_res]
+
+        batch_size = 500
+        for i in range(0, len(all_codes), batch_size):
+            batch_codes = all_codes[i:i + batch_size]
+            placeholders = ','.join(['%s'] * len(batch_codes))
+            
+            # 获取该批次股票的复权因子
+            sql_f = f"SELECT ts_code, adjust_date, back_adjust_factor FROM stock_adjust_factor WHERE ts_code IN ({placeholders}) ORDER BY ts_code, adjust_date"
+            f_res = await execute_query(sql_f, tuple(batch_codes), is_select=True)
+            f_map = {}
+            for r in f_res:
+                f_code = r['ts_code']
+                f_date = r['adjust_date']
+                f_factor = r['back_adjust_factor']
+                if f_code not in f_map:
+                    f_map[f_code] = []
+                # 兼容 date 与 datetime
+                if isinstance(f_date, datetime.date):
+                    f_map[f_code].append((f_date, float(f_factor)))
+                else:
+                    d_parsed = datetime.datetime.strptime(str(f_date)[:10], '%Y-%m-%d').date()
+                    f_map[f_code].append((d_parsed, float(f_factor)))
+
+            # 获取该批次股票的 K 线窗口
+            sql_k = f"SELECT ts_code, trade_date, close FROM stock_kline_daily WHERE ts_code IN ({placeholders}) AND trade_date >= %s AND trade_date <= %s ORDER BY ts_code, trade_date"
+            k_res = await execute_query(sql_k, tuple(batch_codes + [start_date_250, target_date]), is_select=True)
+
+            target_date_obj = datetime.datetime.strptime(target_date, '%Y-%m-%d').date() if isinstance(target_date, str) else target_date
+            
+            # 转换 start_date_60
+            if isinstance(start_date_60, str):
+                start_date_60_obj = datetime.datetime.strptime(start_date_60, '%Y-%m-%d').date()
+            else:
+                start_date_60_obj = start_date_60
+
+            # 转换并分组
+            k_list = []
+            for r in k_res:
+                kd = r['trade_date']
+                kd_obj = datetime.datetime.strptime(str(kd)[:10], '%Y-%m-%d').date() if not isinstance(kd, datetime.date) else kd
+                k_list.append((r['ts_code'], kd_obj, float(r['close'])))
+
+            for code, group in itertools.groupby(k_list, key=lambda x: x[0]):
+                rows = list(group)
+                f_list = f_map.get(code, [(datetime.date(1990, 1, 1), 1.0)])
+                f_dates = [x[0] for x in f_list]
+                latest_factor = f_list[-1][1] if f_list else 1.0
+
+                adj_rows = []
+                for _, t_date, raw_close in rows:
+                    idx = bisect.bisect_right(f_dates, t_date) - 1
+                    factor = f_list[idx if idx >= 0 else 0][1]
+                    adj_p = float(raw_close) * (factor / latest_factor)
+                    adj_rows.append({'date': t_date, 'adj_close': adj_p})
+
+                target_row = next((r for r in adj_rows if r['date'] == target_date_obj), None)
+                if not target_row:
+                    continue
+                curr_p = target_row['adj_close']
+
+                hist_250 = [r['adj_close'] for r in adj_rows if r['date'] < target_date_obj]
+                if hist_250:
+                    if curr_p >= max(hist_250):
+                        high_250d += 1
+                    if curr_p <= min(hist_250):
+                        low_250d += 1
+
+                hist_60 = [r['adj_close'] for r in adj_rows if r['date'] < target_date_obj and r['date'] >= start_date_60_obj]
+                if hist_60:
+                    if curr_p >= max(hist_60):
+                        high_60d += 1
+                    if curr_p <= min(hist_60):
+                        low_60d += 1
+
+        # 写入或更新 market_breadth
+        query = """
+            INSERT INTO ods_market_breadth_daily (
+                trade_date, total_count, up_count, down_count, flat_count,
+                suspended_count, up_5pct_count, down_5pct_count,
+                up_9pct_count, down_9pct_count, high_60d_count, low_60d_count,
+                high_250d_count, low_250d_count, data_source
+            ) VALUES (
+                %(trade_date)s, %(total_count)s, %(up_count)s, %(down_count)s, %(flat_count)s,
+                %(suspended_count)s, %(up_5pct_count)s, %(down_5pct_count)s,
+                %(up_9pct_count)s, %(down_9pct_count)s, %(high_60d_count)s, %(low_60d_count)s,
+                %(high_250d_count)s, %(low_250d_count)s, 'local_derived'
+            ) ON DUPLICATE KEY UPDATE
+                total_count = VALUES(total_count),
+                up_count = VALUES(up_count),
+                down_count = VALUES(down_count),
+                flat_count = VALUES(flat_count),
+                suspended_count = VALUES(suspended_count),
+                up_5pct_count = VALUES(up_5pct_count),
+                down_5pct_count = VALUES(down_5pct_count),
+                up_9pct_count = VALUES(up_9pct_count),
+                down_9pct_count = VALUES(down_9pct_count),
+                high_60d_count = VALUES(high_60d_count),
+                low_60d_count = VALUES(low_60d_count),
+                high_250d_count = VALUES(high_250d_count),
+                low_250d_count = VALUES(low_250d_count),
+                data_source = VALUES(data_source),
+                updated_at = CURRENT_TIMESTAMP
+        """
+        
+        params = {
+            'trade_date': target_date,
+            'total_count': total_count,
+            'up_count': up_count,
+            'down_count': down_count,
+            'flat_count': flat_count,
+            'suspended_count': suspended_count,
+            'up_5pct_count': up_5pct,
+            'down_5pct_count': down_5pct,
+            'up_9pct_count': up_9pct,
+            'down_9pct_count': down_9pct,
+            'high_60d_count': high_60d,
+            'low_60d_count': low_60d,
+            'high_250d_count': high_250d,
+            'low_250d_count': low_250d
+        }
+        
+        await execute_query(query, params, is_select=False)
+        logger.info(f"Successfully computed and derived market breadth for {target_date}")
+        return True

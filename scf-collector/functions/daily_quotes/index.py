@@ -379,6 +379,183 @@ async def async_handler(event, context):
             
             return {"status": "error", "message": err_msg, "request_id": request_id}
 
+    if op == 'sync_limit_pool':
+        logger.info(f"[{request_id}] Starting sync_limit_pool for {trade_date}...")
+        collector_ts = COLLECTORS.get('tushare')
+        collector_ak = COLLECTORS.get('akshare')
+        try:
+            # A. 拉取 Tushare 涨跌停池 (包含 zt, dt, lian)
+            tushare_raw = await collector_ts.fetch_limit_list(trade_date)
+            limit_records = []
+            
+            for x in tushare_raw:
+                limit_type = x.get('limit_type') or x.get('limit')
+                pool_type = 'zt' if limit_type == 'U' or '涨停' in str(limit_type) else ('dt' if limit_type == 'D' or '跌停' in str(limit_type) else None)
+                if not pool_type:
+                    continue
+                
+                # 构造入库记录
+                record = {
+                    'trade_date': trade_date,
+                    'ts_code': x.get('ts_code'),
+                    'name': x.get('name'),
+                    'pool_type': pool_type,
+                    'close': x.get('close'),
+                    'pct_chg': x.get('pct_chg'),
+                    'amount': x.get('amount'),
+                    'first_limit_time': x.get('first_time'),
+                    'last_limit_time': x.get('last_time'),
+                    'board_height': x.get('board_height'),
+                    'seal_money': x.get('fd_amount'),
+                    'open_times': x.get('open_times'),
+                    'data_source': 'tushare'
+                }
+                limit_records.append(record)
+                
+                # 如果是连板
+                bh = x.get('board_height')
+                if pool_type == 'zt' and bh and int(bh) >= 2:
+                    lian_record = dict(record)
+                    lian_record['pool_type'] = 'lian'
+                    limit_records.append(lian_record)
+
+            # B. 拉取 AkShare 炸板池
+            try:
+                zb_data = await collector_ak.fetch_limit_pool(trade_date, 'zb')
+                for x in zb_data:
+                    record = dict(x)
+                    record['trade_date'] = trade_date
+                    record['pool_type'] = 'zb'
+                    record['data_source'] = 'akshare'
+                    limit_records.append(record)
+            except Exception as ak_e:
+                logger.error(f"[{request_id}] Failed to fetch 'zb' pool from AkShare: {ak_e}")
+
+            if limit_records:
+                count = await StockDAO.save_limit_pool(limit_records)
+                await StockDAO.update_data_readiness(trade_date, "ods_event_limit_pool", len(limit_records))
+                await StockDAO.log_pipeline_run("Limit-Pool", "success", run_id=request_id, biz_date=trade_date)
+                
+                # 发送成功邮件
+                await EmailNotifier.notify_success("每日涨跌停池同步", trade_date, count, table_name="ods_event_limit_pool")
+                return {"status": "success", "count": count, "request_id": request_id}
+            else:
+                return {"status": "empty", "count": 0, "request_id": request_id}
+                
+        except Exception as e:
+            err_msg = f"Limit pool sync error: {str(e)}"
+            logger.error(f"[{request_id}] {err_msg}")
+            await StockDAO.log_pipeline_run("Limit-Pool", "error", error_message=err_msg, run_id=request_id, biz_date=trade_date)
+            await EmailNotifier.notify_failure("每日涨跌停池同步", trade_date, err_msg)
+            return {"status": "error", "message": err_msg, "request_id": request_id}
+
+    if op == 'sync_suspend_calendar':
+        logger.info(f"[{request_id}] Starting sync_suspend_calendar for {trade_date}...")
+        collector_ts = COLLECTORS.get('tushare')
+        try:
+            suspend_raw = await collector_ts.fetch_suspend_d(trade_date)
+            if suspend_raw:
+                count = await StockDAO.save_suspend_calendar(suspend_raw)
+                await StockDAO.update_data_readiness(trade_date, "stock_suspensions", len(suspend_raw))
+                await StockDAO.log_pipeline_run("Suspend-Calendar", "success", run_id=request_id, biz_date=trade_date)
+                
+                await EmailNotifier.notify_success("每日停复牌同步", trade_date, count, table_name="stock_suspensions")
+                return {"status": "success", "count": count, "request_id": request_id}
+            else:
+                return {"status": "empty", "count": 0, "request_id": request_id}
+        except Exception as e:
+            err_msg = f"Suspend calendar sync error: {str(e)}"
+            logger.error(f"[{request_id}] {err_msg}")
+            await StockDAO.log_pipeline_run("Suspend-Calendar", "error", error_message=err_msg, run_id=request_id, biz_date=trade_date)
+            await EmailNotifier.notify_failure("每日停复牌同步", trade_date, err_msg)
+            return {"status": "error", "message": err_msg, "request_id": request_id}
+
+    if op == 'sync_margin_data':
+        logger.info(f"[{request_id}] Starting sync_margin_data with incremental fail-safe for {trade_date}...")
+        collector_ts = COLLECTORS.get('tushare')
+        try:
+            # 1. 查找最大已落库的交易日期
+            latest_db_date = await StockDAO.get_latest_margin_date()
+            if not latest_db_date:
+                # 默认回溯到 7 天前，或者起始日期
+                start_date_obj = datetime.datetime.strptime(trade_date, '%Y-%m-%d') - datetime.timedelta(days=7)
+                start_date_str = start_date_obj.strftime('%Y-%m-%d')
+            else:
+                # 从最大已同步日期的次日开始
+                start_date_obj = datetime.datetime.strptime(latest_db_date, '%Y-%m-%d') + datetime.timedelta(days=1)
+                start_date_str = start_date_obj.strftime('%Y-%m-%d')
+
+            target_date_obj = datetime.datetime.strptime(trade_date, '%Y-%m-%d')
+            
+            if start_date_obj > target_date_obj:
+                logger.info(f"[{request_id}] Margin data is already up-to-date (DB: {latest_db_date}, Target: {trade_date}).")
+                return {"status": "success", "message": "already_up_to_date", "request_id": request_id}
+
+            logger.info(f"[{request_id}] Incremental range: {start_date_str} -> {trade_date}")
+            
+            # 2. 生成所有需要同步的日期列表
+            curr_date = start_date_obj
+            total_total_saved = 0
+            total_detail_saved = 0
+            
+            while curr_date <= target_date_obj:
+                date_str = curr_date.strftime('%Y-%m-%d')
+                logger.info(f"[{request_id}] Syncing margin data for date: {date_str}...")
+                
+                # A. 市场总体数据
+                total_data = await collector_ts.fetch_margin(date_str)
+                if total_data:
+                    saved_total = await StockDAO.save_margin_total(total_data)
+                    total_total_saved += saved_total
+                
+                # B. 个股明细数据
+                detail_data = await collector_ts.fetch_margin_detail(date_str)
+                if detail_data:
+                    saved_detail = await StockDAO.save_margin_detail(detail_data)
+                    total_detail_saved += saved_detail
+                
+                # 间隔 0.5s 流控
+                await asyncio.sleep(0.5)
+                curr_date += datetime.timedelta(days=1)
+
+            total_saved = total_total_saved + total_detail_saved
+            if total_saved > 0:
+                await StockDAO.update_data_readiness(trade_date, "ods_margin_total", total_total_saved)
+                await StockDAO.update_data_readiness(trade_date, "ods_margin_detail", total_detail_saved)
+                await StockDAO.log_pipeline_run("Margin-Data", "success", run_id=request_id, biz_date=trade_date)
+                
+                await EmailNotifier.notify_success("每日两融信用同步", trade_date, total_saved, table_name="ods_margin_total",
+                                                    extra={"市场汇总": total_total_saved, "个股明细": total_detail_saved})
+                return {"status": "success", "total_saved": total_total_saved, "detail_saved": total_detail_saved, "request_id": request_id}
+            else:
+                return {"status": "empty", "count": 0, "request_id": request_id}
+                
+        except Exception as e:
+            err_msg = f"Margin data sync error: {str(e)}"
+            logger.error(f"[{request_id}] {err_msg}")
+            await StockDAO.log_pipeline_run("Margin-Data", "error", error_message=err_msg, run_id=request_id, biz_date=trade_date)
+            await EmailNotifier.notify_failure("每日两融信用同步", trade_date, err_msg)
+            return {"status": "error", "message": err_msg, "request_id": request_id}
+
+    if op == 'derive_market_breadth':
+        logger.info(f"[{request_id}] Starting derive_market_breadth (local derivation) for {trade_date}...")
+        try:
+            success = await StockDAO.derive_market_breadth(trade_date)
+            if success:
+                await StockDAO.update_data_readiness(trade_date, "ods_market_breadth_daily", 1)
+                await StockDAO.log_pipeline_run("Market-Breadth", "success", run_id=request_id, biz_date=trade_date)
+                
+                await EmailNotifier.notify_success("市场广度派生", trade_date, 1, table_name="ods_market_breadth_daily")
+                return {"status": "success", "count": 1, "request_id": request_id}
+            else:
+                return {"status": "failed", "message": "no_kline_data", "request_id": request_id}
+        except Exception as e:
+            err_msg = f"Market breadth derivation error: {str(e)}"
+            logger.error(f"[{request_id}] {err_msg}")
+            await StockDAO.log_pipeline_run("Market-Breadth", "error", error_message=err_msg, run_id=request_id, biz_date=trade_date)
+            await EmailNotifier.notify_failure("市场广度派生", trade_date, err_msg)
+            return {"status": "error", "message": err_msg, "request_id": request_id}
+
     if op == 'validate_and_failover':
         # 17:00 完整性校验与熔断编排
         logger.info(f"[{request_id}] Starting integrity validation & fail-over for {trade_date}...")

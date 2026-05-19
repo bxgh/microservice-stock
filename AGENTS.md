@@ -67,9 +67,22 @@
 
 本仓处理采集与 API 交付，需严格遵循以下业务口径：
 - **涨跌停**: 全部按主板 9.7% 简化判定。
-- **北向资金**: 2024-08-19 后个股北向数据已停发，严禁编造或引用。
+- **北向资金**: 2024-08-19 后个股北向数据已停发，严禁编造 or 引用。
 - **单位陷阱**: ETF 净申购金额必须乘 `1e8`。
 - **交易日历**: 必须使用 `meta_trading_calendar` 跳转，严禁日历日加减。
+
+### 4.1 历史数据迁移与增量触发器规约 (Historical Data Migration & Trigger Policy)
+
+1. **历史数据迁移与补全 (Historical Data Backfill)**:
+   - 全市场与个股两融数据（`ods_margin_total`、`ods_margin_detail`）和行情数据在上线前必须进行历史数据补全，**补齐基准点为 2026-01-01 至今**。
+   - 所有盘后采集任务必须内置**高水位无损断点续传逻辑**（通过查询物理表 `MAX(trade_date)` 增量向前拉取），禁止重复请求，支持历史数据的一键平滑回填与灾备重算。
+2. **盘后增量采集触发器 (Incremental Ingestion Timer Triggers - 方案A)**:
+   - 所有的盘后增量采集均通过**腾讯云 SCF 独立定时触发器（Timer Triggers）独立调度**。
+   - 定时触发器 Cron 表达式采用北京时间（CST）进行物理对齐，硬性时序约束如下：
+     - **`DailySuspendCalendar` (09:00 CST)**: 开盘前同步当日停复牌公告日历（`{"op": "sync_suspend_calendar"}`）。
+     - **`DailyLimitPool` (15:45 CST)**: 收盘后及时抓取当日涨跌停、炸板与连板池（`{"op": "sync_limit_pool"}`）。
+     - **`DailyMarketBreadth` (17:30 CST)**: 在日K线与停牌状态落库就绪后，基于本地物理表自主计算派生全市场行情广度面包线（`{"op": "derive_market_breadth"}`）。
+     - **`DailyMarginData` (21:00 CST)**: 晚间 21:00 待交易所发布当日数据后，增量同步两融数据（`{"op": "sync_margin_data"}`）。
 
 ---
 

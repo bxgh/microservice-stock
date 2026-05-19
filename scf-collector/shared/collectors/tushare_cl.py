@@ -324,6 +324,40 @@ class TushareCollector(BaseCollector):
         df = await asyncio.to_thread(self._fetch_margin_detail_sync, date_str)
         return df.to_dict('records') if df is not None and not df.empty else []
 
+    def _fetch_limit_list_sync(self, date_str: str, limit_type: str = None) -> pd.DataFrame:
+        if not self.pro:
+            logger.error("[tushare] pro_api is not initialized.")
+            return pd.DataFrame()
+        try:
+            if limit_type:
+                return self.pro.limit_list(trade_date=date_str, limit_type=limit_type)
+            return self.pro.limit_list(trade_date=date_str)
+        except Exception as e:
+            logger.error(f"[tushare] fetch limit_list error for {date_str} (type={limit_type}): {e}")
+            raise
+
+    async def fetch_limit_list(self, trade_date: str, limit_type: str = None) -> List[Dict[str, Any]]:
+        """[E15-S1-T1] 异步获取每日涨跌停统计数据"""
+        date_str = self._convert_date(trade_date)
+        df = await asyncio.to_thread(self._fetch_limit_list_sync, date_str, limit_type)
+        return df.to_dict('records') if df is not None and not df.empty else []
+
+    def _fetch_margin_sync(self, date_str: str) -> pd.DataFrame:
+        if not self.pro:
+            logger.error("[tushare] pro_api is not initialized.")
+            return pd.DataFrame()
+        try:
+            return self.pro.margin(trade_date=date_str)
+        except Exception as e:
+            logger.error(f"[tushare] fetch margin total error for {date_str}: {e}")
+            raise
+
+    async def fetch_margin(self, trade_date: str) -> List[Dict[str, Any]]:
+        """[E15-S1-T3] 异步获取每日两融市场汇总数据"""
+        date_str = self._convert_date(trade_date)
+        df = await asyncio.to_thread(self._fetch_margin_sync, date_str)
+        return df.to_dict('records') if df is not None and not df.empty else []
+
     def _fetch_disclosure_date_sync(self, actual_date: str) -> pd.DataFrame:
         if not self.pro:
             logger.error("[tushare] pro_api is not initialized.")
@@ -337,6 +371,22 @@ class TushareCollector(BaseCollector):
     async def fetch_disclosure_date(self, actual_date: str) -> List[Dict[str, Any]]:
         """获取指定实际披露日期的财报披露计划与股票列表"""
         df = await asyncio.to_thread(self._fetch_disclosure_date_sync, actual_date)
+        return df.to_dict('records') if df is not None and not df.empty else []
+
+    def _fetch_suspend_d_specific_sync(self, date_str: str) -> pd.DataFrame:
+        if not self.pro:
+            logger.error("[tushare] pro_api is not initialized.")
+            return pd.DataFrame()
+        try:
+            return self.pro.suspend_d(suspend_type='S', trade_date=date_str)
+        except Exception as e:
+            logger.error(f"[tushare] fetch suspend_d error for {date_str}: {e}")
+            raise
+
+    async def fetch_suspend_d(self, trade_date: str) -> List[Dict[str, Any]]:
+        """[E15-S1-T2] 异步获取每日停牌股票数据"""
+        date_str = self._convert_date(trade_date)
+        df = await asyncio.to_thread(self._fetch_suspend_d_specific_sync, date_str)
         return df.to_dict('records') if df is not None and not df.empty else []
 
     def normalize_data(self, df: pd.DataFrame, ts_code: str, trade_date: str) -> List[KLineModel]:

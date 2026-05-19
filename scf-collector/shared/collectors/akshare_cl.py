@@ -134,3 +134,63 @@ class AkShareCollector(BaseCollector):
                 amount=float(row.get('成交额', 0))
             ))
         return results
+
+    def _fetch_limit_pool_sync(self, date_str: str, pool_type: str = 'zt') -> pd.DataFrame:
+        import akshare as ak
+        try:
+            if pool_type == 'zt':
+                return ak.stock_zt_pool_em(date=date_str)
+            elif pool_type == 'dt':
+                return ak.stock_zt_pool_dtgc_em(date=date_str)
+            elif pool_type == 'zb':
+                return ak.stock_zt_pool_zbgc_em(date=date_str)
+            elif pool_type == 'lian':
+                return ak.stock_zt_pool_previous_em(date=date_str)
+            else:
+                raise ValueError(f"Unsupported pool_type: {pool_type}")
+        except Exception as e:
+            logger.error(f"[akshare] fetch_limit_pool error for {date_str} ({pool_type}): {e}")
+            return pd.DataFrame()
+
+    async def fetch_limit_pool(self, trade_date: str, pool_type: str = 'zt') -> List[Dict[str, Any]]:
+        """[E15-S1-T1] 异步获取 AkShare 涨跌停/炸板/连板池数据并对齐字段"""
+        date_str = self._convert_date(trade_date)
+        df = await asyncio.to_thread(self._fetch_limit_pool_sync, date_str, pool_type)
+        if df is None or df.empty:
+            return []
+
+        result = []
+        for _, row in df.iterrows():
+            def clean_val(v, default=None):
+                if v is None or pd.isna(v): 
+                    return default
+                try:
+                    return float(v)
+                except (ValueError, TypeError):
+                    return default
+
+            # 对齐百分比与金额口径
+            pct_chg_raw = clean_val(row.get("涨跌幅"))
+            pct_chg = round(pct_chg_raw / 100.0, 6) if pct_chg_raw is not None else None
+
+            turnover_rate_raw = clean_val(row.get("换手率"))
+            turnover_rate = round(turnover_rate_raw / 100.0, 6) if turnover_rate_raw is not None else None
+
+            item = {
+                "ts_code": row.get("代码"),
+                "name": row.get("名称"),
+                "close": clean_val(row.get("最新价")),
+                "pct_chg": pct_chg,
+                "amount": clean_val(row.get("成交额")),
+                "circ_mv": clean_val(row.get("流通市值")),
+                "turnover_rate": turnover_rate,
+                "first_limit_time": row.get("首次封板时间"),
+                "last_limit_time": row.get("最后封板时间"),
+                "board_height": clean_val(row.get("连板数")),
+                "seal_money": clean_val(row.get("封板资金")),
+                "seal_count": clean_val(row.get("封板次数")),
+                "open_times": clean_val(row.get("炸板次数")),
+                "industry": row.get("所属行业"),
+            }
+            result.append(item)
+        return result
