@@ -1,0 +1,1119 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Epic-Story 评审台</title>
+<link rel="stylesheet" href="https://lib.baomitu.com/KaTeX/0.16.9/dist/katex.min.css">
+<style>
+:root{
+  --bg:#0e0d0b;--bg1:#15130f;--bg2:#1c1915;--bg3:#2a2520;
+  --ink:#ede3cc;--dim:#ccc;--mute:#aaa;--whisper:#888;
+  --amber:#d4a23e;--ab:#f0c968;--as:rgba(212,162,62,.18);
+  --ok:#8ab573;--qc:#c99339;--no:#c85a4a;--cold:#6b8ca8;
+  --hair:#2a2520;--hairL:#3a3530;
+  --serif:'Noto Serif SC',serif;
+  --sans:'Noto Sans SC',-apple-system,sans-serif;
+  --mono:'JetBrains Mono','SF Mono',Consolas,monospace;
+  --xs:10px;--sm:12px;--base:13px;--md:15px;--lg:18px;--xl:20px;--2xl:26px;--3xl:36px;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+html,body{background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:var(--base);line-height:1.6;height:100vh;overflow:hidden;display:flex;flex-direction:column;}
+::-webkit-scrollbar{width:4px;}::-webkit-scrollbar-track{background:transparent;}::-webkit-scrollbar-thumb{background:var(--hair);}
+[contenteditable]{outline:none;border-bottom:1px dashed transparent;transition:border-color .15s;}
+[contenteditable]:hover{border-bottom-color:var(--hair);}
+[contenteditable]:focus{border-bottom-color:var(--amber);}
+
+/* LOAD */
+#scr-load{position:fixed;inset:0;background:var(--bg);z-index:50;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:32px;overflow-y:auto;}
+#scr-load.hidden{display:none;}
+.ld-brand{font-family:var(--serif);font-size:var(--3xl);color:var(--amber);letter-spacing:.08em;margin-bottom:4px;}
+.ld-sub{font-size:var(--sm);color:var(--mute);margin-bottom:32px;}
+.drop-zone{width:500px;max-width:100%;border:1px dashed var(--mute);padding:32px 24px;text-align:center;cursor:pointer;transition:all .2s;position:relative;margin-bottom:24px;}
+.drop-zone:hover,.drop-zone.over{border-color:var(--amber);background:var(--as);}
+.drop-zone input{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%;}
+.dz-icon{font-size:28px;color:var(--mute);margin-bottom:8px;}
+.dz-hint{font-size:var(--sm);color:var(--dim);margin-bottom:4px;}
+.dz-sub{font-size:var(--xs);color:var(--mute);}
+.drop-zone.over .dz-icon{color:var(--amber);}
+.ld-row{display:flex;gap:12px;margin-bottom:32px;flex-wrap:wrap;justify-content:center;}
+.acard{width:160px;border:1px solid var(--hair);background:var(--bg1);padding:12px;cursor:pointer;transition:all .15s;}
+.acard:hover{border-color:var(--amber);background:var(--as);}
+.acard-icon{font-size:18px;margin-bottom:8px;}
+.acard-title{font-size:var(--sm);color:var(--ink);font-weight:500;margin-bottom:4px;}
+.acard-desc{font-size:var(--xs);color:var(--mute);line-height:1.5;}
+.ld-steps{width:500px;max-width:100%;border:1px solid var(--hair);background:var(--bg1);}
+.ld-steps-ttl{padding:8px 12px;font-size:var(--xs);color:var(--mute);letter-spacing:.07em;text-transform:uppercase;border-bottom:1px solid var(--hair);}
+.ld-step{display:flex;gap:12px;padding:8px 12px;border-bottom:1px solid var(--hair);align-items:flex-start;}
+.ld-step:last-child{border-bottom:none;}
+.ld-step-n{font-family:var(--mono);font-size:var(--xs);color:var(--amber);background:var(--as);width:20px;height:20px;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px;}
+.ld-step-t{font-size:var(--sm);color:var(--dim);line-height:1.6;}
+.ld-step-t strong{color:var(--ink);}
+
+/* MODAL */
+#modal{position:fixed;inset:0;background:rgba(14,13,11,.92);z-index:200;display:flex;align-items:center;justify-content:center;padding:24px;}
+#modal.hidden{display:none;}
+.mbox{width:680px;max-width:100%;max-height:85vh;background:var(--bg1);border:1px solid var(--amber);display:flex;flex-direction:column;}
+.mbox-hd{display:flex;align-items:center;justify-content:space-between;padding:12px 20px;border-bottom:1px solid var(--hair);}
+.mbox-title{font-family:var(--serif);font-size:var(--md);color:var(--amber);}
+.mbox-close{background:none;border:1px solid var(--hair);color:var(--mute);cursor:pointer;width:28px;height:28px;font-size:14px;}
+.mbox-close:hover{border-color:var(--no);color:var(--no);}
+.mbox-body{padding:16px 20px;overflow-y:auto;flex:1;}
+.mbox-hint{font-size:var(--sm);color:var(--dim);margin-bottom:12px;line-height:1.7;}
+.prompt-box{background:var(--bg);border:1px solid var(--hair);padding:12px;font-family:var(--mono);font-size:10px;color:var(--dim);white-space:pre-wrap;max-height:420px;overflow-y:auto;line-height:1.6;}
+.mbox-ft{padding:12px 20px;border-top:1px solid var(--hair);display:flex;justify-content:flex-end;gap:8px;}
+.btn{font-family:var(--sans);font-size:var(--sm);padding:6px 14px;border:1px solid var(--hair);background:var(--bg2);color:var(--dim);cursor:pointer;transition:all .15s;}
+.btn:hover{border-color:var(--amber);color:var(--amber);}
+.btn-am{border-color:var(--amber);color:var(--amber);}
+.btn-am:hover{background:var(--as);}
+.btn-okc{border-color:var(--ok);color:var(--ok);background:rgba(138,181,115,.1);}
+
+/* TOPBAR */
+.topbar{display:flex;align-items:center;justify-content:space-between;padding:0 24px;height:56px;border-bottom:1px solid var(--hair);background:linear-gradient(to right, var(--bg1), var(--bg2));flex-shrink:0;z-index:10;box-shadow:0 2px 10px rgba(0,0,0,0.3);}
+.tb-l{display:flex;align-items:center;gap:16px;}
+.tb-brand{font-family:var(--serif);font-size:var(--lg);color:var(--amber);letter-spacing:.08em;font-weight:700;}
+.tb-sep{width:1px;height:24px;background:var(--hairL);}
+.tb-doc{font-size:var(--md);color:var(--ab);font-weight:600;max-width:400px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.tb-meta{display:flex;gap:16px;padding-left:16px;border-left:1px solid var(--hairL);font-family:var(--mono);font-size:var(--xs);color:var(--mute);}
+.tb-mv{color:var(--dim);}
+.tb-r{display:flex;align-items:center;gap:8px;}
+.save-ind{font-size:var(--xs);color:var(--whisper);transition:color .3s;}
+.save-ind.saved{color:var(--ok);}
+.prog-wrap{display:flex;align-items:center;gap:6px;}
+.prog-bar{width:120px;height:4px;background:var(--hair);border-radius:2px;overflow:hidden;}
+.prog-fill{height:100%;background:var(--amber);border-radius:2px;transition:width .3s;}
+.prog-fill.done{background:var(--ok);}
+.prog-txt{font-family:var(--mono);font-size:var(--xs);color:var(--mute);}
+
+/* LAYOUT */
+.layout{display:grid;grid-template-columns:240px 1fr 256px;gap:1px;background:var(--hair);flex:1;height:0;min-height:0;overflow:hidden;}
+
+/* SIDEBAR */
+.sidebar{background:var(--bg1);overflow-y:auto;height:100%;}
+.sb-ttl{padding:8px 12px;font-size:var(--xs);color:var(--mute);letter-spacing:.08em;text-transform:uppercase;border-bottom:1px solid var(--hair);}
+/* All nav nodes are equal weight, just different icons */
+.nav-node{display:flex;align-items:center;gap:6px;padding:6px 12px;cursor:pointer;transition:all .15s;border-left:2px solid transparent;min-height:30px;}
+.nav-node:hover{background:var(--bg2);}
+.nav-node.active{background:var(--as);border-left-color:var(--amber);}
+.nav-node-icon{font-size:10px;color:var(--whisper);flex-shrink:0;width:12px;text-align:center;}
+.nav-node.active .nav-node-icon{color:var(--amber);}
+.nav-node-label{font-size:var(--xs);color:var(--mute);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.nav-node.active .nav-node-label{color:var(--amber);}
+.nav-node-badge{font-family:var(--mono);font-size:10px;padding:1px 4px;border-radius:2px;flex-shrink:0;}
+.nb-ok{background:rgba(138,181,115,.15);color:var(--ok);}
+.nb-no{background:rgba(200,90,74,.15);color:var(--no);}
+.nb-q{background:rgba(201,147,57,.15);color:var(--qc);}
+.nb-p{background:rgba(107,140,168,.1);color:var(--cold);}
+.nb-note{background:rgba(212,162,62,.12);color:var(--amber);font-size:9px;}
+/* Epic group header */
+.nav-group{padding:5px 12px;font-size:var(--xs);font-weight:600;color:var(--amber);background:var(--bg2);border-top:1px solid var(--hair);border-bottom:1px solid var(--hair);letter-spacing:.03em;}
+/* Story indent */
+.nav-story-node{padding-left:24px;}
+
+/* MAIN */
+.main{background:var(--bg);display:flex;flex-direction:column;overflow:hidden;flex:1;}
+.main-inner{flex:1;display:flex;flex-direction:column;height:100%;overflow:hidden;}
+.view-panel{display:none;flex-direction:column;flex:1;height:100%;overflow:hidden;}
+.view-panel.active{display:flex;}
+
+/* Section view */
+.sec-view{flex:1;overflow-y:auto;padding:32px;}
+.sec-view h2{font-family:var(--serif);font-size:var(--2xl);color:var(--ink);margin-bottom:16px;padding-bottom:8px;border-bottom:1px solid var(--hair);}
+.sec-note-area{margin-top:24px;border-top:1px solid var(--hair);padding-top:20px;background:rgba(255,255,255,0.01);border-radius:8px;padding:20px;}
+.sec-note-lbl{font-size:var(--xs);color:var(--amber);letter-spacing:.1em;text-transform:uppercase;margin-bottom:10px;font-weight:700;display:flex;align-items:center;gap:6px;}
+.sec-note-lbl::before{content:'✎';font-size:14px;}
+.sec-note-in{width:100%;min-height:80px;background:var(--bg);border:1px solid var(--hair);color:var(--ink);font-family:var(--sans);font-size:var(--base);padding:12px;resize:none;outline:none;transition:all .2s;line-height:1.6;border-radius:4px;}
+.sec-note-in:hover{border-color:var(--hairL);background:rgba(255,255,255,0.02);}
+.sec-note-in:focus{border-color:var(--amber);background:var(--bg1);box-shadow:0 0 0 3px var(--as), inset 0 2px 4px rgba(0,0,0,0.5);}
+.sec-note-in::placeholder{color:var(--whisper);opacity:0.6;}
+
+/* Rich content blocks */
+.block-text{font-size:var(--base);color:var(--dim);line-height:1.8;margin-bottom:12px;white-space:pre-wrap;word-break:break-word;}
+.block-formula-display{text-align:center;padding:12px 0;margin:12px 0;overflow-x:auto;color:var(--ink);}
+.block-formula-inline{color:var(--ink);}
+.block-mermaid{margin:12px 0;background:var(--bg1);border:1px solid var(--hair);padding:16px;border-radius:4px;text-align:center;}
+.block-mermaid svg{max-width:100%;height:auto;}
+.block-table-wrap{overflow-x:auto;margin:12px 0;}
+.block-table{width:100%;border-collapse:collapse;font-size:var(--sm);}
+.block-table th{background:var(--bg2);color:var(--amber);padding:8px 12px;text-align:left;border:1px solid var(--hair);font-weight:500;font-size:var(--xs);letter-spacing:.04em;}
+.block-table td{padding:8px 12px;border:1px solid var(--hair);color:var(--dim);vertical-align:top;}
+.block-table tr:hover td{background:rgba(255,255,255,.02);}
+.code-wrapper{position:relative;background:#0b0b0b;border:1px solid var(--hair);border-radius:4px;margin:12px 0;overflow:hidden;}
+.code-wrapper::before{content:attr(data-lang);position:absolute;top:0;right:0;padding:2px 8px;font-size:10px;font-family:var(--mono);color:var(--amber);background:rgba(212,162,62,.1);border-bottom:1px solid var(--hair);border-left:1px solid var(--hair);text-transform:uppercase;pointer-events:none;}
+.code-wrapper pre{margin:0;padding:12px;overflow-x:auto;max-height:400px;}
+.code-wrapper code{font-family:var(--mono);font-size:12px;line-height:1.6;color:#ffca28;white-space:pre;}
+.copy-btn{position:absolute;bottom:8px;right:8px;padding:3px 8px;font-size:10px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);color:var(--whisper);border-radius:3px;cursor:pointer;opacity:0;transition:all .2s;}
+.code-wrapper:hover .copy-btn{opacity:1;}
+.copy-btn:hover{background:var(--amber);color:var(--bg);}
+
+/* Story view */
+.story-hd{padding:10px 20px;background:var(--bg2);border-bottom:1px solid var(--hair);display:flex;align-items:center;gap:12px;flex-shrink:0;}
+.story-id-b{font-family:var(--mono);font-size:var(--xs);color:var(--amber);}
+.story-title-t{font-size:var(--md);font-weight:700;color:var(--ink);flex:1;}
+.svote{display:flex;gap:8px;}
+.vbtn{font-size:var(--xs);font-weight:700;padding:6px 14px;border:1px solid rgba(255,255,255,0.05);cursor:pointer;transition:all .15s;background:rgba(255,255,255,0.03);backdrop-filter:blur(4px);border-radius:4px;}
+.vbtn-ok{color:var(--ok);border-color:rgba(138,181,115,.2);}
+.vbtn-ok:hover{background:rgba(138,181,115,.1);border-color:var(--ok);}
+.vbtn-ok.on{background:var(--ok);color:var(--bg);border-color:var(--ok);box-shadow:0 0 12px var(--ok);}
+.vbtn-q{color:var(--qc);border-color:rgba(201,147,57,.2);}
+.vbtn-q:hover{background:rgba(201,147,57,.1);border-color:var(--qc);}
+.vbtn-q.on{background:var(--qc);color:var(--bg);border-color:var(--qc);box-shadow:0 0 12px var(--qc);}
+.vbtn-no{color:var(--no);border-color:rgba(200,90,74,.2);}
+.vbtn-no:hover{background:rgba(200,90,74,.1);border-color:var(--no);}
+.vbtn-no.on{background:var(--no);color:var(--bg);border-color:var(--no);box-shadow:0 0 12px var(--no);}
+.story-body{flex:1;display:flex;flex-direction:column;overflow:hidden;background:var(--bg1);}
+.story-tabs{display:flex;background:var(--bg2);border-bottom:1px solid var(--hair);padding:0 20px;height:40px;align-items:center;flex-shrink:0;gap:4px;overflow-x:auto;}
+.stab{padding:0 16px;font-size:var(--sm);color:var(--mute);cursor:pointer;border-bottom:2px solid transparent;height:100%;display:flex;align-items:center;transition:all .15s;white-space:nowrap;flex-shrink:0;font-weight:500;}
+.stab:hover{color:var(--ink);background:rgba(255,255,255,0.02);}
+.stab.on{color:var(--amber);border-bottom-color:var(--amber);background:var(--as);}
+.stab.s-ok{color:var(--ok);}
+.stab.s-no{color:var(--no);}
+.stab.s-q{color:var(--qc);}
+.stab-content{display:none;flex:1;overflow-y:auto;padding:16px;}
+.stab-content.on{display:flex;flex-direction:column;}
+.role-blk{background:var(--bg2);border-left:2px solid var(--amber);padding:8px 12px;margin-bottom:12px;font-size:var(--base);color:var(--dim);line-height:1.7;}
+.role-blk em{color:var(--amber);font-style:normal;font-weight:500;}
+.story-note-wrap{margin-top:20px;border-top:1px solid var(--hair);padding-top:16px;}
+.story-note-lbl{font-size:var(--xs);color:var(--amber);letter-spacing:.1em;text-transform:uppercase;margin-bottom:10px;font-weight:700;display:flex;align-items:center;gap:6px;}
+.story-note-lbl::before{content:'✎';font-size:14px;}
+.story-note-in{width:100%;min-height:80px;background:var(--bg);border:1px solid var(--hair);color:var(--ink);font-family:var(--sans);font-size:var(--base);padding:12px;resize:none;outline:none;transition:all .2s;line-height:1.6;border-radius:4px;}
+.story-note-in:hover{border-color:var(--hairL);background:rgba(255,255,255,0.02);}
+.story-note-in:focus{border-color:var(--amber);background:var(--bg1);box-shadow:0 0 0 3px var(--as), inset 0 2px 4px rgba(0,0,0,0.5);}
+.story-note-in::placeholder{color:var(--whisper);opacity:0.6;}
+.sub-ttl{font-size:var(--xs);color:var(--mute);letter-spacing:.07em;text-transform:uppercase;margin-bottom:8px;display:flex;align-items:center;gap:8px;}
+.sub-ttl::after{content:'';flex:1;height:1px;background:var(--hair);}
+
+/* Tasks */
+.task-item{display:block;padding:8px 20px;border-bottom:1px solid var(--hair);position:relative;padding-right:76px;}
+.task-item.deleted .task-txt{text-decoration:line-through;color:var(--whisper);}
+.task-row{display:flex;align-items:flex-start;gap:8px;}
+.task-id-b{font-family:var(--mono);font-size:10px;color:var(--mute);background:rgba(255,255,255,.04);padding:1px 5px;border-radius:3px;flex-shrink:0;margin-top:3px;}
+.task-txt{flex:1;font-size:var(--base);color:var(--dim);word-break:break-word;min-height:20px;}
+.task-ctrl{position:absolute;top:8px;right:12px;display:flex;gap:4px;}
+.task-edit-btn,.task-del-btn{font-size:var(--xs);color:var(--whisper);cursor:pointer;padding:2px 6px;border:1px solid transparent;border-radius:3px;transition:all .2s;background:rgba(0,0,0,.2);}
+.task-edit-btn:hover{border-color:var(--amber);color:var(--amber);}
+.task-del-btn:hover{border-color:var(--no);color:var(--no);}
+.task-add-row{display:flex;align-items:center;gap:6px;margin-top:8px;padding:4px 20px 0;}
+.task-add-in{flex:1;background:transparent;border:none;border-bottom:1px dashed var(--hair);color:var(--dim);font-size:var(--sm);outline:none;padding:4px 0;}
+.task-add-in:focus{border-bottom-color:var(--amber);color:var(--ink);}
+.task-add-btn{color:var(--amber);cursor:pointer;font-size:var(--xs);font-weight:700;padding:2px 8px;border:1px solid var(--as);border-radius:3px;flex-shrink:0;}
+.task-add-btn:hover{background:var(--as);}
+
+/* AC */
+.ac-item{border:1px solid var(--hair);margin-bottom:8px;background:var(--bg2);}
+.ac-item.is-ok{border-color:rgba(138,181,115,.4);}
+.ac-item.is-no{border-color:rgba(200,90,74,.4);}
+.ac-item.is-q{border-color:rgba(201,147,57,.4);}
+.ac-hd{display:flex;align-items:center;gap:8px;padding:8px 12px;border-bottom:1px solid var(--hair);}
+.ac-id{font-family:var(--mono);font-size:var(--xs);color:var(--mute);min-width:32px;}
+.ac-name{flex:1;font-size:var(--base);font-weight:500;}
+.ac-acts{display:flex;gap:2px;}
+.ac-btn{font-size:var(--xs);font-weight:700;padding:3px 10px;border:1px solid;cursor:pointer;transition:all .15s;background:var(--bg2);}
+.ac-ok{color:var(--ok);border-color:rgba(138,181,115,.3);}
+.ac-ok:hover,.ac-ok.on{background:var(--ok);color:var(--bg);border-color:var(--ok);}
+.ac-q{color:var(--qc);border-color:rgba(201,147,57,.3);}
+.ac-q:hover,.ac-q.on{background:var(--qc);color:var(--bg);border-color:var(--qc);}
+.ac-no{color:var(--no);border-color:rgba(200,90,74,.3);}
+.ac-no:hover,.ac-no.on{background:var(--no);color:var(--bg);border-color:var(--no);}
+.ac-body{padding:12px 20px;font-size:14px;}
+.gwt{display:grid;grid-template-columns:72px 1fr;gap:12px;margin-bottom:8px;color:var(--dim);line-height:1.6;}
+.gwt-lbl{font-family:var(--mono);font-size:11px;color:var(--whisper);padding-top:3px;text-transform:uppercase;letter-spacing:.1em;}
+.ac-qbox{margin-top:8px;display:none;}
+.ac-qbox.show{display:block;}
+.ac-qin{width:100%;height:72px;background:var(--bg3);border:1px solid var(--hair);color:var(--ink);padding:8px;font-family:var(--sans);font-size:var(--sm);resize:none;outline:none;}
+.ac-qin:focus{border-color:var(--amber);}
+
+/* RIGHT PANEL */
+.rp{background:var(--bg1);overflow-y:auto;height:100%;}
+.rp-sec{padding:12px;border-bottom:1px solid var(--hair);}
+.rp-ttl{padding:6px 0;font-size:var(--xs);color:var(--mute);letter-spacing:.08em;text-transform:uppercase;margin-bottom:6px;}
+.stat-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;}
+.stat-lbl{font-size:var(--sm);color:var(--dim);}
+.stat-val{font-family:var(--mono);font-weight:700;}
+.c-ok{color:var(--ok);}.c-no{color:var(--no);}.c-q{color:var(--qc);}.c-cold{color:var(--cold);}
+.cl-item{display:flex;gap:6px;padding:6px 0;border-bottom:1px solid var(--hair);font-size:var(--xs);}
+.cl-item:last-child{border-bottom:none;}
+.cl-id{font-family:var(--mono);color:var(--qc);flex-shrink:0;}
+.cl-body{color:var(--dim);line-height:1.5;}
+.btn-exp{width:100%;padding:10px;background:var(--bg2);border:1px solid var(--hair);color:#d49a00;cursor:pointer;font-weight:700;margin-top:8px;transition:all .2s;font-size:var(--sm);}
+.btn-exp:hover{background:var(--bg3);border-color:#d49a00;}
+.btn-exp-md{width:100%;padding:8px;background:var(--bg2);border:1px solid var(--hair);color:var(--cold);cursor:pointer;margin-top:6px;transition:all .2s;font-size:var(--sm);}
+.btn-exp-md:hover{border-color:var(--cold);background:rgba(107,140,168,.1);}
+.exp-out{margin-top:8px;background:#000;padding:8px;font-family:var(--mono);font-size:10px;color:#0f0;white-space:pre-wrap;display:none;max-height:160px;overflow-y:auto;}
+.exp-out.show{display:block;}
+</style>
+</head>
+<body>
+
+<!-- LOAD SCREEN -->
+<div id="scr-load">
+  <div class="ld-brand">◆ Epic-Story 评审台</div>
+  <div class="ld-sub">拖入 JSON 文件，或使用以下选项</div>
+  <div class="drop-zone" id="dz">
+    <input type="file" accept=".json,.html" onchange="readAndLoad(this.files[0])">
+    <div class="dz-icon">⬇</div>
+    <div class="dz-hint">拖拽 JSON 或 HTML 评审文件到此，或点击选择</div>
+    <div class="dz-sub">支持 Agent 输出的 JSON，也支持 parse_epic.py 生成的 HTML</div>
+  </div>
+  <div class="ld-row">
+    <div class="acard" onclick="showModal()"><div class="acard-icon">📋</div><div class="acard-title">复制 Agent 提示词</div><div class="acard-desc">粘贴给 Claude，直接生成对应格式 JSON</div></div>
+    <div class="acard" onclick="dlTpl()"><div class="acard-icon">📥</div><div class="acard-title">下载 JSON 模板</div><div class="acard-desc">空白结构模板，按格式填写</div></div>
+    <div class="acard" onclick="loadDemo()"><div class="acard-icon">🎯</div><div class="acard-title">加载示例文档</div><div class="acard-desc">用 E8 示例体验完整评审流程</div></div>
+  </div>
+  <div class="ld-steps">
+    <div class="ld-steps-ttl">主流程（推荐）</div>
+    <div class="ld-step"><div class="ld-step-n">1</div><div class="ld-step-t"><strong>Claude Code 触发 epic-story-doc skill</strong> → 自动输出 draft.json + draft.md</div></div>
+    <div class="ld-step"><div class="ld-step-n">2</div><div class="ld-step-t">运行 <strong>inject.py draft.json</strong> → 生成自包含 review.html，双击打开即进入评审</div></div>
+    <div class="ld-step"><div class="ld-step-n">3</div><div class="ld-step-t">逐 AC 审核、标注疑问、新增或修改任务、批注章节内容</div></div>
+    <div class="ld-step"><div class="ld-step-n">4</div><div class="ld-step-t"><strong>导出审核 JSON</strong> → 粘贴给 Claude，触发全量重生成最终 MD 文档</div></div>
+  </div>
+</div>
+
+<!-- MODAL -->
+<div id="modal" class="hidden">
+  <div class="mbox">
+    <div class="mbox-hd"><div class="mbox-title">Agent 提示词（完整版）</div><button class="mbox-close" onclick="hideModal()">✕</button></div>
+    <div class="mbox-body">
+      <div class="mbox-hint">以下提示词已包含完整 JSON Schema 和输出规则，复制后直接粘贴给 Claude，无需任何补充，末尾附上需求描述即可。</div>
+      <div class="prompt-box" id="prompt-box"></div>
+    </div>
+    <div class="mbox-ft"><button class="btn" onclick="hideModal()">关闭</button><button class="btn btn-am" id="copy-btn" onclick="doCopy()">复制提示词</button></div>
+  </div>
+</div>
+
+<!-- APP -->
+<div class="topbar" id="topbar" style="display:none">
+  <div class="tb-l">
+    <div class="tb-brand">◆ 评审台</div>
+    <div class="tb-sep"></div>
+    <div class="tb-doc" id="tb-doc">...</div>
+    <div class="tb-meta"><span>版本 <span class="tb-mv" id="tb-ver">-</span></span><span>日期 <span class="tb-mv" id="tb-date">-</span></span></div>
+  </div>
+  <div class="tb-r">
+    <div class="save-ind" id="save-ind">● 自动保存</div>
+    <div class="prog-wrap"><div class="prog-bar"><div class="prog-fill" id="prog-fill" style="width:0%"></div></div><div class="prog-txt" id="prog-txt">0 / 0 AC</div></div>
+    <button class="btn" onclick="switchDoc()">切换文档</button>
+    <button class="btn" onclick="resetAll()">重置</button>
+    <button class="btn btn-am" onclick="exportJSON()">导出 JSON →</button>
+  </div>
+</div>
+
+<div class="layout" id="layout" style="display:none">
+  <div class="sidebar"><div class="sb-ttl">文档结构</div><div id="nav-tree"></div></div>
+  <div class="main"><div class="main-inner" id="main-content"></div></div>
+  <div class="rp">
+    <div class="rp-sec"><div class="rp-ttl">审核统计</div>
+      <div class="stat-row"><span class="stat-lbl">AC 通过</span><span class="stat-val c-ok" id="s-ok">0</span></div>
+      <div class="stat-row"><span class="stat-lbl">AC 疑问</span><span class="stat-val c-q" id="s-q">0</span></div>
+      <div class="stat-row"><span class="stat-lbl">AC 拒绝</span><span class="stat-val c-no" id="s-no">0</span></div>
+      <div class="stat-row"><span class="stat-lbl">待审核</span><span class="stat-val c-cold" id="s-p">0</span></div>
+    </div>
+    <div class="rp-sec"><div class="rp-ttl">待处理项</div><div id="cl-list"><span style="font-size:var(--xs);color:var(--whisper)">疑问/拒绝的 AC 汇聚于此</span></div></div>
+    <div class="rp-sec"><div class="rp-ttl">导出</div>
+      <button class="btn-exp" onclick="exportJSON()">▶ 导出审核 JSON</button>
+      <button class="btn-exp-md" onclick="exportMD()">▶ 导出 Markdown 文档</button>
+      <div class="exp-out" id="exp-out"></div>
+    </div>
+  </div>
+</div>
+
+<script defer src="https://lib.baomitu.com/KaTeX/0.16.9/dist/katex.min.js"></script>
+<script defer src="https://lib.baomitu.com/KaTeX/0.16.9/dist/contrib/auto-render.min.js"
+  onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<script defer src="https://lib.baomitu.com/mermaid/10.9.0/mermaid.min.js"></script>
+<script>
+// ============================================================
+// PROMPT
+// ============================================================
+const PROMPT = `你是一位工程文档专家。请将以下需求内容转换为 Epic-Story 结构化 JSON，供评审台直接加载。
+
+【输出规则】
+- 只输出 JSON，不要任何其他内容（不要 markdown 代码块、不要说明文字、不要注释）
+- JSON 必须可被 JSON.parse() 直接解析
+- 不确定的字段填写 "TBD"，不编造数据
+- 每个 Story 至少 2 条 AC，每条 AC 必须是可测试的 Given-When-Then 格式
+- 如文档包含公式，使用 $...$ (行内) 或 $$....$$ (块级) LaTeX 语法
+- 如文档包含流程图/架构图，使用 Mermaid 语法写在 type:mermaid 的 block 中
+
+【JSON 结构】
+{
+  "title": "文档标题",
+  "version": "v0.1",
+  "date": "YYYY-MM-DD",
+  "sections": [
+    {
+      "id": "background",
+      "title": "背景",
+      "blocks": [
+        { "type": "text", "content": "背景说明文字" }
+      ]
+    },
+    {
+      "id": "objective",
+      "title": "目标",
+      "blocks": [
+        { "type": "text", "content": "目标描述" }
+      ]
+    }
+  ],
+  "risks": [
+    { "risk": "风险描述", "impact": "高|中|低", "prob": "高|中|低", "mitigation": "缓解措施" }
+  ],
+  "milestones": [
+    { "name": "里程碑名称", "date": "YYYY-MM-DD", "deliverable": "交付物" }
+  ],
+  "epics": [
+    {
+      "id": "E1",
+      "title": "Epic 标题",
+      "desc": "Epic 描述：交付什么独立价值，预计耗时",
+      "stories": [
+        {
+          "id": "E1-S1",
+          "title": "Story 标题",
+          "role": {
+            "as": "具体角色（如：scf-collector，不写「用户」）",
+            "want": "可观察的功能行为",
+            "value": "具体业务价值，不写空话"
+          },
+          "tasks": [
+            { "id": "E1-S1-T1", "text": "可执行任务描述" }
+          ],
+          "acs": [
+            {
+              "id": "AC1",
+              "name": "AC 名称",
+              "given": "前置条件",
+              "when": "触发动作",
+              "then": "可验证的预期结果（含具体数值/状态）"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
+
+【block 类型说明】
+- type: "text"     → 普通文本，支持 $formula$ 行内公式
+- type: "formula"  → 独立公式块，content 为 LaTeX（不含 $$ 符号）
+- type: "mermaid"  → Mermaid 图表，content 为 mermaid 语法
+- type: "table"    → 表格，content 为二维数组：[["列1","列2"], ["值1","值2"], ...]
+- type: "code"     → 代码块，content 为代码字符串，lang 为语言名（如 "sql","python"）
+
+【重生成规则（收到 review_result.json 时）】
+- status=rejected/questioned 的 AC：根据 question 字段内容修改后重新生成
+- removed=true 的 Task：从文档中删除
+- modified_text 不为 null 的 Task：使用修改后的文本
+- added_tasks 中的内容：作为新 Task 插入对应 Story
+- section_comments 中的内容：在对应章节末尾注明评审意见
+- story_comments 不为空的 Story：在 Story 描述后附注评审意见
+- 版本号按 agent_instruction 字段指示递增
+- 变更记录表中新增一行，注明评审日期和操作内容
+
+---
+以下是我的需求文档：
+`;
+
+// ============================================================
+// STATE
+// ============================================================
+let DOC = null;
+let S = {
+  acSt:{}, acQ:{},
+  storyVote:{}, storyNote:{},
+  taskRm:{}, taskEdit:{}, addedTasks:{},
+  secNote:{}, secTab:{},
+  riskOverride:{}, milestoneEdit:{},
+  activeVid: null, storyTab:{}
+};
+function sKey(){ return DOC ? 'rev4_'+(DOC.title||'doc') : null; }
+function save(){
+  if(!DOC) return;
+  try{ localStorage.setItem(sKey(), JSON.stringify(S)); } catch(e){}
+  const el = document.getElementById('save-ind');
+  el.textContent = '● 已保存'; el.classList.add('saved');
+  setTimeout(()=>{ el.classList.remove('saved'); el.textContent = '● 自动保存'; }, 1800);
+}
+function loadSaved(){
+  if(!DOC) return;
+  try{ const d = localStorage.getItem(sKey()); if(d) S = JSON.parse(d); } catch(e){}
+}
+
+// ============================================================
+// NORMALIZE — accept both new schema and legacy epics-only
+// ============================================================
+function normalize(raw){
+  const doc = { title: raw.title||'Untitled', version: raw.version||'v0.1', date: raw.date||'', nodes:[], risks: raw.risks||[], milestones: raw.milestones||[] };
+
+  // Build flat node list: {type:'section'|'epic-group'|'story', ...}
+  // 1. top-level sections
+  (raw.sections||[]).forEach(sec=>{
+    doc.nodes.push({ type:'section', id:sec.id||sec.title, title:sec.title, blocks:sec.blocks||[] });
+  });
+
+  // 2. If no sections but has background etc, synthesize
+  if(!raw.sections && (raw.background||raw.objective||raw.scope)){
+    if(raw.background) doc.nodes.push({ type:'section', id:'background', title:'背景', blocks:[{type:'text',content:raw.background}] });
+    if(raw.objective)  doc.nodes.push({ type:'section', id:'objective',  title:'目标', blocks:[{type:'text',content:raw.objective}] });
+    if(raw.scope)      doc.nodes.push({ type:'section', id:'scope',      title:'范围', blocks:[{type:'text',content:raw.scope}] });
+    if(raw.out_of_scope) doc.nodes.push({ type:'section', id:'out_of_scope', title:'非目标', blocks:[{type:'text',content:raw.out_of_scope}] });
+  }
+
+  // 3. Epics → group + stories
+  (raw.epics||[]).forEach(epic=>{
+    doc.nodes.push({ type:'epic-group', id:'epic-'+epic.id, title:epic.id+' '+epic.title, desc:epic.desc||'' });
+    (epic.stories||[]).forEach(s=>{
+      doc.nodes.push({
+        type:'story', id:s.id, title:s.title,
+        role: s.role||null, desc: s.desc||'',
+        tasks:(s.tasks||[]).map(t=>({id:t.id, text:t.text})),
+        acs:(s.acs||[]).map(ac=>({id:ac.id, title:ac.name||ac.id, given:ac.given||'', when:ac.when||'', then:ac.then||''}))
+      });
+    });
+  });
+
+  // 4. Risks + Milestones as sections if exist
+  if(doc.risks.length){
+    const blocks = doc.risks.map(r=>({ type:'table', content:[['风险','影响','概率','缓解措施'],[r.risk,r.impact,r.prob,r.mitigation]] }));
+    // Merge into one table
+    const header = ['风险','影响','概率','缓解措施'];
+    const rows = doc.risks.map(r=>[r.risk,r.impact,r.prob,r.mitigation]);
+    doc.nodes.push({ type:'section', id:'risks', title:'风险与缓解', blocks:[{type:'table', content:[header,...rows]}] });
+  }
+  if(doc.milestones.length){
+    const header = ['里程碑','计划日期','交付物'];
+    const rows = doc.milestones.map(m=>[m.name,m.date,m.deliverable]);
+    doc.nodes.push({ type:'section', id:'milestones', title:'里程碑', blocks:[{type:'table', content:[header,...rows]}] });
+  }
+
+  // 5. Legacy sections format from parse_epic.py
+  if(raw.sections && raw.sections.length && !raw.epics && raw.sections.some(s=>s.stories&&s.stories.length)){
+    doc.nodes = [];
+    raw.sections.forEach(sec=>{
+      if(sec.stories && sec.stories.length){
+        doc.nodes.push({ type:'epic-group', id:'sec-'+sec.title, title:sec.title, desc:sec.content||'' });
+        sec.stories.forEach(s=>{
+          doc.nodes.push({
+            type:'story', id:s.id, title:s.title,
+            role:null, desc:s.desc||'',
+            tasks:(s.tasks||[]).map(t=>({id:t.id||'T'+Math.random(), text:t.text})),
+            acs:(s.acs||[]).map(ac=>({id:ac.id, title:ac.title||ac.id, given:ac.given||'', when:ac.when||'', then:ac.then||''}))
+          });
+        });
+      } else {
+        doc.nodes.push({ type:'section', id:'sec-'+sec.title, title:sec.title, blocks:[{type:'text',content:sec.content||''}] });
+      }
+    });
+  }
+
+  return doc;
+}
+
+// ============================================================
+// LOAD
+// ============================================================
+function showModal(){ document.getElementById('prompt-box').textContent = PROMPT; document.getElementById('modal').classList.remove('hidden'); }
+function hideModal(){ document.getElementById('modal').classList.add('hidden'); }
+function doCopy(){
+  navigator.clipboard.writeText(PROMPT).then(()=>{
+    const b = document.getElementById('copy-btn'); b.textContent = '✓ 已复制'; b.className = 'btn btn-okc';
+    setTimeout(()=>{ b.textContent = '复制提示词'; b.className = 'btn btn-am'; }, 2000);
+  });
+}
+function dlTpl(){
+  const t = { title:"文档标题", version:"v0.1", date: new Date().toISOString().slice(0,10),
+    sections:[{id:"background",title:"背景",blocks:[{type:"text",content:"TBD"}]},{id:"objective",title:"目标",blocks:[{type:"text",content:"TBD"}]}],
+    risks:[], milestones:[],
+    epics:[{id:"E1",title:"Epic标题",desc:"描述",stories:[{id:"E1-S1",title:"Story标题",role:{as:"角色",want:"功能",value:"价值"},tasks:[{id:"E1-S1-T1",text:"任务"}],acs:[{id:"AC1",name:"名称",given:"前置",when:"动作",then:"结果"}]}]}]
+  };
+  const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([JSON.stringify(t,null,2)],{type:'application/json'})); a.download = 'epic_story_template.json'; a.click();
+}
+
+function readAndLoad(f){
+  if(!f) return;
+  const r = new FileReader();
+  r.onerror = ()=>alert('文件读取失败，请重试。');
+  r.onload = e=>{
+    const text = e.target.result;
+    if(f.name.endsWith('.json')){
+      let parsed;
+      try{ const clean = text.charCodeAt(0)===0xFEFF ? text.slice(1) : text; parsed = JSON.parse(clean); }
+      catch(err){ alert('JSON 格式错误：\n'+err.message); return; }
+      try{ loadDoc(parsed); } catch(err){ console.error(err); alert('文档加载失败：\n'+err.message); }
+    } else if(f.name.endsWith('.html')){
+      const m = text.match(/const DOC_DATA\s*=\s*(\{[\s\S]*?\});\s*\n/);
+      if(!m){ alert('未找到 DOC_DATA，请确认是 parse_epic.py 生成的评审 HTML。'); return; }
+      try{ loadDoc(JSON.parse(m[1])); } catch(err){ alert('解析失败：'+err.message); }
+    } else { alert('请选择 .json 或 .html 文件'); }
+  };
+  r.readAsText(f, 'UTF-8');
+}
+
+const dz = document.getElementById('dz');
+['dragenter','dragover'].forEach(ev=>dz.addEventListener(ev,e=>{e.preventDefault();dz.classList.add('over');}));
+['dragleave','drop'].forEach(ev=>dz.addEventListener(ev,e=>{e.preventDefault();dz.classList.remove('over');}));
+dz.addEventListener('drop',e=>{ readAndLoad(e.dataTransfer.files[0]); });
+
+function loadDemo(){
+  const d = {"title":"[Epic E8] 复权因子存储与计算方案重设计","version":"v0.1","date":"2026-05-13","sections":[{"id":"background","title":"背景","blocks":[{"type":"text","content":"当前 stock_adjust_factor 存在字段语义错误（前复权因子不可静态存储）和存储冗余（每日全量写入）问题。核心判断：累积后复权因子是唯一适合持久化的基础量，前复权价格应实时计算。"},{"type":"formula","content":"P_{adj}(t) = P_{raw}(t) \\times \\frac{F_{latest}}{F(t)}"},{"type":"text","content":"其中 $F(t)$ 为 $t$ 日的累积后复权因子，$F_{latest}$ 为最新因子值。"}]},{"id":"objective","title":"目标","blocks":[{"type":"table","content":[["指标","目标值"],["记录数压缩","90%+"],["废弃字段","fore_adjust_factor"],["复权计算误差","< 1e-3"]]}]},{"id":"algo","title":"核心算法约定","blocks":[{"type":"text","content":"变动检测采用浮点精度阈值 $\\epsilon = 10^{-8}$，两次因子之差绝对值小于该阈值时视为未变动。"},{"type":"mermaid","content":"flowchart LR\n    A[采集新因子] --> B{与最新库存值之差 < ε?}\n    B -->|是| C[跳过写入]\n    B -->|否| D[INSERT 新记录]"}]}],"risks":[{"risk":"压缩脚本误删变动点","impact":"高","prob":"低","mitigation":"执行前强制备份；压缩前后对比变动点总数"},{"risk":"下游 legacy 代码仍读 fore_adjust_factor","impact":"高","prob":"高","mitigation":"字段 comment 标记废弃，待独立 Story 修复"}],"milestones":[{"name":"M1 变动检测上线","date":"TBD","deliverable":"SCF 变动检测逻辑上线"},{"name":"M2 历史数据修复","date":"TBD","deliverable":"历史数据修复与冗余压缩完成"},{"name":"M3 深度审计","date":"TBD","deliverable":"深度审计报告输出，异常率达标"}],"epics":[{"id":"E8","title":"复权因子存储与计算方案重设计","desc":"将采集侧从每日全量写入改为仅写入变动事件，并规范字段语义为累积后复权因子。","stories":[{"id":"E8-S1","title":"变动检测写入","role":{"as":"scf-collector","want":"在写入前比对最新库存值，仅当因子变化时 INSERT","value":"消除冗余记录，使每行代表一个真实的除权除息事件"},"tasks":[{"id":"E8-S1-T1","text":"修改 dao.py 查询最新因子逻辑"},{"id":"E8-S1-T2","text":"实现仅在变动时执行 INSERT 的判断逻辑"},{"id":"E8-S1-T3","text":"引入 1e-8 浮点精度比对阈值"}],"acs":[{"id":"AC1","name":"幂等性校验","given":"数据库中已存在相同因子记录","when":"执行 save_adj_factor","then":"记录数不增加，返回 False"},{"id":"AC2","name":"变动捕获校验","given":"采集到新的除权因子","when":"执行 save_adj_factor","then":"插入新记录且 fore_adjust_factor 为 NULL，返回 True"}]},{"id":"E8-S2","title":"字段废弃标记","role":{"as":"DB Auditor","want":"在表结构上明确标记 fore_adjust_factor 为废弃","value":"防止后续新代码误读该列"},"tasks":[{"id":"E8-S2-T1","text":"执行 DDL 修改字段注释"},{"id":"E8-S2-T2","text":"更新 TABLES_INDEX.md 文档说明"}],"acs":[{"id":"AC1","name":"元数据审计","given":"DDL 执行完成","when":"查询表字段 Comment","then":"包含\u300c已废弃\u300d字样"},{"id":"AC2","name":"文档同步校验","given":"文档更新完成","when":"查阅 TABLES_INDEX.md","then":"包含字段废弃原因及替代公式说明"}]},{"id":"E8-S3","title":"字段回填","role":{"as":"Data Quality Steward","want":"将历史空值回填为 adjust_factor 值","value":"消除字段空值对下游 legacy 查询的影响"},"tasks":[{"id":"E8-S3-T1","text":"执行分批回填 SQL（每次 10000 行）"},{"id":"E8-S3-T2","text":"执行回填后空值验证 SQL"}],"acs":[{"id":"AC1","name":"空值审计","given":"回填脚本执行完毕","when":"统计 remaining_nulls","then":"结果为 0"},{"id":"AC2","name":"逻辑一致性","given":"存在 legacy 记录","when":"脚本运行","then":"back_adjust_factor 成功同步 adjust_factor 值"}]},{"id":"E8-S4","title":"冗余记录压缩","role":{"as":"Data Quality Steward","want":"删除因子无变化的冗余历史行","value":"使历史数据符合变动事件存储规范"},"tasks":[{"id":"E8-S4-T1","text":"执行数据库备份（mysqldump）"},{"id":"E8-S4-T2","text":"编写并运行 Python 压缩脚本"},{"id":"E8-S4-T3","text":"记录全量压缩日志"}],"acs":[{"id":"AC1","name":"压缩效果审计","given":"压缩脚本执行完毕","when":"查询相邻重复行","then":"结果为 0"},{"id":"AC2","name":"完整性校验","given":"已知除权日期","when":"查询压缩后数据","then":"变动点记录被准确保留"}]},{"id":"E8-S5","title":"抽样对齐与校验","role":{"as":"Data Quality Steward","want":"通过抽样对比验证算法和数据准确性","value":"确认本地数据与 Tushare 权威数据的一致性"},"tasks":[{"id":"E8-S5-T1","text":"抽取 100 只股票进行全量对比"},{"id":"E8-S5-T2","text":"执行 500 个随机样本的前复权计算校验"},{"id":"E8-S5-T3","text":"输出审计 CSV 报告"}],"acs":[{"id":"AC1","name":"算法精度校验","given":"500 个随机样本","when":"对比本地计算与官方价格","then":"异常率 < 0.2%"},{"id":"AC2","name":"报告输出校验","given":"审计脚本运行","when":"检查输出文件","then":"生成包含详细对比结果的 CSV 报告"}]}]}]};
+  loadDoc(d);
+}
+
+function loadDoc(raw){
+  DOC = normalize(raw);
+  S = { acSt:{}, acQ:{}, storyVote:{}, storyNote:{}, taskRm:{}, taskEdit:{}, addedTasks:{}, secNote:{}, riskOverride:{}, milestoneEdit:{}, activeVid:null, storyTab:{} };
+  loadSaved();
+  document.getElementById('scr-load').classList.add('hidden');
+  document.getElementById('topbar').style.display = 'flex';
+  document.getElementById('layout').style.display = 'grid';
+  document.getElementById('tb-doc').textContent = DOC.title;
+  document.getElementById('tb-ver').textContent = DOC.version||'v0.1';
+  document.getElementById('tb-date').textContent = DOC.date||'';
+  renderAll();
+  // Init mermaid after render
+  setTimeout(()=>{ 
+    if(window.mermaid) {
+      mermaid.initialize({ useWorker: false,  startOnLoad: false, theme: 'dark', useWorker: false });
+      mermaid.init(undefined, document.querySelectorAll('.mermaid')); 
+    }
+  }, 200);
+  // Re-render KaTeX
+  setTimeout(()=>{ if(window.renderMathInElement) renderMathInElement(document.getElementById('main-content'),{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]}); }, 300);
+}
+
+function switchDoc(){
+  if(!confirm('切换文档？进度已自动保存。')) return;
+  DOC = null;
+  document.getElementById('topbar').style.display = 'none';
+  document.getElementById('layout').style.display = 'none';
+  document.getElementById('scr-load').classList.remove('hidden');
+}
+function resetAll(){
+  if(!confirm('重置所有审核状态？')) return;
+  S = { acSt:{}, acQ:{}, storyVote:{}, storyNote:{}, taskRm:{}, taskEdit:{}, addedTasks:{}, secNote:{}, riskOverride:{}, milestoneEdit:{}, activeVid:null, storyTab:{} };
+  save(); renderAll();
+}
+
+// ============================================================
+// RENDER
+// ============================================================
+function allStories(){ return DOC.nodes.filter(n=>n.type==='story'); }
+function findNode(id){ return DOC.nodes.find(n=>n.id===id); }
+function storySt(sid){
+  if(S.storyVote[sid]) return S.storyVote[sid];
+  const node = findNode(sid); if(!node) return 'pending';
+  const sts = (node.acs||[]).map(ac=>S.acSt[`${sid}-${ac.id}`]);
+  if(sts.includes('no')) return 'no';
+  if(sts.includes('q')) return 'q';
+  if(sts.length && sts.every(s=>s==='ok')) return 'ok';
+  return 'pending';
+}
+
+function renderAll(){ renderNav(); renderViews(); updateStats(); }
+
+function renderNav(){
+  let h = '';
+  DOC.nodes.forEach(node=>{
+    if(node.type === 'epic-group'){
+      h += `<div class="nav-group">${node.title}</div>`;
+    } else if(node.type === 'story'){
+      const st = storySt(node.id);
+      const bc = st==='ok'?'nb-ok':st==='no'?'nb-no':st==='q'?'nb-q':'nb-p';
+      const bl = st==='ok'?'✓':st==='no'?'✕':st==='q'?'⚠':'·';
+      const cur = S.activeVid===`story-${node.id}`?'active':'';
+      const hasNote = S.storyNote[node.id] ? ' <span class="nav-node-badge nb-note">注</span>' : '';
+      h += `<div class="nav-node nav-story-node ${cur}" id="nav-${node.id}" onclick="selView('story-${node.id}')">
+        <span class="nav-node-icon">◦</span>
+        <span class="nav-node-label">${node.id} ${node.title}</span>
+        ${hasNote}<span class="nav-node-badge ${bc}">${bl}</span>
+      </div>`;
+    } else {
+      // section
+      const cur = S.activeVid===`sec-${node.id}`?'active':'';
+      const hasNote = S.secNote[node.id] ? ' <span class="nav-node-badge nb-note">注</span>' : '';
+      h += `<div class="nav-node ${cur}" id="nav-sec-${node.id}" onclick="selView('sec-${node.id}')">
+        <span class="nav-node-icon">§</span>
+        <span class="nav-node-label">${node.title}</span>
+        ${hasNote}
+      </div>`;
+    }
+  });
+  document.getElementById('nav-tree').innerHTML = h;
+}
+
+function renderViews(){
+  let h = '';
+  DOC.nodes.forEach(node=>{
+    if(node.type === 'epic-group'){
+      h += `<div class="view-panel" id="view-sec-epic-${node.id}">
+        <div class="sec-view"><h2>${node.title}</h2>
+          ${node.desc ? `<div class="block-text">${node.desc}</div>` : ''}
+        </div></div>`;
+    } else if(node.type === 'section'){
+      h += renderSection(node);
+    } else if(node.type === 'story'){
+      h += renderStoryPanel(node);
+    }
+  });
+  if(!S.activeVid){
+    const first = DOC.nodes.find(n=>n.type==='story'||n.type==='section');
+    if(first) S.activeVid = (first.type==='story'?'story-':'sec-') + first.id;
+  }
+  document.getElementById('main-content').innerHTML = h;
+  selView(S.activeVid, false);
+}
+
+function renderSection(node){
+  const noteVal = S.secNote[node.id]||'';
+  let blocksHtml = (node.blocks||[]).map(b=>renderBlock(b)).join('');
+  const activeTab = S.secTab && S.secTab[node.id] ? S.secTab[node.id] : 'content';
+  const tabs = `<div class="stab ${activeTab==='content'?'on':''}" onclick="switchSecTab('${node.id}','content')">章节内容</div>
+                <div class="stab ${activeTab==='notes'?'on':''} ${noteVal?'s-q':''}" onclick="switchSecTab('${node.id}','notes')">章节批注</div>`;
+  const content = `<div class="stab-content ${activeTab==='content'?'on':''}" id="stc-sec-${node.id}-content" style="padding:24px;">
+                      <h2>${node.title}</h2>
+                      ${blocksHtml}
+                   </div>
+                   <div class="stab-content ${activeTab==='notes'?'on':''}" id="stc-sec-${node.id}-notes" style="padding:24px;">
+                      <div class="sec-note-area" style="margin-top:0; border:none; padding:0; background:transparent;">
+                        <div class="sec-note-lbl">本章节评审意见</div>
+                        <textarea class="sec-note-in" style="min-height:400px;" placeholder="在此输入对本章节的审核意见、修正建议或补充说明…"
+                          oninput="this.style.height='auto';this.style.height=this.scrollHeight+'px';S.secNote['${node.id}']=this.value;save();renderNav()">${noteVal}</textarea>
+                      </div>
+                   </div>`;
+  
+  return `<div class="view-panel" id="view-sec-${node.id}">
+    <div class="story-hd">
+      <span class="story-id-b">SECTION</span>
+      <div class="story-title-t">${node.title}</div>
+    </div>
+    <div class="story-body">
+      <div class="story-tabs">${tabs}</div>
+      ${content}
+    </div></div>`;
+}
+
+function renderBlock(b){
+  if(!b) return '';
+  switch(b.type){
+    case 'text':
+      return `<div class="block-text">${b.content||''}</div>`;
+    case 'formula':
+      return `<div class="block-formula-display">$$${b.content||''}$$</div>`;
+    case 'mermaid':
+      return `<div class="block-mermaid"><div class="mermaid">${b.content||''}</div></div>`;
+    case 'table':
+      if(!b.content||!b.content.length) return '';
+      const rows = b.content;
+      const header = rows[0];
+      const body = rows.slice(1);
+      return `<div class="block-table-wrap"><table class="block-table">
+        <thead><tr>${header.map(h=>`<th>${h}</th>`).join('')}</tr></thead>
+        <tbody>${body.map(r=>`<tr>${r.map(c=>`<td>${c}</td>`).join('')}</tr>`).join('')}</tbody>
+      </table></div>`;
+    case 'code':
+      const lang = (b.lang || '').toLowerCase();
+      if (lang === 'mermaid') return `<div class="block-mermaid"><div class="mermaid">${b.content || ''}</div></div>`;
+      return `<div class="code-wrapper" data-lang="${lang}">
+        <pre><code class="language-${lang}">${escHtml(b.content || '')}</code></pre>
+        <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+      </div>`;
+    default:
+      return `<div class="block-text">${b.content||''}</div>`;
+  }
+}
+
+function escHtml(s){ return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+function renderStoryPanel(node){
+  const st = storySt(node.id);
+  const activeTab = S.storyTab[node.id]||'tasks';
+  const noteVal = S.storyNote[node.id]||'';
+  
+  let tabs = `<div class="stab ${activeTab==='tasks'?'on':''}" onclick="switchStab('${node.id}','tasks')">任务清单</div>`;
+  (node.acs||[]).forEach(ac=>{
+    const ast = S.acSt[`${node.id}-${ac.id}`];
+    const tc = ast==='ok'?'s-ok':ast==='no'?'s-no':ast==='q'?'s-q':'';
+    tabs += `<div class="stab ${tc} ${activeTab===ac.id?'on':''}" onclick="switchStab('${node.id}','${ac.id}')">${ac.id}</div>`;
+  });
+  tabs += `<div class="stab ${activeTab==='notes'?'on':''} ${noteVal?'s-q':''}" onclick="switchStab('${node.id}','notes')">评审总结</div>`;
+
+  const taskContent = `
+    ${node.role ? `<div class="role-blk"><em>作为</em> ${node.role.as}，<em>我希望</em> ${node.role.want}，<em>以便</em> ${node.role.value}。</div>` : node.desc ? `<div class="block-text">${node.desc}</div>` : ''}
+    <div class="sub-ttl">任务清单</div>
+    <div id="tasks-${node.id}">${renderTasksHtml(node)}</div>
+    <div class="task-add-row">
+      <input type="text" class="task-add-in" id="add-in-${node.id}" placeholder="添加新任务… (Enter 确认)" onkeyup="if(event.key==='Enter')addTask('${node.id}')">
+      <div class="task-add-btn" onclick="addTask('${node.id}')">+ 添加</div>
+    </div>`;
+
+  const noteContent = `
+    <div class="story-note-wrap" style="margin-top:0; border:none; padding:0; background:transparent;">
+      <div class="story-note-lbl">Story 整体评审意见</div>
+      <textarea class="story-note-in" style="min-height:400px;" placeholder="在此输入对该 Story 的整体评价、架构建议或需要后续跟踪的问题…"
+        oninput="this.style.height='auto';this.style.height=this.scrollHeight+'px';S.storyNote['${node.id}']=this.value;save();renderNav()">${noteVal}</textarea>
+    </div>`;
+
+  let contents = `<div class="stab-content ${activeTab==='tasks'?'on':''}" id="stc-${node.id}-tasks" style="padding:24px;">${taskContent}</div>`;
+  (node.acs||[]).forEach(ac=>{
+    contents += `<div class="stab-content ${activeTab===ac.id?'on':''}" id="stc-${node.id}-${ac.id}" style="padding:24px;">${renderAC(node.id,ac)}</div>`;
+  });
+  contents += `<div class="stab-content ${activeTab==='notes'?'on':''}" id="stc-${node.id}-notes" style="padding:24px;">${noteContent}</div>`;
+
+  return `<div class="view-panel" id="view-story-${node.id}">
+    <div class="story-hd">
+      <span class="story-id-b">${node.id}</span>
+      <span class="story-title-t">${node.title}</span>
+      <div class="svote">
+        <button class="vbtn vbtn-ok ${st==='ok'?'on':''}" onclick="setVote('${node.id}','ok')">✓ 整体通过</button>
+        <button class="vbtn vbtn-q ${st==='q'?'on':''}" onclick="setVote('${node.id}','q')">⚠ 有疑问</button>
+        <button class="vbtn vbtn-no ${st==='no'?'on':''}" onclick="setVote('${node.id}','no')">✕ 需返工</button>
+      </div>
+    </div>
+    <div class="story-body">
+      <div class="story-tabs">${tabs}</div>
+      ${contents}
+    </div></div>`;
+}
+
+function renderTasksHtml(node){
+  let h = (node.tasks||[]).map(t=>{
+    const editedText = S.taskEdit[t.id] !== undefined ? S.taskEdit[t.id] : t.text;
+    const isEditing = false;
+    return `<div class="task-item ${S.taskRm[t.id]?'deleted':''}" id="task-${t.id}">
+      <div class="task-ctrl">
+        <span class="task-edit-btn" onclick="startEditTask('${t.id}','${node.id}')">编辑</span>
+        <span class="task-del-btn" onclick="toggleTask('${t.id}')">${S.taskRm[t.id]?'恢复':'移除'}</span>
+      </div>
+      <div class="task-row">
+        <div class="task-id-b">${t.id}</div>
+        <div class="task-txt" id="ttxt-${t.id}">${editedText}</div>
+      </div>
+    </div>`;
+  }).join('');
+  h += (S.addedTasks[node.id]||[]).map((txt,idx)=>`
+    <div class="task-item" id="added-${node.id}-${idx}">
+      <div class="task-ctrl">
+        <span class="task-del-btn" onclick="rmAdded('${node.id}',${idx})">删除</span>
+      </div>
+      <div class="task-row">
+        <div class="task-id-b" style="color:var(--ok)">NEW</div>
+        <div class="task-txt">${txt}</div>
+      </div>
+    </div>`).join('');
+  return h;
+}
+
+function renderAC(sid, ac){
+  const key = `${sid}-${ac.id}`, st = S.acSt[key]||null;
+  const border = st==='ok'?'is-ok':st==='no'?'is-no':st==='q'?'is-q':'';
+  return `<div class="ac-item ${border}" id="ac-${key}">
+    <div class="ac-hd">
+      <span class="ac-id">${ac.id}</span>
+      <span class="ac-name">${ac.title}</span>
+      <div class="ac-acts">
+        <button class="ac-btn ac-ok ${st==='ok'?'on':''}" onclick="setAC('${key}','ok')">✓ 通过</button>
+        <button class="ac-btn ac-q ${st==='q'?'on':''}" onclick="setAC('${key}','q')">⚠ 疑问</button>
+        <button class="ac-btn ac-no ${st==='no'?'on':''}" onclick="setAC('${key}','no')">✕ 拒绝</button>
+      </div>
+    </div>
+    <div class="ac-body">
+      <div class="gwt"><div class="gwt-lbl">Given</div><div>${ac.given}</div></div>
+      <div class="gwt"><div class="gwt-lbl">When</div><div>${ac.when}</div></div>
+      <div class="gwt"><div class="gwt-lbl">Then</div><div>${ac.then}</div></div>
+      <div class="ac-qbox ${st==='q'||st==='no'?'show':''}" id="acq-${key}">
+        <textarea class="ac-qin" placeholder="填写疑问或修改意见…"
+          oninput="S.acQ['${key}']=this.value;save();updateStats()">${S.acQ[key]||''}</textarea>
+      </div>
+    </div></div>`;
+}
+
+// ============================================================
+// ACTIONS
+// ============================================================
+function selView(vid, doSave=true){
+  if(!vid) return;
+  S.activeVid = vid;
+  document.querySelectorAll('.view-panel').forEach(p=>p.classList.remove('active'));
+  const el = document.getElementById(`view-${vid}`);
+  if(el) el.classList.add('active');
+  document.querySelectorAll('.nav-node').forEach(n=>n.classList.remove('active'));
+  if(vid.startsWith('story-')){
+    const n = document.getElementById(`nav-${vid.slice(6)}`); if(n) n.classList.add('active');
+  } else if(vid.startsWith('sec-')){
+    const n = document.getElementById(`nav-sec-${vid.slice(4)}`); if(n) n.classList.add('active');
+  }
+  if(doSave) save();
+}
+
+function switchStab(sid, tabId){
+  S.storyTab[sid] = tabId;
+  const panel = document.getElementById(`view-story-${sid}`); if(!panel) return;
+  panel.querySelectorAll('.stab').forEach(t=>t.classList.remove('on'));
+  panel.querySelectorAll('.stab-content').forEach(c=>c.classList.remove('on'));
+  const content = document.getElementById(`stc-${sid}-${tabId}`); if(content) content.classList.add('on');
+  const node = findNode(sid); if(!node) return;
+  const tabs = Array.from(panel.querySelectorAll('.stab'));
+  let idx = 0;
+  if(tabId==='tasks') idx=0;
+  else if(tabId==='notes') idx=tabs.length-1;
+  else idx = (node.acs||[]).findIndex(a=>a.id===tabId)+1;
+  if(tabs[idx]) tabs[idx].classList.add('on');
+  save();
+}
+
+function switchSecTab(sid, tabId){
+  if(!S.secTab) S.secTab = {};
+  S.secTab[sid] = tabId;
+  const panel = document.getElementById(`view-sec-${sid}`); if(!panel) return;
+  panel.querySelectorAll('.stab').forEach(t=>t.classList.remove('on'));
+  panel.querySelectorAll('.stab-content').forEach(c=>c.classList.remove('on'));
+  const content = document.getElementById(`stc-sec-${sid}-${tabId}`); if(content) content.classList.add('on');
+  const tabs = Array.from(panel.querySelectorAll('.stab'));
+  const idx = tabId==='content' ? 0 : 1;
+  if(tabs[idx]) tabs[idx].classList.add('on');
+  save();
+}
+
+function setAC(key, status){
+  S.acSt[key] = S.acSt[key]===status ? null : status;
+  const parts = key.split('-'), acid = parts[parts.length-1], sid = parts.slice(0,-1).join('-');
+  const node = findNode(sid), ac = node && (node.acs||[]).find(a=>a.id===acid);
+  if(!ac) return;
+  const el = document.getElementById(`ac-${key}`);
+  if(el){ const t=document.createElement('div'); t.innerHTML=renderAC(sid,ac); el.replaceWith(t.firstChild); }
+  const panel = document.getElementById(`view-story-${sid}`);
+  if(panel && node){
+    const tabs = Array.from(panel.querySelectorAll('.stab'));
+    const idx = (node.acs||[]).findIndex(a=>a.id===acid)+1;
+    if(tabs[idx]){
+      tabs[idx].classList.remove('s-ok','s-no','s-q');
+      const ns=S.acSt[key];
+      if(ns==='ok') tabs[idx].classList.add('s-ok');
+      else if(ns==='no') tabs[idx].classList.add('s-no');
+      else if(ns==='q') tabs[idx].classList.add('s-q');
+    }
+  }
+  save(); updateStats(); renderNav();
+}
+
+function setVote(sid, status){
+  S.storyVote[sid] = S.storyVote[sid]===status ? null : status;
+  const panel = document.getElementById(`view-story-${sid}`); if(!panel) return;
+  const st = storySt(sid);
+  panel.querySelectorAll('.vbtn').forEach(b=>b.classList.remove('on'));
+  const btns = panel.querySelectorAll('.vbtn');
+  if(st==='ok'&&btns[0]) btns[0].classList.add('on');
+  else if(st==='q'&&btns[1]) btns[1].classList.add('on');
+  else if(st==='no'&&btns[2]) btns[2].classList.add('on');
+  save(); updateStats(); renderNav();
+}
+
+function toggleTask(tid){
+  S.taskRm[tid] = !S.taskRm[tid];
+  const el = document.getElementById(`task-${tid}`); if(!el) return;
+  el.classList.toggle('deleted', S.taskRm[tid]);
+  const btn = el.querySelector('.task-del-btn'); if(btn) btn.textContent = S.taskRm[tid]?'恢复':'移除';
+  save();
+}
+
+function startEditTask(tid, sid){
+  const txtEl = document.getElementById(`ttxt-${tid}`); if(!txtEl) return;
+  const cur = S.taskEdit[tid] !== undefined ? S.taskEdit[tid] : txtEl.textContent;
+  txtEl.innerHTML = `<input type="text" style="width:100%;background:transparent;border:none;border-bottom:1px solid var(--amber);color:var(--ink);font-size:var(--base);outline:none;padding:2px 0;" value="${cur.replace(/"/g,'&quot;')}"
+    onblur="finishEditTask('${tid}','${sid}',this.value)"
+    onkeyup="if(event.key==='Enter')this.blur();if(event.key==='Escape'){this.value=this.defaultValue;this.blur();}" >`;
+  txtEl.querySelector('input').focus();
+}
+function finishEditTask(tid, sid, val){
+  const node = findNode(sid); if(!node) return;
+  const origTask = (node.tasks||[]).find(t=>t.id===tid);
+  const orig = origTask ? origTask.text : '';
+  S.taskEdit[tid] = (val.trim()===orig) ? undefined : val.trim();
+  if(S.taskEdit[tid]===undefined) delete S.taskEdit[tid];
+  const txtEl = document.getElementById(`ttxt-${tid}`);
+  if(txtEl) txtEl.textContent = val.trim()||orig;
+  save();
+}
+
+function addTask(sid){
+  const inp = document.getElementById(`add-in-${sid}`); const txt = inp.value.trim(); if(!txt) return;
+  if(!S.addedTasks[sid]) S.addedTasks[sid] = [];
+  S.addedTasks[sid].push(txt); inp.value='';
+  const node = findNode(sid); if(!node) return;
+  document.getElementById(`tasks-${sid}`).innerHTML = renderTasksHtml(node);
+  save();
+}
+function rmAdded(sid, idx){
+  S.addedTasks[sid].splice(idx,1);
+  const node = findNode(sid); if(!node) return;
+  document.getElementById(`tasks-${sid}`).innerHTML = renderTasksHtml(node);
+  save();
+}
+function copyCode(btn){
+  const code = btn.parentElement.querySelector('code').innerText;
+  navigator.clipboard.writeText(code).then(()=>{ const o=btn.textContent; btn.textContent='Copied!'; setTimeout(()=>btn.textContent=o,1800); });
+}
+
+// ============================================================
+// STATS
+// ============================================================
+function updateStats(){
+  let ok=0,q=0,no=0,p=0,tot=0;
+  allStories().forEach(s=>(s.acs||[]).forEach(ac=>{
+    const k=`${s.id}-${ac.id}`; tot++;
+    const st=S.acSt[k];
+    if(st==='ok') ok++; else if(st==='q') q++; else if(st==='no') no++; else p++;
+  }));
+  document.getElementById('s-ok').textContent = ok;
+  document.getElementById('s-q').textContent = q;
+  document.getElementById('s-no').textContent = no;
+  document.getElementById('s-p').textContent = p;
+  const rev = ok+q+no;
+  const pct = tot ? Math.round(rev/tot*100) : 0;
+  const fill = document.getElementById('prog-fill');
+  fill.style.width = pct+'%';
+  fill.classList.toggle('done', pct===100);
+  document.getElementById('prog-txt').textContent = `${rev} / ${tot} AC`;
+  // Clarifications
+  let cls='', idx=1;
+  allStories().forEach(s=>(s.acs||[]).forEach(ac=>{
+    const k=`${s.id}-${ac.id}`;
+    if(S.acSt[k]==='q'||S.acSt[k]==='no'){
+      const lbl = S.acSt[k]==='no'?'[拒绝]':'[疑问]';
+      const qt = S.acQ[k]||'（待补充）';
+      cls += `<div class="cl-item"><span class="cl-id">${idx++}</span><div class="cl-body"><strong style="color:var(--dim)">${k} ${lbl}</strong><br>${qt}</div></div>`;
+    }
+  }));
+  document.getElementById('cl-list').innerHTML = cls||'<span style="font-size:var(--xs);color:var(--whisper)">暂无疑问或拒绝项</span>';
+}
+
+// ============================================================
+// EXPORT JSON
+// ============================================================
+function exportJSON(){
+  const nv = (DOC.version||'v0.1').replace(/(\d+)$/, m=>'v0.'+(parseInt(m.slice(2))+1));
+  const stories = allStories();
+  const out = {
+    review_meta:{ reviewed_at: new Date().toISOString().slice(0,16).replace('T',' '), document_title: DOC.title, version: DOC.version||'v0.1' },
+    story_reviews: stories.map(s=>({ id:s.id, title:s.title, status:storySt(s.id), comment:S.storyNote[s.id]||null,
+      ac_list:(s.acs||[]).map(ac=>{ const k=`${s.id}-${ac.id}`; return { id:ac.id, name:ac.title, status:S.acSt[k]||'ok', question:S.acQ[k]||null }; })
+    })),
+    task_changes: stories.flatMap(s=>[
+      ...(s.tasks||[]).filter(t=>S.taskRm[t.id]||S.taskEdit[t.id]!==undefined).map(t=>({ id:t.id, story:s.id, removed:!!S.taskRm[t.id], modified_text:S.taskEdit[t.id]||null })),
+      ...(S.addedTasks[s.id]||[]).map((txt,i)=>({ id:`NEW-${s.id}-${i+1}`, story:s.id, removed:false, modified_text:null, added:txt }))
+    ]),
+    section_comments: Object.entries(S.secNote||{}).filter(([,v])=>v).map(([id,comment])=>({id,comment})),
+    summary:{
+      ac_ok:Object.values(S.acSt).filter(v=>v==='ok').length,
+      ac_q:Object.values(S.acSt).filter(v=>v==='q').length,
+      ac_no:Object.values(S.acSt).filter(v=>v==='no').length,
+      stories_approved:stories.filter(s=>storySt(s.id)==='ok').length,
+      tasks_removed:Object.values(S.taskRm).filter(Boolean).length,
+      tasks_added:Object.values(S.addedTasks).reduce((a,arr)=>a+(arr||[]).length,0)
+    },
+    agent_instruction:`以下是经人工评审的 Epic-Story 文档。status=no/q 的 AC 含修改意见（未填写意见视为通过），task_changes 包含任务变更，section_comments 为章节批注。请据此全量重生成符合 epic-story-doc 规范的最终 Markdown 文档，版本升至 ${nv}，变更记录注明评审日期 ${new Date().toISOString().slice(0,10)}。`
+  };
+  const json = JSON.stringify(out, null, 2);
+  const outEl = document.getElementById('exp-out'); outEl.textContent = json; outEl.classList.add('show');
+  dlBlob(json, `review_${DOC.title.replace(/[\s\[\]《》]/g,'_')}_${new Date().toISOString().slice(0,10)}.json`, 'application/json');
+  if(navigator.clipboard) navigator.clipboard.writeText(json).then(()=>{
+    const btn = document.querySelector('.btn-exp'), o=btn.textContent;
+    btn.textContent='✓ 已下载并复制'; btn.style.color='var(--ok)'; btn.style.borderColor='var(--ok)';
+    setTimeout(()=>{ btn.textContent=o; btn.style.color=''; btn.style.borderColor=''; },2500);
+  });
+}
+
+// ============================================================
+// EXPORT MARKDOWN
+// ============================================================
+function exportMD(){
+  const nv = (DOC.version||'v0.1').replace(/(\d+)$/, m=>'v0.'+(parseInt(m.slice(2))+1));
+  const today = new Date().toISOString().slice(0,10);
+  let md = `# ${DOC.title}\n\n`;
+  md += `**版本**: ${nv}  **日期**: ${today}\n\n`;
+  md += `---\n\n`;
+
+  DOC.nodes.forEach(node=>{
+    if(node.type==='epic-group'){
+      md += `## ${node.title}\n\n`;
+      if(node.desc) md += `${node.desc}\n\n`;
+    } else if(node.type==='section'){
+      md += `## ${node.title}\n\n`;
+      (node.blocks||[]).forEach(b=>{
+        if(b.type==='text') md += `${b.content}\n\n`;
+        else if(b.type==='formula') md += `$$\n${b.content}\n$$\n\n`;
+        else if(b.type==='mermaid') md += `\`\`\`mermaid\n${b.content}\n\`\`\`\n\n`;
+        else if(b.type==='code') md += `\`\`\`${b.lang||''}\n${b.content}\n\`\`\`\n\n`;
+        else if(b.type==='table' && b.content&&b.content.length){
+          const [hdr,...rows]=b.content;
+          md += `| ${hdr.join(' | ')} |\n`;
+          md += `| ${hdr.map(()=>'---').join(' | ')} |\n`;
+          rows.forEach(r=>{ md += `| ${r.join(' | ')} |\n`; });
+          md += '\n';
+        }
+      });
+      const note = S.secNote[node.id];
+      if(note) md += `> **评审批注**: ${note}\n\n`;
+    } else if(node.type==='story'){
+      md += `### ${node.id} ${node.title}\n\n`;
+      if(node.role) md += `**作为** ${node.role.as}，**我希望** ${node.role.want}，**以便** ${node.role.value}。\n\n`;
+      const sNote = S.storyNote[node.id];
+      if(sNote) md += `> **评审备注**: ${sNote}\n\n`;
+      if((node.tasks||[]).length){
+        md += `#### 任务清单\n\n`;
+        (node.tasks||[]).forEach(t=>{
+          if(S.taskRm[t.id]) return;
+          const txt = S.taskEdit[t.id]||t.text;
+          md += `- [ ] **${t.id}**: ${txt}\n`;
+        });
+        (S.addedTasks[node.id]||[]).forEach((txt,i)=>{ md += `- [ ] **NEW-${i+1}**: ${txt}\n`; });
+        md += '\n';
+      }
+      if((node.acs||[]).length){
+        md += `#### 验收标准\n\n`;
+        (node.acs||[]).forEach(ac=>{
+          const k=`${node.id}-${ac.id}`;
+          const st=S.acSt[k]||'ok';
+          const stLabel=st==='ok'?'✓':st==='no'?'✕ 需修改':'⚠ 有疑问';
+          md += `##### ${ac.id} ${ac.title} [${stLabel}]\n\n`;
+          md += `- **Given** ${ac.given}\n`;
+          md += `- **When** ${ac.when}\n`;
+          md += `- **Then** ${ac.then}\n`;
+          const q=S.acQ[k];
+          if(q) md += `\n> **评审意见**: ${q}\n`;
+          md += '\n';
+        });
+      }
+    }
+  });
+  md += `---\n\n## 变更记录\n\n`;
+  md += `| 版本 | 日期 | 说明 |\n| --- | --- | --- |\n`;
+  md += `| ${nv} | ${today} | 评审后重生成 |\n`;
+  dlBlob(md, `${DOC.title.replace(/[\s\[\]《》]/g,'_')}_${nv}.md`, 'text/markdown');
+  const btn=document.querySelector('.btn-exp-md'), o=btn.textContent;
+  btn.textContent='✓ 已下载'; btn.style.color='var(--ok)';
+  setTimeout(()=>{ btn.textContent=o; btn.style.color=''; },2000);
+}
+
+function dlBlob(content, name, type){
+  const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([content],{type})); a.download=name; a.click();
+}
+
+// === AUTO-INJECTED BY inject.py ===
+(function(){
+  try {
+    const injectedData = {"title": "Epic E15: 盘后系统全量多维数据采集接入与云端定时调度体系补全 (v0.2 Tables Onboarding)", "version": "v1.1", "date": "2026-05-19", "sections": [{"id": "background", "title": "背景与现状", "blocks": [{"type": "text", "content": "在 A 股盘后分析 system v0.2 的升级中，系统表结构从 v0.1 的 12 张表跃升至 38 张表（增量 26 张表，包含 8 张 TBD 命名表），数据维度全面拓展至 L1市场全景、L2行业与概念、L3资金流、L4情绪以及 L6公司公告事件等 5 大板块。"}, {"type": "text", "content": "为了应对大规模高频、异构数据的采集压力，同时契合云端 2000 积分的接口调用权限约束、频率限制瓶颈以及巨潮网络防火墙防爬拦截，必须为这些 MySQL 5.7 数据表设计一套极度安全、按需调度且 100% 数据无损幂等的云端 SCF 采集调度体系。"}, {"type": "text", "content": "⚠️ 重要声明：根据最新评审意见，ClickHouse 数据库与 L5 高频分笔 (Tick) 原始流量及聚合指标不在本次 Epic 设计范围之内。"}]}, {"id": "production_status", "title": "数据就役状态矩阵 (Data Production Status Matrix)", "blocks": [{"type": "text", "content": "本 Epic 完成开发后，物理数据资产的就役与上线状态严格划分如下："}, {"type": "text", "content": "1. 正常增量上线数据 (Active Production - Go Live)：包含 14 个核心业务数据集（共 26 张 MySQL 5.7 表）在本次开发完成后正常增量上线，每日盘后由云端 SCF 定时抓取写入。覆盖：L1基础与两融行情（两融、停牌、涨跌停池、面包线）、L2行业与概念（申万、概念）、L3资金流与宏观（大宗、龙虎榜、港通资金流、国债）、L6公告大事件（增减持、回购、分红、立案、戴脱帽）。"}, {"type": "text", "content": "2. 物理封存数据 (Frozen Historical Data - Read-Only)：个股北向持股数据 (stock_north_funds_daily) 禁止增量上线。因为证监会于 2024-08-19 起停发该数据，故封存为只读历史，严禁增删改，确保完整性。"}, {"type": "text", "content": "3. 不予上线 / 超出设计范围数据 (Out-of-Scope)：L5 高频分笔 Tick 数据 (tick_data、tick_daily_stats) 云端 SCF 无法承载，与 ClickHouse 下游计算层一同移出本次 Epic 范围，不予开发上线。"}]}, {"id": "architecture", "title": "核心物理原则", "blocks": [{"type": "text", "content": "1. 联合唯一索引门禁 (Unique Index Gate)：为吸取 [E4-S1] 自增主键下 REPLACE INTO 退化与历史幽灵因子污染的教训，任何增量或回填的 ODS 数据表，必须前置在物理层建立联合唯一索引（例如 UNIQUE KEY uidx_code_date(ts_code, trade_date)）。未建立唯一索引的表严禁上线任何增量代码，防止多次拉取产生重复行与重影数据。"}, {"type": "text", "content": "2. 防重影物理增量与历史源对齐原则 (Source Alignment & Targeted Healing)：对于完全符合 Tushare 统一口径的历史表，绝对禁止使用 TRUNCATE 或 DELETE 进行无差别暴力清空。若存量表中混合了 v0.1 版遗留的不同口径（如旧版 AkShare 或 BaoStock）历史残留数据，在执行增量同步前，必须通过 DDL 补齐唯一索引，并前置执行针对旧源幽灵数据的精准物理清理或一键全量 Tushare 重采回填，完成数据口径的大一统，方可进入 MAX 日期断点增量续传，杜绝新旧口径不一导致的多因子/多数据共存堆积污染。"}, {"type": "text", "content": "3. 入库幂等写入：数据入库统一采用 ON DUPLICATE KEY UPDATE，使得即使重试或周期重叠，也仅做无损覆盖。"}, {"type": "text", "content": "4. 小数标准化与单位对齐：百分比变动一律在入库前除以 100.0 并以 DECIMAL 小数规范化存储；成交金额一律对齐为元。"}, {"type": "text", "content": "5. 流控安全调度：对于能在本地由已有表计算派生的大盘面包线和戴脱帽数据，必须在盘后本地完成，避免因不必要的接口请求触发 Tushare API 的单日/单分钟调用频率超限流控约束。"}]}], "risks": [{"risk": "Tushare 频次流控超额报错", "impact": "高", "prob": "中", "mitigation": "单线程串行，抓取间隔至少 0.3s-1.5s，确保 100% 避开频次超限。"}, {"risk": "问财反爬与 Node.js 内存限制", "impact": "高", "prob": "高", "mitigation": "解耦 PyWencai 部署为独立 scf-pywencai 云函数（512MB RAM）进行异步流控调配。同时，内置基于 AkShare/东方财富 (Eastmoney) 板块数据接口的轻量级降级爬虫（无 Node.js 依赖，内存 <12MB），一旦问财算法断开或封禁，自动激活降级通道，归一化落库打标 data_source='em_fallback' 确保高可用性。"}, {"risk": "北向个股停发接口报错", "impact": "低", "prob": "极高", "mitigation": "2024-08-19 后个股数据停发，增量引擎必须封存并忽略该历史接口，防止请求报错。"}], "milestones": [{"name": "M1: P0 行情补充与两融接入", "date": "2026-05-20", "deliverable": "落地涨跌停池、个股两融及市场大盘宽度指标。"}, {"name": "M2: P1 公告事件大底座接入", "date": "2026-05-23", "deliverable": "落地股东增减持、公司回购与分红方案，百分比全线标准化。"}, {"name": "M3: P2 大宗交易与申万/概念接入", "date": "2026-05-26", "deliverable": "落地龙虎榜、大宗以及申万/概念板块行情。"}, {"name": "M4: P3 港通流量与个股北向锁定", "date": "2026-05-28", "deliverable": "落地大盘资金大流水，并锁死个股北向增量动作。"}], "epics": [{"id": "E15", "title": "盘后系统全量多维数据采集接入与云端定时调度体系补全 (v0.2 Tables Onboarding)", "desc": "在 A 股盘后分析系统 v0.2 的升级中，系统表结构从 v0.1 的 12 张表跃升至 38 张表，对增量 MySQL 5.7 表设计一套极度安全、按需调度且 100% 数据无损幂等的云端 SCF 采集调度体系。", "stories": [{"id": "E15-S1", "title": "P0级行情池与两融指标采集模块", "role": {"as": "scf-collector", "want": "每日盘后极速同步涨跌停连板高度、当日停复牌过滤器及两融信用杠杆", "value": "提供大盘资金活跃度和交易日状态的基础行情过滤"}, "tasks": [{"id": "E15-S1-T1", "text": "编写 sync_limit_pool 采集接口，将每日涨停、跌停、炸板和连板高度信息入库 ods_event_limit_pool"}, {"id": "E15-S1-T2", "text": "编写 sync_suspend_calendar 每日盘前更新当天停牌数据 ods_suspend_d"}, {"id": "E15-S1-T3", "text": "编写 sync_margin_data 盘后同步两融市场级与个股明细并无损入库，断点续传"}, {"id": "E15-S1-T4", "text": "实现本地 ods_market_breadth_daily 面包线派生，由 K 线完成事件驱动触发，避免触发频率限制流控"}], "acs": [{"id": "AC1", "name": "两融断点无损校验", "given": "两融明细表已有 2026-05-18 数据", "when": "触发 sync_margin_data 时", "then": "系统自动定位 MAX 时间并仅同步 05-19 数据，原有历史数据未被清空。"}, {"id": "AC2", "name": "涨跌停池唯一约束", "given": "重复运行 limit_pool 接口", "when": "唯一约束 uk_code_date 触发时", "then": "语句以 ON DUPLICATE KEY UPDATE 覆盖，无脏数据生成。"}]}, {"id": "E15-S2", "title": "P1级上市公司公告行为事件引擎", "role": {"as": "scf-collector", "want": "规范同步大股东增减持、公司回购、立案调查与 ST 戴脱帽重大变更", "value": "提供事件驱动策略的输入底座，保证百分比一律标准化为小数"}, "tasks": [{"id": "E15-S2-T1", "text": "编写大股东增减持 ods_holdertrade 同步模块，强制在写入前将变动比率除以 100 换算为小数存储"}, {"id": "E15-S2-T2", "text": "编写公司回购与分红送转方案同步接口，支持 ann_date 断点下载与 ON DUPLICATE KEY UPDATE 幂等写入"}, {"id": "E15-S2-T3", "text": "编写 ST 戴脱帽状态本地派生同步，通过检测 stock_basic_info 日度变更进行差分入库"}, {"id": "E15-S2-T4", "text": "编写立案调查数据源对接，同步监管原因与对象"}], "acs": [{"id": "AC1", "name": "增减持比例小数化", "given": "增减持变动比例在 Tushare 中为百分比（如 2.3%）", "when": "写入 ods_holdertrade 时", "then": "字段 change_ratio 存储值必须为规范的 0.023000。"}, {"id": "AC2", "name": "ST 差分事件检验", "given": "股票昨日名称不含 ST 而今日名称包含 ST", "when": "本地差分任务运行后", "then": "在 ods_st_change 表中自动插入一条 new_status=「ST」 的变更记录。"}]}, {"id": "E15-S3", "title": "P2级大宗交易与申万/概念板块行情", "role": {"as": "scf-collector", "want": "每日盘后极速抓取龙虎榜交易席位、大宗交易以及申万与概念行业日K线", "value": "用于跟踪主力筹码异动与行业主题热度"}, "tasks": [{"id": "E15-S3-T1", "text": "编写每日大宗交易 stock_block_trade 增量同步，百分比字段 discount_pct 一律除以 100 存小数"}, {"id": "E15-S3-T2", "text": "编写龙虎榜营业部明细与个股汇总同步逻辑，兼容 dim_yz_seat 维表"}, {"id": "E15-S3-T3", "text": "编写同花顺概念 ods_concept_kline_daily 同步逻辑，单独打包部署 512MB RAM scf-pywencai 函数进行异步调度，并内置基于 AkShare/东财概念接口的轻量级降级爬虫兜底路径，实现算法失效时自动无损降级同步"}, {"id": "E15-S3-T4", "text": "编写申万行业 ods_sw_index_daily 行情同步"}], "acs": [{"id": "AC1", "name": "大宗折溢价标准化", "given": "大宗交易接口返回折溢价率（如 -12.5%）", "when": "写入 stock_block_trade 时", "then": "字段 discount_pct 必须正确换算并存为 -0.125000。"}]}, {"id": "E15-S4", "title": "P3级大盘沪深港通流水与个股北向只读锁定", "role": {"as": "scf-collector", "want": "每日盘后增量同步大盘沪深港通流量，且物理封存已停发的个股北向历史", "value": "锁死已停发接口，且保障市场大盘资金流分析基准的持续"}, "tasks": [{"id": "E15-S4-T1", "text": "永久封存 stock_north_funds_daily 个股北向历史数据，配置写锁或严禁增量更新语句"}, {"id": "E15-S4-T2", "text": "编写大盘沪深港通每日流量 north_capital_daily 增量采集并写入 MySQL"}, {"id": "E15-S4-T3", "text": "编写每日宏观利率情绪指标 monitor_indicators_history 采集，一律除以 100 存小数"}], "acs": [{"id": "AC1", "name": "个股北向保护", "given": "个股北向资金表", "when": "任何 SCF 采集逻辑运行时", "then": "绝不允许对该表发起任何 DELETE、TRUNCATE 或 UPDATE，保证 2024-08-19 之前的历史数据 100% 完整无损。"}, {"id": "AC2", "name": "宏观利率标准存储", "given": "10年期国债收益率数据（如 2.31%）", "when": "写入 monitor_indicators_history 时", "then": "对应值必须存储为标准的小数 0.023100。"}]}]}]};
+    if(document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', ()=>loadDoc(injectedData));
+    } else {
+      loadDoc(injectedData);
+    }
+  } catch(e) {
+    console.error('[inject.py] 数据注入失败:', e);
+  }
+})();
+// === END AUTO-INJECTED ===
+</script>
+</body>
+</html>

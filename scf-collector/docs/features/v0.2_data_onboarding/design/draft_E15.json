@@ -1,0 +1,285 @@
+{
+  "title": "Epic E15: 盘后系统全量多维数据采集接入与云端定时调度体系补全 (v0.2 Tables Onboarding)",
+  "version": "v1.1",
+  "date": "2026-05-19",
+  "sections": [
+    {
+      "id": "background",
+      "title": "背景与现状",
+      "blocks": [
+        {
+          "type": "text",
+          "content": "在 A 股盘后分析 system v0.2 的升级中，系统表结构从 v0.1 的 12 张表跃升至 38 张表（增量 26 张表，包含 8 张 TBD 命名表），数据维度全面拓展至 L1市场全景、L2行业与概念、L3资金流、L4情绪以及 L6公司公告事件等 5 大板块。"
+        },
+        {
+          "type": "text",
+          "content": "为了应对大规模高频、异构数据的采集压力，同时契合云端 2000 积分的接口调用权限约束、频率限制瓶颈以及巨潮网络防火墙防爬拦截，必须为这些 MySQL 5.7 数据表设计一套极度安全、按需调度且 100% 数据无损幂等的云端 SCF 采集调度体系。"
+        },
+        {
+          "type": "text",
+          "content": "⚠️ 重要声明：根据最新评审意见，ClickHouse 数据库与 L5 高频分笔 (Tick) 原始流量及聚合指标不在本次 Epic 设计范围之内。"
+        }
+      ]
+    },
+    {
+      "id": "production_status",
+      "title": "数据就役状态矩阵 (Data Production Status Matrix)",
+      "blocks": [
+        {
+          "type": "text",
+          "content": "本 Epic 完成开发后，物理数据资产的就役与上线状态严格划分如下："
+        },
+        {
+          "type": "text",
+          "content": "1. 正常增量上线数据 (Active Production - Go Live)：包含 14 个核心业务数据集（共 26 张 MySQL 5.7 表）在本次开发完成后正常增量上线，每日盘后由云端 SCF 定时抓取写入。覆盖：L1基础与两融行情（两融、停牌、涨跌停池、面包线）、L2行业与概念（申万、概念）、L3资金流与宏观（大宗、龙虎榜、港通资金流、国债）、L6公告大事件（增减持、回购、分红、立案、戴脱帽）。"
+        },
+        {
+          "type": "text",
+          "content": "2. 物理封存数据 (Frozen Historical Data - Read-Only)：个股北向持股数据 (stock_north_funds_daily) 禁止增量上线。因为证监会于 2024-08-19 起停发该数据，故封存为只读历史，严禁增删改，确保完整性。"
+        },
+        {
+          "type": "text",
+          "content": "3. 不予上线 / 超出设计范围数据 (Out-of-Scope)：L5 高频分笔 Tick 数据 (tick_data、tick_daily_stats) 云端 SCF 无法承载，与 ClickHouse 下游计算层一同移出本次 Epic 范围，不予开发上线。"
+        }
+      ]
+    },
+    {
+      "id": "architecture",
+      "title": "核心物理原则",
+      "blocks": [
+        {
+          "type": "text",
+          "content": "1. 联合唯一索引门禁 (Unique Index Gate)：为吸取 [E4-S1] 自增主键下 REPLACE INTO 退化与历史幽灵因子污染的教训，任何增量或回填的 ODS 数据表，必须前置在物理层建立联合唯一索引（例如 UNIQUE KEY uidx_code_date(ts_code, trade_date)）。未建立唯一索引的表严禁上线任何增量代码，防止多次拉取产生重复行与重影数据。"
+        },
+        {
+          "type": "text",
+          "content": "2. 防重影物理增量与历史源对齐原则 (Source Alignment & Targeted Healing)：对于完全符合 Tushare 统一口径的历史表，绝对禁止使用 TRUNCATE 或 DELETE 进行无差别暴力清空。若存量表中混合了 v0.1 版遗留的不同口径（如旧版 AkShare 或 BaoStock）历史残留数据，在执行增量同步前，必须通过 DDL 补齐唯一索引，并前置执行针对旧源幽灵数据的精准物理清理或一键全量 Tushare 重采回填，完成数据口径的大一统，方可进入 MAX 日期断点增量续传，杜绝新旧口径不一导致的多因子/多数据共存堆积污染。"
+        },
+        {
+          "type": "text",
+          "content": "3. 入库幂等写入：数据入库统一采用 ON DUPLICATE KEY UPDATE，使得即使重试或周期重叠，也仅做无损覆盖。"
+        },
+        {
+          "type": "text",
+          "content": "4. 小数标准化与单位对齐：百分比变动一律在入库前除以 100.0 并以 DECIMAL 小数规范化存储；成交金额一律对齐为元。"
+        },
+        {
+          "type": "text",
+          "content": "5. 流控安全调度：对于能在本地由已有表计算派生的大盘面包线和戴脱帽数据，必须在盘后本地完成，避免因不必要的接口请求触发 Tushare API 的单日/单分钟调用频率超限流控约束。"
+        }
+      ]
+    }
+  ],
+  "risks": [
+    {
+      "risk": "Tushare 频次流控超额报错",
+      "impact": "高",
+      "prob": "中",
+      "mitigation": "单线程串行，抓取间隔至少 0.3s-1.5s，确保 100% 避开频次超限。"
+    },
+    {
+      "risk": "问财反爬与 Node.js 内存限制",
+      "impact": "高",
+      "prob": "高",
+      "mitigation": "解耦 PyWencai 部署为独立 scf-pywencai 云函数（512MB RAM）进行异步流控调配。同时，内置基于 AkShare/东方财富 (Eastmoney) 板块数据接口的轻量级降级爬虫（无 Node.js 依赖，内存 <12MB），一旦问财算法断开或封禁，自动激活降级通道，归一化落库打标 data_source='em_fallback' 确保高可用性。"
+    },
+    {
+      "risk": "北向个股停发接口报错",
+      "impact": "低",
+      "prob": "极高",
+      "mitigation": "2024-08-19 后个股数据停发，增量引擎必须封存并忽略该历史接口，防止请求报错。"
+    }
+  ],
+  "milestones": [
+    {
+      "name": "M1: P0 行情补充与两融接入",
+      "date": "2026-05-20",
+      "deliverable": "落地涨跌停池、个股两融及市场大盘宽度指标。"
+    },
+    {
+      "name": "M2: P1 公告事件大底座接入",
+      "date": "2026-05-23",
+      "deliverable": "落地股东增减持、公司回购与分红方案，百分比全线标准化。"
+    },
+    {
+      "name": "M3: P2 大宗交易与申万/概念接入",
+      "date": "2026-05-26",
+      "deliverable": "落地龙虎榜、大宗以及申万/概念板块行情。"
+    },
+    {
+      "name": "M4: P3 港通流量与个股北向锁定",
+      "date": "2026-05-28",
+      "deliverable": "落地大盘资金大流水，并锁死个股北向增量动作。"
+    }
+  ],
+  "epics": [
+    {
+      "id": "E15",
+      "title": "盘后系统全量多维数据采集接入与云端定时调度体系补全 (v0.2 Tables Onboarding)",
+      "desc": "在 A 股盘后分析系统 v0.2 的升级中，系统表结构从 v0.1 的 12 张表跃升至 38 张表，对增量 MySQL 5.7 表设计一套极度安全、按需调度且 100% 数据无损幂等的云端 SCF 采集调度体系。",
+      "stories": [
+        {
+          "id": "E15-S1",
+          "title": "P0级行情池与两融指标采集模块",
+          "role": {
+            "as": "scf-collector",
+            "want": "每日盘后极速同步涨跌停连板高度、当日停复牌过滤器及两融信用杠杆",
+            "value": "提供大盘资金活跃度和交易日状态的基础行情过滤"
+          },
+          "tasks": [
+            {
+              "id": "E15-S1-T1",
+              "text": "编写 sync_limit_pool 采集接口，将每日涨停、跌停、炸板和连板高度信息入库 ods_event_limit_pool"
+            },
+            {
+              "id": "E15-S1-T2",
+              "text": "编写 sync_suspend_calendar 每日盘前更新当天停牌数据 ods_suspend_d"
+            },
+            {
+              "id": "E15-S1-T3",
+              "text": "编写 sync_margin_data 盘后同步两融市场级与个股明细并无损入库，断点续传"
+            },
+            {
+              "id": "E15-S1-T4",
+              "text": "实现本地 ods_market_breadth_daily 面包线派生，由 K 线完成事件驱动触发，避免触发频率限制流控"
+            }
+          ],
+          "acs": [
+            {
+              "id": "AC1",
+              "name": "两融断点无损校验",
+              "given": "两融明细表已有 2026-05-18 数据",
+              "when": "触发 sync_margin_data 时",
+              "then": "系统自动定位 MAX 时间并仅同步 05-19 数据，原有历史数据未被清空。"
+            },
+            {
+              "id": "AC2",
+              "name": "涨跌停池唯一约束",
+              "given": "重复运行 limit_pool 接口",
+              "when": "唯一约束 uk_code_date 触发时",
+              "then": "语句以 ON DUPLICATE KEY UPDATE 覆盖，无脏数据生成。"
+            }
+          ]
+        },
+        {
+          "id": "E15-S2",
+          "title": "P1级上市公司公告行为事件引擎",
+          "role": {
+            "as": "scf-collector",
+            "want": "规范同步大股东增减持、公司回购、立案调查与 ST 戴脱帽重大变更",
+            "value": "提供事件驱动策略的输入底座，保证百分比一律标准化为小数"
+          },
+          "tasks": [
+            {
+              "id": "E15-S2-T1",
+              "text": "编写大股东增减持 ods_holdertrade 同步模块，强制在写入前将变动比率除以 100 换算为小数存储"
+            },
+            {
+              "id": "E15-S2-T2",
+              "text": "编写公司回购与分红送转方案同步接口，支持 ann_date 断点下载与 ON DUPLICATE KEY UPDATE 幂等写入"
+            },
+            {
+              "id": "E15-S2-T3",
+              "text": "编写 ST 戴脱帽状态本地派生同步，通过检测 stock_basic_info 日度变更进行差分入库"
+            },
+            {
+              "id": "E15-S2-T4",
+              "text": "编写立案调查数据源对接，同步监管原因与对象"
+            }
+          ],
+          "acs": [
+            {
+              "id": "AC1",
+              "name": "增减持比例小数化",
+              "given": "增减持变动比例在 Tushare 中为百分比（如 2.3%）",
+              "when": "写入 ods_holdertrade 时",
+              "then": "字段 change_ratio 存储值必须为规范的 0.023000。"
+            },
+            {
+              "id": "AC2",
+              "name": "ST 差分事件检验",
+              "given": "股票昨日名称不含 ST 而今日名称包含 ST",
+              "when": "本地差分任务运行后",
+              "then": "在 ods_st_change 表中自动插入一条 new_status=「ST」 的变更记录。"
+            }
+          ]
+        },
+        {
+          "id": "E15-S3",
+          "title": "P2级大宗交易与申万/概念板块行情",
+          "role": {
+            "as": "scf-collector",
+            "want": "每日盘后极速抓取龙虎榜交易席位、大宗交易以及申万与概念行业日K线",
+            "value": "用于跟踪主力筹码异动与行业主题热度"
+          },
+          "tasks": [
+            {
+              "id": "E15-S3-T1",
+              "text": "编写每日大宗交易 stock_block_trade 增量同步，百分比字段 discount_pct 一律除以 100 存小数"
+            },
+            {
+              "id": "E15-S3-T2",
+              "text": "编写龙虎榜营业部明细与个股汇总同步逻辑，兼容 dim_yz_seat 维表"
+            },
+            {
+              "id": "E15-S3-T3",
+              "text": "编写同花顺概念 ods_concept_kline_daily 同步逻辑，单独打包部署 512MB RAM scf-pywencai 函数进行异步调度，并内置基于 AkShare/东财概念接口的轻量级降级爬虫兜底路径，实现算法失效时自动无损降级同步"
+            },
+            {
+              "id": "E15-S3-T4",
+              "text": "编写申万行业 ods_sw_index_daily 行情同步"
+            }
+          ],
+          "acs": [
+            {
+              "id": "AC1",
+              "name": "大宗折溢价标准化",
+              "given": "大宗交易接口返回折溢价率（如 -12.5%）",
+              "when": "写入 stock_block_trade 时",
+              "then": "字段 discount_pct 必须正确换算并存为 -0.125000。"
+            }
+          ]
+        },
+        {
+          "id": "E15-S4",
+          "title": "P3级大盘沪深港通流水与个股北向只读锁定",
+          "role": {
+            "as": "scf-collector",
+            "want": "每日盘后增量同步大盘沪深港通流量，且物理封存已停发的个股北向历史",
+            "value": "锁死已停发接口，且保障市场大盘资金流分析基准的持续"
+          },
+          "tasks": [
+            {
+              "id": "E15-S4-T1",
+              "text": "永久封存 stock_north_funds_daily 个股北向历史数据，配置写锁或严禁增量更新语句"
+            },
+            {
+              "id": "E15-S4-T2",
+              "text": "编写大盘沪深港通每日流量 north_capital_daily 增量采集并写入 MySQL"
+            },
+            {
+              "id": "E15-S4-T3",
+              "text": "编写每日宏观利率情绪指标 monitor_indicators_history 采集，一律除以 100 存小数"
+            }
+          ],
+          "acs": [
+            {
+              "id": "AC1",
+              "name": "个股北向保护",
+              "given": "个股北向资金表",
+              "when": "任何 SCF 采集逻辑运行时",
+              "then": "绝不允许对该表发起任何 DELETE、TRUNCATE 或 UPDATE，保证 2024-08-19 之前的历史数据 100% 完整无损。"
+            },
+            {
+              "id": "AC2",
+              "name": "宏观利率标准存储",
+              "given": "10年期国债收益率数据（如 2.31%）",
+              "when": "写入 monitor_indicators_history 时",
+              "then": "对应值必须存储为标准的小数 0.023100。"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
