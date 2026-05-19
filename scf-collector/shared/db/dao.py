@@ -534,17 +534,18 @@ class StockDAO:
         import pandas as pd
         cleaned = {}
         for k, v in item.items():
-            if v is None:
-                cleaned[k] = None
-            elif isinstance(v, float):
-                if math.isnan(v) or math.isinf(v):
-                    cleaned[k] = None
-                else:
-                    cleaned[k] = round(v, 4)
-            elif pd.isna(v):
+            if pd.isna(v):
                 cleaned[k] = None
             else:
-                cleaned[k] = v
+                if hasattr(v, 'item'):
+                    v = v.item()
+                if isinstance(v, float):
+                    if math.isnan(v) or math.isinf(v):
+                        cleaned[k] = None
+                    else:
+                        cleaned[k] = round(v, 4)
+                else:
+                    cleaned[k] = v
         return cleaned
 
     @classmethod

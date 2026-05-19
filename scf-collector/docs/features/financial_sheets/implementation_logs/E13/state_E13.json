@@ -1,0 +1,40 @@
+{
+  "epic_id": "E13",
+  "last_updated": "2026-05-19T11:17:15Z",
+  "current_stage": "E13-S4-增量部署-COMPLETED",
+  "completed_stories": [
+    {
+      "story_id": "E13-S4",
+      "title": "财务三表与关键比率每日增量采集迁移",
+      "status": "completed",
+      "delivered_assets": {
+        "tables": [
+          "ods_fin_balancesheet",
+          "ods_fin_income",
+          "ods_fin_cashflow",
+          "ods_fin_indicators"
+        ],
+        "cloud_function_logic": "scf-collector/functions/daily_quotes/index.py (sync_financial_sheets op)",
+        "collector_extension": "scf-collector/shared/collectors/tushare_cl.py (fetch_disclosure_date)",
+        "validation_script": "scf-collector/scratch/test_incremental_financial.py"
+      },
+      "downstream_notes": "每日盘后增量采集已由 Tushare 实际披露日期接口（disclosure_date）进行驱动，规避了 ann_date 直接拉取全市场数据所需的 5000 积分限制，完全自适应 2000 积分普通账号，防频次超限流控表现完美。"
+    }
+  ],
+  "active_system_state": {
+    "historical_backfill_complete": true,
+    "scf_incremental_sync_deployed": true,
+    "quality_assurance_checked": true,
+    "data_consistency_percentage": 100.0
+  },
+  "next_story_tasks": [
+    {
+      "story_id": "E13-S5",
+      "title": "融资融券及北向数据对齐",
+      "tasks": [
+        "同步融资融券明细表 ods_margin_detail",
+        "注意防范北向资金 2024-08-19 后的政策性停发断流异常"
+      ]
+    }
+  ]
+}

@@ -132,27 +132,32 @@ def setup_triggers():
     cred = credential.Credential(secret_id, secret_key)
     client = scf_client.ScfClient(cred, region)
     
-    # 腾讯云 SCF 定时触发器采用 UTC 时间，北京时间 (CST) 需减去 8 小时
+    # 腾讯云 SCF 定时触发器在中国大陆地域直接采用北京时间 (CST)
     triggers = [
         {
             "name": "DailyKline",
-            "cron": "0 30 8 * * * *",  # 对应北京时间 16:30 CST
+            "cron": "0 30 16 * * * *",  # 对应北京时间 16:30 CST
             "payload": {"op": "sync_kline_daily"}
         },
         {
             "name": "DailyAdjFactor",
-            "cron": "0 25 1 * * * *",  # 对应北京时间 09:25 CST (标准盘前因子同步)
+            "cron": "0 25 9 * * * *",  # 对应北京时间 09:25 CST (标准盘前因子同步)
             "payload": {"op": "sync_adj_factor"}
         },
         {
             "name": "DailyIndex",
-            "cron": "0 40 8 * * * *",  # 对应北京时间 16:40 CST
+            "cron": "0 40 16 * * * *",  # 对应北京时间 16:40 CST
             "payload": {"op": "sync_index_daily"}
         },
         {
             "name": "IntegrityFailOver",
-            "cron": "0 0 9 * * * *",   # 对应北京时间 17:00 CST
+            "cron": "0 0 17 * * * *",   # 对应北京时间 17:00 CST
             "payload": {"op": "validate_and_failover"}
+        },
+        {
+            "name": "DailyFinancialSheets",
+            "cron": "0 0 18 * * * *",   # 对应北京时间 18:00 CST
+            "payload": {"op": "sync_financial_sheets"}
         }
     ]
     

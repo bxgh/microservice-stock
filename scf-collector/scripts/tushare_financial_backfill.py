@@ -99,14 +99,17 @@ async def run_backfill():
     
     overall_start_time = time.time()
     
-    # 2. 个股循环处理 (实现断点续传)
-    for idx, ts_code in enumerate(stocks):
-        check_sql = "SELECT status FROM sync_progress WHERE task_name=%s AND current_code=%s"
-        res = await execute_query(check_sql, (TASK_NAME, ts_code))
-        
-        if res and res[0]['status'] == 'completed':
-            continue
+    # 2. 获取上次断点进度 (实现断点续传)
+    check_sql = "SELECT last_index FROM sync_progress WHERE task_name=%s"
+    progress_res = await execute_query(check_sql, (TASK_NAME,))
+    start_idx = 0
+    if progress_res and progress_res[0]['last_index']:
+        start_idx = int(progress_res[0]['last_index'])
+        logger.info(f"检测到历史同步断点，将跳过前 {start_idx} 支股票，从第 {start_idx + 1} 支开始处理。")
 
+    # 3. 个股循环处理
+    for idx in range(start_idx, total_stocks):
+        ts_code = stocks[idx]
         start_time = time.time()
         
         # 打印炫酷的 CLI 进度条与 ETA 时间预测
@@ -116,7 +119,8 @@ async def run_backfill():
         bar = '█' * filled_length + '-' * (bar_length - filled_length)
         
         elapsed = time.time() - overall_start_time
-        avg_time = elapsed / (idx + 1)
+        completed_since_start = idx - start_idx + 1
+        avg_time = elapsed / completed_since_start
         remaining_stocks = total_stocks - (idx + 1)
         eta_sec = avg_time * remaining_stocks
         eta_str = str(datetime.timedelta(seconds=int(eta_sec)))
@@ -149,13 +153,17 @@ async def run_backfill():
             if ind_clean:
                 await StockDAO.save_fina_indicator(ind_clean)
 
-            # (5) 记录个股断点完成进度
+            # (5) 记录个股断点完成进度 (修复单行 task_name 唯一索引的更新 bug)
             upsert_sql = """
             INSERT INTO sync_progress (task_name, current_code, status, last_index, total_count)
             VALUES (%s, %s, 'completed', %s, %s)
-            ON DUPLICATE KEY UPDATE status='completed', last_index=%s, updated_at=CURRENT_TIMESTAMP
+            ON DUPLICATE KEY UPDATE 
+                current_code = VALUES(current_code),
+                status = 'completed', 
+                last_index = VALUES(last_index), 
+                updated_at = CURRENT_TIMESTAMP
             """
-            await execute_query(upsert_sql, (TASK_NAME, ts_code, idx + 1, total_stocks, idx + 1))
+            await execute_query(upsert_sql, (TASK_NAME, ts_code, idx + 1, total_stocks))
             
             # [E13-S4-AC1] 强制单步 Throttling 休眠，防止接口限流
             await asyncio.sleep(THROTTLE_SLEEP)

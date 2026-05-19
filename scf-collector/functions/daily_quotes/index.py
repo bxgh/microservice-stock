@@ -52,6 +52,44 @@ except Exception as e:
 
 FALLBACK_CHAIN = ['tushare', 'akshare', 'easyquotation']
 
+from typing import List, Dict, Any
+
+def deduplicate_records(data: List[Dict[str, Any]], has_report_type: bool = True) -> List[Dict[str, Any]]:
+    """
+    [E13-S4-T3] Python 业务层排重与预清洗逻辑
+    针对可能存在的更正公告多条重复记录，按唯一键 (end_date, report_type) 对数据进行分组，
+    仅保留公告日期 (ann_date 或 f_ann_date) 最新的那条有效记录。
+    """
+    if not data:
+        return []
+    
+    groups = {}
+    for item in data:
+        end_date = item.get('end_date')
+        if not end_date:
+            continue
+        
+        # 确定唯一键标识
+        if has_report_type:
+            report_type = item.get('report_type', '1')
+            key = (end_date, report_type)
+        else:
+            key = end_date
+            
+        ann_date = str(item.get('ann_date', '') or '')
+        f_ann = str(item.get('f_ann_date', '') or '')
+        # 优先使用实际披露公告日对比时序，否则使用默认公告日
+        compare_date = f_ann if f_ann else ann_date
+        
+        if key not in groups:
+            groups[key] = (compare_date, item)
+        else:
+            saved_date, _ = groups[key]
+            if compare_date > saved_date:
+                groups[key] = (compare_date, item)
+                
+    return [val[1] for val in groups.values()]
+
 async def async_handler(event, context):
     logger.info(f"Received event: {event}")
     # 1. 尝试从 Message 字段解包 (Timer Trigger 专用)
@@ -247,7 +285,100 @@ async def async_handler(event, context):
             await EmailNotifier.notify_success("指数K线同步", trade_date, count, table_name="ods_index_daily")
             
             return {"status": "success", "count": count, "request_id": request_id}
-        return {"status": "success", "count": count, "request_id": request_id}
+        return {"status": "success", "count": 0, "request_id": request_id}
+
+    if op == 'sync_financial_sheets':
+        # 增量同步每日新公告的财务三表与指标 (通过获取披露计划后逐个股票同步，规避 Tushare 2000 积分无 ann_date 批量查询权限的限制)
+        tushare_date = trade_date.replace('-', '')
+        logger.info(f"[{request_id}] Starting incremental financial sheets sync for {trade_date} (Tushare: {tushare_date})...")
+        collector = COLLECTORS.get('tushare')
+        
+        try:
+            # 1. 查询当天实际披露报告的上市公司列表
+            disclosure_list = await collector.fetch_disclosure_date(actual_date=tushare_date)
+            logger.info(f"[{request_id}] Found {len(disclosure_list)} companies disclosing reports on {trade_date}.")
+            
+            bs_count = 0
+            inc_count = 0
+            cf_count = 0
+            ind_count = 0
+            
+            # 2. 如果有披露，逐个股票增量同步
+            if disclosure_list:
+                # 提取去重后的 ts_code 列表
+                ts_codes = list(set([item['ts_code'] for item in disclosure_list if item.get('ts_code')]))
+                logger.info(f"[{request_id}] Unique stock codes to sync: {len(ts_codes)}")
+                
+                # 对这批披露的个股，单独拉取最新财务报告
+                for idx, code in enumerate(ts_codes):
+                    logger.info(f"[{request_id}] [{idx+1}/{len(ts_codes)}] Pulling financial reports for {code}...")
+                    
+                    try:
+                        # (1) 资产负债表 (合并报表)
+                        bs_data = await collector.fetch_balancesheet(ts_code=code)
+                        bs_clean = deduplicate_records(bs_data, has_report_type=True)
+                        if bs_clean:
+                            bs_count += await StockDAO.save_balancesheet(bs_clean)
+                            
+                        # (2) 利润表 (合并报表)
+                        inc_data = await collector.fetch_income(ts_code=code)
+                        inc_clean = deduplicate_records(inc_data, has_report_type=True)
+                        if inc_clean:
+                            inc_count += await StockDAO.save_income(inc_clean)
+                            
+                        # (3) 现金流量表 (合并报表)
+                        cf_data = await collector.fetch_cashflow(ts_code=code)
+                        cf_clean = deduplicate_records(cf_data, has_report_type=True)
+                        if cf_clean:
+                            cf_count += await StockDAO.save_cashflow(cf_clean)
+                            
+                        # (4) 财务指标
+                        ind_data = await collector.fetch_fina_indicator(ts_code=code)
+                        ind_clean = deduplicate_records(ind_data, has_report_type=False)
+                        if ind_clean:
+                            ind_count += await StockDAO.save_fina_indicator(ind_clean)
+                            
+                        # Throttling to prevent Tushare rate limit
+                        await asyncio.sleep(0.3)
+                        
+                    except Exception as e:
+                        logger.error(f"[{request_id}] Failed to sync financial data for {code}: {e}")
+                        continue
+            
+            total_saved = bs_count + inc_count + cf_count + ind_count
+            logger.info(f"[{request_id}] Incremental financial sheets sync complete. "
+                        f"Saved: bs={bs_count}, inc={inc_count}, cf={cf_count}, ind={ind_count}.")
+            
+            # 更新今日数据就绪性状态
+            if total_saved > 0:
+                await StockDAO.update_data_readiness(trade_date, "ods_fin_balancesheet", bs_count)
+                await StockDAO.update_data_readiness(trade_date, "ods_fin_income", inc_count)
+                await StockDAO.update_data_readiness(trade_date, "ods_fin_cashflow", cf_count)
+                await StockDAO.update_data_readiness(trade_date, "ods_fin_indicators", ind_count)
+            
+            await StockDAO.log_pipeline_run("Financial-Sheets", "success", run_id=request_id, biz_date=trade_date)
+            
+            # 发送成功邮件
+            email_body = f"披露公司数: {len(disclosure_list)} | 资产负债表: 保存 {bs_count} 条 | 利润表: 保存 {inc_count} 条 | 现金流量表: 保存 {cf_count} 条 | 关键财务指标: 保存 {ind_count} 条"
+            await EmailNotifier.notify_success("每日财务数据采集", trade_date, total_saved, table_name="ods_fin_multiple", extra={"详细进度": email_body})
+            
+            return {
+                "status": "success", 
+                "disclosing_count": len(disclosure_list),
+                "saved": {"balancesheet": bs_count, "income": inc_count, "cashflow": cf_count, "indicators": ind_count},
+                "request_id": request_id
+            }
+            
+        except Exception as e:
+            err_msg = f"Incremental financial sheets sync error: {str(e)}"
+            logger.error(f"[{request_id}] {err_msg}")
+            await StockDAO.log_pipeline_run("Financial-Sheets", "error", error_message=err_msg, run_id=request_id, biz_date=trade_date)
+            
+            # 发送失败邮件
+            await EmailNotifier.notify_failure("每日财务数据采集", trade_date, err_msg)
+            
+            return {"status": "error", "message": err_msg, "request_id": request_id}
+
     if op == 'validate_and_failover':
         # 17:00 完整性校验与熔断编排
         logger.info(f"[{request_id}] Starting integrity validation & fail-over for {trade_date}...")

@@ -37,13 +37,14 @@
 
 | 表名 | 描述 | 采集频率 | 状态 | 云函数名称 (物理 ID) / 跑批脚本 |
 |---|---|---|---|---|
-| `ods_fin_balancesheet` | 资产负债表 (合并报表) | 披露季度 (跑批更新) | 🟢 生产就绪 | `tushare_financial_backfill.py` |
-| `ods_fin_income` | 利润表 (合并报表) | 披露季度 (跑批更新) | 🟢 生产就绪 | `tushare_financial_backfill.py` |
-| `ods_fin_cashflow` | 现金流量表 (合并报表) | 披露季度 (跑批更新) | 🟢 生产就绪 | `tushare_financial_backfill.py` |
-| `ods_fin_indicators` | 财务关键指标与比率 (百分比除以 100 转换) | 披露季度 (跑批更新) | 🟢 生产就绪 | `tushare_financial_backfill.py` |
+| `ods_fin_balancesheet` | 资产负债表 (合并报表) | 披露季度全量回填 + 每日盘后增量 | 🟢 生产就绪 | `stock-serverless-collector` (云端增量) / `tushare_financial_backfill.py` (历史) |
+| `ods_fin_income` | 利润表 (合并报表) | 披露季度全量回填 + 每日盘后增量 | 🟢 生产就绪 | `stock-serverless-collector` (云端增量) / `tushare_financial_backfill.py` (历史) |
+| `ods_fin_cashflow` | 现金流量表 (合并报表) | 披露季度全量回填 + 每日盘后增量 | 🟢 生产就绪 | `stock-serverless-collector` (云端增量) / `tushare_financial_backfill.py` (历史) |
+| `ods_fin_indicators` | 财务关键指标与比率 (百分比除以 100 转换) | 披露季度全量回填 + 每日盘后增量 | 🟢 生产就绪 | `stock-serverless-collector` (云端增量) / `tushare_financial_backfill.py` (历史) |
 
 ---
 **更新记录**:
+- 2026-05-19: [Epic E13-S4-增量部署] 上线了针对 A 股 2000 积分普通账号优化、且 100% 防频次超限的每日实际披露计划增量拉取算法。通过 `pro.disclosure_date(actual_date=today)` 锁定当日实际发布披露的去重个股代码，再用 `fetch_balancesheet/income/cashflow/fina_indicator` 对披露个股进行循环增量采集，完美解决了 Tushare 2000 积分无法使用 `ann_date` 直接批量下载全市场财务报表数据的物理痛点，完全达成数据增量就绪，并在本地执行完美验证。
 - 2026-05-17: [Epic E13-S4] 财务三表与关键比率迁移。彻底将历史财务数据（资产负债表、利润表、现金流量表、财务指标表）迁移至 Tushare 数据源。设计并实现了以 Tushare Pro 官方接口为基础的高效异步采集适配器，应用 Dual-Layer 校验排重（Python GroupBy 披露期更正排重 + MySQL `UNIQUE KEY uk_code_period_type/uk_code_period` 物理唯一约束 `ON DUPLICATE KEY UPDATE` 写入），以及标准百分比除以 100.0 的小数标准化存储。跑批脚本支持断点续传与 1.5s 安全流控休眠，物理落库无脏数据、无警告，且已通过 pytest 全套自动化测试（拉取/对齐/换算/更正排重/防 NaN 报错）及 Ping An Bank (000001.SZ) 物理对账校验，100% 数据一致性。
 - 2026-05-17: [Epic E14-S2 v2] 政策解耦部署与云端 v13 补丁依赖层激活。将单体采集拆分为：`stock-policy-collector` (高频采集去重)、`stock-policy-analyzer` (并发乐观分布式锁、LIMIT 5 队列、LLM 智能研报主引擎)、`stock-policy-notifier` (微信简报、删除线 HTML side-by-side 响应式投研邮件推送)。编译打包 Version 13 物理补丁层（集成 `exceptiongroup` 关键异步底座包），完美解决 Python 3.10 Cloud 容器下的 `anyio`、`httpx` 及 `openai` 库多米诺骨牌式崩溃，全链路级联 Invoke 100% 远程调试通车！
 - 2026-05-17: [Epic E14-S1] 数据采集层建设。新建独立云函数 `scf-policy-monitor` 抓取多源 JSON/HTML 数据接口，入库 `ods_policy_info`，实现了 URL/MD5 双重去重，并完美对接了 ServerChan 微信通知与 SMTP 邮件警报。

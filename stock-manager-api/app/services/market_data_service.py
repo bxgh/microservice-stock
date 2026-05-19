@@ -250,14 +250,14 @@ class MarketDataService:
                 
                 logger.info(f"Tushare 同步股票日线完成: {total_synced} 条")
 
-                # 3. 增量刷新复权因子缓存
-                if total_synced > 0:
-                    unique_codes = list(set([i.get("ts_code") for i in data if i.get("ts_code") in valid_codes]))
-                    dates = [i.get("trade_date") for i in data if i.get("trade_date")]
-                    if unique_codes and dates:
-                        s_date = f"{min(dates)[:4]}-{min(dates)[4:6]}-{min(dates)[6:8]}"
-                        e_date = f"{max(dates)[:4]}-{max(dates)[4:6]}-{max(dates)[6:8]}"
-                        await self._refresh_factor_cache(unique_codes, s_date, e_date)
+                # [DEPRECATED] 增量刷新复权因子缓存已废弃 (因为 stock_kline_daily 已直接嵌入 adj_factor，不再需要铺平缓存表)
+                # if total_synced > 0:
+                #     unique_codes = list(set([i.get("ts_code") for i in data if i.get("ts_code") in valid_codes]))
+                #     dates = [i.get("trade_date") for i in data if i.get("trade_date")]
+                #     if unique_codes and dates:
+                #         s_date = f"{min(dates)[:4]}-{min(dates)[4:6]}-{min(dates)[6:8]}"
+                #         e_date = f"{max(dates)[:4]}-{max(dates)[4:6]}-{max(dates)[6:8]}"
+                #         await self._refresh_factor_cache(unique_codes, s_date, e_date)
 
                 return total_synced
             else:
@@ -457,44 +457,45 @@ class MarketDataService:
             logger.error(f"同步复权因子失败: {e}")
             raise
 
-    async def _refresh_factor_cache(self, ts_codes: List[str], start_date: str, end_date: str):
-        """分批刷新复权因子缓存 (MySQL 5.7 兼容版，内存优化)"""
-        try:
-            if not ts_codes:
-                return
-                
-            logger.info(f"正在增量刷新复权因子缓存: {len(ts_codes)} 只股票 ({start_date} ~ {end_date})")
-            
-            # 每 200 只股票一个批次，避免 CROSS JOIN 产生过大中间结果
-            batch_size = 200
-            for i in range(0, len(ts_codes), batch_size):
-                batch = ts_codes[i:i+batch_size]
-                sql = f"""
-                    INSERT INTO ods_stock_factor_daily (ts_code, trade_date, adjust_factor)
-                    SELECT
-                        f_codes.ts_code,
-                        c.cal_date,
-                        (SELECT f2.adjust_factor
-                         FROM stock_adjust_factor f2
-                         WHERE f2.ts_code = f_codes.ts_code
-                           AND f2.adjust_date <= c.cal_date
-                         ORDER BY f2.adjust_date DESC LIMIT 1) as adjust_factor
-                    FROM trade_cal c
-                    CROSS JOIN (
-                        SELECT DISTINCT ts_code FROM stock_adjust_factor
-                        WHERE ts_code IN ({','.join(['%s'] * len(batch))})
-                    ) f_codes
-                    WHERE c.is_open = 1
-                      AND c.cal_date BETWEEN %s AND %s
-                    ON DUPLICATE KEY UPDATE
-                        adjust_factor = VALUES(adjust_factor)
-                """
-                params = batch + [start_date, end_date]
-                await db.execute(sql, tuple(params))
-            
-            logger.info(f"复权因子缓存分批刷新完成: {len(ts_codes)} 只股票")
-        except Exception as e:
-            logger.error(f"刷新复权因子缓存失败: {e}")
+    # [DEPRECATED] _refresh_factor_cache 已废弃 (因为 stock_kline_daily 已直接嵌入 adj_factor)
+    # async def _refresh_factor_cache(self, ts_codes: List[str], start_date: str, end_date: str):
+    #     """分批刷新复权因子缓存 (MySQL 5.7 兼容版，内存优化)"""
+    #     try:
+    #         if not ts_codes:
+    #             return
+    #             
+    #         logger.info(f"正在增量刷新复权因子缓存: {len(ts_codes)} 只股票 ({start_date} ~ {end_date})")
+    #         
+    #         # 每 200 只股票一个批次，避免 CROSS JOIN 产生过大中间结果
+    #         batch_size = 200
+    #         for i in range(0, len(ts_codes), batch_size):
+    #             batch = ts_codes[i:i+batch_size]
+    #             sql = f"""
+    #                 INSERT INTO ods_stock_factor_daily (ts_code, trade_date, adjust_factor)
+    #                 SELECT
+    #                     f_codes.ts_code,
+    #                     c.cal_date,
+    #                     (SELECT f2.adjust_factor
+    #                      FROM stock_adjust_factor f2
+    #                      WHERE f2.ts_code = f_codes.ts_code
+    #                        AND f2.adjust_date <= c.cal_date
+    #                      ORDER BY f2.adjust_date DESC LIMIT 1) as adjust_factor
+    #                 FROM trade_cal c
+    #                 CROSS JOIN (
+    #                     SELECT DISTINCT ts_code FROM stock_adjust_factor
+    #                     WHERE ts_code IN ({','.join(['%s'] * len(batch))})
+    #                 ) f_codes
+    #                 WHERE c.is_open = 1
+    #                   AND c.cal_date BETWEEN %s AND %s
+    #                 ON DUPLICATE KEY UPDATE
+    #                     adjust_factor = VALUES(adjust_factor)
+    #             """
+    #             params = batch + [start_date, end_date]
+    #             await db.execute(sql, tuple(params))
+    #         
+    #         logger.info(f"复权因子缓存分批刷新完成: {len(ts_codes)} 只股票")
+    #     except Exception as e:
+    #         logger.error(f"刷新复权因子缓存失败: {e}")
 
     async def sync_index_daily(
             self,
