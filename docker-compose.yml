@@ -116,6 +116,7 @@ services:
       - PYWENCAI_API_URL=http://pywencai-api:8000
       - TUSHARE_API_URL=http://tushare-api:8000
       - MOOTDX_API_URL=http://mootdx-api:8000
+      - DISABLE_SCHEDULER=${DISABLE_SCHEDULER:-false}
 
     env_file:
       - .env

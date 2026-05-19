@@ -25,92 +25,98 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         logger.error(f"数据库连接池启动失败: {e}")
 
-    # 初始化并启动调度器
+    # 初始化并启动调度器 (支持环境变量 DISABLE_SCHEDULER 禁用)
+    import os
+    disable_scheduler = os.environ.get("DISABLE_SCHEDULER", "false").lower() in ("true", "1")
     scheduler = None
+    
     try:
-        from app.scheduler import TaskScheduler, set_scheduler_instance
-        from app.scheduler import jobs as job_funcs
-        from app.scheduler import system_jobs as sys_job_funcs
+        if disable_scheduler:
+            logger.info("TaskScheduler has been disabled via DISABLE_SCHEDULER env var.")
+        else:
+            from app.scheduler import TaskScheduler, set_scheduler_instance
+            from app.scheduler import jobs as job_funcs
+            from app.scheduler import system_jobs as sys_job_funcs
 
-        # 1. 初始化
-        scheduler = TaskScheduler(timezone="Asia/Shanghai")
-        set_scheduler_instance(scheduler)
+            # 1. 初始化
+            scheduler = TaskScheduler(timezone="Asia/Shanghai")
+            set_scheduler_instance(scheduler)
 
-        # 1.1 注册系统健康监控 (每 5 分钟)
-        scheduler.add_interval_job(
-            sys_job_funcs.system_health_monitor_job,
-            minutes=5,
-            job_id="system_health_monitor"
-        )
+            # 1.1 注册系统健康监控 (每 5 分钟)
+            scheduler.add_interval_job(
+                sys_job_funcs.system_health_monitor_job,
+                minutes=5,
+                job_id="system_health_monitor"
+            )
 
-        # 1.2 注册全生命周期就绪探测器 (每 2 分钟)
-        # 职责: 08:00-09:30 探测晨间信号; 15:30-19:00 探测收盘信号; 19:00-23:00 高频探测
-        scheduler.add_interval_job(
-            sys_job_funcs.readiness_prober_job,
-            minutes=2,
-            job_id="readiness_prober"
-        )
+            # 1.2 注册全生命周期就绪探测器 (每 2 分钟)
+            # 职责: 08:00-09:30 探测晨间信号; 15:30-19:00 探测收盘信号; 19:00-23:00 高频探测
+            scheduler.add_interval_job(
+                sys_job_funcs.readiness_prober_job,
+                minutes=2,
+                job_id="readiness_prober"
+            )
 
-        # 2. 注册深夜维护流水线 (每日 01:00)
-        # 职责: 财务指标同步、机构评级、股东数据、错峰执行
-        from app.services.workflow_service import workflow_service
-        import datetime
-        scheduler.add_daily_job(
-            workflow_service.process_maintenance_trigger,
-            job_id="daily_maintenance_pipeline",
-            hour=1,
-            minute=0,
-            args=[datetime.date.today()]
-        )
+            # 2. 注册深夜维护流水线 (每日 01:00)
+            # 职责: 财务指标同步、机构评级、股东数据、错峰执行
+            from app.services.workflow_service import workflow_service
+            import datetime
+            scheduler.add_daily_job(
+                workflow_service.process_maintenance_trigger,
+                job_id="daily_maintenance_pipeline",
+                hour=1,
+                minute=0,
+                args=[datetime.date.today()]
+            )
 
-        # 3. 注册流水线保底扫描任务 (23:00)
-        scheduler.add_daily_job(
-            sys_job_funcs.safety_workflow_scan_job,
-            job_id="safety_workflow_scan",
-            hour=23,
-            minute=0
-        )
+            # 3. 注册流水线保底扫描任务 (23:00)
+            scheduler.add_daily_job(
+                sys_job_funcs.safety_workflow_scan_job,
+                job_id="safety_workflow_scan",
+                hour=23,
+                minute=0
+            )
 
-        # 4. 注册每日任务总结报告
-        # 初次总结 (23:45)
-        scheduler.add_daily_job(
-            sys_job_funcs.daily_pipeline_summary_job,
-            job_id="daily_summary_night",
-            hour=23,
-            minute=45
-        )
-        # 最终报告 (次日 06:00)
-        scheduler.add_daily_job(
-            sys_job_funcs.daily_pipeline_summary_job,
-            job_id="daily_summary_final",
-            hour=6,
-            minute=0
-        )
+            # 4. 注册每日任务总结报告
+            # 初次总结 (23:45)
+            scheduler.add_daily_job(
+                sys_job_funcs.daily_pipeline_summary_job,
+                job_id="daily_summary_night",
+                hour=23,
+                minute=45
+            )
+            # 最终报告 (次日 06:00)
+            scheduler.add_daily_job(
+                sys_job_funcs.daily_pipeline_summary_job,
+                job_id="daily_summary_final",
+                hour=6,
+                minute=0
+            )
 
-        # 5. 注册补数扫描与处理任务
-        scheduler.add_interval_job(
-            sys_job_funcs.backfill_enqueue_job,
-            hours=1,
-            job_id="backfill_enqueue"
-        )
-        scheduler.add_interval_job(
-            sys_job_funcs.backfill_processor_job,
-            minutes=5,
-            job_id="backfill_processor"
-        )
+            # 5. 注册补数扫描与处理任务
+            scheduler.add_interval_job(
+                sys_job_funcs.backfill_enqueue_job,
+                hours=1,
+                job_id="backfill_enqueue"
+            )
+            scheduler.add_interval_job(
+                sys_job_funcs.backfill_processor_job,
+                minutes=5,
+                job_id="backfill_processor"
+            )
 
-        # 5. 注册每周复权因子对账任务 (每周日 05:00)
-        scheduler.add_cron_job(
-            job_funcs.weekly_factor_reconcile_job,
-            job_id="weekly_factor_reconcile",
-            day_of_week='sun',
-            hour=5,
-            minute=0
-        )
+            # 5. 注册每周复权因子对账任务 (每周日 05:00)
+            scheduler.add_cron_job(
+                job_funcs.weekly_factor_reconcile_job,
+                job_id="weekly_factor_reconcile",
+                day_of_week='sun',
+                hour=5,
+                minute=0
+            )
 
-        # 启动
-        await scheduler.start()
-        logger.info("Stock-Manager 内部调度器已启动")
+            # 启动
+            await scheduler.start()
+            logger.info("Stock-Manager 内部调度器已启动")
 
     except Exception as e:
         logger.error(f"调度器启动失败: {e}", exc_info=True)
