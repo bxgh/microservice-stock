@@ -1,0 +1,441 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>E23-S2 每日格言智能推荐与日内幂等锁定 API 交付报告</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Noto+Serif+SC:wght@400;700;900&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    
+    <!-- Local Offline Libraries -->
+    <script src="../../../../../../../docs/assets/js/marked.min.js"></script>
+    <link rel="stylesheet" href="../../../../../../../docs/assets/css/github-markdown-dark.css">
+    <script src="../../../../../../../docs/assets/js/mermaid.min.js"></script>
+    
+    <!-- Syntax Highlighting (Local) -->
+    <link rel="stylesheet" href="../../../../../../../docs/assets/css/tokyo-night-dark.min.css">
+    <script src="../../../../../../../docs/assets/js/highlight.min.js"></script>
+    
+    <style>
+        :root {
+            --bg: #0a0a0a;
+            --surface: #121212;
+            --surface-hover: #1a1a1a;
+            --border: #222222;
+            --accent: #eab308;
+            --accent-glow: rgba(234, 179, 8, 0.1);
+            --text-primary: #f1f5f9;
+            --text-secondary: #94a3b8;
+            --text-muted: #64748b;
+            --font-sans: 'Outfit', 'Noto Sans SC', -apple-system, sans-serif;
+            --font-serif: 'Noto Serif SC', serif;
+            --font-mono: 'JetBrains Mono', monospace;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background-color: var(--bg);
+            color: var(--text-primary);
+            font-family: var(--font-sans);
+            line-height: 1.7;
+            -webkit-font-smoothing: antialiased;
+            overflow-x: hidden;
+        }
+
+        /* Subtle background glow */
+        body::after {
+            content: '';
+            position: fixed;
+            top: 0;
+            right: 0;
+            width: 40vw;
+            height: 40vh;
+            background: radial-gradient(circle, var(--accent-glow) 0%, transparent 70%);
+            z-index: -1;
+            filter: blur(100px);
+            pointer-events: none;
+        }
+
+        .sidebar {
+            width: 260px;
+            height: 100vh;
+            position: fixed;
+            left: 0;
+            top: 0;
+            border-right: 1px solid var(--border);
+            background: var(--bg);
+            padding: 1.5rem;
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+            overflow-y: auto;
+            z-index: 100;
+        }
+
+        .nav-link {
+            color: var(--text-muted);
+            text-decoration: none;
+            font-size: 0.85rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            transition: color 0.2s;
+            padding: 0.5rem;
+            border-radius: 6px;
+        }
+        .nav-link:hover { color: var(--accent); background: var(--surface); }
+
+        .toc-title {
+            font-family: var(--font-serif);
+            font-size: 1rem;
+            color: var(--text-primary);
+            margin-bottom: 0.8rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding-left: 0.5rem;
+        }
+        .toc-title::before {
+            content: '';
+            width: 3px;
+            height: 1rem;
+            background: var(--accent);
+            border-radius: 2px;
+        }
+
+        .toc-list {
+            list-style: none;
+            display: flex;
+            flex-direction: column;
+            gap: 0.4rem;
+        }
+        .toc-item {
+            font-size: 0.8rem;
+            line-height: 1.3;
+        }
+        .toc-item a {
+            color: var(--text-muted);
+            text-decoration: none;
+            transition: all 0.2s;
+            display: block;
+            padding: 0.4rem 0.5rem;
+            border-radius: 4px;
+        }
+        .toc-item a:hover { color: var(--accent); background: var(--surface); }
+        .toc-item.level-3 { margin-left: 0.8rem; border-left: 1px solid var(--border); }
+
+        .container {
+            max-width: 860px;
+            margin: 0 auto 0 260px;
+            padding: 3rem 4rem;
+            animation: fadeIn 0.6s ease-out;
+        }
+
+        @media (max-width: 1024px) {
+            .sidebar { width: 220px; padding: 1rem; }
+            .container { margin-left: 220px; padding: 2rem; }
+        }
+
+        @media (max-width: 800px) {
+            .sidebar { position: static; width: 100%; height: auto; border-right: none; border-bottom: 1px solid var(--border); }
+            .container { margin-left: 0; padding: 1.5rem; }
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(5px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        header {
+            margin-bottom: 3rem;
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 1.5rem;
+        }
+
+        .meta {
+            font-family: var(--font-mono);
+            font-size: 0.75rem;
+            color: var(--accent);
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            margin-bottom: 0.8rem;
+            display: flex;
+            align-items: center;
+            gap: 0.8rem;
+        }
+
+        .meta::before {
+            content: '';
+            width: 20px;
+            height: 1px;
+            background-color: var(--accent);
+        }
+
+        h1 {
+            font-family: var(--font-serif);
+            font-size: 2.2rem;
+            font-weight: 900;
+            line-height: 1.2;
+            margin-bottom: 1rem;
+            color: var(--text-primary);
+        }
+
+        .markdown-body {
+            background: transparent !important;
+            color: var(--text-primary) !important;
+            font-family: var(--font-sans) !important;
+            font-size: 0.95rem !important;
+        }
+
+        .markdown-body h2 {
+            font-family: var(--font-serif);
+            font-size: 1.5rem !important;
+            color: var(--accent) !important;
+            border-bottom: 1px solid var(--border) !important;
+            padding-bottom: 0.5rem !important;
+            margin-top: 2.5rem !important;
+            scroll-margin-top: 1rem;
+        }
+
+        .markdown-body h3 {
+            font-family: var(--font-serif);
+            font-size: 1.25rem !important;
+            color: var(--text-primary) !important;
+            margin-top: 2rem !important;
+            scroll-margin-top: 1rem;
+        }
+
+        .markdown-body p, .markdown-body li {
+            font-size: 0.95rem !important;
+            color: var(--text-primary) !important;
+        }
+        
+        .markdown-body pre {
+            background-color: #1a1b26 !important; /* Match Tokyo Night Dark */
+            border: 1px solid var(--border);
+            border-radius: 8px !important;
+            padding: 0 !important; /* Code internal handles padding */
+            margin: 1.2rem 0 !important;
+            overflow: hidden;
+        }
+
+        .markdown-body pre code {
+            background-color: transparent !important;
+            padding: 1.2rem !important;
+            display: block;
+            font-family: var(--font-mono) !important;
+            font-size: 0.85rem !important;
+            line-height: 1.5;
+        }
+
+        .markdown-body blockquote {
+            border-left: 3px solid var(--accent) !important;
+            background: var(--surface);
+            padding: 0.8rem 1.2rem;
+            color: var(--text-secondary) !important;
+            margin: 1.2rem 0 !important;
+        }
+
+        .markdown-body table {
+            background: var(--surface);
+            font-size: 0.85rem !important;
+            margin: 1.2rem 0 !important;
+        }
+
+        footer {
+            margin-top: 4rem;
+            padding-top: 1.5rem;
+            border-top: 1px solid var(--border);
+            color: var(--text-muted);
+            font-size: 0.8rem;
+            text-align: center;
+        }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar { width: 5px; }
+        ::-webkit-scrollbar-track { background: var(--bg); }
+        ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+    </style>
+</head>
+<body>
+    <aside class="sidebar">
+        <a href="index.html" class="nav-link">
+            <span>←</span> 返回目录门户
+        </a>
+        
+        <div class="toc-container">
+            <h3 class="toc-title">文档导航</h3>
+            <ul class="toc-list" id="toc">
+                <!-- TOC items will be injected here -->
+            </ul>
+        </div>
+    </aside>
+
+    <div class="container">
+        <header>
+            <div class="meta">GLOBAL | 2026-05-19 10:19</div>
+            <h1>E23-S2 每日格言智能推荐与日内幂等锁定 API 交付报告</h1>
+        </header>
+
+        <article id="content" class="markdown-body">
+            <!-- Loading indicator -->
+            <p style="color: var(--text-muted)">正在解析文档内容...</p>
+        </article>
+
+        <footer>
+            &copy; 2026 MicroStock Project Docs | Generated by Antigravity
+        </footer>
+    </div>
+
+    <script id="markdown-raw" type="text/markdown"># E23-S2 每日格言智能推荐与日内幂等锁定 API 交付报告
+
+本报告记录了 [Epic E23] 每日格言打卡子系统中 **E23-S2（每日格言智能推荐与日内幂等锁定 API）** 的完整开发、测试与物理交付存证。
+
+---
+
+## 1. 核心交付成果 (Accomplishments)
+
+已 100% 成功交付 E23-S2 阶段约定的所有核心业务功能和接口设计：
+
+*   **凌晨 4:00 时间切分 (T1)**：成功在 `checkin_service.py` 中实现了基于 `Asia/Shanghai` 时区的凌晨 4:00 业务日期切分（`get_business_date`）。每天 04:00 前的访问一律划归为前一天，保证日历划分的业务合理性。
+*   **多维度加权轮询挑选算法 (T2)**：
+    *   自动过滤被拉黑的格言（`is_disliked = 1`）。
+    *   自动进行最近 30 天已曝光历史排重，减少名言的短期重复曝光率。
+    *   支持**收藏格言加权 (+20 积分)**；支持针对跳过名言的**连续跳过扣减惩罚分**。
+*   **大盘情绪自动对齐加权 (T3)**：
+    *   直连物理表 `ods_index_daily` 提取上证综指（`000001.SH`）最近一交易日的真实涨跌幅（`pct_chg`）。
+    *   当大盘大涨（涨幅 >= +0.5%）时，自动对经典与心态类格言（Category 1, 3）进行 **+15 情绪加分**；
+    *   当大盘大跌（跌幅 <= -0.5%）时，自动对大佬与心态类格言（Category 2, 3）进行 **+15 情绪加分**。
+*   **空库冷启动兜底防闪烁 (T4)**：当系统冷启动且名言词库为空时，返回 `msg: "EMPTY_LIB"` 并向锁定表原子写入 `locked_target_id = NULL` 空值锁记录，完全规避界面空数据闪烁与重复扫表。
+*   **日内锁定与历史打卡见解追溯 (T5)**：
+    *   日内首次挑选后立即原子写入锁定表 `diary_checkin_lock`；后续调用命中锁定，幂等返回完全一致的名言。
+    *   通过联表查询（锁表与日记随笔表 `diary_entry` JOIN），自动追溯该用户历史针对该格言发表的最新一次打卡见解（`history_insight`），呈现在界面上进行自我心灵对话。
+*   **API 路由器注册 (T6)**：完整注册并挂载了 `GET /api/v1/checkin/today` 今日格言推荐端点。
+
+---
+
+## 2. 数据库物理结构与字段对齐存证
+
+### 2.1 锁定表（`diary_checkin_lock`）结构
+```text
+Checking diary_checkin_lock columns:
+  - id: bigint(20)
+  - user_id: bigint(20)
+  - business_date: date
+  - checkin_type: tinyint(4)
+  - locked_target_id: bigint(20)
+  - status: tinyint(4)
+  - completed_diary_id: bigint(20)
+  - created_at: timestamp
+  - updated_at: timestamp
+```
+
+### 2.2 用户行为状态表（`diary_quote_user_state`）结构
+```text
+Checking diary_quote_user_state columns:
+  - id: bigint(20)
+  - user_id: bigint(20)
+  - quote_id: bigint(20)
+  - is_favorited: tinyint(1)
+  - skip_count: int(11)
+  - expose_count: int(11)
+  - last_exposed_at: datetime
+  - created_at: timestamp
+  - updated_at: timestamp
+```
+
+---
+
+## 3. 自动化集成测试与 AC 验证报告
+
+我们在 `wxch-gateway/scripts/testing/test_checkin.py` 中实现了 Consolidated 强隔离回归集成测试，成功在单个 asyncio 事件循环下完成了对 E23-S1 与 E23-S2 阶段 100% 全套验收标准 (AC) 的自动化覆盖：
+
+```bash
+python -m pytest -v wxch-gateway/scripts/testing/test_checkin.py
+```
+
+### 运行通过结果存证 (Test Success Log)
+
+```text
+============================= test session starts =============================
+platform win32 -- Python 3.11.5, pytest-8.4.1, pluggy-1.6.0 -- D:\Program Files\Python311\python.exe
+cachedir: .pytest_cache
+rootdir: E:\gitee\microservice-stock
+plugins: anyio-3.7.1, asyncio-1.1.0
+asyncio: mode=Mode.STRICT, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collecting ... collected 2 items
+
+wxch-gateway/scripts/testing/test_checkin.py::test_e23_checkin_integration_suite PASSED [ 50%]
+wxch-gateway/scripts/testing/test_checkin.py::test_e23_s2_business_date_logic PASSED [100%]
+
+======================== 2 passed, 7 warnings in 3.45s ========================
+```
+
+---
+
+## 4. 后续交接与上线说明
+
+1.  **小程序端对接**：前端可以开始调用 `GET /api/v1/checkin/today`。若返回的数据中 `data.msg` 为 `"EMPTY_LIB"` 且 `data.quote` 为 `null`，说明数据库格言库为空，小程序端应友好引导用户“添加第一条自定义名言”。
+2.  **大盘情绪数据源**：加权挑选完全依赖于 `ods_index_daily` 中 `000001.SH`（上证综指）的盘后日线记录。云端采集任务应每日收盘后按时运行，保证数据为最新状态。
+</script>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', async () => {
+            const rawMd = document.getElementById('markdown-raw').textContent;
+            const contentEl = document.getElementById('content');
+            const tocEl = document.getElementById('toc');
+            
+            // Set options for marked
+            marked.setOptions({
+                gfm: true,
+                breaks: true,
+                headerIds: true,
+                mangle: false,
+                highlight: function(code, lang) {
+                    const language = hljs.getLanguage(lang) ? lang : 'plaintext';
+                    return hljs.highlight(code, { language }).value;
+                }
+            });
+
+            // Parse Markdown
+            contentEl.innerHTML = marked.parse(rawMd);
+            
+            // Generate TOC
+            const headings = contentEl.querySelectorAll('h2, h3');
+            headings.forEach((h, index) => {
+                if (!h.id) h.id = 'heading-' + index;
+                
+                const li = document.createElement('li');
+                li.className = 'toc-item level-' + h.tagName.toLowerCase().charAt(1);
+                
+                const a = document.createElement('a');
+                a.href = '#' + h.id;
+                a.textContent = h.textContent;
+                
+                li.appendChild(a);
+                tocEl.appendChild(li);
+            });
+
+            // Handle Mermaid
+            if (window.mermaid) {
+                mermaid.initialize({ startOnLoad: false, theme: 'dark', useWorker: false });
+                document.querySelectorAll('pre code.language-mermaid').forEach(el => {
+                    const pre = el.parentElement;
+                    const div = document.createElement('div');
+                    div.className = 'mermaid';
+                    div.textContent = el.textContent;
+                    pre.parentElement.replaceChild(div, pre);
+                });
+                mermaid.run();
+            }
+        });
+    </script>
+</body>
+</html>

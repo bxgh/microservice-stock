@@ -1,0 +1,183 @@
+# [Epic E23] 每日格言打卡 · 后端系统设计与实施方案
+
+本设计方案作为 `wxch-gateway` 微服务下“每日格言打卡”功能的统一真源，遵循 [AGENTS.md](file:///e:/gitee/microservice-stock/AGENTS.md) 规范中关于“双格式输出（Double-Format Specification）”与“项目归口原则（Document Locality Principle）”的强力门禁。
+
+---
+
+## 背景与约束说明
+
+格言打卡是股市日记中培养交易体感与反思习惯的低门槛机制。为了让本子系统更加轻量、健壮且符合用户的使用习惯，我们基于以下后端开发约束进行系统设计：
+
+*   **手工录入与复制粘贴**：系统不使用自动化导入或第三方爬虫，格言均由用户在小程序端手工录入，后端提供标准的 API 完成格言的持久化录入。
+*   **从零开始与零数据冷启动**：数据库上线时初始数据为空。后端获取锁定算法必须包含空候选池防御，当无数据时，静默返回 `EMPTY_LIB` 状态，优雅引导用户添加首条格言，杜绝 404 或空指针异常。
+*   **解读多次累积与非金句**：用户可对同一格言多次打卡。每次打卡在 `diary_entry` 中新建一篇 Markdown 格式的随笔日记，并在用户状态表中原子自增解读次数。解读本身不计入金句词库中。
+*   **接口与数据库聚焦**：本阶段仅开发后端 MySQL 5.7 表结构迁移，以及基于异步 FastAPI + aiomysql 的核心 API 接口与加权锁定算法。
+
+---
+
+## 数据库表结构 DDL (MySQL 5.7)
+
+本系统共设计 3 张新物理表以支持格言、状态及锁定状态，并与主日记表进行关联对账。所有表必须具备 created_at、updated_at、is_deleted 的尾部三件套审计列。
+
+### 1. 格言词库主表 `diary_quote_lib`
+```sql
+CREATE TABLE `diary_quote_lib` (
+  `id` bigint(20) NOT NULL AUTO_INCREMENT COMMENT '格言唯一主键',
+  `owner_user_id` bigint(20) NOT NULL DEFAULT '1' COMMENT '归属用户ID',
+  `content` text NOT NULL COMMENT '格言正文',
+  `source_author` varchar(64) DEFAULT NULL COMMENT '格言原作者(如巴菲特、芒格等，未知可为空)',
+  `source_book` varchar(128) DEFAULT NULL COMMENT '来源书籍、文章或媒体渠道',
+  `category` tinyint(4) NOT NULL DEFAULT '1' COMMENT '1=经典名言, 2=大佬语录, 3=历史教训, 4=用户摘录, 5=自己写的金句',
+  `base_weight` int(11) NOT NULL DEFAULT '50' COMMENT '用户设定的基础曝光权重(1-100)',
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `updated_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  `is_deleted` tinyint(4) NOT NULL DEFAULT '0' COMMENT '逻辑删除标识',
+  PRIMARY KEY (`id`),
+  KEY `idx_user_category` (`owner_user_id`, `category`),
+  KEY `idx_created` (`created_at`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='格言与金句词库主表';
+```
+
+### 2. 用户格言个性化状态表 `diary_quote_user_state`
+```sql
+CREATE TABLE `diary_quote_user_state` (
+  `id` bigint(20) NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+  `user_id` bigint(20) NOT NULL DEFAULT '1' COMMENT '用户ID',
+  `quote_id` bigint(20) NOT NULL COMMENT '关联的格言ID',
+  `is_favorited` tinyint(4) NOT NULL DEFAULT '0' COMMENT '是否收藏: 1=已收藏, 0=未收藏',
+  `is_disliked` tinyint(4) NOT NULL DEFAULT '0' COMMENT '是否永久屏蔽: 1=已屏蔽, 0=正常',
+  `consecutive_skip_count` int(11) NOT NULL DEFAULT '0' COMMENT '连续跳过次数',
+  `expose_count` int(11) NOT NULL DEFAULT '0' COMMENT '累计曝光轮询次数',
+  `insight_count` int(11) NOT NULL DEFAULT '0' COMMENT '用户累计针对该格言写过的见解数',
+  `deep_insight_count` int(11) NOT NULL DEFAULT '0' COMMENT '字数超过50字的深度见解感悟数',
+  `last_exposed_at` timestamp NULL DEFAULT NULL COMMENT '最近一次被曝光的时间戳',
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `updated_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_user_quote` (`user_id`, `quote_id`),
+  KEY `idx_user_expose` (`user_id`, `last_exposed_at`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='用户格言行为状态与计数表';
+```
+
+### 3. 每日打卡状态锁定表 `diary_checkin_lock`
+```sql
+CREATE TABLE `diary_checkin_lock` (
+  `id` bigint(20) NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+  `user_id` bigint(20) NOT NULL DEFAULT '1' COMMENT '用户ID',
+  `business_date` date NOT NULL COMMENT '业务日期(以凌晨4:00作为切分基准)',
+  `checkin_type` tinyint(4) NOT NULL DEFAULT '2' COMMENT '打卡类型: 2=格言打卡',
+  `locked_target_id` bigint(20) DEFAULT NULL COMMENT '锁定的格言ID(对应diary_quote_lib.id)',
+  `status` tinyint(4) NOT NULL DEFAULT '0' COMMENT '打卡状态: 0=待打卡, 1=已完成, 2=已跳过',
+  `completed_diary_id` bigint(20) DEFAULT NULL COMMENT '生成的日记ID(打卡成功后回填)',
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `updated_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_user_date_type` (`user_id`, `business_date`, `checkin_type`),
+  KEY `idx_user_status` (`user_id`, `status`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='每日打卡任务锁定状态表';
+```
+
+---
+
+## 风险识别与对策 (Risks)
+
+*   **风险 1：新上线格言表为空导致接口空指针异常**
+    *   **影响**：高 | **概率**：高
+    *   **缓解措施**：在加权随机轮询服务层前置检查库总数，若为空则静默返回 `EMPTY_LIB` 状态，前端优雅渲染引导卡片。
+*   **风险 2：大盘行情快照抓取失败导致打卡事务回滚**
+    *   **影响**：中 | **概率**：中
+    *   **缓解措施**：获取行情采用 try-except 容错块，若接口失败则在随笔日记 meta 中写入空 JSON 并记入日志，不阻塞打卡核心事务的提交。
+*   **风险 3：高并发下多次解读的 insight_count 对账冲突**
+    *   **影响**：低 | **概率**：低
+    *   **缓解措施**：在打卡提交的 SQL 中使用 `ON DUPLICATE KEY UPDATE` 实现计数原子递增，确保多并发下的计数一致性。
+
+---
+
+## 交付里程碑 (Milestones)
+
+*   **M1_DB_Setup** (2026-05-20)：MySQL 5.7 三张格言管理表迁移及测试。
+*   **M2_API_Core** (2026-05-22)：手工创建、今日锁定（含`EMPTY_LIB`防崩溃）及提交打卡等核心 API 提测。
+*   **M3_timeline_timeline** (2026-05-25)：动作操作与解读历史时间轴接口完工，全量自动化回归测试通过。
+
+---
+
+## Epic E23 每日格言打卡 · 后端核心系统
+
+手工录入、冷启动容错、日内锁定防闪烁、随笔日记原子级生成、解读次数无限累加及解读历史时间轴。
+
+### E23-S1 格言库建表与手工录入接口
+*   **角色**: `wxch-gateway`
+*   **需求**: 提供手工录入格言的物理存储和标准的 POST 创建 API。
+*   **价值**: 支持用户从小程序端录入、复制粘贴自己喜欢的交易格言，并设置相应分类与曝光基础权重。
+
+#### 任务
+- [x] T1: 编写 DDL 迁移文件 `migrations/v2.1_add_maxim_tables.sql`。
+- [x] T2: 在测试库运行迁移，验证三张物理表及 `idx_user_category` 索引的建立。
+- [x] T3: 编写 Pydantic 校验模型 `app/models/checkin.py` 中的 `MaximQuoteCreate`，限制字数为 10-500 字。
+- [x] T4: 编写服务层 `app/services/checkin_service.py` 中 `create_quote()` 函数，完成插入并返回 ID。
+- [x] T5: 在 `app/api/checkin.py` 中注册路由 `POST /api/v1/checkin/maxim/quote`，挂载 `get_current_user_id` 验证。
+
+#### 验收标准 (AC)
+##### AC1 手工录入成功落库与防空拦截
+- **Given** 格言录入接口已完成部署，用户已鉴权；
+- **When** 手工提交 `content` 为空或仅有 5 个字的请求时；
+- **Then** 接口拦截返回 `422 Unprocessable Entity` 错误；当输入 15 字合法正文时，成功写入并返回自增主键。
+
+##### AC2 审计三件套与索引对账
+- **Given** 录入多条格言记录已落库；
+- **When** 查询表 `diary_quote_lib` 时；
+- **Then** `created_at`、`updated_at` 等审计字段必须自动正确生成，且 `idx_user_category` 索引能生效以供后续高效检索。
+
+---
+
+### E23-S2 今日待办格言拉取与日内幂等锁定
+*   **角色**: `wxch-gateway`
+*   **需求**: 提供包含凌晨 4 点业务切分、排重与情绪加权的智能轮询锁定 API。
+*   **价值**: 确保用户日内多次进入时，卡片内容不闪烁，并在空库冷启动时安全无崩溃返回 `EMPTY_LIB` 状态。
+
+#### 任务
+- [ ] T1: 在 `app/utils/checkin_helper.py` 中实现 `get_business_date()`，零点到四点归属前一天。
+- [ ] T2: 实现智能加权轮询 `select_daily_quote()` 算法，包含 30 天排重门禁及极少格言兜底。
+- [ ] T3: 编写空候选池防护机制，当库中没有未屏蔽格言时，返回 `EMPTY_LIB` 容错标记。
+- [ ] T4: 在获取待打卡接口中，查询 `diary_checkin_lock`，若未锁定则随机挑选今日格言并持久化写入锁定表。
+- [ ] T5: 在 API 层实现并注册 `GET /api/v1/checkin/today` 与 `GET /api/v1/checkin/maxim/detail`。
+
+#### 验收标准 (AC)
+##### AC1 日内锁定幂等无闪烁
+- **Given** 格言库含有多条数据，用户今日尚未打卡且首次访问；
+- **When** 第一次和第二次连续调用 `GET /api/v1/checkin/today` 时；
+- **Then** 两次返回的 `quote.id` 必须 100% 一致，且锁定表成功产生了对应日期的业务锁定记录。
+
+##### AC2 冷启动空库柔性兜底
+- **Given** 格言库完全为空，没有任何有效格言；
+- **When** 调用 `GET /api/v1/checkin/today` 时；
+- **Then** 接口返回 `200 OK` 且 `data.quote` 字段为 `null`，带有 `msg` 字段为 `EMPTY_LIB`，不返回 404 或 500 崩溃错误。
+
+---
+
+### E23-S3 打卡感悟提交事务与解读历史聚合
+*   **角色**: `wxch-gateway`
+*   **需求**: 提供打卡感悟提交、状态/计数同步以及解读历史时间轴 API。
+*   **价值**: 确保用户的感悟打卡操作能生成独立的归随笔日记，且在同一事务中累加解读计数并持久化，实现认知时间轴追溯。
+
+#### 任务
+- [ ] T1: 在 `app/services/checkin_service.py` 中实现 `submit_checkin()`，强校验 30 字最低解读门禁。
+- [ ] T2: 在提交中开启异步显式事务，包含随笔日记写入、日内锁定表状态置 1 以及格言解读计数 +1。
+- [ ] T3: 在 API 层注册并实现 `POST /api/v1/checkin/maxim/submit`。
+- [ ] T4: 实现动作操作 API `POST /api/v1/checkin/maxim/action`，支持收藏 (`favorite`)、跳过 (`skip`)、屏蔽 (`dislike`) 状态切换。
+- [ ] T5: 实现时间轴接口 `GET /api/v1/checkin/maxim/timeline`，根据 `quote_id` 倒序返回用户历史见解列表。
+
+#### 验收标准 (AC)
+##### AC1 感悟解读提交字数拦截与日记生成
+- **Given** 用户今日被锁定了格言 A；
+- **When** 提交解读内容少于 30 字时报错；当提交大于 30 字见解时，日记表 `diary_entry` 成功生成一条 `is_checkin=1` 的记录，锁定表置为状态 1。
+
+##### AC2 个人解读计数在事务中累积
+- **Given** 格言 A 原来的 `insight_count` 计数为 2；
+- **When** 在事务中成功提交针对格言 A 的第 3 次解读时；
+- **Then** 状态表中的累计解读计数必须幂等增加为 3，且一旦中间发生异常，日记生成和锁定更新自动全部回滚。
+
+##### AC3 历史见解时间轴聚合
+- **Given** 用户对格言 A 存在 2 次解读日记记录；
+- **When** 调用 `GET /api/v1/checkin/maxim/timeline?quote_id=A` 时；
+- **Then** 接口返回倒序的 2 条记录，包含了每次解读的 Markdown 见解与大盘快照。

@@ -1,0 +1,90 @@
+{
+  "epic_id": "E23",
+  "last_updated": "2026-05-19T10:28:00Z",
+  "current_stage": "ALL_STORIES_COMPLETED",
+  "completed_stories": [
+    {
+      "story_id": "E23-S1",
+      "title": "格言库建表与手工录入接口",
+      "completed_at": "2026-05-19T10:08:13Z",
+      "physical_assets": [
+        "migrations/v2.1_add_maxim_tables.sql",
+        "app/models/checkin.py",
+        "app/services/checkin_service.py",
+        "app/api/checkin.py"
+      ]
+    },
+    {
+      "story_id": "E23-S2",
+      "title": "每日格言智能推荐与日内锁定 API",
+      "completed_at": "2026-05-19T10:19:40Z",
+      "physical_assets": [
+        "app/services/checkin_service.py",
+        "app/api/checkin.py",
+        "app/utils/database.py",
+        "scripts/testing/test_checkin.py",
+        "docs/features/wechat-gateway/implementation_logs/E23/S2/walkthrough.md"
+      ],
+      "handoff_notes": "S2 智能分配与日内锁定逻辑已全线打通并通过 100% 单元测试。"
+    },
+    {
+      "story_id": "E23-S3",
+      "title": "格言打卡行为控制 API",
+      "completed_at": "2026-05-19T10:27:00Z",
+      "physical_assets": [
+        "app/services/checkin_service.py",
+        "app/api/checkin.py",
+        "docs/features/wechat-gateway/implementation_logs/E23/S3/walkthrough.md"
+      ]
+    },
+    {
+      "story_id": "E23-S5",
+      "title": "每日格言收藏动作 API",
+      "completed_at": "2026-05-19T10:27:00Z",
+      "physical_assets": [
+        "app/services/checkin_service.py",
+        "app/api/checkin.py",
+        "docs/features/wechat-gateway/implementation_logs/E23/S5/walkthrough.md"
+      ]
+    },
+    {
+      "story_id": "E23-S6",
+      "title": "每日格言屏蔽动作 API",
+      "completed_at": "2026-05-19T10:27:00Z",
+      "physical_assets": [
+        "app/services/checkin_service.py",
+        "app/api/checkin.py",
+        "docs/features/wechat-gateway/implementation_logs/E23/S6/walkthrough.md"
+      ]
+    },
+    {
+      "story_id": "E23-S7",
+      "title": "格言打卡心得提交与日记关联 API",
+      "completed_at": "2026-05-19T10:27:00Z",
+      "physical_assets": [
+        "app/services/checkin_service.py",
+        "app/api/checkin.py",
+        "docs/features/wechat-gateway/implementation_logs/E23/S7/walkthrough.md"
+      ]
+    },
+    {
+      "story_id": "E23-S8",
+      "title": "反思见解历史时间轴 API",
+      "completed_at": "2026-05-19T10:27:00Z",
+      "physical_assets": [
+        "app/services/checkin_service.py",
+        "app/api/checkin.py",
+        "docs/features/wechat-gateway/implementation_logs/E23/S8/walkthrough.md"
+      ]
+    }
+  ],
+  "active_system_state": {
+    "tables_created": true,
+    "lock_logic_deployed": true,
+    "actions_logic_deployed": true,
+    "submit_logic_deployed": true,
+    "timeline_logic_deployed": true,
+    "tests_passed": true
+  },
+  "next_story_tasks": []
+}

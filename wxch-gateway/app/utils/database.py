@@ -34,6 +34,7 @@ class Database:
         if self.pool:
             self.pool.close()
             await self.pool.wait_closed()
+            self.pool = None
             logger.info("MySQL 异步连接池已关闭")
 
     async def execute(self, query: str, args: tuple = None, use_dict: bool = True):

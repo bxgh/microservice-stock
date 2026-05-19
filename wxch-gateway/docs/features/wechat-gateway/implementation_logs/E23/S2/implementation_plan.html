@@ -1,0 +1,437 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>[Story E23-S2] 每日格言智能轮询与日内锁定 API · 实施计划书</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Noto+Serif+SC:wght@400;700;900&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    
+    <!-- Local Offline Libraries -->
+    <script src="../../../../../../../docs/assets/js/marked.min.js"></script>
+    <link rel="stylesheet" href="../../../../../../../docs/assets/css/github-markdown-dark.css">
+    <script src="../../../../../../../docs/assets/js/mermaid.min.js"></script>
+    
+    <!-- Syntax Highlighting (Local) -->
+    <link rel="stylesheet" href="../../../../../../../docs/assets/css/tokyo-night-dark.min.css">
+    <script src="../../../../../../../docs/assets/js/highlight.min.js"></script>
+    
+    <style>
+        :root {
+            --bg: #0a0a0a;
+            --surface: #121212;
+            --surface-hover: #1a1a1a;
+            --border: #222222;
+            --accent: #eab308;
+            --accent-glow: rgba(234, 179, 8, 0.1);
+            --text-primary: #f1f5f9;
+            --text-secondary: #94a3b8;
+            --text-muted: #64748b;
+            --font-sans: 'Outfit', 'Noto Sans SC', -apple-system, sans-serif;
+            --font-serif: 'Noto Serif SC', serif;
+            --font-mono: 'JetBrains Mono', monospace;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background-color: var(--bg);
+            color: var(--text-primary);
+            font-family: var(--font-sans);
+            line-height: 1.7;
+            -webkit-font-smoothing: antialiased;
+            overflow-x: hidden;
+        }
+
+        /* Subtle background glow */
+        body::after {
+            content: '';
+            position: fixed;
+            top: 0;
+            right: 0;
+            width: 40vw;
+            height: 40vh;
+            background: radial-gradient(circle, var(--accent-glow) 0%, transparent 70%);
+            z-index: -1;
+            filter: blur(100px);
+            pointer-events: none;
+        }
+
+        .sidebar {
+            width: 260px;
+            height: 100vh;
+            position: fixed;
+            left: 0;
+            top: 0;
+            border-right: 1px solid var(--border);
+            background: var(--bg);
+            padding: 1.5rem;
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+            overflow-y: auto;
+            z-index: 100;
+        }
+
+        .nav-link {
+            color: var(--text-muted);
+            text-decoration: none;
+            font-size: 0.85rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            transition: color 0.2s;
+            padding: 0.5rem;
+            border-radius: 6px;
+        }
+        .nav-link:hover { color: var(--accent); background: var(--surface); }
+
+        .toc-title {
+            font-family: var(--font-serif);
+            font-size: 1rem;
+            color: var(--text-primary);
+            margin-bottom: 0.8rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding-left: 0.5rem;
+        }
+        .toc-title::before {
+            content: '';
+            width: 3px;
+            height: 1rem;
+            background: var(--accent);
+            border-radius: 2px;
+        }
+
+        .toc-list {
+            list-style: none;
+            display: flex;
+            flex-direction: column;
+            gap: 0.4rem;
+        }
+        .toc-item {
+            font-size: 0.8rem;
+            line-height: 1.3;
+        }
+        .toc-item a {
+            color: var(--text-muted);
+            text-decoration: none;
+            transition: all 0.2s;
+            display: block;
+            padding: 0.4rem 0.5rem;
+            border-radius: 4px;
+        }
+        .toc-item a:hover { color: var(--accent); background: var(--surface); }
+        .toc-item.level-3 { margin-left: 0.8rem; border-left: 1px solid var(--border); }
+
+        .container {
+            max-width: 860px;
+            margin: 0 auto 0 260px;
+            padding: 3rem 4rem;
+            animation: fadeIn 0.6s ease-out;
+        }
+
+        @media (max-width: 1024px) {
+            .sidebar { width: 220px; padding: 1rem; }
+            .container { margin-left: 220px; padding: 2rem; }
+        }
+
+        @media (max-width: 800px) {
+            .sidebar { position: static; width: 100%; height: auto; border-right: none; border-bottom: 1px solid var(--border); }
+            .container { margin-left: 0; padding: 1.5rem; }
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(5px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        header {
+            margin-bottom: 3rem;
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 1.5rem;
+        }
+
+        .meta {
+            font-family: var(--font-mono);
+            font-size: 0.75rem;
+            color: var(--accent);
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            margin-bottom: 0.8rem;
+            display: flex;
+            align-items: center;
+            gap: 0.8rem;
+        }
+
+        .meta::before {
+            content: '';
+            width: 20px;
+            height: 1px;
+            background-color: var(--accent);
+        }
+
+        h1 {
+            font-family: var(--font-serif);
+            font-size: 2.2rem;
+            font-weight: 900;
+            line-height: 1.2;
+            margin-bottom: 1rem;
+            color: var(--text-primary);
+        }
+
+        .markdown-body {
+            background: transparent !important;
+            color: var(--text-primary) !important;
+            font-family: var(--font-sans) !important;
+            font-size: 0.95rem !important;
+        }
+
+        .markdown-body h2 {
+            font-family: var(--font-serif);
+            font-size: 1.5rem !important;
+            color: var(--accent) !important;
+            border-bottom: 1px solid var(--border) !important;
+            padding-bottom: 0.5rem !important;
+            margin-top: 2.5rem !important;
+            scroll-margin-top: 1rem;
+        }
+
+        .markdown-body h3 {
+            font-family: var(--font-serif);
+            font-size: 1.25rem !important;
+            color: var(--text-primary) !important;
+            margin-top: 2rem !important;
+            scroll-margin-top: 1rem;
+        }
+
+        .markdown-body p, .markdown-body li {
+            font-size: 0.95rem !important;
+            color: var(--text-primary) !important;
+        }
+        
+        .markdown-body pre {
+            background-color: #1a1b26 !important; /* Match Tokyo Night Dark */
+            border: 1px solid var(--border);
+            border-radius: 8px !important;
+            padding: 0 !important; /* Code internal handles padding */
+            margin: 1.2rem 0 !important;
+            overflow: hidden;
+        }
+
+        .markdown-body pre code {
+            background-color: transparent !important;
+            padding: 1.2rem !important;
+            display: block;
+            font-family: var(--font-mono) !important;
+            font-size: 0.85rem !important;
+            line-height: 1.5;
+        }
+
+        .markdown-body blockquote {
+            border-left: 3px solid var(--accent) !important;
+            background: var(--surface);
+            padding: 0.8rem 1.2rem;
+            color: var(--text-secondary) !important;
+            margin: 1.2rem 0 !important;
+        }
+
+        .markdown-body table {
+            background: var(--surface);
+            font-size: 0.85rem !important;
+            margin: 1.2rem 0 !important;
+        }
+
+        footer {
+            margin-top: 4rem;
+            padding-top: 1.5rem;
+            border-top: 1px solid var(--border);
+            color: var(--text-muted);
+            font-size: 0.8rem;
+            text-align: center;
+        }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar { width: 5px; }
+        ::-webkit-scrollbar-track { background: var(--bg); }
+        ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+    </style>
+</head>
+<body>
+    <aside class="sidebar">
+        <a href="index.html" class="nav-link">
+            <span>←</span> 返回目录门户
+        </a>
+        
+        <div class="toc-container">
+            <h3 class="toc-title">文档导航</h3>
+            <ul class="toc-list" id="toc">
+                <!-- TOC items will be injected here -->
+            </ul>
+        </div>
+    </aside>
+
+    <div class="container">
+        <header>
+            <div class="meta">GLOBAL | 2026-05-19 10:16</div>
+            <h1>[Story E23-S2] 每日格言智能轮询与日内锁定 API · 实施计划书</h1>
+        </header>
+
+        <article id="content" class="markdown-body">
+            <!-- Loading indicator -->
+            <p style="color: var(--text-muted)">正在解析文档内容...</p>
+        </article>
+
+        <footer>
+            &copy; 2026 MicroStock Project Docs | Generated by Antigravity
+        </footer>
+    </div>
+
+    <script id="markdown-raw" type="text/markdown"># [Story E23-S2] 每日格言智能轮询与日内锁定 API · 实施计划书
+
+本计划书规划了每日格言打卡子系统 **E23-S2** 阶段的详细物理设计与技术实施路径，旨在提供工业级、支持高可用的日内格言幂等锁定、情绪对齐加权轮询以及冷启动兜底机制。
+
+## User Review Required
+
+> [!IMPORTANT]
+> **业务时间分界线 (凌晨 4:00 规则)**
+> 考虑到投资者的反思习惯，夜间打卡往往延续至凌晨。系统采用凌晨 **04:00** 作为格言更新的物理切分点：
+> - 当前时间为 `03:30` -> 业务日期归属为**前一天**。
+> - 当前时间为 `04:15` -> 业务日期归属为**今天**。
+> - 系统将基于 `Asia/Shanghai` 时区进行高精度时钟运算。
+
+> [!WARNING]
+> **多并发冷启动防穿透**
+> 当小程序启动且格言库为空时，首批进站的用户并发调用 `GET /today`。系统必须在 `diary_checkin_lock` 中写入 `locked_target_id = NULL` 占位记录，实现日内空值锁定，杜绝并发下数据库被反复扫描重试。
+
+---
+
+## Proposed Changes
+
+本期 Story E23-S2 开发聚焦于 `wxch-gateway` 的服务层与 API 路由层。
+
+### [wxch-gateway Backend Component]
+
+#### [MODIFY] [app/services/checkin_service.py](file:///e:/gitee/microservice-stock/wxch-gateway/app/services/checkin_service.py)
+在服务层新增并实现以下核心业务方法：
+1. **`get_business_date(now: datetime) -> date`**：
+   - 提取当前上海时区时间，判定若 `now.hour < 4`，返回 `(now - timedelta(days=1)).date()`，否则返回 `now.date()`。
+2. **`select_daily_quote(user_id: int, business_date: date) -> Optional[dict]`**：
+   - 从 `diary_quote_lib` 查询所有未删除格言（`is_deleted = 0`）。
+   - 从 `diary_quote_user_state` 查询当前用户的行为记录：
+     - 排除 `is_disliked = 1`（永久屏蔽）的格言。
+     - 排除最近 30 天内曾曝光过的格言（`last_exposed_at >= business_date - 30 days`）。
+   - 计算加权得分：
+     - 初始权重 = 格言主表 `base_weight`。
+     - 连续跳过扣权：`weight = max(1, base_weight - consecutive_skip_count * 10)`。
+     - 收藏加权：如果 `is_favorited = 1`，则 `weight += 20`。
+     - 大盘指数对齐加权：从 `ods_index_daily` 检索上证指数（`000001.SH`）最近交易日的涨跌幅 `pct_chg`：
+       - 若 `pct_chg >= 0.005`（大盘大涨），则 Category 1 (经典名言/进取) 与 Category 3 (心态/纪律) 权重增加 `+15`。
+       - 若 `pct_chg <= -0.005`（大盘大跌），则 Category 2 (大佬语录/防守) 与 Category 3 (心态/纪律) 权重增加 `+15`。
+   - 使用加权轮询概率算法（`random.choices`）进行最终格言挑选。
+3. **`get_or_lock_today_quote(user_id: int) -> TodayQuoteResponseData`**：
+   - 计算业务日期 `business_date`。
+   - 查询 `diary_checkin_lock` 确认用户今日是否已锁定：
+     - 若已存在锁记录且 `locked_target_id` 不为空，则读取格言库详情，补充 `is_favorited` 状态及该格言下用户最新的 `history_insight`（历史见解，读取自 `diary_entry` 最新心得）。
+     - 若锁记录存在 but `locked_target_id IS NULL`，返回 `EMPTY_LIB` 状态。
+     - 若不存在锁：
+       - 执行 `select_daily_quote()`。
+       - 若选出格言，原子写入 `diary_checkin_lock` 锁记录（`locked_target_id = quote_id, status = 0`），并在 `diary_quote_user_state` 中累加 `expose_count = expose_count + 1`，更新 `last_exposed_at`。
+       - 若无可用格言（冷启动空库），原子写入 `diary_checkin_lock` 锁记录（`locked_target_id = NULL, status = 0`），返回 `EMPTY_LIB`。
+
+#### [MODIFY] [app/api/checkin.py](file:///e:/gitee/microservice-stock/wxch-gateway/app/api/checkin.py)
+实现预留的 `GET /api/v1/checkin/today` 路由方法：
+- 注入 `user_id: int = Depends(get_current_user_id)`。
+- 调用 `checkin_service.get_or_lock_today_quote(user_id)`。
+- 组装并返回 `TodayQuoteResponse`。
+
+---
+
+## Verification Plan
+
+我们将在 `wxch-gateway/scripts/testing/test_checkin.py` 中增量编写高度密集的场景断言：
+
+### Automated Tests
+1. **冷启动防穿透测试**：
+   - 清空 `diary_quote_lib`（或使用测试用户隔绝匹配）。
+   - 连续调用 2 次 `GET /api/v1/checkin/today`。
+   - 预期返回状态码 `200`，`msg` 包含 `"EMPTY_LIB"`，`quote` 字段为 `None`。
+   - 查验数据库中新增了一条 `locked_target_id IS NULL` 的锁记录，证明空锁机制生效。
+2. **幂等锁定与日内防闪烁测试**：
+   - 手工录入格言 A、格言 B。
+   - 首次调用 `GET /api/v1/checkin/today`，挑选其中一条并返回（假设为格言 A）。
+   - 第二次调用该接口，预期返回的仍是格言 A（锁定生效）。
+   - 查验锁定表 `diary_checkin_lock` 与用户状态表 `expose_count` 和 `last_exposed_at` 正确更新。
+3. **加权轮询算法测试**：
+   - 伪造大盘指数数据（写入 `ods_index_daily` 临时测试记录）：
+     - 场景 A：上证指数大跌 2.5% -> 校验“防守型格言”被抽中概率显著提升。
+     - 场景 B：上证指数大涨 1.8% -> 校验“纪律/进取型格言”被抽中概率显著提升。
+4. **凌晨 4:00 时间切分测试**：
+   - 注入 Mock 时钟，校验凌晨 3:59 判归为前一天，凌晨 4:01 判归为今天。
+
+### 运行测试命令
+```bash
+python -m pytest -v wxch-gateway/scripts/testing/test_checkin.py
+```
+</script>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', async () => {
+            const rawMd = document.getElementById('markdown-raw').textContent;
+            const contentEl = document.getElementById('content');
+            const tocEl = document.getElementById('toc');
+            
+            // Set options for marked
+            marked.setOptions({
+                gfm: true,
+                breaks: true,
+                headerIds: true,
+                mangle: false,
+                highlight: function(code, lang) {
+                    const language = hljs.getLanguage(lang) ? lang : 'plaintext';
+                    return hljs.highlight(code, { language }).value;
+                }
+            });
+
+            // Parse Markdown
+            contentEl.innerHTML = marked.parse(rawMd);
+            
+            // Generate TOC
+            const headings = contentEl.querySelectorAll('h2, h3');
+            headings.forEach((h, index) => {
+                if (!h.id) h.id = 'heading-' + index;
+                
+                const li = document.createElement('li');
+                li.className = 'toc-item level-' + h.tagName.toLowerCase().charAt(1);
+                
+                const a = document.createElement('a');
+                a.href = '#' + h.id;
+                a.textContent = h.textContent;
+                
+                li.appendChild(a);
+                tocEl.appendChild(li);
+            });
+
+            // Handle Mermaid
+            if (window.mermaid) {
+                mermaid.initialize({ startOnLoad: false, theme: 'dark', useWorker: false });
+                document.querySelectorAll('pre code.language-mermaid').forEach(el => {
+                    const pre = el.parentElement;
+                    const div = document.createElement('div');
+                    div.className = 'mermaid';
+                    div.textContent = el.textContent;
+                    pre.parentElement.replaceChild(div, pre);
+                });
+                mermaid.run();
+            }
+        });
+    </script>
+</body>
+</html>

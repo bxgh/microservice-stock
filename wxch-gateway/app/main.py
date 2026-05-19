@@ -4,7 +4,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI, Request, HTTPException
 from fastapi.responses import JSONResponse
 
-from app.api import kline, quote, stock_info, market, calendar, auth, diary, user
+from app.api import kline, quote, stock_info, market, calendar, auth, diary, user, checkin
 from app.utils.logger import setup_logger, request_id_var
 from app.utils.database import db
 
@@ -107,6 +107,7 @@ app.include_router(quote.router, prefix="/api/v1/stocks", tags=["股票数据"])
 app.include_router(stock_info.router, prefix="/api/v1/stocks", tags=["个股详情"])
 app.include_router(market.router, prefix="/api/v1/market", tags=["市场纵览"])
 app.include_router(calendar.router, prefix="/api/v1/calendar", tags=["交易日历"])
+app.include_router(checkin.router, prefix="/api/v1/checkin", tags=["每日打卡"])
 
 # 静态首页或 404 处理
 @app.get("/")

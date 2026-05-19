@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>[Epic E23] 每日格言打卡 · 单独完整设计</title>
+    <title>[Epic E23] 每日格言打卡 · 完整前后端与数据库设计方案</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Noto+Serif+SC:wght@400;700;900&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
@@ -280,8 +280,8 @@
 
     <div class="container">
         <header>
-            <div class="meta">GLOBAL | 2026-05-19 08:48</div>
-            <h1>[Epic E23] 每日格言打卡 · 单独完整设计</h1>
+            <div class="meta">GLOBAL | 2026-05-19 09:56</div>
+            <h1>[Epic E23] 每日格言打卡 · 完整前后端与数据库设计方案</h1>
         </header>
 
         <article id="content" class="markdown-body">
@@ -294,264 +294,546 @@
         </footer>
     </div>
 
-    <script id="markdown-raw" type="text/markdown"># [Epic E23] 每日格言打卡 · 单独完整设计
+    <script id="markdown-raw" type="text/markdown"># [Epic E23] 每日格言打卡 · 完整前后端与数据库设计方案
 
-## 背景与目标
+## 一、 背景与约束说明
 
-格言打卡是 MVP 三个日打卡中**门槛最低、最易坚持、长期价值最高**的一项。看似简单（看一句话，写一段话），实则是**投资体系内化**的关键机制。
+根据格言打卡与股市日记的功能需求，以及最新的业务调整说明，本方案作为前后端与数据库接口开发的完整设计文档，遵循以下设计约束：
 
-### 设计原则
-- **主动训练**：不是被动“鸡汤推送”，而是“思考肌肉训练”。
-- **真实连接**：不是被动接受名言，而是把名言**变成自己的经历**。
-- **沉淀积累**：不是单纯消费内容，而是**沉淀个人智慧**（自己写过的金句也能成为以后的格言）。
-
-### 业务范围
-- 格言库管理、每日智能轮询算法、见解输入脚手架、收藏机制、共建机制、历史见解回看。
-
-### 非目标 (MVP 不做)
-- 不做格言搜索或分类浏览，由系统进行全自动智能轮询，避免挑选疲劳。
-- 不做格言评论与点赞互动，保持 MVP 阶段的纯粹自用属性。
-- 不做每日格言推送通知，减少用户被动打扰，用户自然登录进入即可。
+1. **手工录入与复制粘贴**：系统不采用复杂的第三方爬虫或自动化导入，所有格言内容均由用户在小程序端手工录入（支持复制粘贴）。前端提供添加页面，后端提供格言创建接口。
+2. **从零开始，无需初始化**：数据库上线时格言库为空，无需预置底座数据。前后端必须具备高度的健壮性，完美兼容“零格言”以及“格言极少”的极端冷启动场景。
+3. **解读按次数累积且非金句**：用户可以对同一条格言进行多次打卡，每次打卡的见解/解读会作为独立的随笔日记进行持久化，并在格言关联表上累加解读计数。解读本身不属于金句库（金句库仅存放格言本体）。
+4. **本次只涉及后端数据库和接口开发**：虽然保留前端需求以供未来参考和联调，但本次开发实施仅聚焦于后端 MySQL 表结构设计、API 接口实现及核心加权算法。
 
 ---
 
-## 格言打卡子系统设计 (Maxim Check-in Subsystem)
+## 二、 用户故事与前端交互需求 (User Stories & Front-end Requirements)
 
-### E23-S1 格言库内容与分类
+### E23-S1 手工录入与添加格言
 **作为** 用户  
-**我希望** 看到的格言有质量、有深度并自动分类  
-**以便** 每天都能引发新的思考，将外部大师智慧与个人反思相糅合
+**我希望** 能在手机小程序端方便地手动录入、粘贴复制我喜欢的投资格言  
+**以便** 随着我的阅读，逐步充实我个人的投资智慧格言库
 
 #### 任务
-- [ ] T1: 整理并构建含有 5 个分类的格言数据结构，支持经典名言、大佬语录、历史教训、用户摘录、自己写的金句
-- [ ] T2: 手工录入 50 条经典名言、20 条大佬语录和 10 条历史教训作为冷启动基础底座数据
-- [ ] T3: 开发“日记段落长按摘录”功能，支持用户直接将个人日记中的段落加入金句库，并回链原日记 ID
-- [ ] T4: 实现后台异步语义识别，当用户日记中包含“真正的 / 永远 / 必须”等断言式金句特征时，提示用户加入金句库
+- [ ] T1: 【前端】开发“我也想加一条”录入页面，支持用户输入 10-500 字的正文、作者、分类及来源，支持一键粘贴。
+- [ ] T2: 【后端】开发格言创建接口 `POST /api/v1/checkin/maxim/quote`，将格言写入 `diary_quote_lib`。
+- [ ] T3: 【容错】格言表 `diary_quote_lib` 基础数据上线从零开始，无需预置初始化数据。
 
 #### 验收标准 (AC)
-##### AC1 初始冷启动数据就绪
-- **Given** 上线第一天格言数据库初始化完成
-- **When** 统计 `diary_quote_lib` 记录总数时
-- **Then** 系统应至少拥有 80 条（50经典 + 20大佬 + 10教训）的优质格言底座
+##### AC1 手工录入成功落库
+- **Given** 用户打开“我也想加一条”格言录入页
+- **When** 输入内容并点击提交时
+- **Then** 接口返回成功，`diary_quote_lib` 成功写入一条数据，且 `owner_user_id` 自动标记为当前用户。
 
-##### AC2 手动段落摘录金句
-- **Given** 用户在某篇日记详情页中长按选中一段话
-- **When** 点击浮层菜单中的“加入金句”按钮时
-- **Then** 该段落必须被成功添加到格言库，且其 `category` 自动标记为 `5` (自己写的金句)，并正确回链原日记 ID
-
-##### AC3 智能金句识别机制
-- **Given** 用户保存了一篇含有“真正的止损是执行纪律”的交易日记
-- **When** 后端正则/语义分析组件执行时
-- **Then** 应在月度限额内（每月最多 3 次）向用户推送一条加入金句库的确认提示
+##### AC2 字符长度及内容防空校验
+- **Given** 用户手工录入一条为空或只有 5 个字符的格言
+- **When** 尝试提交时
+- **Then** 前后端均应触发校验拦截，提示“格言内容字数必须在 10-500 字之间”。
 
 ---
 
-### E23-S2 每日格言轮询算法
+### E23-S2 每日格言轮询与锁定
 **作为** 用户  
-**我希望** 每天首次进入打卡时看到一条完全契合当日行情、且近期未曝光过的格言  
-**以便** 获得心灵共鸣并提升投资敏锐度
+**我希望** 每天首次进入打卡时自动锁定一条近期未曝光的格言，并且在格言库为空时给予友好引导  
+**以便** 获得舒适、无闪烁、不崩溃的打卡体验
 
 #### 任务
-- [ ] T1: 编写排重门禁逻辑，自动排除 30 天内已曝光过的格言、被标记“已掌握”的格言以及非启用状态的格言
-- [ ] T2: 编写基于大盘当日行情与情绪的动态加权打分算法，为大跌（恐惧类）、大涨（贪婪类）、震荡（耐心类）格言注入权重
-- [ ] T3: 编写 Top 10 随机轮询选择算法，确保候选集权重最大化的同时具备一定的惊喜感
-- [ ] T4: 编写凌晨 4:00 后台格言预生成机制，并在用户首次进入打卡时锁定该当日格言，防止重复计算和高峰网络延迟
+- [ ] T1: 【后端】编写排重门禁逻辑，自动排除 30 天内已曝光过的格言、被标记永久屏蔽的格言。
+- [ ] T2: 【后端】编写基于今日大盘涨跌的动态权重加分算法，并选取 Top 10 进行加权随机抽取。
+- [ ] T3: 【后端】编写凌晨 4:00 后台业务日期切分与任务锁定机制，避免用户日内重新进入页面时格言发生刷新闪烁。
+- [ ] T4: 【容错】编写格言库“零数据”容错机制。若库为空，返回 `quote: null` 与 `msg: EMPTY_LIB`，不引发白屏崩溃。
+- [ ] T5: 【前端】当今日格言接口返回 `EMPTY_LIB` 时，前端优雅展示“请录入您的第一条投资格言”引导卡片。
 
 #### 验收标准 (AC)
-##### AC1 30天内防重复曝光
-- **Given** 用户连续打卡 30 天
-- **When** 每天生成当日格言时
-- **Then** 这 30 天内获取的格言必须 100% 互不重复
+##### AC1 日内锁定防闪烁
+- **Given** 用户在 16:00 首次进入打卡页，系统抽取并锁定了格言 A
+- **When** 退出小程序并于 20:00 重新进入时
+- **Then** 页面展示的必须是同一条格言 A，绝对不发生内容闪烁或重新抽取。
 
-##### AC2 市场大跌恐惧加权
-- **Given** 当日大盘暴跌 3% (符合大跌阈值)
-- **When** 系统计算当日格言加权打分时
-- **Then** 包含“恐惧/贪婪”标签的经典格言其综合得分应自动获得 +15 情绪权重
-
-##### AC3 预生成与当日锁定
-- **Given** 用户在 16:00 首次打开打卡页
-- **When** 退出并重新进入该页面时
-- **Then** 展示的必须是同一条被锁定的当日格言，绝对不发生实时闪烁或重新抽取
+##### AC2 空格言库柔性容错
+- **Given** 系统新上线，格言库 `diary_quote_lib` 记录数正好为 0
+- **When** 用户进入格言打卡页面时
+- **Then** 接口返回 `200 OK` 伴随状态码 `EMPTY_LIB`，小程序不崩溃，而是展示高级感空状态及“去录入第一条格言”的按钮。
 
 ---
 
-### E23-S3 格言展示界面与上次见解
+### E23-S3 格言卡片展示与历史见解对照
 **作为** 用户  
-**我希望** 格言展示富有排版仪式感，且在输入前能对照自己以前对该格言的感悟  
-**以便** 看清自己认知演进的轨迹，实现与“过去的自己”深度对话
+**我希望** 格言卡片排版精致有仪式感，且输入框上方能对比展示自己上一次对该格言的感悟见解  
+**以便** 直观感受自己对同一条格言在不同时期认知上的演进
 
 #### 任务
-- [ ] T1: 设计采用 `Noto Serif SC` 衬线字体的格言展示主卡片，配置精致的引号装饰与大白留边
-- [ ] T2: 在卡片顶部高亮渲染分类徽章，底部展示作者及来源信息
-- [ ] T3: 针对“自己写的金句”类型卡片，自动展示跳转回原日记的金色高亮链接
-- [ ] T4: 在输入框上方，自动拉取并高对比展示该用户上一次对该条格言写下的感悟见解
+- [ ] T1: 【前端】使用衬线字体渲染格言卡片，顶部展示分类徽章，底部展示作者与来源。
+- [ ] T2: 【后端】在获取今日待打卡格言接口中，查询并返回用户最近一次对该 `quote_id` 写过的解读内容。
+- [ ] T3: 【前端】在输入框上方以磨砂玻璃质感卡片高对比展示“上一次的见解”。
 
 #### 验收标准 (AC)
-##### AC1 自己金句回链跳转
-- **Given** 当前轮询展示的格言分类为“自己写的金句”
-- **When** 页面加载完成且用户点击来源链接时
-- **Then** 系统应能顺畅跳转回该金句诞生的原日记详情页
-
-##### AC2 历史见解对照呈现
-- **Given** 用户在 30 天前曾对格言 A 写过 60 字感悟
+##### AC1 历史见解对照呈现
+- **Given** 用户在一个月前曾对格言 A 提交过一段见解
 - **When** 今日再次抽中格言 A 且用户点击输入框准备书写时
-- **Then** 输入框上方必须以磨砂卡片形式完整且无截断地显示出那段“30天前写过的见解”
+- **Then** 输入框上方必须以卡片形式完整显示一个月前的那段见解，并标注当时的日期。
 
 ---
 
 ### E23-S4 见解输入引导与脚手架
 **作为** 用户  
-**我希望** 在书写见解时拥有针对性的 placeholder 问题引导和思考脚手架快捷词  
-**以便** 在卡壳时能迅速组织文字，输出高质量反思
+**我希望** 在书写见解时有字数限制门禁和思考脚手架快捷词  
+**以便** 在卡壳时迅速组织文字，输出高质量反思
 
 #### 任务
-- [ ] T1: 根据 5 大格言分类，配置 4 套个性化占位符引导问题（如：“回头看自己写的话，今天还认同吗？”）
-- [ ] T2: 编写字数计算与门禁，设定最低 30 字强制门禁、50-100 字深度见解高亮，以及 500 字上限提示
-- [ ] T3: 在输入框下方设计 4 个思考脚手架快捷词 Chip（「举个例子」、「反对一下」、「联系当下」、「未来怎么做」）
-- [ ] T4: 实现点击快捷词 Chip 自动在光标位置插入引导句（如：“比如有一次，我...”）并自动聚焦
+- [ ] T1: 【前端】配置根据格言分类个性化的 placeholder 问题引导。
+- [ ] T2: 【前端/后端】设定最低 30 字强制门禁、50-100 字深度见解高亮，以及 500 字上限提示。
+- [ ] T3: 【前端】在输入框下方设计 4 个思考脚手架快捷词 Chip（「举个例子」、「反对一下」、「联系当下」、「未来怎么做」）。
+- [ ] T4: 【前端】实现点击快捷词 Chip 自动在光标位置插入引导句（如：“比如有一次，我...”）并自动聚焦。
 
 #### 验收标准 (AC)
-##### AC1 字数硬门禁校验
-- **Given** 输入见解只有 15 个字
+##### AC1 最低字数硬门禁
+- **Given** 用户在输入框中仅写了 15 个字
 - **When** 尝试点击提交打卡时
-- **Then** 提交按钮必须保持灰色禁用状态，且字数实时计数器呈现警告红色
-
-##### AC2 脚手架快捷词插入
-- **Given** 输入框当前聚焦且光标位于文本中间
-- **When** 点击「举个例子」快捷词 Chip 时
-- **Then** 引导句“比如有一次，我...”应精准插入在光标处，且字数实时累加，按钮状态自动更新
+- **Then** 提交按钮保持灰色禁用状态，且接口对少于 30 字的请求直接拦截报错。
 
 ---
 
-### E23-S5 收藏与用户共建
+### E23-S5 收藏与共建
 **作为** 用户  
-**我希望** 能一键收藏打动我的格言，并能随时自主添加新的投资格言  
-**以便** 让系统中的智慧库越来越个性化
+**我希望** 能一键收藏打动我的格言，并能随时修改其权重  
+**以便** 让系统中的曝光率越来越个性化
 
 #### 任务
-- [ ] T1: 在格言卡片下方设计“⭐ 收藏格言”按钮，支持收藏状态的实时双向切换
-- [ ] T2: 实现收藏状态持久化，被收藏的格言在算法加分中自动获得 +20 的高权重分
-- [ ] T3: 编写“我也想加一条”录入页面，支持用户输入 10-200 字的正文、作者、分类及来源
+- [ ] T1: 【前端】在卡片下方设计“⭐ 收藏格言”按钮，支持收藏状态的实时双向切换。
+- [ ] T2: 【后端】在 `diary_quote_user_state` 中记录收藏状态，被收藏的格言在算法加分中自动获得 +20 的高权重分。
 
 #### 验收标准 (AC)
 ##### AC1 收藏状态持久化与加权
 - **Given** 用户点击收藏当前格言
-- **When** 数据库更新成功后
-- **Then** 再次触发计算该格言轮询得分时，其基础得分必须获得 +20 收藏加成，且页面展示为已收藏金色星星
-
-##### AC2 自主共建格言落库
-- **Given** 录入一条巴菲特关于长寿的格言并提交
-- **When** 查询格言表 `diary_quote_lib` 时
-- **Then** 该记录的 `owner_user_id` 必须为 `1`，且下一交易日的轮询池能正常将其计入候选集
+- **When** 数据库更新成功，且后续重新计算该格言轮询得分时
+- **Then** 其最终得分自动获得 +20 收藏加成，页面展示为已收藏金色星星。
 
 ---
 
-### E23-S6 跳过与拒绝机制
+### E23-S6 跳过与永久屏蔽
 **作为** 用户  
-**我希望** 能够跳过今天不感兴趣的格言，或永久屏蔽我不认同的理论  
-**以便** 拥有自主控制权，保持打卡的舒适度
+**我希望** 能跳过今天不想解读的格言，或永久屏蔽我不认同的理论  
+**以便** 保持打卡的舒适度和自主权
 
 #### 任务
-- [ ] T1: 页面右上角设计“跳过”按钮，点击跳过当日打卡不计入已做，且该格言在下一日优先重新展示
-- [ ] T2: 编写连续跳过惩罚逻辑，若同一条格言被连续跳过 3 次，将其权重降为 1 避免后续骚扰
-- [ ] T3: 编写长按“不喜欢这条”快捷屏蔽逻辑，将此格言对当前用户永久置为禁用状态
+- [ ] T1: 【前端】右上角设计“跳过”按钮，点击跳过当日，该格言加入连续跳过计数。
+- [ ] T2: 【后端】编写跳过惩罚逻辑：若同一条格言被连续跳过，权重进行相应扣减，避免短期内频繁曝光。
+- [ ] T3: 【前端/后端】设计“不喜欢/永久屏蔽”操作，将此格言对当前用户的 `is_disliked` 状态置为 `1`，从此永久在候选池中消隐。
 
 #### 验收标准 (AC)
-##### AC1 跳过保留与重新展出
-- **Given** 用户今天对格言 A 选择了“跳过”
-- **When** 明天凌晨格言生成任务运行时
-- **Then** 格言 A 必须作为超高优先级候选展示在明天的待办卡片中，给用户第二次重读的机会
-
-##### AC2 连续跳过触发自动降权
-- **Given** 格言 A 已被用户连续 3 天点击“跳过”
-- **When** 第三天跳过操作成功后
-- **Then** 该格言的 `weight` 字段值应自动被惩罚自减，使其以后轮询中几乎不再出现
-
-##### AC3 永久屏蔽“不喜欢”
-- **Given** 用户长按格言 B 并选择“不喜欢这条”
-- **When** 点击确认屏蔽时
-- **Then** `diary_quote_lib` 中该格言针对当前用户的 `status` 字段应置为 `0` (禁用)，从此永久在曝光候选池中消隐
+##### AC1 永久屏蔽生效
+- **Given** 用户对格言 B 点击“不喜欢这条”并确认
+- **When** 接口将其 `is_disliked` 更新为 `1` 后
+- **Then** 格言 B 将从此在曝光候选池中永久过滤。
 
 ---
 
-### E23-S7 打卡日记产物生成
+### E23-S7 打卡日记产物生成 (多度解读累加)
 **作为** 用户  
-**我希望** 每次打卡的见解内容能自动生成一篇紧凑格式的精美随笔日记  
-**以便** 沉淀我的投资思考资产，并在主列表中能便捷回顾
+**我希望** 每次提交解读打卡时自动生成一篇独立的随笔日记，且原格言记录累加解读次数  
+**以便** 沉淀我的投资思考资产，且格言解读次数能按次数正常累加
 
 #### 任务
-- [ ] T1: 编写打卡提交后的数据转换逻辑，自动将打卡内容拼装为 Markdown 格式的正文（带格言引用框和我的见解标题）
-- [ ] T2: 自动生成精炼标题，格式为：“格言 · [作者] · [格言开头前10字]”
-- [ ] T3: 将日记实体字段 `is_checkin` 赋值为 `1`，`checkin_type` 赋值为 `2`，`entry_type` 设定为 `5` (随笔类)
-- [ ] T4: 实现大盘当日数据快照的自动拉取，并将其作为 meta 存入日记的 JSON 字段中
+- [ ] T1: 【后端】编写数据转换逻辑，自动将打卡见解拼装为标准的 Markdown 格式正文。
+- [ ] T2: 【后端】生成精炼标题，格式为：“格言解读 · [作者] · [格言开头前10字]”。
+- [ ] T3: 【后端】将新日记的 `is_checkin` 赋值为 `1`，`checkin_type` 赋值为 `2`，`entry_type` 设定为 `5` (随笔类)。
+- [ ] T4: 【后端】打卡提交事务中，同步使 `diary_quote_user_state` 表中的 `insight_count` 累加 1。
 
 #### 验收标准 (AC)
-##### AC1 随笔日记落库验证
-- **Given** 打卡感悟提交成功
-- **When** 查询日记表 `diary_entry` 最新一条数据时
-- **Then** 该记录的 `is_checkin` 必须为 `1`，`checkin_type` 为 `2`，且正文内容为标准的 Markdown 拼接结构
-
-##### AC2 历史行情快照存证
-- **Given** 大跌当日提交了格言打卡
-- **When** 查询该生成的随笔日记 `meta` 字段时
-- **Then** JSON 结构中必须精准存储了当时上证指数的跌幅百分比数值，保障事后复盘的环境追溯
+##### AC1 随笔日记落库与解读计数累加
+- **Given** 用户针对格言 A 提交了第 3 次解读见解
+- **When** 保存接口调用成功后
+- **Then** `diary_entry` 表新增一条随笔记录，且 `diary_quote_user_state` 表中格言 A 的 `insight_count` 必须精确变更为 3。
 
 ---
 
-### E23-S8 历史见解聚合回看
+### E23-S8 历史见解聚合时间轴
 **作为** 用户  
-**我希望** 能够在一页中查看我对同一条格言在不同时期写下的所有反思感悟  
+**我希望** 能够查看我对同一条格言在不同时期写下的所有历史感悟  
 **以便** 极其直观地目睹自己交易哲学的演进与心智成长
 
 #### 任务
-- [ ] T1: 页面右上角设计“我和这句话的故事”按钮，点击跳转至见解聚合时间轴页面
-- [ ] T2: 编写时间轴数据聚合接口，根据当前 `quote_id` 倒序拉取该用户的所有历史格言打卡随笔日记
-- [ ] T3: 在聚合页面顶部，渲染聚合统计文案（如：“你已对这条格言写过 5 次见解，跨度 3 个月”）
-- [ ] T4: 每一个见解卡片上，高亮呈现当时发表见解时的日期以及随文存证的大盘涨跌行情
+- [ ] T1: 【前端】提供“我和这句话的故事”按钮，点击跳转至见解聚合时间轴页面。
+- [ ] T2: 【后端】开发时间轴数据聚合接口 `GET /api/v1/checkin/maxim/timeline`，根据 `quote_id` 倒序拉取该用户的所有历史格言打卡随笔日记。
 
 #### 验收标准 (AC)
-##### AC1 见解时间轴对账
-- **Given** 用户对格言 A 曾分别在 3 月、4 月、5 月写过 3 次感悟
-- **When** 点击进入该格言的“我和这句话的故事”故事集页面时
-- **Then** 页面必须倒序呈现 3 条打卡记录卡片，清晰印证每一个时期的主观思考与客观市场环境的对比
+##### AC1 时间轴数据倒序排列
+- **Given** 用户对格言 A 曾在 4 月和 5 月写过两次感悟
+- **When** 点击进入时间轴页面时
+- **Then** 页面成功倒序呈现 2 条解读记录，显示出每次的具体见解内容。
 
 ---
 
-## 数据结构 (Database DDL Schema)
+## 三、 数据库表结构设计 (MySQL 5.7)
 
-### 格言字典表 `diary_quote_lib`
+本次数据库设计采用三表分离架构（格言库表、个性化状态表、打卡锁定表），并与主系统的日记实体表无缝整合。
+
+### 1. 格言词库主表 `diary_quote_lib`
 ```sql
 CREATE TABLE `diary_quote_lib` (
   `id` bigint(20) NOT NULL AUTO_INCREMENT COMMENT '格言唯一主键',
-  `owner_user_id` bigint(20) DEFAULT NULL COMMENT 'NULL表示系统公共格言; 有值表示用户个性化共建金句',
+  `owner_user_id` bigint(20) NOT NULL DEFAULT '1' COMMENT '归属用户ID(MVP自用版默认为1)',
   `content` text NOT NULL COMMENT '格言正文',
-  `source_author` varchar(64) DEFAULT NULL COMMENT '格言原作者(巴菲特、芒格等)',
-  `source_book` varchar(128) DEFAULT NULL COMMENT '来源书籍或文章标题',
+  `source_author` varchar(64) DEFAULT NULL COMMENT '格言原作者(如巴菲特、芒格等，未知可为空)',
+  `source_book` varchar(128) DEFAULT NULL COMMENT '来源书籍、文章或媒体渠道',
   `category` tinyint(4) NOT NULL DEFAULT '1' COMMENT '1=经典名言, 2=大佬语录, 3=历史教训, 4=用户摘录, 5=自己写的金句',
-  `weight` int(11) NOT NULL DEFAULT '50' COMMENT '轮询基础权重(1-100)',
-  `status` tinyint(4) NOT NULL DEFAULT '1' COMMENT '1=启用, 0=对当前用户永久禁用屏蔽',
-  `expose_count` int(11) NOT NULL DEFAULT '0' COMMENT '累计曝光轮询次数',
-  `insight_count` int(11) NOT NULL DEFAULT '0' COMMENT '用户累计针对该格言写过的见解感悟数',
-  `deep_insight_count` int(11) NOT NULL DEFAULT '0' COMMENT '字数超过50字的深度见解感悟次数',
-  `last_exposed_at` timestamp NULL DEFAULT NULL COMMENT '最近一次被曝光的时间戳',
-  `source_diary_id` bigint(20) DEFAULT NULL COMMENT '来源日记ID(仅当category=5自己写的金句时必填)',
-  `meta` json DEFAULT NULL COMMENT '扩展字段，存放标签分类或关联情绪数组',
+  `base_weight` int(11) NOT NULL DEFAULT '50' COMMENT '用户设定的基础曝光权重(1-100)',
   `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
   `updated_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
   `is_deleted` tinyint(4) NOT NULL DEFAULT '0' COMMENT '逻辑删除标识',
   PRIMARY KEY (`id`),
-  KEY `idx_user_cat` (`owner_user_id`, `category`),
-  KEY `idx_weight_exposed` (`weight`, `last_exposed_at`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='系统格言与个人金句词库表';
+  KEY `idx_user_category` (`owner_user_id`, `category`),
+  KEY `idx_created` (`created_at`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='格言与金句词库主表';
+```
+
+### 2. 用户格言个性化状态表 `diary_quote_user_state`
+```sql
+CREATE TABLE `diary_quote_user_state` (
+  `id` bigint(20) NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+  `user_id` bigint(20) NOT NULL DEFAULT '1' COMMENT '用户ID',
+  `quote_id` bigint(20) NOT NULL COMMENT '关联的格言ID',
+  `is_favorited` tinyint(4) NOT NULL DEFAULT '0' COMMENT '是否收藏: 1=已收藏, 0=未收藏',
+  `is_disliked` tinyint(4) NOT NULL DEFAULT '0' COMMENT '是否永久屏蔽: 1=已屏蔽, 0=正常',
+  `consecutive_skip_count` int(11) NOT NULL DEFAULT '0' COMMENT '连续跳过次数',
+  `expose_count` int(11) NOT NULL DEFAULT '0' COMMENT '累计曝光轮询次数',
+  `insight_count` int(11) NOT NULL DEFAULT '0' COMMENT '用户累计针对该格言写过的见解数',
+  `deep_insight_count` int(11) NOT NULL DEFAULT '0' COMMENT '字数超过50字的深度见解感悟数',
+  `last_exposed_at` timestamp NULL DEFAULT NULL COMMENT '最近一次被曝光的时间戳',
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `updated_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_user_quote` (`user_id`, `quote_id`),
+  KEY `idx_user_expose` (`user_id`, `last_exposed_at`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='用户格言行为状态与计数表';
+```
+
+### 3. 每日打卡状态锁定表 `diary_checkin_lock`
+```sql
+CREATE TABLE `diary_checkin_lock` (
+  `id` bigint(20) NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+  `user_id` bigint(20) NOT NULL DEFAULT '1' COMMENT '用户ID',
+  `business_date` date NOT NULL COMMENT '业务日期(以凌晨4:00作为切分基准)',
+  `checkin_type` tinyint(4) NOT NULL DEFAULT '2' COMMENT '打卡类型: 2=格言打卡',
+  `locked_target_id` bigint(20) DEFAULT NULL COMMENT '锁定的格言ID(对应diary_quote_lib.id)',
+  `status` tinyint(4) NOT NULL DEFAULT '0' COMMENT '打卡状态: 0=待打卡, 1=已完成, 2=已跳过',
+  `completed_diary_id` bigint(20) DEFAULT NULL COMMENT '生成的日记ID(打卡成功后回填)',
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `updated_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_user_date_type` (`user_id`, `business_date`, `checkin_type`),
+  KEY `idx_user_status` (`user_id`, `status`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='每日打卡任务锁定状态表';
+```
+
+### 4. 日记实体表 `diary_entry` (复用/整合设计)
+```sql
+CREATE TABLE `diary_entry` (
+  `id` bigint(20) NOT NULL AUTO_INCREMENT COMMENT '日记唯一主键',
+  `user_id` bigint(20) NOT NULL DEFAULT '1' COMMENT '归属用户ID',
+  `title` varchar(128) NOT NULL COMMENT '日记标题',
+  `content` text NOT NULL COMMENT '日记正文(Markdown格式)',
+  `entry_date` date NOT NULL COMMENT '业务日期',
+  `entry_type` tinyint(4) NOT NULL DEFAULT '5' COMMENT '日记分类: 5=随笔类',
+  `mood` tinyint(4) DEFAULT NULL COMMENT '主观情绪打标(冷静、兴奋、焦虑、恐惧、贪婪、困惑)',
+  `is_checkin` tinyint(4) NOT NULL DEFAULT '1' COMMENT '是否为打卡生成: 1=是, 0=否',
+  `checkin_type` tinyint(4) DEFAULT '2' COMMENT '打卡类型: 2=格言打卡',
+  `checkin_target_id` bigint(20) DEFAULT NULL COMMENT '绑定的格言ID(对应diary_quote_lib.id)',
+  `meta` json DEFAULT NULL COMMENT '扩展快照数据(例如当时的大盘指数涨跌幅JSON)',
+  `is_deleted` tinyint(4) NOT NULL DEFAULT '0' COMMENT '逻辑删除标识',
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `idx_user_date` (`user_id`, `entry_date`),
+  KEY `idx_checkin` (`is_checkin`, `checkin_type`, `checkin_target_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='日记实体表';
 ```
 
 ---
 
-## 变更记录
+## 四、 后端接口设计 (API Specification)
 
-| 日期 | 版本 | 说明 |
+所有接口统一采用异步 FastAPI 框架规范，前缀为 `/api/v1`。
+
+### 1. 新增格言 (手工录入)
+用户在小程序端输入或粘贴复制内容后，调用此接口录入金句库。
+*   **接口**：`POST /api/v1/checkin/maxim/quote`
+*   **请求体**：
+    ```json
+    {
+      "content": "真正的投资是一场关于自律的终身修行。",
+      "source_author": "巴菲特",
+      "source_book": "致股东的信",
+      "category": 1,
+      "base_weight": 50
+    }
+    ```
+*   **返回体**：
+    ```json
+    {
+      "code": 200,
+      "message": "success",
+      "data": {
+        "quote_id": 12,
+        "content": "真正的投资是一场关于自律的终身修行。",
+        "created_at": "2026-05-19 09:50:00"
+      }
+    }
+    ```
+
+### 2. 获取今日待打卡格言 (防闪烁锁定)
+拉取用户今日被锁定的格言。如果今日尚未锁定且格言库非空，则根据轮询算法自动计算并锁定。
+*   **接口**：`GET /api/v1/checkin/today`
+*   **返回体 (有锁定格言时)**：
+    ```json
+    {
+      "code": 200,
+      "message": "success",
+      "data": {
+        "business_date": "2026-05-19",
+        "checkin_type": 2,
+        "status": 0,
+        "quote": {
+          "id": 12,
+          "content": "真正的投资是一场关于自律的终身修行。",
+          "source_author": "巴菲特",
+          "source_book": "致股东的信",
+          "category": 1,
+          "is_favorited": 0,
+          "history_insight": {
+            "last_insight_content": "上一次我对这句话的理解是...",
+            "last_insight_date": "2026-04-18"
+          }
+        }
+      }
+    }
+    ```
+*   **返回体 (冷启动无格言时 - 柔性容错状态)**：
+    ```json
+    {
+      "code": 200,
+      "message": "success",
+      "data": {
+        "business_date": "2026-05-19",
+        "checkin_type": 2,
+        "status": 0,
+        "quote": null,
+        "msg": "EMPTY_LIB" 
+      }
+    }
+    ```
+
+### 3. 提交格言打卡解读 (生成日记与累加计数)
+用户输入个人解读并提交。后端生成一篇独立的 Markdown 格式随笔日记。
+*   **接口**：`POST /api/v1/checkin/maxim/submit`
+*   **请求体**：
+    ```json
+    {
+      "quote_id": 12,
+      "insight": "今天看到这句话，我联想到上周在某只股票上的频繁操作，确实是因为不够自律，没有严格执行止损纪律...",
+      "mood": 1
+    }
+    ```
+*   **返回体**：
+    ```json
+    {
+      "code": 200,
+      "message": "success",
+      "data": {
+        "diary_id": 105,
+        "title": "格言解读 · 巴菲特 · 真正的投资是...",
+        "entry_date": "2026-05-19",
+        "accumulated_insight_count": 3
+      }
+    }
+    ```
+
+### 4. 动作更新：收藏、屏蔽、跳过
+对当前锁定的格言执行交互修改。
+*   **接口**：`POST /api/v1/checkin/maxim/action`
+*   **请求体**：
+    ```json
+    {
+      "quote_id": 12,
+      "action_type": "favorite", 
+      "value": 1
+    }
+    ```
+    *(注：`action_type` 取值范围：`favorite`、`dislike`、`skip`)*
+*   **返回体**：
+    ```json
+    {
+      "code": 200,
+      "message": "success"
+    }
+    ```
+
+### 5. 历史解读聚合时间轴 (针对单条格言)
+拉取用户对某一条特定格言写过的所有历史见解。
+*   **接口**：`GET /api/v1/checkin/maxim/timeline`
+*   **参数**：`quote_id=12`
+*   **返回体**：
+    ```json
+    {
+      "code": 200,
+      "message": "success",
+      "data": {
+        "quote_id": 12,
+        "content": "真正的投资是一场关于自律的终身修行。",
+        "total_insights": 3,
+        "timeline": [
+          {
+            "diary_id": 105,
+            "date": "2026-05-19",
+            "insight": "今天看到这句话，我联想到上周在某只股票上的频繁操作...",
+            "mood": 1,
+            "market_summary": {
+              "sh_change_pct": -0.015,
+              "volume_billions": 850.5
+            }
+          },
+          {
+            "diary_id": 78,
+            "date": "2026-04-18",
+            "insight": "上一次我对这句话的理解是...",
+            "mood": 3,
+            "market_summary": null
+          }
+        ]
+      }
+    }
+    ```
+
+---
+
+## 五、 核心业务逻辑与算法设计
+
+### 1. 凌晨 4:00 业务日期切分逻辑
+为支持深夜或凌晨打卡习惯，自然日的 00:00 - 04:00 仍归属为前一交易日的业务日期：
+```python
+from datetime import datetime, timedelta, date
+
+def get_business_date() -> date:
+    now = datetime.now()  # Asia/Shanghai 时区
+    if now.hour < 4:
+        # 凌晨 4:00 前计入前一天
+        return (now - timedelta(days=1)).date()
+    return now.date()
+```
+
+### 2. 智能轮询及动态加权排序算法 (Quote Selector)
+在获取今日待打卡格言时，若今日未锁定，则触发本算法：
+
+```python
+async def select_daily_quote(user_id: int) -> int:
+    # 1. 查询用户已永久屏蔽(is_disliked=1)的格言ID列表
+    # 2. 查询用户在最近 30 天内曝光过(last_exposed_at >= now - 30 days)的格言ID列表
+    
+    # 3. 从 diary_quote_lib 中过滤掉上述格言，并限制 owner_user_id = user_id
+    #    SELECT * FROM diary_quote_lib WHERE is_deleted=0 AND owner_user_id = :user_id
+    #    AND id NOT IN (屏蔽列表 + 30天曝光列表)
+    
+    # 4. 极端场景兜底防护 (Graceful Degradation):
+    #    A. 若候选池完全为空 (格言总数较少，且30天内都被曝光过了):
+    #       - 则无视“30天排重”，重新拉取未被屏蔽的所有格言候选。
+    #    B. 若重新拉取后候选池依然为空 (用户手工金句库彻底为空，新上线无数据):
+    #       - 接口终止算法，直接向前端返回 "EMPTY_LIB" 状态，引导用户手动录入第一条格言。
+
+    # 5. 动态加权计算:
+    #    针对候选池中的每一条格言，拉取其 diary_quote_user_state 记录:
+    #    W_i = base_weight
+    #    - 若 is_favorited = 1: W_i += 20 (收藏加成)
+    #    - 若 consecutive_skip_count > 0: W_i -= (consecutive_skip_count * 15)  (跳过惩罚)
+    #    - 获取今日大盘行情(上证指数变动 pct_chg):
+    #      若今日暴跌(pct_chg <= -0.015) 且格言 meta 含有 "discipline" 或 "fear" 标签: W_i += 15
+    #      若今日暴涨(pct_chg >= 0.015) 且格言 meta 含有 "greed" 或 "risk_control" 标签: W_i += 15
+    
+    # 6. 选择决策:
+    #    - 将候选格言按最终权重 W_i 降序排列。
+    #    - 取出权重最高的前 10 条 (若不足10条，则全部取出)。
+    #    - 从这 Top 10 中进行均匀随机抽取一条，作为今日锁定格言，返回其 ID。
+```
+
+### 3. 打卡提交与日记实体生成逻辑
+当用户提交打卡时，将解读与格言正文组装为 Markdown 存入日记，并执行原子级更新：
+
+```python
+async def submit_maxim_checkin(user_id: int, quote_id: int, insight: str, mood: int):
+    # 1. 检验字数是否满足最低 30 字
+    if len(insight) < 30:
+        raise ValueError("解读字数不得少于30字")
+        
+    # 2. 查询格言正文与作者
+    quote = await db.fetch_one("SELECT content, source_author, source_book FROM diary_quote_lib WHERE id = :id", {"id": quote_id})
+    
+    # 3. 组装 Markdown 内容
+    markdown_content = (
+        f"> **每日格言**\n"
+        f"> 「{quote.content}」 —— {quote.source_author or '佚名'}《{quote.source_book or '未记'}》\n\n"
+        f"### 我的今日解读反思\n"
+        f"{insight}"
+    )
+    
+    # 4. 获取今日行情快照
+    market_snapshot = await get_market_summary_json()
+    
+    # 5. 开启数据库事务
+    async with db.transaction():
+        # A. 写入 diary_entry 表，生成一条 is_checkin = 1, checkin_type = 2 的随笔记录
+        diary_id = await db.execute(
+            "INSERT INTO diary_entry (user_id, title, content, entry_date, mood, is_checkin, checkin_type, checkin_target_id, meta) "
+            "VALUES (:user_id, :title, :content, :entry_date, :mood, 1, 2, :quote_id, :meta)",
+            {
+                "user_id": user_id,
+                "title": f"格言解读 · {quote.source_author or '佚名'} · {quote.content[:10]}...",
+                "content": markdown_content,
+                "entry_date": get_business_date(),
+                "mood": mood,
+                "quote_id": quote_id,
+                "meta": market_snapshot
+            }
+        )
+        
+        # B. 更新每日打卡锁定表 diary_checkin_lock
+        await db.execute(
+            "UPDATE diary_checkin_lock SET status = 1, completed_diary_id = :diary_id "
+            "WHERE user_id = :user_id AND business_date = :business_date AND checkin_type = 2",
+            {
+                "diary_id": diary_id,
+                "user_id": user_id,
+                "business_date": get_business_date()
+            }
+        )
+        
+        # C. 更新或新增格言状态计数
+        #    如果 diary_quote_user_state 不存在该记录，则 INSERT，存在则 UPDATE：
+        #    insight_count = insight_count + 1
+        #    若 len(insight) >= 50，则 deep_insight_count = deep_insight_count + 1
+        await db.execute(
+            "INSERT INTO diary_quote_user_state (user_id, quote_id, insight_count, deep_insight_count, last_exposed_at) "
+            "VALUES (:user_id, :quote_id, 1, :is_deep, NOW()) "
+            "ON DUPLICATE KEY UPDATE "
+            "insight_count = insight_count + 1, "
+            "deep_insight_count = deep_insight_count + :is_deep, "
+            "last_exposed_at = NOW()",
+            {
+                "user_id": user_id,
+                "quote_id": quote_id,
+                "is_deep": 1 if len(insight) >= 50 else 0
+            }
+        )
+        
+    return diary_id
+```
+
+---
+
+## 六、 变更记录
+
+| 日期 | 版本 | 变更说明 |
 |---|---|---|
-| 2026-05-19 | v1.0 | 精细化拆解 E2-S3 每日格言打卡 Story，规范 Given-When-Then，补充 DDL 建表。 |</script>
+| 2026-05-19 | v1.2 | 合并并对齐前端 User Stories 与后端设计；确立手工录入从零冷启动的规则，优化算法空值兜底，完善前后端对账 AC；保存完整的前端参考细节以便前端开发使用。 |</script>
 
     <script>
         document.addEventListener('DOMContentLoaded', async () => {
