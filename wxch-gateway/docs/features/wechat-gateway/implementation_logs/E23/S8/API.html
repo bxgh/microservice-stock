@@ -1,0 +1,563 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Epic E23-S8 每日格言打卡系统 HTTP REST API 接口契约 (API.md)</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Noto+Serif+SC:wght@400;700;900&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    
+    <!-- Local Offline Libraries -->
+    <script src="../../../../../../../docs/assets/js/marked.min.js"></script>
+    <link rel="stylesheet" href="../../../../../../../docs/assets/css/github-markdown-dark.css">
+    <script src="../../../../../../../docs/assets/js/mermaid.min.js"></script>
+    
+    <!-- Syntax Highlighting (Local) -->
+    <link rel="stylesheet" href="../../../../../../../docs/assets/css/tokyo-night-dark.min.css">
+    <script src="../../../../../../../docs/assets/js/highlight.min.js"></script>
+    
+    <style>
+        :root {
+            --bg: #0a0a0a;
+            --surface: #121212;
+            --surface-hover: #1a1a1a;
+            --border: #222222;
+            --accent: #eab308;
+            --accent-glow: rgba(234, 179, 8, 0.1);
+            --text-primary: #f1f5f9;
+            --text-secondary: #94a3b8;
+            --text-muted: #64748b;
+            --font-sans: 'Outfit', 'Noto Sans SC', -apple-system, sans-serif;
+            --font-serif: 'Noto Serif SC', serif;
+            --font-mono: 'JetBrains Mono', monospace;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background-color: var(--bg);
+            color: var(--text-primary);
+            font-family: var(--font-sans);
+            line-height: 1.7;
+            -webkit-font-smoothing: antialiased;
+            overflow-x: hidden;
+        }
+
+        /* Subtle background glow */
+        body::after {
+            content: '';
+            position: fixed;
+            top: 0;
+            right: 0;
+            width: 40vw;
+            height: 40vh;
+            background: radial-gradient(circle, var(--accent-glow) 0%, transparent 70%);
+            z-index: -1;
+            filter: blur(100px);
+            pointer-events: none;
+        }
+
+        .sidebar {
+            width: 260px;
+            height: 100vh;
+            position: fixed;
+            left: 0;
+            top: 0;
+            border-right: 1px solid var(--border);
+            background: var(--bg);
+            padding: 1.5rem;
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+            overflow-y: auto;
+            z-index: 100;
+        }
+
+        .nav-link {
+            color: var(--text-muted);
+            text-decoration: none;
+            font-size: 0.85rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            transition: color 0.2s;
+            padding: 0.5rem;
+            border-radius: 6px;
+        }
+        .nav-link:hover { color: var(--accent); background: var(--surface); }
+
+        .toc-title {
+            font-family: var(--font-serif);
+            font-size: 1rem;
+            color: var(--text-primary);
+            margin-bottom: 0.8rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding-left: 0.5rem;
+        }
+        .toc-title::before {
+            content: '';
+            width: 3px;
+            height: 1rem;
+            background: var(--accent);
+            border-radius: 2px;
+        }
+
+        .toc-list {
+            list-style: none;
+            display: flex;
+            flex-direction: column;
+            gap: 0.4rem;
+        }
+        .toc-item {
+            font-size: 0.8rem;
+            line-height: 1.3;
+        }
+        .toc-item a {
+            color: var(--text-muted);
+            text-decoration: none;
+            transition: all 0.2s;
+            display: block;
+            padding: 0.4rem 0.5rem;
+            border-radius: 4px;
+        }
+        .toc-item a:hover { color: var(--accent); background: var(--surface); }
+        .toc-item.level-3 { margin-left: 0.8rem; border-left: 1px solid var(--border); }
+
+        .container {
+            max-width: 860px;
+            margin: 0 auto 0 260px;
+            padding: 3rem 4rem;
+            animation: fadeIn 0.6s ease-out;
+        }
+
+        @media (max-width: 1024px) {
+            .sidebar { width: 220px; padding: 1rem; }
+            .container { margin-left: 220px; padding: 2rem; }
+        }
+
+        @media (max-width: 800px) {
+            .sidebar { position: static; width: 100%; height: auto; border-right: none; border-bottom: 1px solid var(--border); }
+            .container { margin-left: 0; padding: 1.5rem; }
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(5px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        header {
+            margin-bottom: 3rem;
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 1.5rem;
+        }
+
+        .meta {
+            font-family: var(--font-mono);
+            font-size: 0.75rem;
+            color: var(--accent);
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            margin-bottom: 0.8rem;
+            display: flex;
+            align-items: center;
+            gap: 0.8rem;
+        }
+
+        .meta::before {
+            content: '';
+            width: 20px;
+            height: 1px;
+            background-color: var(--accent);
+        }
+
+        h1 {
+            font-family: var(--font-serif);
+            font-size: 2.2rem;
+            font-weight: 900;
+            line-height: 1.2;
+            margin-bottom: 1rem;
+            color: var(--text-primary);
+        }
+
+        .markdown-body {
+            background: transparent !important;
+            color: var(--text-primary) !important;
+            font-family: var(--font-sans) !important;
+            font-size: 0.95rem !important;
+        }
+
+        .markdown-body h2 {
+            font-family: var(--font-serif);
+            font-size: 1.5rem !important;
+            color: var(--accent) !important;
+            border-bottom: 1px solid var(--border) !important;
+            padding-bottom: 0.5rem !important;
+            margin-top: 2.5rem !important;
+            scroll-margin-top: 1rem;
+        }
+
+        .markdown-body h3 {
+            font-family: var(--font-serif);
+            font-size: 1.25rem !important;
+            color: var(--text-primary) !important;
+            margin-top: 2rem !important;
+            scroll-margin-top: 1rem;
+        }
+
+        .markdown-body p, .markdown-body li {
+            font-size: 0.95rem !important;
+            color: var(--text-primary) !important;
+        }
+        
+        .markdown-body pre {
+            background-color: #1a1b26 !important; /* Match Tokyo Night Dark */
+            border: 1px solid var(--border);
+            border-radius: 8px !important;
+            padding: 0 !important; /* Code internal handles padding */
+            margin: 1.2rem 0 !important;
+            overflow: hidden;
+        }
+
+        .markdown-body pre code {
+            background-color: transparent !important;
+            padding: 1.2rem !important;
+            display: block;
+            font-family: var(--font-mono) !important;
+            font-size: 0.85rem !important;
+            line-height: 1.5;
+        }
+
+        .markdown-body blockquote {
+            border-left: 3px solid var(--accent) !important;
+            background: var(--surface);
+            padding: 0.8rem 1.2rem;
+            color: var(--text-secondary) !important;
+            margin: 1.2rem 0 !important;
+        }
+
+        .markdown-body table {
+            background: var(--surface);
+            font-size: 0.85rem !important;
+            margin: 1.2rem 0 !important;
+        }
+
+        footer {
+            margin-top: 4rem;
+            padding-top: 1.5rem;
+            border-top: 1px solid var(--border);
+            color: var(--text-muted);
+            font-size: 0.8rem;
+            text-align: center;
+        }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar { width: 5px; }
+        ::-webkit-scrollbar-track { background: var(--bg); }
+        ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+    </style>
+</head>
+<body>
+    <aside class="sidebar">
+        <a href="index.html" class="nav-link">
+            <span>←</span> 返回目录门户
+        </a>
+        
+        <div class="toc-container">
+            <h3 class="toc-title">文档导航</h3>
+            <ul class="toc-list" id="toc">
+                <!-- TOC items will be injected here -->
+            </ul>
+        </div>
+    </aside>
+
+    <div class="container">
+        <header>
+            <div class="meta">GLOBAL | 2026-05-19 10:37</div>
+            <h1>Epic E23-S8 每日格言打卡系统 HTTP REST API 接口契约 (API.md)</h1>
+        </header>
+
+        <article id="content" class="markdown-body">
+            <!-- Loading indicator -->
+            <p style="color: var(--text-muted)">正在解析文档内容...</p>
+        </article>
+
+        <footer>
+            &copy; 2026 MicroStock Project Docs | Generated by Antigravity
+        </footer>
+    </div>
+
+    <script id="markdown-raw" type="text/markdown"># Epic E23-S8 每日格言打卡系统 HTTP REST API 接口契约 (API.md)
+
+> [!NOTE]
+> **API 真源声明**: 每日格言打卡系统通过统一的 `wxch-gateway` Web 网关对外暴露。微信小程序端必须携带标准授权标头进行接入。本文件作为前端与后端系统开发的唯一真源 HTTP REST 契约协议。
+
+---
+
+## 1. 基础配置与鉴权契约
+
+- **API 基本路径 (Base URL)**: `/api/v1`
+- **默认时区 (Timezone)**: `Asia/Shanghai` (CST)
+- **安全鉴权 (Authentication)**: 
+  - 所有接口（除公开或免登录除外，打卡相关接口一律强制校验鉴权）均必须在 HTTP Request Headers 中携带微信小程序颁发的 JWT Access Token。
+  - **标头结构**:
+    ```http
+    Authorization: Bearer <Your_Access_Token>
+    ```
+
+---
+
+## 2. 接口端点定义 (Endpoints)
+
+### 2.1 手工录入格言 (POST /checkin/maxim/quote)
+
+- **接口描述**: 允许用户从小程序端录入自定义或收集的金句格言（支持手工录入和粘贴复制）。
+- **请求格式**: `application/json`
+- **请求 Payload**:
+  ```json
+  {
+    "content": "在别人恐惧时我贪婪，在别人贪婪时我恐惧。",
+    "source_author": "巴菲特",
+    "source_book": "致股东的信",
+    "category": 1,
+    "base_weight": 80
+  }
+  ```
+  - **字段约束**:
+    - `content`: `str`，格言正文。必填，长度限 10 ~ 500 字。
+    - `source_author`: `str`，原作者。非必填，限 64 字以内。
+    - `source_book`: `str`，来源渠道或书籍。非必填，限 128 字以内。
+    - `category`: `int`，分类。1=经典名言, 2=大佬语录, 3=历史教训, 4=用户摘录, 5=自己写的金句。默认 1。
+    - `base_weight`: `int`，基础曝光权重。默认 50，范围 1 ~ 100。
+- **响应体 (Response Body)**:
+  ```json
+  {
+    "code": 200,
+    "message": "success",
+    "data": {
+      "quote_id": 12,
+      "content": "在别人恐惧时我贪婪，在别人贪婪时我恐惧。",
+      "created_at": "2026-05-19T10:08:13Z"
+    }
+  }
+  ```
+
+---
+
+### 2.2 每日格言智能推荐与日内锁定 (GET /checkin/today)
+
+- **接口描述**: 小程序端今日打卡主页加载时调用。根据智能加权轮询推荐算法返回格言，每日凌晨 4:00 后首次调用进行曝光与日内锁定，当日后续调用幂等返回锁定的格言。
+- **请求格式**: 无 Payload
+- **响应体 (已锁定格言)**:
+  ```json
+  {
+    "code": 200,
+    "message": "success",
+    "data": {
+      "msg": "LOCKED",
+      "quote": {
+        "id": 12,
+        "content": "在别人恐惧时我贪婪，在别人贪婪时我恐惧。",
+        "source_author": "巴菲特",
+        "source_book": "致股东的信",
+        "category": 1,
+        "is_favorited": 0,
+        "insight_count": 3
+      },
+      "history_insight": {
+        "completed_diary_id": 98,
+        "last_insight_content": "这是我之前写过的心得解读...",
+        "last_insight_date": "2026-05-18"
+      }
+    }
+  }
+  ```
+- **响应体 (词库为空冷启动防空转)**:
+  ```json
+  {
+    "code": 200,
+    "message": "success",
+    "data": {
+      "msg": "EMPTY_LIB",
+      "quote": null,
+      "history_insight": null
+    }
+  }
+  ```
+
+---
+
+### 2.3 格言打卡行为交互控制 (POST /checkin/maxim/action)
+
+- **接口描述**: 用户对锁定格言进行收藏（加权）、拉黑（屏蔽推荐）或跳过（释放当前锁定并扣减推荐分）的动作交互。
+- **请求格式**: `application/json`
+- **请求 Payload**:
+  ```json
+  {
+    "quote_id": 12,
+    "action_type": "favorite",
+    "value": 1
+  }
+  ```
+  - **字段约束**:
+    - `quote_id`: `int`，名言唯一主键。必填。
+    - `action_type`: `str`，动作类型。必须在 `["favorite", "dislike", "skip"]` 范围内。
+    - `value`: `int`，设置的值。0=取消/未操作, 1=激活。
+- **响应体**:
+  ```json
+  {
+    "code": 200,
+    "message": "success",
+    "data": null
+  }
+  ```
+
+---
+
+### 2.4 提交心得感悟并完成打卡 (POST /checkin/maxim/submit)
+
+- **接口描述**: 用户在今日打卡格言卡片下编写个人感悟，点击完成打卡。自动在数据库中生成随笔日记并更新状态锁定记录，执行数据与计数的事务更新。
+- **请求格式**: `application/json`
+- **请求 Payload**:
+  ```json
+  {
+    "quote_id": 12,
+    "insight": "这是一段字数必须大等于三十个字并且长度不能超过五百个汉字的极其深刻投资感悟反思，在这里记录心得体会。",
+    "mood": 1
+  }
+  ```
+  - **字段约束**:
+    - `quote_id`: `int`，锁定打卡的格言ID。必填。
+    - `insight`: `str`，解读心得。必填，长度限 30 ~ 500 字。
+    - `mood`: `int`，打卡心情。非必填，限 1=平静, 2=兴奋, 3=郁闷, 4=焦虑, 5=贪婪, 6=恐惧。
+- **响应体**:
+  ```json
+  {
+    "code": 200,
+    "message": "success",
+    "data": {
+      "diary_id": 102,
+      "title": "格言解读 · 2026-05-19",
+      "entry_date": "2026-05-19",
+      "accumulated_insight_count": 4
+    }
+  }
+  ```
+- **异常拦截 (重复打卡保护)**:
+  - 当今日已打卡成功时，再次提交会返回 `HTTP 400`。
+  ```json
+  {
+    "error": {
+      "code": "BAD_REQUEST",
+      "message": "您今日已完成格言打卡，请勿重复提交！",
+      "request_id": "req_8c3dceac"
+    }
+  }
+  ```
+
+---
+
+### 2.5 历史反思轨迹时间轴 (GET /checkin/maxim/timeline)
+
+- **接口描述**: 传入特定格言 ID，获取该用户针对此条格言的所有历史打卡反思轨迹与当时大盘情绪快照，帮助用户实现与过去的自己“隔空对话”。
+- **请求格式**: Query Parameters
+  - `quote_id`: `int`，格言ID。必填。
+- **响应体**:
+  ```json
+  {
+    "code": 200,
+    "message": "success",
+    "data": {
+      "quote_id": 12,
+      "content": "在别人恐惧时我贪婪，在别人贪婪时我恐惧。",
+      "total_insights": 2,
+      "timeline": [
+        {
+          "diary_id": 102,
+          "date": "2026-05-19",
+          "insight": "这是一段非常深刻并且字数一定要大于三十个汉字才可以正常通过后台Pydantic拦截校验的投资感悟反思，测试落库与锁更新逻辑。",
+          "mood": 1,
+          "market_summary": {
+            "ts_code": "000001.SH",
+            "pct_chg": -0.000934
+          }
+        },
+        {
+          "diary_id": 98,
+          "date": "2026-05-18",
+          "insight": "昨日的大跌中我有些许恐慌，记录今天的心得体会，要时刻遵守巴菲特老爷子的教诲...",
+          "mood": 4,
+          "market_summary": {
+            "ts_code": "000001.SH",
+            "pct_chg": -0.012400
+          }
+        }
+      ]
+    }
+  }
+  ```
+
+---
+*本接口契约文件为每日格言打卡系统 HTTP 服务端标准契约，已向全局网页 Portal 挂接。*
+</script>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', async () => {
+            const rawMd = document.getElementById('markdown-raw').textContent;
+            const contentEl = document.getElementById('content');
+            const tocEl = document.getElementById('toc');
+            
+            // Set options for marked
+            marked.setOptions({
+                gfm: true,
+                breaks: true,
+                headerIds: true,
+                mangle: false,
+                highlight: function(code, lang) {
+                    const language = hljs.getLanguage(lang) ? lang : 'plaintext';
+                    return hljs.highlight(code, { language }).value;
+                }
+            });
+
+            // Parse Markdown
+            contentEl.innerHTML = marked.parse(rawMd);
+            
+            // Generate TOC
+            const headings = contentEl.querySelectorAll('h2, h3');
+            headings.forEach((h, index) => {
+                if (!h.id) h.id = 'heading-' + index;
+                
+                const li = document.createElement('li');
+                li.className = 'toc-item level-' + h.tagName.toLowerCase().charAt(1);
+                
+                const a = document.createElement('a');
+                a.href = '#' + h.id;
+                a.textContent = h.textContent;
+                
+                li.appendChild(a);
+                tocEl.appendChild(li);
+            });
+
+            // Handle Mermaid
+            if (window.mermaid) {
+                mermaid.initialize({ startOnLoad: false, theme: 'dark', useWorker: false });
+                document.querySelectorAll('pre code.language-mermaid').forEach(el => {
+                    const pre = el.parentElement;
+                    const div = document.createElement('div');
+                    div.className = 'mermaid';
+                    div.textContent = el.textContent;
+                    pre.parentElement.replaceChild(div, pre);
+                });
+                mermaid.run();
+            }
+        });
+    </script>
+</body>
+</html>

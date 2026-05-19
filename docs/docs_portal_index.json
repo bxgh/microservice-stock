@@ -128,6 +128,14 @@
     "deprecated": false
   },
   {
+    "title": "Epic E23-S8 每日格言打卡系统 HTTP REST API 接口契约 (API.md)",
+    "path": "wxch-gateway/docs/features/wechat-gateway/implementation_logs/E23/S8/API.html",
+    "type": "standard",
+    "service": "WECHAT-GATEWAY",
+    "last_modified": "2026-05-19 10:37",
+    "deprecated": false
+  },
+  {
     "title": "E23-S3 格言打卡行为控制 API 交付报告",
     "path": "wxch-gateway/docs/features/wechat-gateway/implementation_logs/E23/S3/walkthrough.html",
     "type": "standard",
