@@ -1,10 +1,18 @@
 [
   {
+    "title": "踩坑记录：Python re.sub 模板替换中的反斜杠二次解析与 JavaScript 注入白屏故障",
+    "path": "wxch-gateway/docs/features/wechat-gateway/design/implementation_logs/E23/re_sub_backslash_unescape.pitfall.html",
+    "type": "pitfall",
+    "service": "WECHAT-GATEWAY",
+    "last_modified": "2026-05-19 20:26",
+    "deprecated": false
+  },
+  {
     "title": "Tushare Pro 2000积分 接口开发与限流治理最佳实践",
     "path": "docs/standards/tushare_api_reference.kb.html",
     "type": "kb",
     "service": "GLOBAL",
-    "last_modified": "2026-05-19 20:34",
+    "last_modified": "2026-05-18 21:44",
     "deprecated": false
   },
   {
@@ -12,63 +20,7 @@
     "path": "scf-collector/docs/features/kline_management/implementation_logs/E4/S1/validate_factors_audit.summary.html",
     "type": "summary",
     "service": "KLINE_MANAGEMENT",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "📈 Epic 14 Story 1 宏观与监管政策多源采集阶段总结\n            阶段总结",
-    "path": "scf-collector/docs/features/policy-tracker/implementation_logs/E14/S1/e14_s1_policy_acquisition.summary.html",
-    "type": "summary",
-    "service": "POLICY-TRACKER",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "⚠️ 央行官网 WAF 屏蔽避坑与国务院政策库动态映射决策\n            排障避坑",
-    "path": "scf-collector/docs/features/policy-tracker/implementation_logs/E14/S1/pbc_waf_bypass.pitfall.html",
-    "type": "pitfall",
-    "service": "POLICY-TRACKER",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "Epic E14-S2 A股宏观政策AI追踪系统阶段性完工总结",
-    "path": "scf-collector/docs/features/policy-tracker/implementation_logs/E14/S2/E14_S2.summary.html",
-    "type": "summary",
-    "service": "POLICY-TRACKER",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "A股宏观政策AI分析结果及板块映射深度审计报告",
-    "path": "scf-collector/docs/features/policy-tracker/implementation_logs/E14/S2/policy_tracker_analysis_report.kb.html",
-    "type": "kb",
-    "service": "POLICY-TRACKER",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "腾讯云 SCF Serverless 环境 naive datetime.now() 引起的 8小时时区偏差排障避坑指南",
-    "path": "scf-collector/docs/features/policy-tracker/implementation_logs/E14/S2/scf_timezone_utc.pitfall.html",
-    "type": "pitfall",
-    "service": "POLICY-TRACKER",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "Python 3.10 SCF 只读沙盒异步多米诺骨牌崩溃排障记录",
-    "path": "scf-collector/docs/features/policy-tracker/implementation_logs/E14/S2/tushare_anyio_exceptiongroup.pitfall.html",
-    "type": "pitfall",
-    "service": "POLICY-TRACKER",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "避坑秘籍：多级路由分级调度 staged_analyzer 的避坑与物理熔断实践",
-    "path": "scf-collector/docs/features/policy-tracker/implementation_logs/E15/S1/iterations/v2/staged_routing_failsafe.pitfall.html",
-    "type": "pitfall",
-    "service": "POLICY-TRACKER",
-    "last_modified": "2026-05-19 20:34",
+    "last_modified": "2026-05-18 21:44",
     "deprecated": false
   },
   {
@@ -76,31 +28,63 @@
     "path": "scf-collector/docs/features/tushare_migration/scf_timezone_cron.pitfall.html",
     "type": "pitfall",
     "service": "TUSHARE_MIGRATION",
-    "last_modified": "2026-05-19 20:34",
+    "last_modified": "2026-05-18 21:44",
     "deprecated": false
   },
   {
-    "title": "踩坑记录：Python re.sub 模板替换中的反斜杠二次解析与 JavaScript 注入白屏故障",
-    "path": "wxch-gateway/docs/features/wechat-gateway/design/implementation_logs/E23/re_sub_backslash_unescape.pitfall.html",
+    "title": "避坑秘籍：多级路由分级调度 staged_analyzer 的避坑与物理熔断实践",
+    "path": "scf-collector/docs/features/policy-tracker/implementation_logs/E15/S1/iterations/v2/staged_routing_failsafe.pitfall.html",
     "type": "pitfall",
-    "service": "WECHAT-GATEWAY",
-    "last_modified": "2026-05-19 20:34",
+    "service": "POLICY-TRACKER",
+    "last_modified": "2026-05-18 21:44",
     "deprecated": false
   },
   {
-    "title": "踩坑与排障复盘: [E4-S1] 自增主键下 `REPLACE INTO` 退化与历史幽灵因子污染",
-    "path": "scf-collector/docs/features/kline_management/implementation_logs/E4/S1/factor_duplicate_pollution.pitfall.html",
-    "type": "pitfall",
-    "service": "KLINE_MANAGEMENT",
-    "last_modified": "2026-05-17 17:27",
-    "deprecated": false
-  },
-  {
-    "title": "技术秘籍: [E4-S1] 1700万行日线大表极速区间并发回填算法",
-    "path": "scf-collector/docs/features/kline_management/implementation_logs/E4/S1/high_performance_db_backfill.kb.html",
+    "title": "A股宏观政策AI分析结果及板块映射深度审计报告",
+    "path": "scf-collector/docs/features/policy-tracker/implementation_logs/E14/S2/policy_tracker_analysis_report.kb.html",
     "type": "kb",
-    "service": "KLINE_MANAGEMENT",
-    "last_modified": "2026-05-17 17:27",
+    "service": "POLICY-TRACKER",
+    "last_modified": "2026-05-18 21:44",
+    "deprecated": false
+  },
+  {
+    "title": "Python 3.10 SCF 只读沙盒异步多米诺骨牌崩溃排障记录",
+    "path": "scf-collector/docs/features/policy-tracker/implementation_logs/E14/S2/tushare_anyio_exceptiongroup.pitfall.html",
+    "type": "pitfall",
+    "service": "POLICY-TRACKER",
+    "last_modified": "2026-05-17 20:44",
+    "deprecated": false
+  },
+  {
+    "title": "腾讯云 SCF Serverless 环境 naive datetime.now() 引起的 8小时时区偏差排障避坑指南",
+    "path": "scf-collector/docs/features/policy-tracker/implementation_logs/E14/S2/scf_timezone_utc.pitfall.html",
+    "type": "pitfall",
+    "service": "POLICY-TRACKER",
+    "last_modified": "2026-05-17 20:44",
+    "deprecated": false
+  },
+  {
+    "title": "Epic E14-S2 A股宏观政策AI追踪系统阶段性完工总结",
+    "path": "scf-collector/docs/features/policy-tracker/implementation_logs/E14/S2/E14_S2.summary.html",
+    "type": "summary",
+    "service": "POLICY-TRACKER",
+    "last_modified": "2026-05-17 20:44",
+    "deprecated": false
+  },
+  {
+    "title": "⚠️ 央行官网 WAF 屏蔽避坑与国务院政策库动态映射决策\n            排障避坑",
+    "path": "scf-collector/docs/features/policy-tracker/implementation_logs/E14/S1/pbc_waf_bypass.pitfall.html",
+    "type": "pitfall",
+    "service": "POLICY-TRACKER",
+    "last_modified": "2026-05-17 20:44",
+    "deprecated": false
+  },
+  {
+    "title": "📈 Epic 14 Story 1 宏观与监管政策多源采集阶段总结\n            阶段总结",
+    "path": "scf-collector/docs/features/policy-tracker/implementation_logs/E14/S1/e14_s1_policy_acquisition.summary.html",
+    "type": "summary",
+    "service": "POLICY-TRACKER",
+    "last_modified": "2026-05-17 20:44",
     "deprecated": false
   },
   {
@@ -108,7 +92,7 @@
     "path": "scf-collector/docs/features/kline_validation/implementation_logs/E12/kline_audit_troubleshoot.pitfall.html",
     "type": "pitfall",
     "service": "KLINE_VALIDATION",
-    "last_modified": "2026-05-17 17:27",
+    "last_modified": "2026-05-17 17:21",
     "deprecated": false
   },
   {
@@ -116,7 +100,7 @@
     "path": "scf-collector/docs/features/kline_validation/implementation_logs/E12/kline_healing.summary.html",
     "type": "summary",
     "service": "KLINE_VALIDATION",
-    "last_modified": "2026-05-17 17:27",
+    "last_modified": "2026-05-17 17:21",
     "deprecated": false
   },
   {
@@ -124,15 +108,23 @@
     "path": "scf-collector/docs/features/kline_validation/implementation_logs/E12/triple_source_repair.kb.html",
     "type": "kb",
     "service": "KLINE_VALIDATION",
-    "last_modified": "2026-05-17 17:27",
+    "last_modified": "2026-05-17 17:21",
     "deprecated": false
   },
   {
-    "title": "Walkthrough - E15-S1: P0级行情池与两融指标采集模块",
-    "path": "scf-collector/docs/features/v0.2_data_onboarding/implementation_logs/E15/S1/walkthrough.html",
-    "type": "standard",
-    "service": "V0.2_DATA_ONBOARDING",
-    "last_modified": "2026-05-19 23:53",
+    "title": "技术秘籍: [E4-S1] 1700万行日线大表极速区间并发回填算法",
+    "path": "scf-collector/docs/features/kline_management/implementation_logs/E4/S1/high_performance_db_backfill.kb.html",
+    "type": "kb",
+    "service": "KLINE_MANAGEMENT",
+    "last_modified": "2026-05-17 17:21",
+    "deprecated": false
+  },
+  {
+    "title": "踩坑与排障复盘: [E4-S1] 自增主键下 `REPLACE INTO` 退化与历史幽灵因子污染",
+    "path": "scf-collector/docs/features/kline_management/implementation_logs/E4/S1/factor_duplicate_pollution.pitfall.html",
+    "type": "pitfall",
+    "service": "KLINE_MANAGEMENT",
+    "last_modified": "2026-05-17 17:21",
     "deprecated": false
   },
   {
@@ -140,1447 +132,15 @@
     "path": "scf-collector/docs/features/v0.2_data_onboarding/implementation_logs/E15/S1/implementation_plan.html",
     "type": "standard",
     "service": "V0.2_DATA_ONBOARDING",
-    "last_modified": "2026-05-19 23:31",
+    "last_modified": "2026-05-19 23:56",
     "deprecated": false
   },
   {
-    "title": "Stock-Manager API 文档更新总结",
-    "path": "docs/API文档更新总结.html",
+    "title": "Walkthrough - E15-S1: P0级行情池与两融指标采集模块",
+    "path": "scf-collector/docs/features/v0.2_data_onboarding/implementation_logs/E15/S1/walkthrough.html",
     "type": "standard",
-    "service": "GLOBAL",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "股东数据 数据库结构",
-    "path": "docs/database_schema.html",
-    "type": "standard",
-    "service": "GLOBAL",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "项目文档索引 (Documentation Index)",
-    "path": "docs/README.html",
-    "type": "standard",
-    "service": "GLOBAL",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "量化数据监控小程序 - 前端开发规范",
-    "path": "docs/scheculer_manager.html",
-    "type": "standard",
-    "service": "GLOBAL",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "股市日记系统：API 规格说明书 (V1.0)",
-    "path": "docs/api/api-spec-diary.html",
-    "type": "standard",
-    "service": "GLOBAL",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "数据审计日志接口 (Data Audit)",
-    "path": "docs/api/data_audit.html",
-    "type": "standard",
-    "service": "GLOBAL",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "股票微服务集群 API 接口文档汇总",
-    "path": "docs/api/FULL_API_DOCUMENTATION.html",
-    "type": "standard",
-    "service": "GLOBAL",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "数据管线事件驱动与流水线编排 API (Pipeline & Event-Driven)",
-    "path": "docs/api/PIPELINE_EVENT_API.html",
-    "type": "standard",
-    "service": "GLOBAL",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "静态数据库 (MySQL) 交互接口指南 (Static DB API Guide)",
-    "path": "docs/api/STATIC_DB_API_GUIDE.html",
-    "type": "standard",
-    "service": "GLOBAL",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "Stock-Manager API 前端开发文档",
-    "path": "docs/api/stock-manager-frontend-api.html",
-    "type": "standard",
-    "service": "GLOBAL",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "Stock-Manager 业务中台接口文档 (Stock-Manager API)",
-    "path": "docs/api/STOCK_MANAGER_API.html",
-    "type": "standard",
-    "service": "GLOBAL",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "股票数据消息类型清单",
-    "path": "docs/api/stock_messages.html",
-    "type": "standard",
-    "service": "GLOBAL",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "微信小程序调用指南：WXCH Gateway API",
-    "path": "docs/api/WXCH_GATEWAY_USAGE.html",
-    "type": "standard",
-    "service": "GLOBAL",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "01. 体系架构总览 (System Architecture Blueprint)",
-    "path": "docs/architecture/01_体系架构总览.html",
-    "type": "standard",
-    "service": "GLOBAL",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "02a. Nginx 网关配置 (Gateway Spec)",
-    "path": "docs/architecture/02a_Nginx网关配置.html",
-    "type": "standard",
-    "service": "GLOBAL",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "02b. Cloud-API 聚合层 (BFF Spec)",
-    "path": "docs/architecture/02b_Cloud-API聚合层.html",
-    "type": "standard",
-    "service": "GLOBAL",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "02c. 数据采集微服务 (Ingestion Services Spec)",
-    "path": "docs/architecture/02c_数据采集微服务.html",
-    "type": "standard",
-    "service": "GLOBAL",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "02d. 前端 API 规范 (Frontend API Spec)",
-    "path": "docs/architecture/02d_前端API规范.html",
-    "type": "standard",
-    "service": "GLOBAL",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "02e. Stock-Manager-API 服务规划",
-    "path": "docs/architecture/02e_Stock-Manager服务规划.html",
-    "type": "standard",
-    "service": "GLOBAL",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "Cloud-API vs Stock-Manager 架构定位对比",
-    "path": "docs/architecture/02f_BFF层架构对比.html",
-    "type": "standard",
-    "service": "GLOBAL",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "02g. Task-Orchestrator 调度系统",
-    "path": "docs/architecture/02g_Task-Orchestrator调度系统.html",
-    "type": "standard",
-    "service": "GLOBAL",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "股票异动捕捉管线 v1.1 部署方案",
-    "path": "docs/architecture/02h_new_task_调度系统.html",
-    "type": "standard",
-    "service": "GLOBAL",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "02. 云端服务与API (Cloud Services Index)",
-    "path": "docs/architecture/02_云端服务与API.html",
-    "type": "standard",
-    "service": "GLOBAL",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "03. 内网计算引擎 (Core Engine Specification)",
-    "path": "docs/architecture/03_内网计算引擎.html",
-    "type": "standard",
-    "service": "GLOBAL",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "04. 风险治理与优化 (Risk Governance & Optimization)",
-    "path": "docs/architecture/04_风险治理与优化.html",
-    "type": "standard",
-    "service": "GLOBAL",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "05. 运维部署手册 (Operations Manual)",
-    "path": "docs/architecture/05_运维部署手册.html",
-    "type": "standard",
-    "service": "GLOBAL",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "📋 代码评估报告",
-    "path": "docs/architecture/06_最新评估.html",
-    "type": "standard",
-    "service": "GLOBAL",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "Get-StockData 数据获取架构与开发指南",
-    "path": "docs/architecture/DATA_ACQUISITION_ARCHITECTURE.html",
-    "type": "standard",
-    "service": "GLOBAL",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "数据采集与接入 QC 检查清单 (QC Checklist)",
-    "path": "docs/architecture/QC_GUIDELINES.html",
-    "type": "standard",
-    "service": "GLOBAL",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "Task-Orchestrator 核心架构理念",
-    "path": "docs/architecture/调度任务.html",
-    "type": "standard",
-    "service": "GLOBAL",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "虚拟 Agent 角色定义 (Virtual Role-based Rules)",
-    "path": "docs/architecture/agent-skill-rules/ROLES.html",
-    "type": "standard",
-    "service": "GLOBAL",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "E100-S1: 腾讯云环境治理同步与角色增强",
-    "path": "docs/architecture/agent-skill-rules/implementation_logs/E100/S1/implementation_plan.html",
-    "type": "standard",
-    "service": "GLOBAL",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "Task Log: E100-S1",
-    "path": "docs/architecture/agent-skill-rules/implementation_logs/E100/S1/task.html",
-    "type": "standard",
-    "service": "GLOBAL",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "Walkthrough: E100-S1 治理规范同步",
-    "path": "docs/architecture/agent-skill-rules/implementation_logs/E100/S1/walkthrough.html",
-    "type": "standard",
-    "service": "GLOBAL",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "E100-S2: WXCH Gateway 专有治理角色与安全红线",
-    "path": "docs/architecture/agent-skill-rules/implementation_logs/E100/S2/implementation_plan.html",
-    "type": "standard",
-    "service": "GLOBAL",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "Task Log: E100-S2",
-    "path": "docs/architecture/agent-skill-rules/implementation_logs/E100/S2/task.html",
-    "type": "standard",
-    "service": "GLOBAL",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "Walkthrough: E100-S2 WXCH 网关治理角色",
-    "path": "docs/architecture/agent-skill-rules/implementation_logs/E100/S2/walkthrough.html",
-    "type": "standard",
-    "service": "GLOBAL",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "Implementation Plan - E100-S3 数据质量 QC 准则优化与标准化",
-    "path": "docs/architecture/agent-skill-rules/implementation_logs/E100/S3/implementation_plan.html",
-    "type": "standard",
-    "service": "GLOBAL",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "task",
-    "path": "docs/architecture/agent-skill-rules/implementation_logs/E100/S3/task.html",
-    "type": "standard",
-    "service": "GLOBAL",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "Walkthrough - E100-S3 数据质量 QC 准则优化",
-    "path": "docs/architecture/agent-skill-rules/implementation_logs/E100/S3/walkthrough.html",
-    "type": "standard",
-    "service": "GLOBAL",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "ClickHouse在内网部署的可行性分析",
-    "path": "docs/architecture/archive/ClickHouse部署方案.html",
-    "type": "standard",
-    "service": "GLOBAL",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "腾讯云轻量服务器 (2C 4G) 详细架构设计",
-    "path": "docs/architecture/archive/云端服务器架构细化.html",
-    "type": "standard",
-    "service": "GLOBAL",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "量化系统架构深度优化与风险治理 (Architecture & Risk Governance)",
-    "path": "docs/architecture/archive/架构深度优化与风险治理.html",
-    "type": "standard",
-    "service": "GLOBAL",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "股票数据源微服务架构设计",
-    "path": "docs/architecture/archive/架构设计.html",
-    "type": "standard",
-    "service": "GLOBAL",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "混合云微服务融合架构规划",
-    "path": "docs/architecture/archive/混合云微服务融合规划.html",
-    "type": "standard",
-    "service": "GLOBAL",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "混合云量化交易系统架构设计",
-    "path": "docs/architecture/archive/混合云架构设计.html",
-    "type": "standard",
-    "service": "GLOBAL",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "Epic E100: Agent 治理体系从“口头约定”到“模块化门禁”的重构",
-    "path": "docs/architecture/archive/agent-rules-skills/E100_Governance_Transformation.html",
-    "type": "standard",
-    "service": "GLOBAL",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "Final Report - Epic: Agent Governance Transformation (E100-E103)",
-    "path": "docs/architecture/archive/agent-rules-skills/reportOf41server.html",
-    "type": "standard",
-    "service": "GLOBAL",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "Implementation Plan - E100-S1: AGENTS.md 升级与规约解耦",
-    "path": "docs/architecture/archive/agent-rules-skills/implementation_logs/E100/S1/implementation_plan.html",
-    "type": "standard",
-    "service": "GLOBAL",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "Task Tracking - E100-S1: AGENTS.md 升级与规约解耦",
-    "path": "docs/architecture/archive/agent-rules-skills/implementation_logs/E100/S1/task.html",
-    "type": "standard",
-    "service": "GLOBAL",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "Walkthrough - E100-S1: 治理补强与物理对齐",
-    "path": "docs/architecture/archive/agent-rules-skills/implementation_logs/E100/S1/walkthrough.html",
-    "type": "standard",
-    "service": "GLOBAL",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "Implementation Plan - E100-S2: 引入 ROLES.md 建立角色化责任闭环",
-    "path": "docs/architecture/archive/agent-rules-skills/implementation_logs/E100/S2/implementation_plan.html",
-    "type": "standard",
-    "service": "GLOBAL",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "Task Tracking - E100-S2: 引入 ROLES.md 建立角色化责任闭环",
-    "path": "docs/architecture/archive/agent-rules-skills/implementation_logs/E100/S2/task.html",
-    "type": "standard",
-    "service": "GLOBAL",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "Implementation Plan - E100-S3: 物理门禁：自动化审计脚本迁移",
-    "path": "docs/architecture/archive/agent-rules-skills/implementation_logs/E100/S3/implementation_plan.html",
-    "type": "standard",
-    "service": "GLOBAL",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "Task Tracking - E100-S3: 物理门禁：自动化审计脚本迁移",
-    "path": "docs/architecture/archive/agent-rules-skills/implementation_logs/E100/S3/task.html",
-    "type": "standard",
-    "service": "GLOBAL",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "Implementation Plan - E100-S4: 标准化交付模板实施",
-    "path": "docs/architecture/archive/agent-rules-skills/implementation_logs/E100/S4/implementation_plan.html",
-    "type": "standard",
-    "service": "GLOBAL",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "Task Tracking - E100-S4: 标准化交付模板实施",
-    "path": "docs/architecture/archive/agent-rules-skills/implementation_logs/E100/S4/task.html",
-    "type": "standard",
-    "service": "GLOBAL",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "PRD 架构审计报告：自愈型数据管线 (v1.1)",
-    "path": "docs/audit_reports/PRD_自愈管线_审核报告.html",
-    "type": "standard",
-    "service": "GLOBAL",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "K线同步锁冲突问题修复报告",
-    "path": "docs/bugfix/K线同步锁冲突问题修复报告.html",
-    "type": "standard",
-    "service": "GLOBAL",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "K线同步锁冲突问题分析报告",
-    "path": "docs/bugfix/K线同步锁冲突问题分析.html",
-    "type": "standard",
-    "service": "GLOBAL",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "复权因子显示问题修复报告",
-    "path": "docs/bugfix/复权因子显示问题修复.html",
-    "type": "standard",
-    "service": "GLOBAL",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "审计数据基线不一致问题修复报告",
-    "path": "docs/bugfix/审计基线不一致问题修复.html",
-    "type": "standard",
-    "service": "GLOBAL",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "Stock-Manager API 部署与外网访问配置",
-    "path": "docs/deployment/stock-manager-external-access.html",
-    "type": "standard",
-    "service": "GLOBAL",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "Mootdx API Deployment Plan (Tencent Cloud)",
-    "path": "docs/deployment/mootdx/readme.html",
-    "type": "standard",
-    "service": "GLOBAL",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "Implementation Plan - Deploy mootdx-api to Tencent Cloud [E101-S1]",
-    "path": "docs/deployment/mootdx/implementation_logs/E101/S1/implementation_plan.html",
-    "type": "standard",
-    "service": "GLOBAL",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "Tasks: mootdx-api Deployment [E101-S1]",
-    "path": "docs/deployment/mootdx/implementation_logs/E101/S1/task.html",
-    "type": "standard",
-    "service": "GLOBAL",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "Walkthrough - mootdx-api Deployment [E101-S1]",
-    "path": "docs/deployment/mootdx/implementation_logs/E101/S1/walkthrough.html",
-    "type": "standard",
-    "service": "GLOBAL",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "五维度量化分析体系设计文档",
-    "path": "docs/design/quantitative_analysis_system.html",
-    "type": "standard",
-    "service": "GLOBAL",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "云端调度系统 (Stock-Manager-Scheduler) 开发文档 v1.1",
-    "path": "docs/design/Task_Orchestrator_Cloud_Implementation.html",
-    "type": "standard",
-    "service": "GLOBAL",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "Claude Code 开发需求：A股结构性牛市监控系统",
-    "path": "docs/design/结构性牛市.html",
-    "type": "standard",
-    "service": "GLOBAL",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "E1 数据基础设施 (重整版)",
-    "path": "docs/design/astock-fundamental-system/E1_Data_Infrastructure.html",
-    "type": "standard",
-    "service": "GLOBAL",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "E2 排雷规则引擎",
-    "path": "docs/design/astock-fundamental-system/E2_Landmine_Rule_Engine.html",
-    "type": "standard",
-    "service": "GLOBAL",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "E3 AI 抽取流水线",
-    "path": "docs/design/astock-fundamental-system/E3_AI_Extraction_Pipeline.html",
-    "type": "standard",
-    "service": "GLOBAL",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "E4 财务交叉验证",
-    "path": "docs/design/astock-fundamental-system/E4_Financial_Cross_Validation.html",
-    "type": "standard",
-    "service": "GLOBAL",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "E5 同业对比",
-    "path": "docs/design/astock-fundamental-system/E5_Peer_Comparison.html",
-    "type": "standard",
-    "service": "GLOBAL",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "E6 触发式跟踪",
-    "path": "docs/design/astock-fundamental-system/E6_Triggered_Tracking.html",
-    "type": "standard",
-    "service": "GLOBAL",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "E7 输出与可视化",
-    "path": "docs/design/astock-fundamental-system/E7_Output_and_Visualization.html",
-    "type": "standard",
-    "service": "GLOBAL",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "E8 系统运维",
-    "path": "docs/design/astock-fundamental-system/E8_System_Ops.html",
-    "type": "standard",
-    "service": "GLOBAL",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "A 股个股基本面分析系统 - 工程技术方案",
-    "path": "docs/design/astock-fundamental-system/readme.html",
-    "type": "standard",
-    "service": "GLOBAL",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "附录 A: 核心数据表 DDL 示意",
-    "path": "docs/design/astock-fundamental-system/SPEC_Appendices.html",
-    "type": "standard",
-    "service": "GLOBAL",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "Implementation Plan - E1-S1 数据源接入扩展",
-    "path": "docs/design/astock-fundamental-system/implementation_logs/E1/S1/implementation_plan.html",
-    "type": "standard",
-    "service": "GLOBAL",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "task",
-    "path": "docs/design/astock-fundamental-system/implementation_logs/E1/S1/task.html",
-    "type": "standard",
-    "service": "GLOBAL",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "Walkthrough - E1-S1 数据源接入扩展",
-    "path": "docs/design/astock-fundamental-system/implementation_logs/E1/S1/walkthrough.html",
-    "type": "standard",
-    "service": "GLOBAL",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "实施反馈日志",
-    "path": "docs/design/claude-project-files/IMPLEMENTATION_FEEDBACK.html",
-    "type": "standard",
-    "service": "GLOBAL",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "项目总览：A 股盘后分析系统",
-    "path": "docs/design/claude-project-files/PROJECT_OVERVIEW.html",
-    "type": "standard",
-    "service": "GLOBAL",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "表清单总览(TABLES_INDEX.md)",
-    "path": "docs/design/claude-project-files/TABLES_INDEX.html",
-    "type": "standard",
-    "service": "GLOBAL",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "提问规则",
-    "path": "docs/design/claude-project-files/提问规则.html",
-    "type": "standard",
-    "service": "GLOBAL",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "第 1-2 章 · 盘后数据体系技术总结 (Final)",
-    "path": "docs/design/复盘/CHAPTER_1_2_TECHNICAL_REPORT.html",
-    "type": "standard",
-    "service": "GLOBAL",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "E1: 原始数据采集需求",
-    "path": "docs/design/复盘/data_requirements.html",
-    "type": "standard",
-    "service": "GLOBAL",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "数据库表结构与空间占用报告",
-    "path": "docs/design/复盘/db_inventory.html",
-    "type": "standard",
-    "service": "GLOBAL",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "复盘数据表结构设计方案 (深度校对版)",
-    "path": "docs/design/复盘/db_schema_proposal.html",
-    "type": "standard",
-    "service": "GLOBAL",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "E2: 派生指标输出规范",
-    "path": "docs/design/复盘/indicator_specs.html",
-    "type": "standard",
-    "service": "GLOBAL",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "A 股盘后数据观察体系 · 总纲",
-    "path": "docs/design/复盘/README.html",
-    "type": "standard",
-    "service": "GLOBAL",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "风险控制与工程实践",
-    "path": "docs/design/复盘/risk_control.html",
-    "type": "standard",
-    "service": "GLOBAL",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "定时任务执行情况深度审计总结 (2026-05-03)",
-    "path": "docs/design/复盘/scheduled_tasks_audit_summary_20260503.html",
-    "type": "standard",
-    "service": "GLOBAL",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "定时任务执行情况评估报告 (2026-05-03)",
-    "path": "docs/design/复盘/scheduled_tasks_execution_report.html",
-    "type": "standard",
-    "service": "GLOBAL",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "微服务股票数据系统 - 定时任务部署清单 (2026-05-03)",
-    "path": "docs/design/复盘/scheduled_tasks_inventory.html",
-    "type": "standard",
-    "service": "GLOBAL",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "第 1 章 · 市场全景看板",
-    "path": "docs/design/复盘/chapter1/chapter1.html",
-    "type": "standard",
-    "service": "GLOBAL",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "第 1 章 · 数据库改造 (E1)",
-    "path": "docs/design/复盘/chapter1/E1_database.html",
-    "type": "standard",
-    "service": "GLOBAL",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "第 1 章 · 指标计算 SQL (E2)",
-    "path": "docs/design/复盘/chapter1/E2_indicators.html",
-    "type": "standard",
-    "service": "GLOBAL",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "第 1 章 · 微信小程序前端 (E3)",
-    "path": "docs/design/复盘/chapter1/E3_frontend.html",
-    "type": "standard",
-    "service": "GLOBAL",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "第 1 章 · 数据字典与口径 (E4)",
-    "path": "docs/design/复盘/chapter1/E4_dictionary.html",
-    "type": "standard",
-    "service": "GLOBAL",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "第 1 章 · 风险、规避与里程碑",
-    "path": "docs/design/复盘/chapter1/Risk_Milestones.html",
-    "type": "standard",
-    "service": "GLOBAL",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "第 2 章 · 行业与风格分化",
-    "path": "docs/design/复盘/chapter2/chapter2.html",
-    "type": "standard",
-    "service": "GLOBAL",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "第 2 章 · 数据库改造 (E1)",
-    "path": "docs/design/复盘/chapter2/E1_database.html",
-    "type": "standard",
-    "service": "GLOBAL",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "第 2 章 · 指标计算 SQL (E2)",
-    "path": "docs/design/复盘/chapter2/E2_indicators.html",
-    "type": "standard",
-    "service": "GLOBAL",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "第 2 章 · API 接口契约 (E3)",
-    "path": "docs/design/复盘/chapter2/E3_api_contract.html",
-    "type": "standard",
-    "service": "GLOBAL",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "第 2 章 · 数据字典与口径 (E4)",
-    "path": "docs/design/复盘/chapter2/E4_dictionary.html",
-    "type": "standard",
-    "service": "GLOBAL",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "第 2 章 · 数据采集策略 (E5) - Updated",
-    "path": "docs/design/复盘/chapter2/E5_acquisition_strategy.html",
-    "type": "standard",
-    "service": "GLOBAL",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "第 2 章修复方案",
-    "path": "docs/design/复盘/chapter2/repaire.html",
-    "type": "standard",
-    "service": "GLOBAL",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "第 2 章 · 风险与里程碑",
-    "path": "docs/design/复盘/chapter2/Risk_Milestones.html",
-    "type": "standard",
-    "service": "GLOBAL",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "盘后复盘体系 · 第 3 + 4 章交付",
-    "path": "docs/design/复盘/chapter3-4/chapger3-4.html",
-    "type": "standard",
-    "service": "GLOBAL",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "盘后复盘体系 · 第 5 + 6 章交付",
-    "path": "docs/design/复盘/chapter5-6/chapter5-6.html",
-    "type": "standard",
-    "service": "GLOBAL",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "第 7 章 · 跨市场 + 估值 + 每日综述 APP",
-    "path": "docs/design/复盘/chapter7/chapter7.html",
-    "type": "standard",
-    "service": "GLOBAL",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "第 8 章 · 认知训练系统(Cognition Loop)",
-    "path": "docs/design/复盘/chapter8/chapter8.html",
-    "type": "standard",
-    "service": "GLOBAL",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "第 8 章 · 认知训练系统 (基础与设计)",
-    "path": "docs/design/复盘/chapter8/steps/00_基础与设计.html",
-    "type": "standard",
-    "service": "GLOBAL",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "第 8 章 · 认知训练系统 (第一步：晨间预判)",
-    "path": "docs/design/复盘/chapter8/steps/01_晨间预判.html",
-    "type": "standard",
-    "service": "GLOBAL",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "第 8 章 · 认知训练系统 (第二步：日记与决策)",
-    "path": "docs/design/复盘/chapter8/steps/02_日记与决策.html",
-    "type": "standard",
-    "service": "GLOBAL",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "第 8 章 · 认知训练系统 (第三步：周末复盘)",
-    "path": "docs/design/复盘/chapter8/steps/03_周末复盘.html",
-    "type": "standard",
-    "service": "GLOBAL",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "第 8 章 · 认知训练系统 (第四步：认知仪表盘)",
-    "path": "docs/design/复盘/chapter8/steps/04_认知仪表盘.html",
-    "type": "standard",
-    "service": "GLOBAL",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "第 8 章 · 认知训练系统 (第五步：前端实现)",
-    "path": "docs/design/复盘/chapter8/steps/05_前端实现.html",
-    "type": "standard",
-    "service": "GLOBAL",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "第 8 章 · 认知训练系统 (总结、运营与评估)",
-    "path": "docs/design/复盘/chapter8/steps/06_运营与评估.html",
-    "type": "standard",
-    "service": "GLOBAL",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "Appendices",
-    "path": "docs/design/异动股捕捉/Appendices.html",
-    "type": "standard",
-    "service": "GLOBAL",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "E1_Data_Structure",
-    "path": "docs/design/异动股捕捉/E1_Data_Structure.html",
-    "type": "standard",
-    "service": "GLOBAL",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "E2_Signal_Rules",
-    "path": "docs/design/异动股捕捉/E2_Signal_Rules.html",
-    "type": "standard",
-    "service": "GLOBAL",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "E3_Scoring_Function",
-    "path": "docs/design/异动股捕捉/E3_Scoring_Function.html",
-    "type": "standard",
-    "service": "GLOBAL",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "E4_Top10_Rules",
-    "path": "docs/design/异动股捕捉/E4_Top10_Rules.html",
-    "type": "standard",
-    "service": "GLOBAL",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "E5_System_Integration",
-    "path": "docs/design/异动股捕捉/E5_System_Integration.html",
-    "type": "standard",
-    "service": "GLOBAL",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "股票异动捕捉管线 v1.1 部署方案",
-    "path": "docs/design/异动股捕捉/readme.html",
-    "type": "standard",
-    "service": "GLOBAL",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "异动捕捉模块 · 设计交付文档 v1.1",
-    "path": "docs/design/异动股捕捉/readme1.html",
-    "type": "standard",
-    "service": "GLOBAL",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "历史数据修复与架构重构方案",
-    "path": "docs/design/数据管线/历史数据修复与架构重构方案.html",
-    "type": "standard",
-    "service": "GLOBAL",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "历史数据校验体系落地规划",
-    "path": "docs/design/数据管线/历史数据校验体系.html",
-    "type": "standard",
-    "service": "GLOBAL",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "最终交付报告 - 任务交接事件化 (Event-Driven Handover)",
-    "path": "docs/design/数据管线/任务交接事件化/FINAL_REPORT.html",
-    "type": "standard",
-    "service": "GLOBAL",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "第 4.1 章 · 任务交接事件化 (Event-Driven Handover)",
-    "path": "docs/design/数据管线/任务交接事件化/readme.html",
-    "type": "standard",
-    "service": "GLOBAL",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "实施计划 - E4-S1-T2: 封装任务状态查询与监控接口",
-    "path": "docs/design/数据管线/任务交接事件化/implementation_logs/E4/S1/implementation_plan.html",
-    "type": "standard",
-    "service": "GLOBAL",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "任务进度 - E4-S1-T2",
-    "path": "docs/design/数据管线/任务交接事件化/implementation_logs/E4/S1/task.html",
-    "type": "standard",
-    "service": "GLOBAL",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "实施总结 - E4-S1-T2: 封装任务状态查询与监控接口",
-    "path": "docs/design/数据管线/任务交接事件化/implementation_logs/E4/S1/walkthrough.html",
-    "type": "standard",
-    "service": "GLOBAL",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "实施计划 - E5-S1: 云端四阶段流水线管理器 (WorkflowManager)",
-    "path": "docs/design/数据管线/任务交接事件化/implementation_logs/E5/S1/implementation_plan.html",
-    "type": "standard",
-    "service": "GLOBAL",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "task",
-    "path": "docs/design/数据管线/任务交接事件化/implementation_logs/E5/S1/task.html",
-    "type": "standard",
-    "service": "GLOBAL",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "Walkthrough - E5-S1: 云端四阶段流水线管理器 (WorkflowManager)",
-    "path": "docs/design/数据管线/任务交接事件化/implementation_logs/E5/S1/walkthrough.html",
-    "type": "standard",
-    "service": "GLOBAL",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "实施计划 - E6-S1: 任务触发模式切换 (Task Trigger Mode Switch)",
-    "path": "docs/design/数据管线/任务交接事件化/implementation_logs/E6/S1/implementation_plan.html",
-    "type": "standard",
-    "service": "GLOBAL",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "task",
-    "path": "docs/design/数据管线/任务交接事件化/implementation_logs/E6/S1/task.html",
-    "type": "standard",
-    "service": "GLOBAL",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "Walkthrough - E6-S1: 任务触发模式切换 (Task Trigger Mode Switch)",
-    "path": "docs/design/数据管线/任务交接事件化/implementation_logs/E6/S1/walkthrough.html",
-    "type": "standard",
-    "service": "GLOBAL",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "实施计划 - E6-S2: 每日任务调度合理化分配 (Rationalizing Task Scheduling)",
-    "path": "docs/design/数据管线/任务交接事件化/implementation_logs/E6/S2/implementation_plan.html",
-    "type": "standard",
-    "service": "GLOBAL",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "task",
-    "path": "docs/design/数据管线/任务交接事件化/implementation_logs/E6/S2/task.html",
-    "type": "standard",
-    "service": "GLOBAL",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "验收报告 (QA Report) - E6-S2",
-    "path": "docs/design/数据管线/任务交接事件化/implementation_logs/E6/S2/walkthrough.html",
-    "type": "standard",
-    "service": "GLOBAL",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "实施计划 - E6-S3: 告警邮件系统标准化优化",
-    "path": "docs/design/数据管线/任务交接事件化/implementation_logs/E6/S3/implementation_plan.html",
-    "type": "standard",
-    "service": "GLOBAL",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "每日任务调度合理化分配 - E6-S3: 告警邮件系统标准化优化",
-    "path": "docs/design/数据管线/任务交接事件化/implementation_logs/E6/S3/task.html",
-    "type": "standard",
-    "service": "GLOBAL",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "实施计划 - E6-S4: 每日任务执行总结报告 (Daily Summary Report)",
-    "path": "docs/design/数据管线/任务交接事件化/implementation_logs/E6/S4/implementation_plan.html",
-    "type": "standard",
-    "service": "GLOBAL",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "每日任务执行总结报告 - E6-S4",
-    "path": "docs/design/数据管线/任务交接事件化/implementation_logs/E6/S4/task.html",
-    "type": "standard",
-    "service": "GLOBAL",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "每日任务执行总结报告 - 实施验收报告 (E6-S4)",
-    "path": "docs/design/数据管线/任务交接事件化/implementation_logs/E6/S4/walkthrough.html",
-    "type": "standard",
-    "service": "GLOBAL",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "ClickHouse 数据指标计算交付要求 (数据中台)",
-    "path": "docs/design/数据管线/历史数据校验体系/CK_指标计算交付要求.html",
-    "type": "standard",
-    "service": "GLOBAL",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "E1: 数据模型重构 (P0) [COMPLETED]",
-    "path": "docs/design/数据管线/历史数据校验体系/E1_数据模型重构.html",
-    "type": "standard",
-    "service": "GLOBAL",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "E2: 写入路径同步校验 (P0) [COMPLETED]",
-    "path": "docs/design/数据管线/历史数据校验体系/E2_写入路径同步校验.html",
-    "type": "standard",
-    "service": "GLOBAL",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "E3: 巡检模块独立部署(P0)",
-    "path": "docs/design/数据管线/历史数据校验体系/E3_巡检模块独立部署.html",
-    "type": "standard",
-    "service": "GLOBAL",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "E4: 跨源比对(P1)",
-    "path": "docs/design/数据管线/历史数据校验体系/E4_跨源比对.html",
-    "type": "standard",
-    "service": "GLOBAL",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "E5: 业务规则校验(P1)",
-    "path": "docs/design/数据管线/历史数据校验体系/E5_业务规则校验.html",
-    "type": "standard",
-    "service": "GLOBAL",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "E6: 内网重算节点对接规范",
-    "path": "docs/design/数据管线/历史数据校验体系/E6_内网对接规范.html",
-    "type": "standard",
-    "service": "GLOBAL",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "E6: 补数与修复闭环(P1)",
-    "path": "docs/design/数据管线/历史数据校验体系/E6_补数与修复闭环.html",
-    "type": "standard",
-    "service": "GLOBAL",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "E7: 可观测性与 SLA(P2, 持续迭代)",
-    "path": "docs/design/数据管线/历史数据校验体系/E7_可观测性与SLA.html",
-    "type": "standard",
-    "service": "GLOBAL",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "E8: 校验规则工程化(P2, 持续)",
-    "path": "docs/design/数据管线/历史数据校验体系/E8_校验规则工程化.html",
-    "type": "standard",
-    "service": "GLOBAL",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "[Epic E200] A 股自愈型数据管线实施方案",
-    "path": "docs/design/数据管线/自愈管线/EPIC-E200-自愈型数据管线实施方案.html",
-    "type": "standard",
-    "service": "GLOBAL",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "[PRD] A 股数据管线自愈系统 (Tencent Cloud MySQL 侧)",
-    "path": "docs/design/数据管线/自愈管线/PRD-自愈型数据管线.html",
-    "type": "standard",
-    "service": "GLOBAL",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "Implementation Plan - E200-S1: 差异化跨源扫描器",
-    "path": "docs/design/数据管线/自愈管线/implementation_logs/E200/S1/implementation_plan.html",
-    "type": "standard",
-    "service": "GLOBAL",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "技术报告 - E200-S1: 差异化跨源扫描器异常判定机制",
-    "path": "docs/design/数据管线/自愈管线/implementation_logs/E200/S1/REPORT.html",
-    "type": "standard",
-    "service": "GLOBAL",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "Task List - E200-S1: 差异化跨源扫描器",
-    "path": "docs/design/数据管线/自愈管线/implementation_logs/E200/S1/task.html",
-    "type": "standard",
-    "service": "GLOBAL",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "Walkthrough - E200-S1: 差异化跨源扫描器",
-    "path": "docs/design/数据管线/自愈管线/implementation_logs/E200/S1/walkthrough.html",
-    "type": "standard",
-    "service": "GLOBAL",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "API 接口文档 - E200-S2: 自愈修复引擎 (Healer)",
-    "path": "docs/design/数据管线/自愈管线/implementation_logs/E200/S2/API.html",
-    "type": "standard",
-    "service": "GLOBAL",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "[E200-S2] 自动化修复与回滚引擎 (Healer)",
-    "path": "docs/design/数据管线/自愈管线/implementation_logs/E200/S2/implementation_plan.html",
-    "type": "standard",
-    "service": "GLOBAL",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "技术报告 - E200-S2: 自动化修复与回滚引擎 (Healer)",
-    "path": "docs/design/数据管线/自愈管线/implementation_logs/E200/S2/REPORT.html",
-    "type": "standard",
-    "service": "GLOBAL",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "Task List - E200-S2: 自动化修复与回滚引擎 (Healer)",
-    "path": "docs/design/数据管线/自愈管线/implementation_logs/E200/S2/task.html",
-    "type": "standard",
-    "service": "GLOBAL",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "Walkthrough - E200-S2: 自动化修复与回滚引擎 (Healer)",
-    "path": "docs/design/数据管线/自愈管线/implementation_logs/E200/S2/walkthrough.html",
-    "type": "standard",
-    "service": "GLOBAL",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "[E200-S3] 级联失效与同步阻塞 (Consistency)",
-    "path": "docs/design/数据管线/自愈管线/implementation_logs/E200/S3/implementation_plan.html",
-    "type": "standard",
-    "service": "GLOBAL",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "[E200-S3] 技术报告：级联失效与同步阻塞 (Consistency)",
-    "path": "docs/design/数据管线/自愈管线/implementation_logs/E200/S3/REPORT.html",
-    "type": "standard",
-    "service": "GLOBAL",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "Walkthrough - E200-S3 级联失效与同步阻塞",
-    "path": "docs/design/数据管线/自愈管线/implementation_logs/E200/S3/walkthrough.html",
-    "type": "standard",
-    "service": "GLOBAL",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "[E200-S4] 白名单与 SLA 监控 (Governance)",
-    "path": "docs/design/数据管线/自愈管线/implementation_logs/E200/S4/implementation_plan.html",
-    "type": "standard",
-    "service": "GLOBAL",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "Tasks for E200-S4: 白名单与 SLA 监控 (Governance)",
-    "path": "docs/design/数据管线/自愈管线/implementation_logs/E200/S4/task.html",
-    "type": "standard",
-    "service": "GLOBAL",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "股市日记系统：后端 API 接口需求文档 (V1.0)",
-    "path": "docs/design/股市日记/api-requirment.html",
-    "type": "standard",
-    "service": "GLOBAL",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "token",
-    "path": "docs/design/股市日记/token.html",
-    "type": "standard",
-    "service": "GLOBAL",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "数据初始化 SQL",
-    "path": "docs/design/股市日记/表初始化.html",
-    "type": "standard",
-    "service": "GLOBAL",
-    "last_modified": "2026-05-19 20:34",
+    "service": "V0.2_DATA_ONBOARDING",
+    "last_modified": "2026-05-19 23:56",
     "deprecated": false
   },
   {
@@ -1588,671 +148,15 @@
     "path": "docs/design/股市日记/表结构.html",
     "type": "standard",
     "service": "GLOBAL",
-    "last_modified": "2026-05-19 20:34",
+    "last_modified": "2026-05-19 20:26",
     "deprecated": false
   },
   {
-    "title": "资金获取方案: 产业资本",
-    "path": "docs/design/资金图谱/产业资本.html",
+    "title": "数据初始化 SQL",
+    "path": "docs/design/股市日记/表初始化.html",
     "type": "standard",
     "service": "GLOBAL",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "资金获取方案: 公募基金",
-    "path": "docs/design/资金图谱/公募.html",
-    "type": "standard",
-    "service": "GLOBAL",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "资金获取方案: 北向资金 (配置盘 vs 交易盘)",
-    "path": "docs/design/资金图谱/北向资金.html",
-    "type": "standard",
-    "service": "GLOBAL",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "资金获取方案: 国家队",
-    "path": "docs/design/资金图谱/国家队.html",
-    "type": "standard",
-    "service": "GLOBAL",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "数据获取工程化建议与更新频率",
-    "path": "docs/design/资金图谱/工程化建议.html",
-    "type": "standard",
-    "service": "GLOBAL",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "资金获取方案: 散户",
-    "path": "docs/design/资金图谱/散户.html",
-    "type": "standard",
-    "service": "GLOBAL",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "资金获取方案: 游资",
-    "path": "docs/design/资金图谱/游资.html",
-    "type": "standard",
-    "service": "GLOBAL",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "状态屏指标的完整计算手册",
-    "path": "docs/design/资金图谱/状态屏.html",
-    "type": "standard",
-    "service": "GLOBAL",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "资金获取方案: 量化基金",
-    "path": "docs/design/资金图谱/量化资金.html",
-    "type": "standard",
-    "service": "GLOBAL",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "资金获取方案: 险资",
-    "path": "docs/design/资金图谱/险资.html",
-    "type": "standard",
-    "service": "GLOBAL",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "质量控制报告 - Scheduler Manager API 实现",
-    "path": "docs/development/QC_REPORT_20260115.html",
-    "type": "standard",
-    "service": "GLOBAL",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "调度管理器开发日志 (Scheduler Manager Dev Log)",
-    "path": "docs/development/SCHEDULER_DEV_LOG.html",
-    "type": "standard",
-    "service": "GLOBAL",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "小程序云托管",
-    "path": "docs/development/小程序云托管.html",
-    "type": "standard",
-    "service": "GLOBAL",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "Epic E11: 文档体系标准化：基于功能领域的层级重构",
-    "path": "docs/domains/infrastructure/docs_standardization/design/draft_E11.html",
-    "type": "standard",
-    "service": "DOCS_STANDARDIZATION",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "Epic-Story 评审台",
-    "path": "docs/domains/infrastructure/docs_standardization/reviews/review_E11_20260515.html",
-    "type": "standard",
-    "service": "DOCS_STANDARDIZATION",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "Epic E10: 开发者体验增强：双级文档门户与 SOP 自动化闭环",
-    "path": "docs/domains/infrastructure/portal_automation/design/draft_E10.html",
-    "type": "standard",
-    "service": "PORTAL_AUTOMATION",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "A股投资四锚框架之一：盈利锚完整体系",
-    "path": "docs/epics/盈利锚.html",
-    "type": "standard",
-    "service": "GLOBAL",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "A股盈利锚智能投研系统 - 架构与开发设计白皮书",
-    "path": "docs/epics/盈利锚落地设计.html",
-    "type": "standard",
-    "service": "GLOBAL",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "资源控制部署指南",
-    "path": "docs/guidelines/RESOURCE_CONTROL.html",
-    "type": "standard",
-    "service": "GLOBAL",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "股票数据源微服务开发规范",
-    "path": "docs/guidelines/开发规范.html",
-    "type": "standard",
-    "service": "GLOBAL",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "知识库：股票 K 线与复权数据处理规范",
-    "path": "docs/knowledge/stock_data_standard.html",
-    "type": "standard",
-    "service": "GLOBAL",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "知识库：微服务架构设计与指标计算标准",
-    "path": "docs/knowledge/system_architecture_and_calc_standards.html",
-    "type": "standard",
-    "service": "GLOBAL",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "Stock-Manager-API 质量控制报告",
-    "path": "docs/qc/stock-manager-api-qc-report.html",
-    "type": "standard",
-    "service": "GLOBAL",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "EPIC-002 数据源匹配度深度评估报告",
-    "path": "docs/reports/EPIC002_数据源匹配度评估.html",
-    "type": "standard",
-    "service": "GLOBAL",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "股票微服务集群最终验收报告 (System Acceptance Report)",
-    "path": "docs/reports/功能验收报告.html",
-    "type": "standard",
-    "service": "GLOBAL",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "A 股数据采集质量与完整性判定规范",
-    "path": "docs/spec/data_collection_quality_spec.html",
-    "type": "standard",
-    "service": "GLOBAL",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "EPIC-002 数据集成完成需求文档",
-    "path": "docs/spec/epic002需求数据.html",
-    "type": "standard",
-    "service": "GLOBAL",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "指令队列格式规范 (task_commands)",
-    "path": "docs/spec/task_command_format.html",
-    "type": "standard",
-    "service": "GLOBAL",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "云端数据源 API 需求规格",
-    "path": "docs/spec/云端数据源API需求规格.html",
-    "type": "standard",
-    "service": "GLOBAL",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "项目总览：A 股盘后分析系统",
-    "path": "docs/standards/PROJECT_OVERVIEW.html",
-    "type": "standard",
-    "service": "GLOBAL",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "表清单总览(TABLES_INDEX.md)",
-    "path": "docs/standards/TABLES_INDEX.html",
-    "type": "standard",
-    "service": "GLOBAL",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "A股资金博弈监测体系全景",
-    "path": "docs/投资指南html/ashare_monitoring_system.html",
-    "type": "standard",
-    "service": "GLOBAL",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "A股四锚知识框架",
-    "path": "docs/投资指南html/A股四锚知识框架.html",
-    "type": "standard",
-    "service": "GLOBAL",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "在结构性市场中找到确定性",
-    "path": "docs/投资指南html/A股操作指南.html",
-    "type": "standard",
-    "service": "GLOBAL",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "从感性认识到信息系统",
-    "path": "docs/投资指南html/A股认知体系.html",
-    "type": "standard",
-    "service": "GLOBAL",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "综合参考手册九类资金行为特征速查卡",
-    "path": "docs/投资指南html/capital_index.html",
-    "type": "standard",
-    "service": "GLOBAL",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "建立资金图谱从数据到知识的工程",
-    "path": "docs/投资指南html/capital_map_methodology.html",
-    "type": "standard",
-    "service": "GLOBAL",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "资金视角理解A股的核心钥匙",
-    "path": "docs/投资指南html/capital_perspective.html",
-    "type": "standard",
-    "service": "GLOBAL",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "宁德时代资金运行周期全景解剖",
-    "path": "docs/投资指南html/catl_case_study.html",
-    "type": "standard",
-    "service": "GLOBAL",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "diary_app_screens_overview.html",
-    "path": "docs/投资指南html/diary_app_screens_overview.html",
-    "type": "standard",
-    "service": "GLOBAL",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "diary_detail_redesign_three_options.html",
-    "path": "docs/投资指南html/diary_detail_redesign_three_options.html",
-    "type": "standard",
-    "service": "GLOBAL",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "状态屏指标计算手册",
-    "path": "docs/投资指南html/engineering_appendix.html",
-    "type": "standard",
-    "service": "GLOBAL",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "状态屏指标计算手册",
-    "path": "docs/投资指南html/engineering_appendix_1.html",
-    "type": "standard",
-    "service": "GLOBAL",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "实战篇观测体系与决策引擎",
-    "path": "docs/投资指南html/execution_handbook.html",
-    "type": "standard",
-    "service": "GLOBAL",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "四锚framework\n    下的个股结构化分析",
-    "path": "docs/投资指南html/four-anchors-analysis.html",
-    "type": "standard",
-    "service": "GLOBAL",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "研究\"研究股票的人\"一种认知层级的跃迁",
-    "path": "docs/投资指南html/meta_research.html",
-    "type": "standard",
-    "service": "GLOBAL",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "迈瑞医疗一个\"左侧困境\"的资金博弈样本",
-    "path": "docs/投资指南html/mindray_case_study.html",
-    "type": "standard",
-    "service": "GLOBAL",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "${s.name}",
-    "path": "docs/投资指南html/moutai-four-anchors-terminal.html",
-    "type": "standard",
-    "service": "GLOBAL",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "${s.name}",
-    "path": "docs/投资指南html/moutai-four-anchors-terminal_1.html",
-    "type": "standard",
-    "service": "GLOBAL",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "贵州茅台 600519 · 四锚分析",
-    "path": "docs/投资指南html/moutai-four-anchors-terminal_2.html",
-    "type": "standard",
-    "service": "GLOBAL",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "贵州茅台 600519 · 四锚分析",
-    "path": "docs/投资指南html/moutai-four-anchors-terminal_3.html",
-    "type": "standard",
-    "service": "GLOBAL",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "当市场不再有牛熊，只有结构和纪律还能救你。",
-    "path": "docs/投资指南html/six-disciplines-terminal.html",
-    "type": "standard",
-    "service": "GLOBAL",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "A 股 相变监测 体系",
-    "path": "docs/投资指南html/volume_xi_critical_transition.html",
-    "type": "standard",
-    "service": "GLOBAL",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "速查卡 X.C · 资金波浪实战对照 · Dark",
-    "path": "docs/投资指南html/volume_x_cheatsheet_dark.html",
-    "type": "standard",
-    "service": "GLOBAL",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "资金波浪的定量验证",
-    "path": "docs/投资指南html/volume_x_quantitative_wave.html",
-    "type": "standard",
-    "service": "GLOBAL",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "资金波浪的定量验证",
-    "path": "docs/投资指南html/volume_x_quantitative_wave_dark.html",
-    "type": "standard",
-    "service": "GLOBAL",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "你的投资体系 1.0",
-    "path": "docs/投资指南html/投资体系.html",
-    "type": "standard",
-    "service": "GLOBAL",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "个人投资者推荐的轻量栈",
-    "path": "docs/投资指南html/用AI搭建政策跟踪系统.html",
-    "type": "standard",
-    "service": "GLOBAL",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "盈利锚完整体系",
-    "path": "docs/投资指南html/盈利锚完整体系.html",
-    "type": "standard",
-    "service": "GLOBAL",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "盈利锚知识框架",
-    "path": "docs/投资指南html/盈利锚知识框架.html",
-    "type": "standard",
-    "service": "GLOBAL",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "盈利锚知识框架",
-    "path": "docs/投资指南html/盈利锚知识框架_1.html",
-    "type": "standard",
-    "service": "GLOBAL",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "股东数据 API 接口文档",
-    "path": "docs/股票数据/五维度数据API.html",
-    "type": "standard",
-    "service": "GLOBAL",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "股东数据 数据库结构",
-    "path": "docs/股票数据/五维度数据库结构.html",
-    "type": "standard",
-    "service": "GLOBAL",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "元数据管理 (issue_price, 申万行业)",
-    "path": "docs/股票数据/元数据管理.html",
-    "type": "standard",
-    "service": "GLOBAL",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "指数与ETF数据补全实施方案",
-    "path": "docs/股票数据/指数与ETF补全实施方案.html",
-    "type": "standard",
-    "service": "GLOBAL",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "五维度数据深度补充计划",
-    "path": "docs/股票数据/数据回溯补充计划.html",
-    "type": "standard",
-    "service": "GLOBAL",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "信息维度 (Information Dimension)",
-    "path": "docs/股票数据/信息/README.html",
-    "type": "standard",
-    "service": "GLOBAL",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "停复牌数据文档",
-    "path": "docs/股票数据/停复牌/停复牌数据文档.html",
-    "type": "standard",
-    "service": "GLOBAL",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "早盘数据服务 (Pre-Market)",
-    "path": "docs/股票数据/早盘数据/早盘数据服务文档.html",
-    "type": "standard",
-    "service": "GLOBAL",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "股东数据 (Shareholder Data) 模块说明",
-    "path": "docs/股票数据/股东/README.html",
-    "type": "standard",
-    "service": "GLOBAL",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "五维度分析",
-    "path": "docs/股票数据/股东/五维度分析.html",
-    "type": "standard",
-    "service": "GLOBAL",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "股东数据同步任务指引",
-    "path": "docs/股票数据/股东/同步任务.html",
-    "type": "standard",
-    "service": "GLOBAL",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "股东数据源说明",
-    "path": "docs/股票数据/股东/数据源.html",
-    "type": "standard",
-    "service": "GLOBAL",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "[Epic E8] 复权因子存储与计算方案重设计",
-    "path": "scf-collector/docs/features/financial_data/design/E8_adjust_factor.html",
-    "type": "standard",
-    "service": "FINANCIAL_DATA",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "Implementation Plan - E8-S1: 变动检测写入 (Change-based Storage for Adj Factors)",
-    "path": "scf-collector/docs/features/financial_data/implementation_logs/E8/S1/implementation_plan.html",
-    "type": "standard",
-    "service": "FINANCIAL_DATA",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "Task List - E8-S1: 变动检测写入",
-    "path": "scf-collector/docs/features/financial_data/implementation_logs/E8/S1/task.html",
-    "type": "standard",
-    "service": "FINANCIAL_DATA",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "Walkthrough - E8-S1: 变动检测写入 (Change-based Storage)",
-    "path": "scf-collector/docs/features/financial_data/implementation_logs/E8/S1/walkthrough.html",
-    "type": "standard",
-    "service": "FINANCIAL_DATA",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "Implementation Plan - E8-S2: 字段废弃标记 (Deprecated Field Marking)",
-    "path": "scf-collector/docs/features/financial_data/implementation_logs/E8/S2/implementation_plan.html",
-    "type": "standard",
-    "service": "FINANCIAL_DATA",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "Task List - E8-S2: 字段废弃标记",
-    "path": "scf-collector/docs/features/financial_data/implementation_logs/E8/S2/task.html",
-    "type": "standard",
-    "service": "FINANCIAL_DATA",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "Walkthrough - E8-S2: 字段废弃标记 (Deprecated Field Marking)",
-    "path": "scf-collector/docs/features/financial_data/implementation_logs/E8/S2/walkthrough.html",
-    "type": "standard",
-    "service": "FINANCIAL_DATA",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "Implementation Plan - E8-S3: 历史数据字段回填 (Historical Data Backfill)",
-    "path": "scf-collector/docs/features/financial_data/implementation_logs/E8/S3/implementation_plan.html",
-    "type": "standard",
-    "service": "FINANCIAL_DATA",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "Task List - E8-S3: 历史数据字段回填",
-    "path": "scf-collector/docs/features/financial_data/implementation_logs/E8/S3/task.html",
-    "type": "standard",
-    "service": "FINANCIAL_DATA",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "Walkthrough - E8-S3: 历史数据字段回填 (Historical Data Backfill)",
-    "path": "scf-collector/docs/features/financial_data/implementation_logs/E8/S3/walkthrough.html",
-    "type": "standard",
-    "service": "FINANCIAL_DATA",
-    "last_modified": "2026-05-19 20:34",
+    "last_modified": "2026-05-19 20:26",
     "deprecated": false
   },
   {
@@ -2260,559 +164,7 @@
     "path": "scf-collector/docs/features/financial_sheets/implementation_logs/E13/S4/walkthrough.html",
     "type": "standard",
     "service": "FINANCIAL_SHEETS",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "[Epic E7] SCF 采集链路可靠性与审计校验增强",
-    "path": "scf-collector/docs/features/kline_management/design/E7_Reliability_Validation.html",
-    "type": "standard",
-    "service": "KLINE_MANAGEMENT",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "API Documentation - stock-scf-meta",
-    "path": "scf-collector/docs/features/kline_management/implementation_logs/E7/S1/API.html",
-    "type": "standard",
-    "service": "KLINE_MANAGEMENT",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "E7-S1: 基于死线的全量降级逻辑 (17:00 Fail-over) 实施方案",
-    "path": "scf-collector/docs/features/kline_management/implementation_logs/E7/S1/implementation_plan.html",
-    "type": "standard",
-    "service": "KLINE_MANAGEMENT",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "E7-S1 实施闭坑指南 (Pitfall Avoidance Guide)",
-    "path": "scf-collector/docs/features/kline_management/implementation_logs/E7/S1/PITFALLS.html",
-    "type": "standard",
-    "service": "KLINE_MANAGEMENT",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "Technical Report - E7-S1: Serverless Meta Foundation Implementation",
-    "path": "scf-collector/docs/features/kline_management/implementation_logs/E7/S1/REPORT.html",
-    "type": "standard",
-    "service": "KLINE_MANAGEMENT",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "Task List: E7-S1 基于死线的全量降级逻辑",
-    "path": "scf-collector/docs/features/kline_management/implementation_logs/E7/S1/task.html",
-    "type": "standard",
-    "service": "KLINE_MANAGEMENT",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "Walkthrough: E7-S1 采集可靠性增强 (Phase 1)",
-    "path": "scf-collector/docs/features/kline_management/implementation_logs/E7/S1/walkthrough.html",
-    "type": "standard",
-    "service": "KLINE_MANAGEMENT",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "接口定义 - E7-S2: Shadow Audit 操作标准",
-    "path": "scf-collector/docs/features/kline_management/implementation_logs/E7/S2/API.html",
-    "type": "standard",
-    "service": "KLINE_MANAGEMENT",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "E7-S2: 影子审计与校验证据 (Shadow Audit Evidence) 实施方案 (v1.3)",
-    "path": "scf-collector/docs/features/kline_management/implementation_logs/E7/S2/implementation_plan.html",
-    "type": "standard",
-    "service": "KLINE_MANAGEMENT",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "避坑指南 - E7-S2: 影子审计系统实战踩坑记录",
-    "path": "scf-collector/docs/features/kline_management/implementation_logs/E7/S2/PITFALLS.html",
-    "type": "standard",
-    "service": "KLINE_MANAGEMENT",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "技术报告 - E7-S2: 影子审计系统量纲对齐与生产加固",
-    "path": "scf-collector/docs/features/kline_management/implementation_logs/E7/S2/REPORT.html",
-    "type": "standard",
-    "service": "KLINE_MANAGEMENT",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "Task List - E7-S2: Shadow Audit Production Hardening",
-    "path": "scf-collector/docs/features/kline_management/implementation_logs/E7/S2/task.html",
-    "type": "standard",
-    "service": "KLINE_MANAGEMENT",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "实施复盘 - E7-S2: 影子审计系统生产级加固",
-    "path": "scf-collector/docs/features/kline_management/implementation_logs/E7/S2/walkthrough.html",
-    "type": "standard",
-    "service": "KLINE_MANAGEMENT",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "E7-S3 接口变更文档",
-    "path": "scf-collector/docs/features/kline_management/implementation_logs/E7/S3/API.html",
-    "type": "standard",
-    "service": "KLINE_MANAGEMENT",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "E7-S3: 字段完整性契约强制 (Data Contract)",
-    "path": "scf-collector/docs/features/kline_management/implementation_logs/E7/S3/implementation_plan.html",
-    "type": "standard",
-    "service": "KLINE_MANAGEMENT",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "E7-S3 技术报告: 数据契约与归一化引擎增强",
-    "path": "scf-collector/docs/features/kline_management/implementation_logs/E7/S3/REPORT.html",
-    "type": "standard",
-    "service": "KLINE_MANAGEMENT",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "task",
-    "path": "scf-collector/docs/features/kline_management/implementation_logs/E7/S3/task.html",
-    "type": "standard",
-    "service": "KLINE_MANAGEMENT",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "E7-S3 实施验收文档 (Walkthrough)",
-    "path": "scf-collector/docs/features/kline_management/implementation_logs/E7/S3/walkthrough.html",
-    "type": "standard",
-    "service": "KLINE_MANAGEMENT",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "E7-S4: 采集完整性校验与备份源接管 (Integrity & Fail-over) v2",
-    "path": "scf-collector/docs/features/kline_management/implementation_logs/E7/S4/implementation_plan.html",
-    "type": "standard",
-    "service": "KLINE_MANAGEMENT",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "技术报告 - E7-S4: 采集完整性熔断与全量备份源接管",
-    "path": "scf-collector/docs/features/kline_management/implementation_logs/E7/S4/REPORT.html",
-    "type": "standard",
-    "service": "KLINE_MANAGEMENT",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "task",
-    "path": "scf-collector/docs/features/kline_management/implementation_logs/E7/S4/task.html",
-    "type": "standard",
-    "service": "KLINE_MANAGEMENT",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "Walkthrough - E7-S4: 采集完整性校验与备份源接管",
-    "path": "scf-collector/docs/features/kline_management/implementation_logs/E7/S4/walkthrough.html",
-    "type": "standard",
-    "service": "KLINE_MANAGEMENT",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "API Changes - E7-S5: Trading Day Aware Trigger Control",
-    "path": "scf-collector/docs/features/kline_management/implementation_logs/E7/S5/API.html",
-    "type": "standard",
-    "service": "KLINE_MANAGEMENT",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "Implementation Plan - E7-S5: Trading Day Aware Trigger Control",
-    "path": "scf-collector/docs/features/kline_management/implementation_logs/E7/S5/implementation_plan.html",
-    "type": "standard",
-    "service": "KLINE_MANAGEMENT",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "Implementation Report - E7-S5: Trading Day Aware Trigger Control",
-    "path": "scf-collector/docs/features/kline_management/implementation_logs/E7/S5/REPORT.html",
-    "type": "standard",
-    "service": "KLINE_MANAGEMENT",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "Task List - E7-S5: Trading Day Aware Trigger Control",
-    "path": "scf-collector/docs/features/kline_management/implementation_logs/E7/S5/task.html",
-    "type": "standard",
-    "service": "KLINE_MANAGEMENT",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "Walkthrough - E7-S5: Trading Day Aware Trigger Control",
-    "path": "scf-collector/docs/features/kline_management/implementation_logs/E7/S5/walkthrough.html",
-    "type": "standard",
-    "service": "KLINE_MANAGEMENT",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "E12: stock_kline_daily 历史数据校验与自动修复体系",
-    "path": "scf-collector/docs/features/kline_validation/design/draft_E12.html",
-    "type": "standard",
-    "service": "KLINE_VALIDATION",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "Epic-Story 评审台",
-    "path": "scf-collector/docs/features/kline_validation/design/review_E12_20260515.html",
-    "type": "standard",
-    "service": "KLINE_VALIDATION",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "Implementation Plan - E12-S1: 全量数据像素级对账方案 (修订版)",
-    "path": "scf-collector/docs/features/kline_validation/implementation_logs/E12/S1/implementation_plan.html",
-    "type": "standard",
-    "service": "KLINE_VALIDATION",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "Task List - E12-S1-T1",
-    "path": "scf-collector/docs/features/kline_validation/implementation_logs/E12/S1/task.html",
-    "type": "standard",
-    "service": "KLINE_VALIDATION",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "已就绪采集表清单 (Done List Tables)",
-    "path": "scf-collector/docs/features/policy-tracker/done-list-tables.html",
-    "type": "standard",
-    "service": "POLICY-TRACKER",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "Epic 14: AI-Driven Policy Tracking System (MVP)",
-    "path": "scf-collector/docs/features/policy-tracker/design/draft_E14.html",
-    "type": "standard",
-    "service": "POLICY-TRACKER",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "E15: AI 政策分析引擎效率与成本优化实施方案",
-    "path": "scf-collector/docs/features/policy-tracker/design/E15_AI_Efficiency_Cost_Optimization_v1.0.html",
-    "type": "standard",
-    "service": "POLICY-TRACKER",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "Epic-Story 评审台",
-    "path": "scf-collector/docs/features/policy-tracker/design/review_Epic_14__AI-Dri_20260516.html",
-    "type": "standard",
-    "service": "POLICY-TRACKER",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "🚀 Story 1 完工报告 - 数据采集层 (Path A)\n            Passed",
-    "path": "scf-collector/docs/features/policy-tracker/implementation_logs/E14/S1/REPORT.html",
-    "type": "standard",
-    "service": "POLICY-TRACKER",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "Epic E14-S2 宏观政策 AI 追踪系统异步事件与状态机接口契约",
-    "path": "scf-collector/docs/features/policy-tracker/implementation_logs/E14/S2/API.html",
-    "type": "standard",
-    "service": "POLICY-TRACKER",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "Epic E14-S2 A股宏观政策AI追踪分析系统",
-    "path": "scf-collector/docs/features/policy-tracker/implementation_logs/E14/S2/REPORT.html",
-    "type": "standard",
-    "service": "POLICY-TRACKER",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "Implementation Plan - E15-M6: 思考预算精细化 (E3-S3) + 响应缓存 (E5) + 错峰调度 (E4-S5) 落地",
-    "path": "scf-collector/docs/features/policy-tracker/implementation_logs/E15/M6/implementation_plan.html",
-    "type": "standard",
-    "service": "POLICY-TRACKER",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "Task Checklist - E15-M6: 思考预算精细化 (E3-S3) + 响应缓存 (E5) + 错峰调度 (E4-S5)",
-    "path": "scf-collector/docs/features/policy-tracker/implementation_logs/E15/M6/task.html",
-    "type": "standard",
-    "service": "POLICY-TRACKER",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "Walkthrough - E15-M6: 思考预算精细化 (E3-S3) + 响应缓存 (E5) + 错峰调度 (E4-S5) 落地总结",
-    "path": "scf-collector/docs/features/policy-tracker/implementation_logs/E15/M6/walkthrough.html",
-    "type": "standard",
-    "service": "POLICY-TRACKER",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "Implementation Plan - E15-M7: E6 增量(Diff)分析落地与集成",
-    "path": "scf-collector/docs/features/policy-tracker/implementation_logs/E15/M7/implementation_plan.html",
-    "type": "standard",
-    "service": "POLICY-TRACKER",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "Task Checklist - E15-M7: E6 增量(Diff)分析落地与集成",
-    "path": "scf-collector/docs/features/policy-tracker/implementation_logs/E15/M7/task.html",
-    "type": "standard",
-    "service": "POLICY-TRACKER",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "E15-M7: E6 增量(Diff)分析落地与集成交付报告",
-    "path": "scf-collector/docs/features/policy-tracker/implementation_logs/E15/M7/walkthrough.html",
-    "type": "standard",
-    "service": "POLICY-TRACKER",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "Walkthrough - E15-S1: 零成本 Bypass 与 Caching 基础架构落地 (v1.2 加固版)",
-    "path": "scf-collector/docs/features/policy-tracker/implementation_logs/E15/S1/walkthrough.html",
-    "type": "standard",
-    "service": "POLICY-TRACKER",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "E15-S1 迭代纪要 (v2: M1-Patch 深度补漏与防裸奔加固)",
-    "path": "scf-collector/docs/features/policy-tracker/implementation_logs/E15/S1/iterations/v2/ITERATION_NOTE.html",
-    "type": "standard",
-    "service": "POLICY-TRACKER",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "M1-Patch 深度补漏验收清单看板",
-    "path": "scf-collector/docs/features/policy-tracker/implementation_logs/E15/S1/iterations/v2/task.html",
-    "type": "standard",
-    "service": "POLICY-TRACKER",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "[E15-M1-Patch (v2)] 统一分级调度分析与防裸奔 MOps 实测对账总结报告",
-    "path": "scf-collector/docs/features/policy-tracker/implementation_logs/E15/S1/iterations/v2/walkthrough.html",
-    "type": "standard",
-    "service": "POLICY-TRACKER",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "Implementation Plan - E15-E2: 二阶段分析与 5 星政策 Self-Consistency 投票落地",
-    "path": "scf-collector/docs/features/policy-tracker/implementation_logs/E15/S2/implementation_plan.html",
-    "type": "standard",
-    "service": "POLICY-TRACKER",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "Walkthrough - E15-E2: 二阶段分析与 5 星政策 Self-Consistency 投票落地",
-    "path": "scf-collector/docs/features/policy-tracker/implementation_logs/E15/S2/walkthrough.html",
-    "type": "standard",
-    "service": "POLICY-TRACKER",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "规则直切影子对照对账审计报告 (Policy Bypass Audit Report)",
-    "path": "scf-collector/docs/features/policy-tracker/implementation_logs/E15/S3/audit_report.html",
-    "type": "standard",
-    "service": "POLICY-TRACKER",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "E15-S3: 规则路径灰度审计与正式切流实施方案",
-    "path": "scf-collector/docs/features/policy-tracker/implementation_logs/E15/S3/implementation_plan.html",
-    "type": "standard",
-    "service": "POLICY-TRACKER",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "E15-S3: 零成本规则直切正式切流与一键回退运维指南 (Cutover & Rollback Playbook)",
-    "path": "scf-collector/docs/features/policy-tracker/implementation_logs/E15/S3/playbook_cutover_rollback.html",
-    "type": "standard",
-    "service": "POLICY-TRACKER",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "E1-S3 灰度审计与正式切流开发进度跟踪",
-    "path": "scf-collector/docs/features/policy-tracker/implementation_logs/E15/S3/task.html",
-    "type": "standard",
-    "service": "POLICY-TRACKER",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "E15-S3: 规则路径灰度审计与正式切流交付验收报告 (Walkthrough)",
-    "path": "scf-collector/docs/features/policy-tracker/implementation_logs/E15/S3/walkthrough.html",
-    "type": "standard",
-    "service": "POLICY-TRACKER",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "Implementation Plan - E15-E4: Prefix-Freeze 缓存改造",
-    "path": "scf-collector/docs/features/policy-tracker/implementation_logs/E15/S4/implementation_plan.html",
-    "type": "standard",
-    "service": "POLICY-TRACKER",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "E15-E4: Prefix-Freeze 缓存改造 Checklist",
-    "path": "scf-collector/docs/features/policy-tracker/implementation_logs/E15/S4/task.html",
-    "type": "standard",
-    "service": "POLICY-TRACKER",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "Walkthrough - E15-E4: Prefix-Freeze 缓存改造",
-    "path": "scf-collector/docs/features/policy-tracker/implementation_logs/E15/S4/walkthrough.html",
-    "type": "standard",
-    "service": "POLICY-TRACKER",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "Implementation Plan - E15-E6-S1: 政策相似度检测 (SimHash & Hamming Distance)",
-    "path": "scf-collector/docs/features/policy-tracker/implementation_logs/E15/S6/implementation_plan.html",
-    "type": "standard",
-    "service": "POLICY-TRACKER",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "Task List - E15-E6-S1: 政策相似度检测 (SimHash & Hamming Distance)",
-    "path": "scf-collector/docs/features/policy-tracker/implementation_logs/E15/S6/task.html",
-    "type": "standard",
-    "service": "POLICY-TRACKER",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "E15-E6-S1: 政策相似度检测 (SimHash & Hamming Distance) 交付物与验证报告",
-    "path": "scf-collector/docs/features/policy-tracker/implementation_logs/E15/S6/walkthrough.html",
-    "type": "standard",
-    "service": "POLICY-TRACKER",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "Epic E14-S2 宏观政策 AI 智能分析系统技术评审记录",
-    "path": "scf-collector/docs/features/policy-tracker/reviews/E14_S2_review_record.html",
-    "type": "standard",
-    "service": "POLICY-TRACKER",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "Epic E13: 全市场日 K 线采集源迁移：从 BaoStock 切换至 Tushare (全量回填版)",
-    "path": "scf-collector/docs/features/tushare_migration/design/draft_E13.html",
-    "type": "standard",
-    "service": "TUSHARE_MIGRATION",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "Epic-Story 评审台",
-    "path": "scf-collector/docs/features/tushare_migration/design/review_全市场日_K_线采集源迁移：从_20260516.html",
-    "type": "standard",
-    "service": "TUSHARE_MIGRATION",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "tusare_api",
-    "path": "scf-collector/docs/features/tushare_migration/design/tusare_api.html",
-    "type": "standard",
-    "service": "TUSHARE_MIGRATION",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "API 变更存证 (E13-S2)",
-    "path": "scf-collector/docs/features/tushare_migration/implementation_logs/E13/S2/API.html",
-    "type": "standard",
-    "service": "TUSHARE_MIGRATION",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "E13-S4 内部数据接口设计手册",
-    "path": "scf-collector/docs/features/tushare_migration/implementation_logs/E13/S4/API.html",
-    "type": "standard",
-    "service": "TUSHARE_MIGRATION",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "财务三表与核心指标迁移成功",
-    "path": "scf-collector/docs/features/tushare_migration/implementation_logs/E13/S4/REPORT.html",
-    "type": "standard",
-    "service": "TUSHARE_MIGRATION",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "Epic E15: 盘后系统全量多维数据采集接入与云端定时调度体系补全 (v0.2 Tables Onboarding)",
-    "path": "scf-collector/docs/features/v0.2_data_onboarding/design/draft_E15.html",
-    "type": "standard",
-    "service": "V0.2_DATA_ONBOARDING",
-    "last_modified": "2026-05-19 20:34",
+    "last_modified": "2026-05-19 20:26",
     "deprecated": false
   },
   {
@@ -2820,15 +172,15 @@
     "path": "scf-collector/docs/features/v0.2_data_onboarding/design/review_E15_20260519.html",
     "type": "standard",
     "service": "V0.2_DATA_ONBOARDING",
-    "last_modified": "2026-05-19 20:34",
+    "last_modified": "2026-05-19 20:26",
     "deprecated": false
   },
   {
-    "title": "股东数据 数据库结构",
-    "path": "scf-collector/docs/mysql-data/database_schema.html",
+    "title": "Epic E15: 盘后系统全量多维数据采集接入与云端定时调度体系补全 (v0.2 Tables Onboarding)",
+    "path": "scf-collector/docs/features/v0.2_data_onboarding/design/draft_E15.html",
     "type": "standard",
-    "service": "scf-collector",
-    "last_modified": "2026-05-19 20:34",
+    "service": "V0.2_DATA_ONBOARDING",
+    "last_modified": "2026-05-19 20:26",
     "deprecated": false
   },
   {
@@ -2836,31 +188,7 @@
     "path": "wxch-gateway/docs/readme.html",
     "type": "standard",
     "service": "wxch-gateway",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "[Epic E1] 股市日记 MVP · Epic 文档",
-    "path": "wxch-gateway/docs/features/wechat-gateway/design/diary-check.html",
-    "type": "standard",
-    "service": "WECHAT-GATEWAY",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "[Epic E23] 每日格言打卡 · 后端系统设计与实施方案",
-    "path": "wxch-gateway/docs/features/wechat-gateway/design/draft_E23.html",
-    "type": "standard",
-    "service": "WECHAT-GATEWAY",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "[Epic E23] 每日格言打卡 · 完整前后端与数据库设计方案",
-    "path": "wxch-gateway/docs/features/wechat-gateway/design/maxim-check.html",
-    "type": "standard",
-    "service": "WECHAT-GATEWAY",
-    "last_modified": "2026-05-19 20:34",
+    "last_modified": "2026-05-19 20:26",
     "deprecated": false
   },
   {
@@ -2868,15 +196,31 @@
     "path": "wxch-gateway/docs/features/wechat-gateway/design/review_E23_20260519.html",
     "type": "standard",
     "service": "WECHAT-GATEWAY",
-    "last_modified": "2026-05-19 20:34",
+    "last_modified": "2026-05-19 20:26",
     "deprecated": false
   },
   {
-    "title": "Epic-Story 评审台",
-    "path": "wxch-gateway/docs/features/wechat-gateway/design/implementation_logs/E1/review_E1.html",
+    "title": "[Epic E23] 每日格言打卡 · 完整前后端与数据库设计方案",
+    "path": "wxch-gateway/docs/features/wechat-gateway/design/maxim-check.html",
     "type": "standard",
     "service": "WECHAT-GATEWAY",
-    "last_modified": "2026-05-19 20:34",
+    "last_modified": "2026-05-19 20:26",
+    "deprecated": false
+  },
+  {
+    "title": "[Epic E1] 股市日记 MVP · Epic 文档",
+    "path": "wxch-gateway/docs/features/wechat-gateway/design/diary-check.html",
+    "type": "standard",
+    "service": "WECHAT-GATEWAY",
+    "last_modified": "2026-05-19 20:26",
+    "deprecated": false
+  },
+  {
+    "title": "[Epic E23] 每日格言打卡 · 后端系统设计与实施方案",
+    "path": "wxch-gateway/docs/features/wechat-gateway/design/draft_E23.html",
+    "type": "standard",
+    "service": "WECHAT-GATEWAY",
+    "last_modified": "2026-05-19 20:26",
     "deprecated": false
   },
   {
@@ -2884,31 +228,15 @@
     "path": "wxch-gateway/docs/features/wechat-gateway/design/implementation_logs/E23/review_E23.html",
     "type": "standard",
     "service": "WECHAT-GATEWAY",
-    "last_modified": "2026-05-19 20:34",
+    "last_modified": "2026-05-19 20:26",
     "deprecated": false
   },
   {
-    "title": "Story E23-S1: 格言库建表与手工录入接口 · 交付验证报告",
-    "path": "wxch-gateway/docs/features/wechat-gateway/implementation_logs/E23/S1/walkthrough.html",
+    "title": "Epic-Story 评审台",
+    "path": "wxch-gateway/docs/features/wechat-gateway/design/implementation_logs/E1/review_E1.html",
     "type": "standard",
     "service": "WECHAT-GATEWAY",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "[Story E23-S2] 每日格言智能轮询与日内锁定 API · 实施计划书",
-    "path": "wxch-gateway/docs/features/wechat-gateway/implementation_logs/E23/S2/implementation_plan.html",
-    "type": "standard",
-    "service": "WECHAT-GATEWAY",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "E23-S2 每日格言智能推荐与日内幂等锁定 API 交付报告",
-    "path": "wxch-gateway/docs/features/wechat-gateway/implementation_logs/E23/S2/walkthrough.html",
-    "type": "standard",
-    "service": "WECHAT-GATEWAY",
-    "last_modified": "2026-05-19 20:34",
+    "last_modified": "2026-05-19 20:26",
     "deprecated": false
   },
   {
@@ -2916,7 +244,7 @@
     "path": "wxch-gateway/docs/features/wechat-gateway/implementation_logs/E23/S3/walkthrough.html",
     "type": "standard",
     "service": "WECHAT-GATEWAY",
-    "last_modified": "2026-05-19 20:34",
+    "last_modified": "2026-05-19 20:26",
     "deprecated": false
   },
   {
@@ -2924,7 +252,7 @@
     "path": "wxch-gateway/docs/features/wechat-gateway/implementation_logs/E23/S5/walkthrough.html",
     "type": "standard",
     "service": "WECHAT-GATEWAY",
-    "last_modified": "2026-05-19 20:34",
+    "last_modified": "2026-05-19 20:26",
     "deprecated": false
   },
   {
@@ -2932,15 +260,7 @@
     "path": "wxch-gateway/docs/features/wechat-gateway/implementation_logs/E23/S6/walkthrough.html",
     "type": "standard",
     "service": "WECHAT-GATEWAY",
-    "last_modified": "2026-05-19 20:34",
-    "deprecated": false
-  },
-  {
-    "title": "E23-S7 格言打卡心得提交与日记关联 API 交付报告",
-    "path": "wxch-gateway/docs/features/wechat-gateway/implementation_logs/E23/S7/walkthrough.html",
-    "type": "standard",
-    "service": "WECHAT-GATEWAY",
-    "last_modified": "2026-05-19 20:34",
+    "last_modified": "2026-05-19 20:26",
     "deprecated": false
   },
   {
@@ -2948,7 +268,7 @@
     "path": "wxch-gateway/docs/features/wechat-gateway/implementation_logs/E23/S8/API.html",
     "type": "standard",
     "service": "WECHAT-GATEWAY",
-    "last_modified": "2026-05-19 20:34",
+    "last_modified": "2026-05-19 20:26",
     "deprecated": false
   },
   {
@@ -2956,7 +276,2687 @@
     "path": "wxch-gateway/docs/features/wechat-gateway/implementation_logs/E23/S8/walkthrough.html",
     "type": "standard",
     "service": "WECHAT-GATEWAY",
-    "last_modified": "2026-05-19 20:34",
+    "last_modified": "2026-05-19 20:26",
+    "deprecated": false
+  },
+  {
+    "title": "E23-S7 格言打卡心得提交与日记关联 API 交付报告",
+    "path": "wxch-gateway/docs/features/wechat-gateway/implementation_logs/E23/S7/walkthrough.html",
+    "type": "standard",
+    "service": "WECHAT-GATEWAY",
+    "last_modified": "2026-05-19 20:26",
+    "deprecated": false
+  },
+  {
+    "title": "[Story E23-S2] 每日格言智能轮询与日内锁定 API · 实施计划书",
+    "path": "wxch-gateway/docs/features/wechat-gateway/implementation_logs/E23/S2/implementation_plan.html",
+    "type": "standard",
+    "service": "WECHAT-GATEWAY",
+    "last_modified": "2026-05-19 20:26",
+    "deprecated": false
+  },
+  {
+    "title": "E23-S2 每日格言智能推荐与日内幂等锁定 API 交付报告",
+    "path": "wxch-gateway/docs/features/wechat-gateway/implementation_logs/E23/S2/walkthrough.html",
+    "type": "standard",
+    "service": "WECHAT-GATEWAY",
+    "last_modified": "2026-05-19 20:26",
+    "deprecated": false
+  },
+  {
+    "title": "Story E23-S1: 格言库建表与手工录入接口 · 交付验证报告",
+    "path": "wxch-gateway/docs/features/wechat-gateway/implementation_logs/E23/S1/walkthrough.html",
+    "type": "standard",
+    "service": "WECHAT-GATEWAY",
+    "last_modified": "2026-05-19 20:26",
+    "deprecated": false
+  },
+  {
+    "title": "股东数据 数据库结构",
+    "path": "scf-collector/docs/mysql-data/database_schema.html",
+    "type": "standard",
+    "service": "scf-collector",
+    "last_modified": "2026-05-18 21:44",
+    "deprecated": false
+  },
+  {
+    "title": "E13-S4 内部数据接口设计手册",
+    "path": "scf-collector/docs/features/tushare_migration/implementation_logs/E13/S4/API.html",
+    "type": "standard",
+    "service": "TUSHARE_MIGRATION",
+    "last_modified": "2026-05-18 21:44",
+    "deprecated": false
+  },
+  {
+    "title": "财务三表与核心指标迁移成功",
+    "path": "scf-collector/docs/features/tushare_migration/implementation_logs/E13/S4/REPORT.html",
+    "type": "standard",
+    "service": "TUSHARE_MIGRATION",
+    "last_modified": "2026-05-18 21:44",
+    "deprecated": false
+  },
+  {
+    "title": "已就绪采集表清单 (Done List Tables)",
+    "path": "scf-collector/docs/features/policy-tracker/done-list-tables.html",
+    "type": "standard",
+    "service": "POLICY-TRACKER",
+    "last_modified": "2026-05-18 21:44",
+    "deprecated": false
+  },
+  {
+    "title": "E15: AI 政策分析引擎效率与成本优化实施方案",
+    "path": "scf-collector/docs/features/policy-tracker/design/E15_AI_Efficiency_Cost_Optimization_v1.0.html",
+    "type": "standard",
+    "service": "POLICY-TRACKER",
+    "last_modified": "2026-05-18 21:44",
+    "deprecated": false
+  },
+  {
+    "title": "规则直切影子对照对账审计报告 (Policy Bypass Audit Report)",
+    "path": "scf-collector/docs/features/policy-tracker/implementation_logs/E15/S3/audit_report.html",
+    "type": "standard",
+    "service": "POLICY-TRACKER",
+    "last_modified": "2026-05-18 21:44",
+    "deprecated": false
+  },
+  {
+    "title": "E15-S3: 规则路径灰度审计与正式切流实施方案",
+    "path": "scf-collector/docs/features/policy-tracker/implementation_logs/E15/S3/implementation_plan.html",
+    "type": "standard",
+    "service": "POLICY-TRACKER",
+    "last_modified": "2026-05-18 21:44",
+    "deprecated": false
+  },
+  {
+    "title": "E15-S3: 零成本规则直切正式切流与一键回退运维指南 (Cutover & Rollback Playbook)",
+    "path": "scf-collector/docs/features/policy-tracker/implementation_logs/E15/S3/playbook_cutover_rollback.html",
+    "type": "standard",
+    "service": "POLICY-TRACKER",
+    "last_modified": "2026-05-18 21:44",
+    "deprecated": false
+  },
+  {
+    "title": "E1-S3 灰度审计与正式切流开发进度跟踪",
+    "path": "scf-collector/docs/features/policy-tracker/implementation_logs/E15/S3/task.html",
+    "type": "standard",
+    "service": "POLICY-TRACKER",
+    "last_modified": "2026-05-18 21:44",
+    "deprecated": false
+  },
+  {
+    "title": "E15-S3: 规则路径灰度审计与正式切流交付验收报告 (Walkthrough)",
+    "path": "scf-collector/docs/features/policy-tracker/implementation_logs/E15/S3/walkthrough.html",
+    "type": "standard",
+    "service": "POLICY-TRACKER",
+    "last_modified": "2026-05-18 21:44",
+    "deprecated": false
+  },
+  {
+    "title": "Implementation Plan - E15-E4: Prefix-Freeze 缓存改造",
+    "path": "scf-collector/docs/features/policy-tracker/implementation_logs/E15/S4/implementation_plan.html",
+    "type": "standard",
+    "service": "POLICY-TRACKER",
+    "last_modified": "2026-05-18 21:44",
+    "deprecated": false
+  },
+  {
+    "title": "E15-E4: Prefix-Freeze 缓存改造 Checklist",
+    "path": "scf-collector/docs/features/policy-tracker/implementation_logs/E15/S4/task.html",
+    "type": "standard",
+    "service": "POLICY-TRACKER",
+    "last_modified": "2026-05-18 21:44",
+    "deprecated": false
+  },
+  {
+    "title": "Walkthrough - E15-E4: Prefix-Freeze 缓存改造",
+    "path": "scf-collector/docs/features/policy-tracker/implementation_logs/E15/S4/walkthrough.html",
+    "type": "standard",
+    "service": "POLICY-TRACKER",
+    "last_modified": "2026-05-18 21:44",
+    "deprecated": false
+  },
+  {
+    "title": "Implementation Plan - E15-E6-S1: 政策相似度检测 (SimHash & Hamming Distance)",
+    "path": "scf-collector/docs/features/policy-tracker/implementation_logs/E15/S6/implementation_plan.html",
+    "type": "standard",
+    "service": "POLICY-TRACKER",
+    "last_modified": "2026-05-18 21:44",
+    "deprecated": false
+  },
+  {
+    "title": "Task List - E15-E6-S1: 政策相似度检测 (SimHash & Hamming Distance)",
+    "path": "scf-collector/docs/features/policy-tracker/implementation_logs/E15/S6/task.html",
+    "type": "standard",
+    "service": "POLICY-TRACKER",
+    "last_modified": "2026-05-18 21:44",
+    "deprecated": false
+  },
+  {
+    "title": "E15-E6-S1: 政策相似度检测 (SimHash & Hamming Distance) 交付物与验证报告",
+    "path": "scf-collector/docs/features/policy-tracker/implementation_logs/E15/S6/walkthrough.html",
+    "type": "standard",
+    "service": "POLICY-TRACKER",
+    "last_modified": "2026-05-18 21:44",
+    "deprecated": false
+  },
+  {
+    "title": "Implementation Plan - E15-M6: 思考预算精细化 (E3-S3) + 响应缓存 (E5) + 错峰调度 (E4-S5) 落地",
+    "path": "scf-collector/docs/features/policy-tracker/implementation_logs/E15/M6/implementation_plan.html",
+    "type": "standard",
+    "service": "POLICY-TRACKER",
+    "last_modified": "2026-05-18 21:44",
+    "deprecated": false
+  },
+  {
+    "title": "Task Checklist - E15-M6: 思考预算精细化 (E3-S3) + 响应缓存 (E5) + 错峰调度 (E4-S5)",
+    "path": "scf-collector/docs/features/policy-tracker/implementation_logs/E15/M6/task.html",
+    "type": "standard",
+    "service": "POLICY-TRACKER",
+    "last_modified": "2026-05-18 21:44",
+    "deprecated": false
+  },
+  {
+    "title": "Walkthrough - E15-M6: 思考预算精细化 (E3-S3) + 响应缓存 (E5) + 错峰调度 (E4-S5) 落地总结",
+    "path": "scf-collector/docs/features/policy-tracker/implementation_logs/E15/M6/walkthrough.html",
+    "type": "standard",
+    "service": "POLICY-TRACKER",
+    "last_modified": "2026-05-18 21:44",
+    "deprecated": false
+  },
+  {
+    "title": "Implementation Plan - E15-E2: 二阶段分析与 5 星政策 Self-Consistency 投票落地",
+    "path": "scf-collector/docs/features/policy-tracker/implementation_logs/E15/S2/implementation_plan.html",
+    "type": "standard",
+    "service": "POLICY-TRACKER",
+    "last_modified": "2026-05-18 21:44",
+    "deprecated": false
+  },
+  {
+    "title": "Walkthrough - E15-E2: 二阶段分析与 5 星政策 Self-Consistency 投票落地",
+    "path": "scf-collector/docs/features/policy-tracker/implementation_logs/E15/S2/walkthrough.html",
+    "type": "standard",
+    "service": "POLICY-TRACKER",
+    "last_modified": "2026-05-18 21:44",
+    "deprecated": false
+  },
+  {
+    "title": "Implementation Plan - E15-M7: E6 增量(Diff)分析落地与集成",
+    "path": "scf-collector/docs/features/policy-tracker/implementation_logs/E15/M7/implementation_plan.html",
+    "type": "standard",
+    "service": "POLICY-TRACKER",
+    "last_modified": "2026-05-18 21:44",
+    "deprecated": false
+  },
+  {
+    "title": "Task Checklist - E15-M7: E6 增量(Diff)分析落地与集成",
+    "path": "scf-collector/docs/features/policy-tracker/implementation_logs/E15/M7/task.html",
+    "type": "standard",
+    "service": "POLICY-TRACKER",
+    "last_modified": "2026-05-18 21:44",
+    "deprecated": false
+  },
+  {
+    "title": "E15-M7: E6 增量(Diff)分析落地与集成交付报告",
+    "path": "scf-collector/docs/features/policy-tracker/implementation_logs/E15/M7/walkthrough.html",
+    "type": "standard",
+    "service": "POLICY-TRACKER",
+    "last_modified": "2026-05-18 21:44",
+    "deprecated": false
+  },
+  {
+    "title": "Walkthrough - E15-S1: 零成本 Bypass 与 Caching 基础架构落地 (v1.2 加固版)",
+    "path": "scf-collector/docs/features/policy-tracker/implementation_logs/E15/S1/walkthrough.html",
+    "type": "standard",
+    "service": "POLICY-TRACKER",
+    "last_modified": "2026-05-18 21:44",
+    "deprecated": false
+  },
+  {
+    "title": "E15-S1 迭代纪要 (v2: M1-Patch 深度补漏与防裸奔加固)",
+    "path": "scf-collector/docs/features/policy-tracker/implementation_logs/E15/S1/iterations/v2/ITERATION_NOTE.html",
+    "type": "standard",
+    "service": "POLICY-TRACKER",
+    "last_modified": "2026-05-18 21:44",
+    "deprecated": false
+  },
+  {
+    "title": "M1-Patch 深度补漏验收清单看板",
+    "path": "scf-collector/docs/features/policy-tracker/implementation_logs/E15/S1/iterations/v2/task.html",
+    "type": "standard",
+    "service": "POLICY-TRACKER",
+    "last_modified": "2026-05-18 21:44",
+    "deprecated": false
+  },
+  {
+    "title": "[E15-M1-Patch (v2)] 统一分级调度分析与防裸奔 MOps 实测对账总结报告",
+    "path": "scf-collector/docs/features/policy-tracker/implementation_logs/E15/S1/iterations/v2/walkthrough.html",
+    "type": "standard",
+    "service": "POLICY-TRACKER",
+    "last_modified": "2026-05-18 21:44",
+    "deprecated": false
+  },
+  {
+    "title": "量化数据监控小程序 - 前端开发规范",
+    "path": "docs/scheculer_manager.html",
+    "type": "standard",
+    "service": "GLOBAL",
+    "last_modified": "2026-05-17 20:44",
+    "deprecated": false
+  },
+  {
+    "title": "股东数据 数据库结构",
+    "path": "docs/database_schema.html",
+    "type": "standard",
+    "service": "GLOBAL",
+    "last_modified": "2026-05-17 20:44",
+    "deprecated": false
+  },
+  {
+    "title": "Stock-Manager API 文档更新总结",
+    "path": "docs/API文档更新总结.html",
+    "type": "standard",
+    "service": "GLOBAL",
+    "last_modified": "2026-05-17 20:44",
+    "deprecated": false
+  },
+  {
+    "title": "项目文档索引 (Documentation Index)",
+    "path": "docs/README.html",
+    "type": "standard",
+    "service": "GLOBAL",
+    "last_modified": "2026-05-17 20:44",
+    "deprecated": false
+  },
+  {
+    "title": "项目总览：A 股盘后分析系统",
+    "path": "docs/standards/PROJECT_OVERVIEW.html",
+    "type": "standard",
+    "service": "GLOBAL",
+    "last_modified": "2026-05-17 20:44",
+    "deprecated": false
+  },
+  {
+    "title": "表清单总览(TABLES_INDEX.md)",
+    "path": "docs/standards/TABLES_INDEX.html",
+    "type": "standard",
+    "service": "GLOBAL",
+    "last_modified": "2026-05-17 20:44",
+    "deprecated": false
+  },
+  {
+    "title": "Stock-Manager API 前端开发文档",
+    "path": "docs/api/stock-manager-frontend-api.html",
+    "type": "standard",
+    "service": "GLOBAL",
+    "last_modified": "2026-05-17 20:44",
+    "deprecated": false
+  },
+  {
+    "title": "静态数据库 (MySQL) 交互接口指南 (Static DB API Guide)",
+    "path": "docs/api/STATIC_DB_API_GUIDE.html",
+    "type": "standard",
+    "service": "GLOBAL",
+    "last_modified": "2026-05-17 20:44",
+    "deprecated": false
+  },
+  {
+    "title": "股票微服务集群 API 接口文档汇总",
+    "path": "docs/api/FULL_API_DOCUMENTATION.html",
+    "type": "standard",
+    "service": "GLOBAL",
+    "last_modified": "2026-05-17 20:44",
+    "deprecated": false
+  },
+  {
+    "title": "微信小程序调用指南：WXCH Gateway API",
+    "path": "docs/api/WXCH_GATEWAY_USAGE.html",
+    "type": "standard",
+    "service": "GLOBAL",
+    "last_modified": "2026-05-17 20:44",
+    "deprecated": false
+  },
+  {
+    "title": "股市日记系统：API 规格说明书 (V1.0)",
+    "path": "docs/api/api-spec-diary.html",
+    "type": "standard",
+    "service": "GLOBAL",
+    "last_modified": "2026-05-17 20:44",
+    "deprecated": false
+  },
+  {
+    "title": "数据审计日志接口 (Data Audit)",
+    "path": "docs/api/data_audit.html",
+    "type": "standard",
+    "service": "GLOBAL",
+    "last_modified": "2026-05-17 20:44",
+    "deprecated": false
+  },
+  {
+    "title": "股票数据消息类型清单",
+    "path": "docs/api/stock_messages.html",
+    "type": "standard",
+    "service": "GLOBAL",
+    "last_modified": "2026-05-17 20:44",
+    "deprecated": false
+  },
+  {
+    "title": "Stock-Manager 业务中台接口文档 (Stock-Manager API)",
+    "path": "docs/api/STOCK_MANAGER_API.html",
+    "type": "standard",
+    "service": "GLOBAL",
+    "last_modified": "2026-05-17 20:44",
+    "deprecated": false
+  },
+  {
+    "title": "数据管线事件驱动与流水线编排 API (Pipeline & Event-Driven)",
+    "path": "docs/api/PIPELINE_EVENT_API.html",
+    "type": "standard",
+    "service": "GLOBAL",
+    "last_modified": "2026-05-17 20:44",
+    "deprecated": false
+  },
+  {
+    "title": "四锚framework\n    下的个股结构化分析",
+    "path": "docs/投资指南html/four-anchors-analysis.html",
+    "type": "standard",
+    "service": "GLOBAL",
+    "last_modified": "2026-05-17 20:44",
+    "deprecated": false
+  },
+  {
+    "title": "迈瑞医疗一个\"左侧困境\"的资金博弈样本",
+    "path": "docs/投资指南html/mindray_case_study.html",
+    "type": "standard",
+    "service": "GLOBAL",
+    "last_modified": "2026-05-17 20:44",
+    "deprecated": false
+  },
+  {
+    "title": "当市场不再有牛熊，只有结构和纪律还能救你。",
+    "path": "docs/投资指南html/six-disciplines-terminal.html",
+    "type": "standard",
+    "service": "GLOBAL",
+    "last_modified": "2026-05-17 20:44",
+    "deprecated": false
+  },
+  {
+    "title": "个人投资者推荐的轻量栈",
+    "path": "docs/投资指南html/用AI搭建政策跟踪系统.html",
+    "type": "standard",
+    "service": "GLOBAL",
+    "last_modified": "2026-05-17 20:44",
+    "deprecated": false
+  },
+  {
+    "title": "研究\"研究股票的人\"一种认知层级的跃迁",
+    "path": "docs/投资指南html/meta_research.html",
+    "type": "standard",
+    "service": "GLOBAL",
+    "last_modified": "2026-05-17 20:44",
+    "deprecated": false
+  },
+  {
+    "title": "${s.name}",
+    "path": "docs/投资指南html/moutai-four-anchors-terminal_1.html",
+    "type": "standard",
+    "service": "GLOBAL",
+    "last_modified": "2026-05-17 20:44",
+    "deprecated": false
+  },
+  {
+    "title": "从感性认识到信息系统",
+    "path": "docs/投资指南html/A股认知体系.html",
+    "type": "standard",
+    "service": "GLOBAL",
+    "last_modified": "2026-05-17 20:44",
+    "deprecated": false
+  },
+  {
+    "title": "${s.name}",
+    "path": "docs/投资指南html/moutai-four-anchors-terminal.html",
+    "type": "standard",
+    "service": "GLOBAL",
+    "last_modified": "2026-05-17 20:44",
+    "deprecated": false
+  },
+  {
+    "title": "综合参考手册九类资金行为特征速查卡",
+    "path": "docs/投资指南html/capital_index.html",
+    "type": "standard",
+    "service": "GLOBAL",
+    "last_modified": "2026-05-17 20:44",
+    "deprecated": false
+  },
+  {
+    "title": "资金波浪的定量验证",
+    "path": "docs/投资指南html/volume_x_quantitative_wave_dark.html",
+    "type": "standard",
+    "service": "GLOBAL",
+    "last_modified": "2026-05-17 20:44",
+    "deprecated": false
+  },
+  {
+    "title": "贵州茅台 600519 · 四锚分析",
+    "path": "docs/投资指南html/moutai-four-anchors-terminal_2.html",
+    "type": "standard",
+    "service": "GLOBAL",
+    "last_modified": "2026-05-17 20:44",
+    "deprecated": false
+  },
+  {
+    "title": "A股资金博弈监测体系全景",
+    "path": "docs/投资指南html/ashare_monitoring_system.html",
+    "type": "standard",
+    "service": "GLOBAL",
+    "last_modified": "2026-05-17 20:44",
+    "deprecated": false
+  },
+  {
+    "title": "diary_detail_redesign_three_options.html",
+    "path": "docs/投资指南html/diary_detail_redesign_three_options.html",
+    "type": "standard",
+    "service": "GLOBAL",
+    "last_modified": "2026-05-17 20:44",
+    "deprecated": false
+  },
+  {
+    "title": "盈利锚完整体系",
+    "path": "docs/投资指南html/盈利锚完整体系.html",
+    "type": "standard",
+    "service": "GLOBAL",
+    "last_modified": "2026-05-17 20:44",
+    "deprecated": false
+  },
+  {
+    "title": "状态屏指标计算手册",
+    "path": "docs/投资指南html/engineering_appendix.html",
+    "type": "standard",
+    "service": "GLOBAL",
+    "last_modified": "2026-05-17 20:44",
+    "deprecated": false
+  },
+  {
+    "title": "贵州茅台 600519 · 四锚分析",
+    "path": "docs/投资指南html/moutai-four-anchors-terminal_3.html",
+    "type": "standard",
+    "service": "GLOBAL",
+    "last_modified": "2026-05-17 20:44",
+    "deprecated": false
+  },
+  {
+    "title": "速查卡 X.C · 资金波浪实战对照 · Dark",
+    "path": "docs/投资指南html/volume_x_cheatsheet_dark.html",
+    "type": "standard",
+    "service": "GLOBAL",
+    "last_modified": "2026-05-17 20:44",
+    "deprecated": false
+  },
+  {
+    "title": "在结构性市场中找到确定性",
+    "path": "docs/投资指南html/A股操作指南.html",
+    "type": "standard",
+    "service": "GLOBAL",
+    "last_modified": "2026-05-17 20:44",
+    "deprecated": false
+  },
+  {
+    "title": "盈利锚知识框架",
+    "path": "docs/投资指南html/盈利锚知识框架.html",
+    "type": "standard",
+    "service": "GLOBAL",
+    "last_modified": "2026-05-17 20:44",
+    "deprecated": false
+  },
+  {
+    "title": "资金视角理解A股的核心钥匙",
+    "path": "docs/投资指南html/capital_perspective.html",
+    "type": "standard",
+    "service": "GLOBAL",
+    "last_modified": "2026-05-17 20:44",
+    "deprecated": false
+  },
+  {
+    "title": "盈利锚知识框架",
+    "path": "docs/投资指南html/盈利锚知识框架_1.html",
+    "type": "standard",
+    "service": "GLOBAL",
+    "last_modified": "2026-05-17 20:44",
+    "deprecated": false
+  },
+  {
+    "title": "状态屏指标计算手册",
+    "path": "docs/投资指南html/engineering_appendix_1.html",
+    "type": "standard",
+    "service": "GLOBAL",
+    "last_modified": "2026-05-17 20:44",
+    "deprecated": false
+  },
+  {
+    "title": "宁德时代资金运行周期全景解剖",
+    "path": "docs/投资指南html/catl_case_study.html",
+    "type": "standard",
+    "service": "GLOBAL",
+    "last_modified": "2026-05-17 20:44",
+    "deprecated": false
+  },
+  {
+    "title": "资金波浪的定量验证",
+    "path": "docs/投资指南html/volume_x_quantitative_wave.html",
+    "type": "standard",
+    "service": "GLOBAL",
+    "last_modified": "2026-05-17 20:44",
+    "deprecated": false
+  },
+  {
+    "title": "A 股 相变监测 体系",
+    "path": "docs/投资指南html/volume_xi_critical_transition.html",
+    "type": "standard",
+    "service": "GLOBAL",
+    "last_modified": "2026-05-17 20:44",
+    "deprecated": false
+  },
+  {
+    "title": "实战篇观测体系与决策引擎",
+    "path": "docs/投资指南html/execution_handbook.html",
+    "type": "standard",
+    "service": "GLOBAL",
+    "last_modified": "2026-05-17 20:44",
+    "deprecated": false
+  },
+  {
+    "title": "diary_app_screens_overview.html",
+    "path": "docs/投资指南html/diary_app_screens_overview.html",
+    "type": "standard",
+    "service": "GLOBAL",
+    "last_modified": "2026-05-17 20:44",
+    "deprecated": false
+  },
+  {
+    "title": "A股四锚知识框架",
+    "path": "docs/投资指南html/A股四锚知识框架.html",
+    "type": "standard",
+    "service": "GLOBAL",
+    "last_modified": "2026-05-17 20:44",
+    "deprecated": false
+  },
+  {
+    "title": "你的投资体系 1.0",
+    "path": "docs/投资指南html/投资体系.html",
+    "type": "standard",
+    "service": "GLOBAL",
+    "last_modified": "2026-05-17 20:44",
+    "deprecated": false
+  },
+  {
+    "title": "建立资金图谱从数据到知识的工程",
+    "path": "docs/投资指南html/capital_map_methodology.html",
+    "type": "standard",
+    "service": "GLOBAL",
+    "last_modified": "2026-05-17 20:44",
+    "deprecated": false
+  },
+  {
+    "title": "云端数据源 API 需求规格",
+    "path": "docs/spec/云端数据源API需求规格.html",
+    "type": "standard",
+    "service": "GLOBAL",
+    "last_modified": "2026-05-17 20:44",
+    "deprecated": false
+  },
+  {
+    "title": "指令队列格式规范 (task_commands)",
+    "path": "docs/spec/task_command_format.html",
+    "type": "standard",
+    "service": "GLOBAL",
+    "last_modified": "2026-05-17 20:44",
+    "deprecated": false
+  },
+  {
+    "title": "EPIC-002 数据集成完成需求文档",
+    "path": "docs/spec/epic002需求数据.html",
+    "type": "standard",
+    "service": "GLOBAL",
+    "last_modified": "2026-05-17 20:44",
+    "deprecated": false
+  },
+  {
+    "title": "A 股数据采集质量与完整性判定规范",
+    "path": "docs/spec/data_collection_quality_spec.html",
+    "type": "standard",
+    "service": "GLOBAL",
+    "last_modified": "2026-05-17 20:44",
+    "deprecated": false
+  },
+  {
+    "title": "股票异动捕捉管线 v1.1 部署方案",
+    "path": "docs/architecture/02h_new_task_调度系统.html",
+    "type": "standard",
+    "service": "GLOBAL",
+    "last_modified": "2026-05-17 20:44",
+    "deprecated": false
+  },
+  {
+    "title": "02b. Cloud-API 聚合层 (BFF Spec)",
+    "path": "docs/architecture/02b_Cloud-API聚合层.html",
+    "type": "standard",
+    "service": "GLOBAL",
+    "last_modified": "2026-05-17 20:44",
+    "deprecated": false
+  },
+  {
+    "title": "02a. Nginx 网关配置 (Gateway Spec)",
+    "path": "docs/architecture/02a_Nginx网关配置.html",
+    "type": "standard",
+    "service": "GLOBAL",
+    "last_modified": "2026-05-17 20:44",
+    "deprecated": false
+  },
+  {
+    "title": "02c. 数据采集微服务 (Ingestion Services Spec)",
+    "path": "docs/architecture/02c_数据采集微服务.html",
+    "type": "standard",
+    "service": "GLOBAL",
+    "last_modified": "2026-05-17 20:44",
+    "deprecated": false
+  },
+  {
+    "title": "Task-Orchestrator 核心架构理念",
+    "path": "docs/architecture/调度任务.html",
+    "type": "standard",
+    "service": "GLOBAL",
+    "last_modified": "2026-05-17 20:44",
+    "deprecated": false
+  },
+  {
+    "title": "03. 内网计算引擎 (Core Engine Specification)",
+    "path": "docs/architecture/03_内网计算引擎.html",
+    "type": "standard",
+    "service": "GLOBAL",
+    "last_modified": "2026-05-17 20:44",
+    "deprecated": false
+  },
+  {
+    "title": "05. 运维部署手册 (Operations Manual)",
+    "path": "docs/architecture/05_运维部署手册.html",
+    "type": "standard",
+    "service": "GLOBAL",
+    "last_modified": "2026-05-17 20:44",
+    "deprecated": false
+  },
+  {
+    "title": "📋 代码评估报告",
+    "path": "docs/architecture/06_最新评估.html",
+    "type": "standard",
+    "service": "GLOBAL",
+    "last_modified": "2026-05-17 20:44",
+    "deprecated": false
+  },
+  {
+    "title": "02. 云端服务与API (Cloud Services Index)",
+    "path": "docs/architecture/02_云端服务与API.html",
+    "type": "standard",
+    "service": "GLOBAL",
+    "last_modified": "2026-05-17 20:44",
+    "deprecated": false
+  },
+  {
+    "title": "Get-StockData 数据获取架构与开发指南",
+    "path": "docs/architecture/DATA_ACQUISITION_ARCHITECTURE.html",
+    "type": "standard",
+    "service": "GLOBAL",
+    "last_modified": "2026-05-17 20:44",
+    "deprecated": false
+  },
+  {
+    "title": "数据采集与接入 QC 检查清单 (QC Checklist)",
+    "path": "docs/architecture/QC_GUIDELINES.html",
+    "type": "standard",
+    "service": "GLOBAL",
+    "last_modified": "2026-05-17 20:44",
+    "deprecated": false
+  },
+  {
+    "title": "02d. 前端 API 规范 (Frontend API Spec)",
+    "path": "docs/architecture/02d_前端API规范.html",
+    "type": "standard",
+    "service": "GLOBAL",
+    "last_modified": "2026-05-17 20:44",
+    "deprecated": false
+  },
+  {
+    "title": "02e. Stock-Manager-API 服务规划",
+    "path": "docs/architecture/02e_Stock-Manager服务规划.html",
+    "type": "standard",
+    "service": "GLOBAL",
+    "last_modified": "2026-05-17 20:44",
+    "deprecated": false
+  },
+  {
+    "title": "02g. Task-Orchestrator 调度系统",
+    "path": "docs/architecture/02g_Task-Orchestrator调度系统.html",
+    "type": "standard",
+    "service": "GLOBAL",
+    "last_modified": "2026-05-17 20:44",
+    "deprecated": false
+  },
+  {
+    "title": "01. 体系架构总览 (System Architecture Blueprint)",
+    "path": "docs/architecture/01_体系架构总览.html",
+    "type": "standard",
+    "service": "GLOBAL",
+    "last_modified": "2026-05-17 20:44",
+    "deprecated": false
+  },
+  {
+    "title": "04. 风险治理与优化 (Risk Governance & Optimization)",
+    "path": "docs/architecture/04_风险治理与优化.html",
+    "type": "standard",
+    "service": "GLOBAL",
+    "last_modified": "2026-05-17 20:44",
+    "deprecated": false
+  },
+  {
+    "title": "Cloud-API vs Stock-Manager 架构定位对比",
+    "path": "docs/architecture/02f_BFF层架构对比.html",
+    "type": "standard",
+    "service": "GLOBAL",
+    "last_modified": "2026-05-17 20:44",
+    "deprecated": false
+  },
+  {
+    "title": "虚拟 Agent 角色定义 (Virtual Role-based Rules)",
+    "path": "docs/architecture/agent-skill-rules/ROLES.html",
+    "type": "standard",
+    "service": "GLOBAL",
+    "last_modified": "2026-05-17 20:44",
+    "deprecated": false
+  },
+  {
+    "title": "Implementation Plan - E100-S3 数据质量 QC 准则优化与标准化",
+    "path": "docs/architecture/agent-skill-rules/implementation_logs/E100/S3/implementation_plan.html",
+    "type": "standard",
+    "service": "GLOBAL",
+    "last_modified": "2026-05-17 20:44",
+    "deprecated": false
+  },
+  {
+    "title": "task",
+    "path": "docs/architecture/agent-skill-rules/implementation_logs/E100/S3/task.html",
+    "type": "standard",
+    "service": "GLOBAL",
+    "last_modified": "2026-05-17 20:44",
+    "deprecated": false
+  },
+  {
+    "title": "Walkthrough - E100-S3 数据质量 QC 准则优化",
+    "path": "docs/architecture/agent-skill-rules/implementation_logs/E100/S3/walkthrough.html",
+    "type": "standard",
+    "service": "GLOBAL",
+    "last_modified": "2026-05-17 20:44",
+    "deprecated": false
+  },
+  {
+    "title": "E100-S2: WXCH Gateway 专有治理角色与安全红线",
+    "path": "docs/architecture/agent-skill-rules/implementation_logs/E100/S2/implementation_plan.html",
+    "type": "standard",
+    "service": "GLOBAL",
+    "last_modified": "2026-05-17 20:44",
+    "deprecated": false
+  },
+  {
+    "title": "Task Log: E100-S2",
+    "path": "docs/architecture/agent-skill-rules/implementation_logs/E100/S2/task.html",
+    "type": "standard",
+    "service": "GLOBAL",
+    "last_modified": "2026-05-17 20:44",
+    "deprecated": false
+  },
+  {
+    "title": "Walkthrough: E100-S2 WXCH 网关治理角色",
+    "path": "docs/architecture/agent-skill-rules/implementation_logs/E100/S2/walkthrough.html",
+    "type": "standard",
+    "service": "GLOBAL",
+    "last_modified": "2026-05-17 20:44",
+    "deprecated": false
+  },
+  {
+    "title": "E100-S1: 腾讯云环境治理同步与角色增强",
+    "path": "docs/architecture/agent-skill-rules/implementation_logs/E100/S1/implementation_plan.html",
+    "type": "standard",
+    "service": "GLOBAL",
+    "last_modified": "2026-05-17 20:44",
+    "deprecated": false
+  },
+  {
+    "title": "Task Log: E100-S1",
+    "path": "docs/architecture/agent-skill-rules/implementation_logs/E100/S1/task.html",
+    "type": "standard",
+    "service": "GLOBAL",
+    "last_modified": "2026-05-17 20:44",
+    "deprecated": false
+  },
+  {
+    "title": "Walkthrough: E100-S1 治理规范同步",
+    "path": "docs/architecture/agent-skill-rules/implementation_logs/E100/S1/walkthrough.html",
+    "type": "standard",
+    "service": "GLOBAL",
+    "last_modified": "2026-05-17 20:44",
+    "deprecated": false
+  },
+  {
+    "title": "量化系统架构深度优化与风险治理 (Architecture & Risk Governance)",
+    "path": "docs/architecture/archive/架构深度优化与风险治理.html",
+    "type": "standard",
+    "service": "GLOBAL",
+    "last_modified": "2026-05-17 20:44",
+    "deprecated": false
+  },
+  {
+    "title": "腾讯云轻量服务器 (2C 4G) 详细架构设计",
+    "path": "docs/architecture/archive/云端服务器架构细化.html",
+    "type": "standard",
+    "service": "GLOBAL",
+    "last_modified": "2026-05-17 20:44",
+    "deprecated": false
+  },
+  {
+    "title": "混合云量化交易系统架构设计",
+    "path": "docs/architecture/archive/混合云架构设计.html",
+    "type": "standard",
+    "service": "GLOBAL",
+    "last_modified": "2026-05-17 20:44",
+    "deprecated": false
+  },
+  {
+    "title": "ClickHouse在内网部署的可行性分析",
+    "path": "docs/architecture/archive/ClickHouse部署方案.html",
+    "type": "standard",
+    "service": "GLOBAL",
+    "last_modified": "2026-05-17 20:44",
+    "deprecated": false
+  },
+  {
+    "title": "混合云微服务融合架构规划",
+    "path": "docs/architecture/archive/混合云微服务融合规划.html",
+    "type": "standard",
+    "service": "GLOBAL",
+    "last_modified": "2026-05-17 20:44",
+    "deprecated": false
+  },
+  {
+    "title": "股票数据源微服务架构设计",
+    "path": "docs/architecture/archive/架构设计.html",
+    "type": "standard",
+    "service": "GLOBAL",
+    "last_modified": "2026-05-17 20:44",
+    "deprecated": false
+  },
+  {
+    "title": "Epic E100: Agent 治理体系从“口头约定”到“模块化门禁”的重构",
+    "path": "docs/architecture/archive/agent-rules-skills/E100_Governance_Transformation.html",
+    "type": "standard",
+    "service": "GLOBAL",
+    "last_modified": "2026-05-17 20:44",
+    "deprecated": false
+  },
+  {
+    "title": "Final Report - Epic: Agent Governance Transformation (E100-E103)",
+    "path": "docs/architecture/archive/agent-rules-skills/reportOf41server.html",
+    "type": "standard",
+    "service": "GLOBAL",
+    "last_modified": "2026-05-17 20:44",
+    "deprecated": false
+  },
+  {
+    "title": "Implementation Plan - E100-S3: 物理门禁：自动化审计脚本迁移",
+    "path": "docs/architecture/archive/agent-rules-skills/implementation_logs/E100/S3/implementation_plan.html",
+    "type": "standard",
+    "service": "GLOBAL",
+    "last_modified": "2026-05-17 20:44",
+    "deprecated": false
+  },
+  {
+    "title": "Task Tracking - E100-S3: 物理门禁：自动化审计脚本迁移",
+    "path": "docs/architecture/archive/agent-rules-skills/implementation_logs/E100/S3/task.html",
+    "type": "standard",
+    "service": "GLOBAL",
+    "last_modified": "2026-05-17 20:44",
+    "deprecated": false
+  },
+  {
+    "title": "Implementation Plan - E100-S4: 标准化交付模板实施",
+    "path": "docs/architecture/archive/agent-rules-skills/implementation_logs/E100/S4/implementation_plan.html",
+    "type": "standard",
+    "service": "GLOBAL",
+    "last_modified": "2026-05-17 20:44",
+    "deprecated": false
+  },
+  {
+    "title": "Task Tracking - E100-S4: 标准化交付模板实施",
+    "path": "docs/architecture/archive/agent-rules-skills/implementation_logs/E100/S4/task.html",
+    "type": "standard",
+    "service": "GLOBAL",
+    "last_modified": "2026-05-17 20:44",
+    "deprecated": false
+  },
+  {
+    "title": "Implementation Plan - E100-S2: 引入 ROLES.md 建立角色化责任闭环",
+    "path": "docs/architecture/archive/agent-rules-skills/implementation_logs/E100/S2/implementation_plan.html",
+    "type": "standard",
+    "service": "GLOBAL",
+    "last_modified": "2026-05-17 20:44",
+    "deprecated": false
+  },
+  {
+    "title": "Task Tracking - E100-S2: 引入 ROLES.md 建立角色化责任闭环",
+    "path": "docs/architecture/archive/agent-rules-skills/implementation_logs/E100/S2/task.html",
+    "type": "standard",
+    "service": "GLOBAL",
+    "last_modified": "2026-05-17 20:44",
+    "deprecated": false
+  },
+  {
+    "title": "Implementation Plan - E100-S1: AGENTS.md 升级与规约解耦",
+    "path": "docs/architecture/archive/agent-rules-skills/implementation_logs/E100/S1/implementation_plan.html",
+    "type": "standard",
+    "service": "GLOBAL",
+    "last_modified": "2026-05-17 20:44",
+    "deprecated": false
+  },
+  {
+    "title": "Task Tracking - E100-S1: AGENTS.md 升级与规约解耦",
+    "path": "docs/architecture/archive/agent-rules-skills/implementation_logs/E100/S1/task.html",
+    "type": "standard",
+    "service": "GLOBAL",
+    "last_modified": "2026-05-17 20:44",
+    "deprecated": false
+  },
+  {
+    "title": "Walkthrough - E100-S1: 治理补强与物理对齐",
+    "path": "docs/architecture/archive/agent-rules-skills/implementation_logs/E100/S1/walkthrough.html",
+    "type": "standard",
+    "service": "GLOBAL",
+    "last_modified": "2026-05-17 20:44",
+    "deprecated": false
+  },
+  {
+    "title": "云端调度系统 (Stock-Manager-Scheduler) 开发文档 v1.1",
+    "path": "docs/design/Task_Orchestrator_Cloud_Implementation.html",
+    "type": "standard",
+    "service": "GLOBAL",
+    "last_modified": "2026-05-17 20:44",
+    "deprecated": false
+  },
+  {
+    "title": "Claude Code 开发需求：A股结构性牛市监控系统",
+    "path": "docs/design/结构性牛市.html",
+    "type": "standard",
+    "service": "GLOBAL",
+    "last_modified": "2026-05-17 20:44",
+    "deprecated": false
+  },
+  {
+    "title": "五维度量化分析体系设计文档",
+    "path": "docs/design/quantitative_analysis_system.html",
+    "type": "standard",
+    "service": "GLOBAL",
+    "last_modified": "2026-05-17 20:44",
+    "deprecated": false
+  },
+  {
+    "title": "历史数据校验体系落地规划",
+    "path": "docs/design/数据管线/历史数据校验体系.html",
+    "type": "standard",
+    "service": "GLOBAL",
+    "last_modified": "2026-05-17 20:44",
+    "deprecated": false
+  },
+  {
+    "title": "历史数据修复与架构重构方案",
+    "path": "docs/design/数据管线/历史数据修复与架构重构方案.html",
+    "type": "standard",
+    "service": "GLOBAL",
+    "last_modified": "2026-05-17 20:44",
+    "deprecated": false
+  },
+  {
+    "title": "E6: 内网重算节点对接规范",
+    "path": "docs/design/数据管线/历史数据校验体系/E6_内网对接规范.html",
+    "type": "standard",
+    "service": "GLOBAL",
+    "last_modified": "2026-05-17 20:44",
+    "deprecated": false
+  },
+  {
+    "title": "E4: 跨源比对(P1)",
+    "path": "docs/design/数据管线/历史数据校验体系/E4_跨源比对.html",
+    "type": "standard",
+    "service": "GLOBAL",
+    "last_modified": "2026-05-17 20:44",
+    "deprecated": false
+  },
+  {
+    "title": "E6: 补数与修复闭环(P1)",
+    "path": "docs/design/数据管线/历史数据校验体系/E6_补数与修复闭环.html",
+    "type": "standard",
+    "service": "GLOBAL",
+    "last_modified": "2026-05-17 20:44",
+    "deprecated": false
+  },
+  {
+    "title": "ClickHouse 数据指标计算交付要求 (数据中台)",
+    "path": "docs/design/数据管线/历史数据校验体系/CK_指标计算交付要求.html",
+    "type": "standard",
+    "service": "GLOBAL",
+    "last_modified": "2026-05-17 20:44",
+    "deprecated": false
+  },
+  {
+    "title": "E8: 校验规则工程化(P2, 持续)",
+    "path": "docs/design/数据管线/历史数据校验体系/E8_校验规则工程化.html",
+    "type": "standard",
+    "service": "GLOBAL",
+    "last_modified": "2026-05-17 20:44",
+    "deprecated": false
+  },
+  {
+    "title": "E1: 数据模型重构 (P0) [COMPLETED]",
+    "path": "docs/design/数据管线/历史数据校验体系/E1_数据模型重构.html",
+    "type": "standard",
+    "service": "GLOBAL",
+    "last_modified": "2026-05-17 20:44",
+    "deprecated": false
+  },
+  {
+    "title": "E3: 巡检模块独立部署(P0)",
+    "path": "docs/design/数据管线/历史数据校验体系/E3_巡检模块独立部署.html",
+    "type": "standard",
+    "service": "GLOBAL",
+    "last_modified": "2026-05-17 20:44",
+    "deprecated": false
+  },
+  {
+    "title": "E5: 业务规则校验(P1)",
+    "path": "docs/design/数据管线/历史数据校验体系/E5_业务规则校验.html",
+    "type": "standard",
+    "service": "GLOBAL",
+    "last_modified": "2026-05-17 20:44",
+    "deprecated": false
+  },
+  {
+    "title": "E2: 写入路径同步校验 (P0) [COMPLETED]",
+    "path": "docs/design/数据管线/历史数据校验体系/E2_写入路径同步校验.html",
+    "type": "standard",
+    "service": "GLOBAL",
+    "last_modified": "2026-05-17 20:44",
+    "deprecated": false
+  },
+  {
+    "title": "E7: 可观测性与 SLA(P2, 持续迭代)",
+    "path": "docs/design/数据管线/历史数据校验体系/E7_可观测性与SLA.html",
+    "type": "standard",
+    "service": "GLOBAL",
+    "last_modified": "2026-05-17 20:44",
+    "deprecated": false
+  },
+  {
+    "title": "[Epic E200] A 股自愈型数据管线实施方案",
+    "path": "docs/design/数据管线/自愈管线/EPIC-E200-自愈型数据管线实施方案.html",
+    "type": "standard",
+    "service": "GLOBAL",
+    "last_modified": "2026-05-17 20:44",
+    "deprecated": false
+  },
+  {
+    "title": "[PRD] A 股数据管线自愈系统 (Tencent Cloud MySQL 侧)",
+    "path": "docs/design/数据管线/自愈管线/PRD-自愈型数据管线.html",
+    "type": "standard",
+    "service": "GLOBAL",
+    "last_modified": "2026-05-17 20:44",
+    "deprecated": false
+  },
+  {
+    "title": "[E200-S3] 技术报告：级联失效与同步阻塞 (Consistency)",
+    "path": "docs/design/数据管线/自愈管线/implementation_logs/E200/S3/REPORT.html",
+    "type": "standard",
+    "service": "GLOBAL",
+    "last_modified": "2026-05-17 20:44",
+    "deprecated": false
+  },
+  {
+    "title": "[E200-S3] 级联失效与同步阻塞 (Consistency)",
+    "path": "docs/design/数据管线/自愈管线/implementation_logs/E200/S3/implementation_plan.html",
+    "type": "standard",
+    "service": "GLOBAL",
+    "last_modified": "2026-05-17 20:44",
+    "deprecated": false
+  },
+  {
+    "title": "Walkthrough - E200-S3 级联失效与同步阻塞",
+    "path": "docs/design/数据管线/自愈管线/implementation_logs/E200/S3/walkthrough.html",
+    "type": "standard",
+    "service": "GLOBAL",
+    "last_modified": "2026-05-17 20:44",
+    "deprecated": false
+  },
+  {
+    "title": "[E200-S4] 白名单与 SLA 监控 (Governance)",
+    "path": "docs/design/数据管线/自愈管线/implementation_logs/E200/S4/implementation_plan.html",
+    "type": "standard",
+    "service": "GLOBAL",
+    "last_modified": "2026-05-17 20:44",
+    "deprecated": false
+  },
+  {
+    "title": "Tasks for E200-S4: 白名单与 SLA 监控 (Governance)",
+    "path": "docs/design/数据管线/自愈管线/implementation_logs/E200/S4/task.html",
+    "type": "standard",
+    "service": "GLOBAL",
+    "last_modified": "2026-05-17 20:44",
+    "deprecated": false
+  },
+  {
+    "title": "API 接口文档 - E200-S2: 自愈修复引擎 (Healer)",
+    "path": "docs/design/数据管线/自愈管线/implementation_logs/E200/S2/API.html",
+    "type": "standard",
+    "service": "GLOBAL",
+    "last_modified": "2026-05-17 20:44",
+    "deprecated": false
+  },
+  {
+    "title": "技术报告 - E200-S2: 自动化修复与回滚引擎 (Healer)",
+    "path": "docs/design/数据管线/自愈管线/implementation_logs/E200/S2/REPORT.html",
+    "type": "standard",
+    "service": "GLOBAL",
+    "last_modified": "2026-05-17 20:44",
+    "deprecated": false
+  },
+  {
+    "title": "[E200-S2] 自动化修复与回滚引擎 (Healer)",
+    "path": "docs/design/数据管线/自愈管线/implementation_logs/E200/S2/implementation_plan.html",
+    "type": "standard",
+    "service": "GLOBAL",
+    "last_modified": "2026-05-17 20:44",
+    "deprecated": false
+  },
+  {
+    "title": "Task List - E200-S2: 自动化修复与回滚引擎 (Healer)",
+    "path": "docs/design/数据管线/自愈管线/implementation_logs/E200/S2/task.html",
+    "type": "standard",
+    "service": "GLOBAL",
+    "last_modified": "2026-05-17 20:44",
+    "deprecated": false
+  },
+  {
+    "title": "Walkthrough - E200-S2: 自动化修复与回滚引擎 (Healer)",
+    "path": "docs/design/数据管线/自愈管线/implementation_logs/E200/S2/walkthrough.html",
+    "type": "standard",
+    "service": "GLOBAL",
+    "last_modified": "2026-05-17 20:44",
+    "deprecated": false
+  },
+  {
+    "title": "技术报告 - E200-S1: 差异化跨源扫描器异常判定机制",
+    "path": "docs/design/数据管线/自愈管线/implementation_logs/E200/S1/REPORT.html",
+    "type": "standard",
+    "service": "GLOBAL",
+    "last_modified": "2026-05-17 20:44",
+    "deprecated": false
+  },
+  {
+    "title": "Implementation Plan - E200-S1: 差异化跨源扫描器",
+    "path": "docs/design/数据管线/自愈管线/implementation_logs/E200/S1/implementation_plan.html",
+    "type": "standard",
+    "service": "GLOBAL",
+    "last_modified": "2026-05-17 20:44",
+    "deprecated": false
+  },
+  {
+    "title": "Task List - E200-S1: 差异化跨源扫描器",
+    "path": "docs/design/数据管线/自愈管线/implementation_logs/E200/S1/task.html",
+    "type": "standard",
+    "service": "GLOBAL",
+    "last_modified": "2026-05-17 20:44",
+    "deprecated": false
+  },
+  {
+    "title": "Walkthrough - E200-S1: 差异化跨源扫描器",
+    "path": "docs/design/数据管线/自愈管线/implementation_logs/E200/S1/walkthrough.html",
+    "type": "standard",
+    "service": "GLOBAL",
+    "last_modified": "2026-05-17 20:44",
+    "deprecated": false
+  },
+  {
+    "title": "最终交付报告 - 任务交接事件化 (Event-Driven Handover)",
+    "path": "docs/design/数据管线/任务交接事件化/FINAL_REPORT.html",
+    "type": "standard",
+    "service": "GLOBAL",
+    "last_modified": "2026-05-17 20:44",
+    "deprecated": false
+  },
+  {
+    "title": "第 4.1 章 · 任务交接事件化 (Event-Driven Handover)",
+    "path": "docs/design/数据管线/任务交接事件化/readme.html",
+    "type": "standard",
+    "service": "GLOBAL",
+    "last_modified": "2026-05-17 20:44",
+    "deprecated": false
+  },
+  {
+    "title": "实施计划 - E4-S1-T2: 封装任务状态查询与监控接口",
+    "path": "docs/design/数据管线/任务交接事件化/implementation_logs/E4/S1/implementation_plan.html",
+    "type": "standard",
+    "service": "GLOBAL",
+    "last_modified": "2026-05-17 20:44",
+    "deprecated": false
+  },
+  {
+    "title": "任务进度 - E4-S1-T2",
+    "path": "docs/design/数据管线/任务交接事件化/implementation_logs/E4/S1/task.html",
+    "type": "standard",
+    "service": "GLOBAL",
+    "last_modified": "2026-05-17 20:44",
+    "deprecated": false
+  },
+  {
+    "title": "实施总结 - E4-S1-T2: 封装任务状态查询与监控接口",
+    "path": "docs/design/数据管线/任务交接事件化/implementation_logs/E4/S1/walkthrough.html",
+    "type": "standard",
+    "service": "GLOBAL",
+    "last_modified": "2026-05-17 20:44",
+    "deprecated": false
+  },
+  {
+    "title": "实施计划 - E6-S3: 告警邮件系统标准化优化",
+    "path": "docs/design/数据管线/任务交接事件化/implementation_logs/E6/S3/implementation_plan.html",
+    "type": "standard",
+    "service": "GLOBAL",
+    "last_modified": "2026-05-17 20:44",
+    "deprecated": false
+  },
+  {
+    "title": "每日任务调度合理化分配 - E6-S3: 告警邮件系统标准化优化",
+    "path": "docs/design/数据管线/任务交接事件化/implementation_logs/E6/S3/task.html",
+    "type": "standard",
+    "service": "GLOBAL",
+    "last_modified": "2026-05-17 20:44",
+    "deprecated": false
+  },
+  {
+    "title": "实施计划 - E6-S4: 每日任务执行总结报告 (Daily Summary Report)",
+    "path": "docs/design/数据管线/任务交接事件化/implementation_logs/E6/S4/implementation_plan.html",
+    "type": "standard",
+    "service": "GLOBAL",
+    "last_modified": "2026-05-17 20:44",
+    "deprecated": false
+  },
+  {
+    "title": "每日任务执行总结报告 - E6-S4",
+    "path": "docs/design/数据管线/任务交接事件化/implementation_logs/E6/S4/task.html",
+    "type": "standard",
+    "service": "GLOBAL",
+    "last_modified": "2026-05-17 20:44",
+    "deprecated": false
+  },
+  {
+    "title": "每日任务执行总结报告 - 实施验收报告 (E6-S4)",
+    "path": "docs/design/数据管线/任务交接事件化/implementation_logs/E6/S4/walkthrough.html",
+    "type": "standard",
+    "service": "GLOBAL",
+    "last_modified": "2026-05-17 20:44",
+    "deprecated": false
+  },
+  {
+    "title": "实施计划 - E6-S2: 每日任务调度合理化分配 (Rationalizing Task Scheduling)",
+    "path": "docs/design/数据管线/任务交接事件化/implementation_logs/E6/S2/implementation_plan.html",
+    "type": "standard",
+    "service": "GLOBAL",
+    "last_modified": "2026-05-17 20:44",
+    "deprecated": false
+  },
+  {
+    "title": "task",
+    "path": "docs/design/数据管线/任务交接事件化/implementation_logs/E6/S2/task.html",
+    "type": "standard",
+    "service": "GLOBAL",
+    "last_modified": "2026-05-17 20:44",
+    "deprecated": false
+  },
+  {
+    "title": "验收报告 (QA Report) - E6-S2",
+    "path": "docs/design/数据管线/任务交接事件化/implementation_logs/E6/S2/walkthrough.html",
+    "type": "standard",
+    "service": "GLOBAL",
+    "last_modified": "2026-05-17 20:44",
+    "deprecated": false
+  },
+  {
+    "title": "实施计划 - E6-S1: 任务触发模式切换 (Task Trigger Mode Switch)",
+    "path": "docs/design/数据管线/任务交接事件化/implementation_logs/E6/S1/implementation_plan.html",
+    "type": "standard",
+    "service": "GLOBAL",
+    "last_modified": "2026-05-17 20:44",
+    "deprecated": false
+  },
+  {
+    "title": "task",
+    "path": "docs/design/数据管线/任务交接事件化/implementation_logs/E6/S1/task.html",
+    "type": "standard",
+    "service": "GLOBAL",
+    "last_modified": "2026-05-17 20:44",
+    "deprecated": false
+  },
+  {
+    "title": "Walkthrough - E6-S1: 任务触发模式切换 (Task Trigger Mode Switch)",
+    "path": "docs/design/数据管线/任务交接事件化/implementation_logs/E6/S1/walkthrough.html",
+    "type": "standard",
+    "service": "GLOBAL",
+    "last_modified": "2026-05-17 20:44",
+    "deprecated": false
+  },
+  {
+    "title": "实施计划 - E5-S1: 云端四阶段流水线管理器 (WorkflowManager)",
+    "path": "docs/design/数据管线/任务交接事件化/implementation_logs/E5/S1/implementation_plan.html",
+    "type": "standard",
+    "service": "GLOBAL",
+    "last_modified": "2026-05-17 20:44",
+    "deprecated": false
+  },
+  {
+    "title": "task",
+    "path": "docs/design/数据管线/任务交接事件化/implementation_logs/E5/S1/task.html",
+    "type": "standard",
+    "service": "GLOBAL",
+    "last_modified": "2026-05-17 20:44",
+    "deprecated": false
+  },
+  {
+    "title": "Walkthrough - E5-S1: 云端四阶段流水线管理器 (WorkflowManager)",
+    "path": "docs/design/数据管线/任务交接事件化/implementation_logs/E5/S1/walkthrough.html",
+    "type": "standard",
+    "service": "GLOBAL",
+    "last_modified": "2026-05-17 20:44",
+    "deprecated": false
+  },
+  {
+    "title": "Appendices",
+    "path": "docs/design/异动股捕捉/Appendices.html",
+    "type": "standard",
+    "service": "GLOBAL",
+    "last_modified": "2026-05-17 20:44",
+    "deprecated": false
+  },
+  {
+    "title": "E1_Data_Structure",
+    "path": "docs/design/异动股捕捉/E1_Data_Structure.html",
+    "type": "standard",
+    "service": "GLOBAL",
+    "last_modified": "2026-05-17 20:44",
+    "deprecated": false
+  },
+  {
+    "title": "E4_Top10_Rules",
+    "path": "docs/design/异动股捕捉/E4_Top10_Rules.html",
+    "type": "standard",
+    "service": "GLOBAL",
+    "last_modified": "2026-05-17 20:44",
+    "deprecated": false
+  },
+  {
+    "title": "E5_System_Integration",
+    "path": "docs/design/异动股捕捉/E5_System_Integration.html",
+    "type": "standard",
+    "service": "GLOBAL",
+    "last_modified": "2026-05-17 20:44",
+    "deprecated": false
+  },
+  {
+    "title": "E3_Scoring_Function",
+    "path": "docs/design/异动股捕捉/E3_Scoring_Function.html",
+    "type": "standard",
+    "service": "GLOBAL",
+    "last_modified": "2026-05-17 20:44",
+    "deprecated": false
+  },
+  {
+    "title": "异动捕捉模块 · 设计交付文档 v1.1",
+    "path": "docs/design/异动股捕捉/readme1.html",
+    "type": "standard",
+    "service": "GLOBAL",
+    "last_modified": "2026-05-17 20:44",
+    "deprecated": false
+  },
+  {
+    "title": "股票异动捕捉管线 v1.1 部署方案",
+    "path": "docs/design/异动股捕捉/readme.html",
+    "type": "standard",
+    "service": "GLOBAL",
+    "last_modified": "2026-05-17 20:44",
+    "deprecated": false
+  },
+  {
+    "title": "E2_Signal_Rules",
+    "path": "docs/design/异动股捕捉/E2_Signal_Rules.html",
+    "type": "standard",
+    "service": "GLOBAL",
+    "last_modified": "2026-05-17 20:44",
+    "deprecated": false
+  },
+  {
+    "title": "E1: 原始数据采集需求",
+    "path": "docs/design/复盘/data_requirements.html",
+    "type": "standard",
+    "service": "GLOBAL",
+    "last_modified": "2026-05-17 20:44",
+    "deprecated": false
+  },
+  {
+    "title": "定时任务执行情况深度审计总结 (2026-05-03)",
+    "path": "docs/design/复盘/scheduled_tasks_audit_summary_20260503.html",
+    "type": "standard",
+    "service": "GLOBAL",
+    "last_modified": "2026-05-17 20:44",
+    "deprecated": false
+  },
+  {
+    "title": "数据库表结构与空间占用报告",
+    "path": "docs/design/复盘/db_inventory.html",
+    "type": "standard",
+    "service": "GLOBAL",
+    "last_modified": "2026-05-17 20:44",
+    "deprecated": false
+  },
+  {
+    "title": "E2: 派生指标输出规范",
+    "path": "docs/design/复盘/indicator_specs.html",
+    "type": "standard",
+    "service": "GLOBAL",
+    "last_modified": "2026-05-17 20:44",
+    "deprecated": false
+  },
+  {
+    "title": "定时任务执行情况评估报告 (2026-05-03)",
+    "path": "docs/design/复盘/scheduled_tasks_execution_report.html",
+    "type": "standard",
+    "service": "GLOBAL",
+    "last_modified": "2026-05-17 20:44",
+    "deprecated": false
+  },
+  {
+    "title": "第 1-2 章 · 盘后数据体系技术总结 (Final)",
+    "path": "docs/design/复盘/CHAPTER_1_2_TECHNICAL_REPORT.html",
+    "type": "standard",
+    "service": "GLOBAL",
+    "last_modified": "2026-05-17 20:44",
+    "deprecated": false
+  },
+  {
+    "title": "复盘数据表结构设计方案 (深度校对版)",
+    "path": "docs/design/复盘/db_schema_proposal.html",
+    "type": "standard",
+    "service": "GLOBAL",
+    "last_modified": "2026-05-17 20:44",
+    "deprecated": false
+  },
+  {
+    "title": "风险控制与工程实践",
+    "path": "docs/design/复盘/risk_control.html",
+    "type": "standard",
+    "service": "GLOBAL",
+    "last_modified": "2026-05-17 20:44",
+    "deprecated": false
+  },
+  {
+    "title": "A 股盘后数据观察体系 · 总纲",
+    "path": "docs/design/复盘/README.html",
+    "type": "standard",
+    "service": "GLOBAL",
+    "last_modified": "2026-05-17 20:44",
+    "deprecated": false
+  },
+  {
+    "title": "微服务股票数据系统 - 定时任务部署清单 (2026-05-03)",
+    "path": "docs/design/复盘/scheduled_tasks_inventory.html",
+    "type": "standard",
+    "service": "GLOBAL",
+    "last_modified": "2026-05-17 20:44",
+    "deprecated": false
+  },
+  {
+    "title": "第 8 章 · 认知训练系统(Cognition Loop)",
+    "path": "docs/design/复盘/chapter8/chapter8.html",
+    "type": "standard",
+    "service": "GLOBAL",
+    "last_modified": "2026-05-17 20:44",
+    "deprecated": false
+  },
+  {
+    "title": "第 8 章 · 认知训练系统 (基础与设计)",
+    "path": "docs/design/复盘/chapter8/steps/00_基础与设计.html",
+    "type": "standard",
+    "service": "GLOBAL",
+    "last_modified": "2026-05-17 20:44",
+    "deprecated": false
+  },
+  {
+    "title": "第 8 章 · 认知训练系统 (第二步：日记与决策)",
+    "path": "docs/design/复盘/chapter8/steps/02_日记与决策.html",
+    "type": "standard",
+    "service": "GLOBAL",
+    "last_modified": "2026-05-17 20:44",
+    "deprecated": false
+  },
+  {
+    "title": "第 8 章 · 认知训练系统 (第四步：认知仪表盘)",
+    "path": "docs/design/复盘/chapter8/steps/04_认知仪表盘.html",
+    "type": "standard",
+    "service": "GLOBAL",
+    "last_modified": "2026-05-17 20:44",
+    "deprecated": false
+  },
+  {
+    "title": "第 8 章 · 认知训练系统 (第五步：前端实现)",
+    "path": "docs/design/复盘/chapter8/steps/05_前端实现.html",
+    "type": "standard",
+    "service": "GLOBAL",
+    "last_modified": "2026-05-17 20:44",
+    "deprecated": false
+  },
+  {
+    "title": "第 8 章 · 认知训练系统 (总结、运营与评估)",
+    "path": "docs/design/复盘/chapter8/steps/06_运营与评估.html",
+    "type": "standard",
+    "service": "GLOBAL",
+    "last_modified": "2026-05-17 20:44",
+    "deprecated": false
+  },
+  {
+    "title": "第 8 章 · 认知训练系统 (第三步：周末复盘)",
+    "path": "docs/design/复盘/chapter8/steps/03_周末复盘.html",
+    "type": "standard",
+    "service": "GLOBAL",
+    "last_modified": "2026-05-17 20:44",
+    "deprecated": false
+  },
+  {
+    "title": "第 8 章 · 认知训练系统 (第一步：晨间预判)",
+    "path": "docs/design/复盘/chapter8/steps/01_晨间预判.html",
+    "type": "standard",
+    "service": "GLOBAL",
+    "last_modified": "2026-05-17 20:44",
+    "deprecated": false
+  },
+  {
+    "title": "第 1 章 · 指标计算 SQL (E2)",
+    "path": "docs/design/复盘/chapter1/E2_indicators.html",
+    "type": "standard",
+    "service": "GLOBAL",
+    "last_modified": "2026-05-17 20:44",
+    "deprecated": false
+  },
+  {
+    "title": "第 1 章 · 数据字典与口径 (E4)",
+    "path": "docs/design/复盘/chapter1/E4_dictionary.html",
+    "type": "standard",
+    "service": "GLOBAL",
+    "last_modified": "2026-05-17 20:44",
+    "deprecated": false
+  },
+  {
+    "title": "第 1 章 · 微信小程序前端 (E3)",
+    "path": "docs/design/复盘/chapter1/E3_frontend.html",
+    "type": "standard",
+    "service": "GLOBAL",
+    "last_modified": "2026-05-17 20:44",
+    "deprecated": false
+  },
+  {
+    "title": "第 1 章 · 风险、规避与里程碑",
+    "path": "docs/design/复盘/chapter1/Risk_Milestones.html",
+    "type": "standard",
+    "service": "GLOBAL",
+    "last_modified": "2026-05-17 20:44",
+    "deprecated": false
+  },
+  {
+    "title": "第 1 章 · 市场全景看板",
+    "path": "docs/design/复盘/chapter1/chapter1.html",
+    "type": "standard",
+    "service": "GLOBAL",
+    "last_modified": "2026-05-17 20:44",
+    "deprecated": false
+  },
+  {
+    "title": "第 1 章 · 数据库改造 (E1)",
+    "path": "docs/design/复盘/chapter1/E1_database.html",
+    "type": "standard",
+    "service": "GLOBAL",
+    "last_modified": "2026-05-17 20:44",
+    "deprecated": false
+  },
+  {
+    "title": "盘后复盘体系 · 第 5 + 6 章交付",
+    "path": "docs/design/复盘/chapter5-6/chapter5-6.html",
+    "type": "standard",
+    "service": "GLOBAL",
+    "last_modified": "2026-05-17 20:44",
+    "deprecated": false
+  },
+  {
+    "title": "第 7 章 · 跨市场 + 估值 + 每日综述 APP",
+    "path": "docs/design/复盘/chapter7/chapter7.html",
+    "type": "standard",
+    "service": "GLOBAL",
+    "last_modified": "2026-05-17 20:44",
+    "deprecated": false
+  },
+  {
+    "title": "第 2 章 · 行业与风格分化",
+    "path": "docs/design/复盘/chapter2/chapter2.html",
+    "type": "standard",
+    "service": "GLOBAL",
+    "last_modified": "2026-05-17 20:44",
+    "deprecated": false
+  },
+  {
+    "title": "第 2 章 · 指标计算 SQL (E2)",
+    "path": "docs/design/复盘/chapter2/E2_indicators.html",
+    "type": "standard",
+    "service": "GLOBAL",
+    "last_modified": "2026-05-17 20:44",
+    "deprecated": false
+  },
+  {
+    "title": "第 2 章 · 数据字典与口径 (E4)",
+    "path": "docs/design/复盘/chapter2/E4_dictionary.html",
+    "type": "standard",
+    "service": "GLOBAL",
+    "last_modified": "2026-05-17 20:44",
+    "deprecated": false
+  },
+  {
+    "title": "第 2 章 · 数据采集策略 (E5) - Updated",
+    "path": "docs/design/复盘/chapter2/E5_acquisition_strategy.html",
+    "type": "standard",
+    "service": "GLOBAL",
+    "last_modified": "2026-05-17 20:44",
+    "deprecated": false
+  },
+  {
+    "title": "第 2 章 · 风险与里程碑",
+    "path": "docs/design/复盘/chapter2/Risk_Milestones.html",
+    "type": "standard",
+    "service": "GLOBAL",
+    "last_modified": "2026-05-17 20:44",
+    "deprecated": false
+  },
+  {
+    "title": "第 2 章 · API 接口契约 (E3)",
+    "path": "docs/design/复盘/chapter2/E3_api_contract.html",
+    "type": "standard",
+    "service": "GLOBAL",
+    "last_modified": "2026-05-17 20:44",
+    "deprecated": false
+  },
+  {
+    "title": "第 2 章修复方案",
+    "path": "docs/design/复盘/chapter2/repaire.html",
+    "type": "standard",
+    "service": "GLOBAL",
+    "last_modified": "2026-05-17 20:44",
+    "deprecated": false
+  },
+  {
+    "title": "第 2 章 · 数据库改造 (E1)",
+    "path": "docs/design/复盘/chapter2/E1_database.html",
+    "type": "standard",
+    "service": "GLOBAL",
+    "last_modified": "2026-05-17 20:44",
+    "deprecated": false
+  },
+  {
+    "title": "盘后复盘体系 · 第 3 + 4 章交付",
+    "path": "docs/design/复盘/chapter3-4/chapger3-4.html",
+    "type": "standard",
+    "service": "GLOBAL",
+    "last_modified": "2026-05-17 20:44",
+    "deprecated": false
+  },
+  {
+    "title": "E5 同业对比",
+    "path": "docs/design/astock-fundamental-system/E5_Peer_Comparison.html",
+    "type": "standard",
+    "service": "GLOBAL",
+    "last_modified": "2026-05-17 20:44",
+    "deprecated": false
+  },
+  {
+    "title": "E2 排雷规则引擎",
+    "path": "docs/design/astock-fundamental-system/E2_Landmine_Rule_Engine.html",
+    "type": "standard",
+    "service": "GLOBAL",
+    "last_modified": "2026-05-17 20:44",
+    "deprecated": false
+  },
+  {
+    "title": "E4 财务交叉验证",
+    "path": "docs/design/astock-fundamental-system/E4_Financial_Cross_Validation.html",
+    "type": "standard",
+    "service": "GLOBAL",
+    "last_modified": "2026-05-17 20:44",
+    "deprecated": false
+  },
+  {
+    "title": "E6 触发式跟踪",
+    "path": "docs/design/astock-fundamental-system/E6_Triggered_Tracking.html",
+    "type": "standard",
+    "service": "GLOBAL",
+    "last_modified": "2026-05-17 20:44",
+    "deprecated": false
+  },
+  {
+    "title": "E7 输出与可视化",
+    "path": "docs/design/astock-fundamental-system/E7_Output_and_Visualization.html",
+    "type": "standard",
+    "service": "GLOBAL",
+    "last_modified": "2026-05-17 20:44",
+    "deprecated": false
+  },
+  {
+    "title": "E3 AI 抽取流水线",
+    "path": "docs/design/astock-fundamental-system/E3_AI_Extraction_Pipeline.html",
+    "type": "standard",
+    "service": "GLOBAL",
+    "last_modified": "2026-05-17 20:44",
+    "deprecated": false
+  },
+  {
+    "title": "附录 A: 核心数据表 DDL 示意",
+    "path": "docs/design/astock-fundamental-system/SPEC_Appendices.html",
+    "type": "standard",
+    "service": "GLOBAL",
+    "last_modified": "2026-05-17 20:44",
+    "deprecated": false
+  },
+  {
+    "title": "E8 系统运维",
+    "path": "docs/design/astock-fundamental-system/E8_System_Ops.html",
+    "type": "standard",
+    "service": "GLOBAL",
+    "last_modified": "2026-05-17 20:44",
+    "deprecated": false
+  },
+  {
+    "title": "E1 数据基础设施 (重整版)",
+    "path": "docs/design/astock-fundamental-system/E1_Data_Infrastructure.html",
+    "type": "standard",
+    "service": "GLOBAL",
+    "last_modified": "2026-05-17 20:44",
+    "deprecated": false
+  },
+  {
+    "title": "A 股个股基本面分析系统 - 工程技术方案",
+    "path": "docs/design/astock-fundamental-system/readme.html",
+    "type": "standard",
+    "service": "GLOBAL",
+    "last_modified": "2026-05-17 20:44",
+    "deprecated": false
+  },
+  {
+    "title": "Implementation Plan - E1-S1 数据源接入扩展",
+    "path": "docs/design/astock-fundamental-system/implementation_logs/E1/S1/implementation_plan.html",
+    "type": "standard",
+    "service": "GLOBAL",
+    "last_modified": "2026-05-17 20:44",
+    "deprecated": false
+  },
+  {
+    "title": "task",
+    "path": "docs/design/astock-fundamental-system/implementation_logs/E1/S1/task.html",
+    "type": "standard",
+    "service": "GLOBAL",
+    "last_modified": "2026-05-17 20:44",
+    "deprecated": false
+  },
+  {
+    "title": "Walkthrough - E1-S1 数据源接入扩展",
+    "path": "docs/design/astock-fundamental-system/implementation_logs/E1/S1/walkthrough.html",
+    "type": "standard",
+    "service": "GLOBAL",
+    "last_modified": "2026-05-17 20:44",
+    "deprecated": false
+  },
+  {
+    "title": "状态屏指标的完整计算手册",
+    "path": "docs/design/资金图谱/状态屏.html",
+    "type": "standard",
+    "service": "GLOBAL",
+    "last_modified": "2026-05-17 20:44",
+    "deprecated": false
+  },
+  {
+    "title": "资金获取方案: 量化基金",
+    "path": "docs/design/资金图谱/量化资金.html",
+    "type": "standard",
+    "service": "GLOBAL",
+    "last_modified": "2026-05-17 20:44",
+    "deprecated": false
+  },
+  {
+    "title": "资金获取方案: 北向资金 (配置盘 vs 交易盘)",
+    "path": "docs/design/资金图谱/北向资金.html",
+    "type": "standard",
+    "service": "GLOBAL",
+    "last_modified": "2026-05-17 20:44",
+    "deprecated": false
+  },
+  {
+    "title": "数据获取工程化建议与更新频率",
+    "path": "docs/design/资金图谱/工程化建议.html",
+    "type": "standard",
+    "service": "GLOBAL",
+    "last_modified": "2026-05-17 20:44",
+    "deprecated": false
+  },
+  {
+    "title": "资金获取方案: 公募基金",
+    "path": "docs/design/资金图谱/公募.html",
+    "type": "standard",
+    "service": "GLOBAL",
+    "last_modified": "2026-05-17 20:44",
+    "deprecated": false
+  },
+  {
+    "title": "资金获取方案: 散户",
+    "path": "docs/design/资金图谱/散户.html",
+    "type": "standard",
+    "service": "GLOBAL",
+    "last_modified": "2026-05-17 20:44",
+    "deprecated": false
+  },
+  {
+    "title": "资金获取方案: 险资",
+    "path": "docs/design/资金图谱/险资.html",
+    "type": "standard",
+    "service": "GLOBAL",
+    "last_modified": "2026-05-17 20:44",
+    "deprecated": false
+  },
+  {
+    "title": "资金获取方案: 产业资本",
+    "path": "docs/design/资金图谱/产业资本.html",
+    "type": "standard",
+    "service": "GLOBAL",
+    "last_modified": "2026-05-17 20:44",
+    "deprecated": false
+  },
+  {
+    "title": "资金获取方案: 游资",
+    "path": "docs/design/资金图谱/游资.html",
+    "type": "standard",
+    "service": "GLOBAL",
+    "last_modified": "2026-05-17 20:44",
+    "deprecated": false
+  },
+  {
+    "title": "资金获取方案: 国家队",
+    "path": "docs/design/资金图谱/国家队.html",
+    "type": "standard",
+    "service": "GLOBAL",
+    "last_modified": "2026-05-17 20:44",
+    "deprecated": false
+  },
+  {
+    "title": "token",
+    "path": "docs/design/股市日记/token.html",
+    "type": "standard",
+    "service": "GLOBAL",
+    "last_modified": "2026-05-17 20:44",
+    "deprecated": false
+  },
+  {
+    "title": "股市日记系统：后端 API 接口需求文档 (V1.0)",
+    "path": "docs/design/股市日记/api-requirment.html",
+    "type": "standard",
+    "service": "GLOBAL",
+    "last_modified": "2026-05-17 20:44",
+    "deprecated": false
+  },
+  {
+    "title": "提问规则",
+    "path": "docs/design/claude-project-files/提问规则.html",
+    "type": "standard",
+    "service": "GLOBAL",
+    "last_modified": "2026-05-17 20:44",
+    "deprecated": false
+  },
+  {
+    "title": "实施反馈日志",
+    "path": "docs/design/claude-project-files/IMPLEMENTATION_FEEDBACK.html",
+    "type": "standard",
+    "service": "GLOBAL",
+    "last_modified": "2026-05-17 20:44",
+    "deprecated": false
+  },
+  {
+    "title": "项目总览：A 股盘后分析系统",
+    "path": "docs/design/claude-project-files/PROJECT_OVERVIEW.html",
+    "type": "standard",
+    "service": "GLOBAL",
+    "last_modified": "2026-05-17 20:44",
+    "deprecated": false
+  },
+  {
+    "title": "表清单总览(TABLES_INDEX.md)",
+    "path": "docs/design/claude-project-files/TABLES_INDEX.html",
+    "type": "standard",
+    "service": "GLOBAL",
+    "last_modified": "2026-05-17 20:44",
+    "deprecated": false
+  },
+  {
+    "title": "PRD 架构审计报告：自愈型数据管线 (v1.1)",
+    "path": "docs/audit_reports/PRD_自愈管线_审核报告.html",
+    "type": "standard",
+    "service": "GLOBAL",
+    "last_modified": "2026-05-17 20:44",
+    "deprecated": false
+  },
+  {
+    "title": "Stock-Manager API 部署与外网访问配置",
+    "path": "docs/deployment/stock-manager-external-access.html",
+    "type": "standard",
+    "service": "GLOBAL",
+    "last_modified": "2026-05-17 20:44",
+    "deprecated": false
+  },
+  {
+    "title": "Mootdx API Deployment Plan (Tencent Cloud)",
+    "path": "docs/deployment/mootdx/readme.html",
+    "type": "standard",
+    "service": "GLOBAL",
+    "last_modified": "2026-05-17 20:44",
+    "deprecated": false
+  },
+  {
+    "title": "Implementation Plan - Deploy mootdx-api to Tencent Cloud [E101-S1]",
+    "path": "docs/deployment/mootdx/implementation_logs/E101/S1/implementation_plan.html",
+    "type": "standard",
+    "service": "GLOBAL",
+    "last_modified": "2026-05-17 20:44",
+    "deprecated": false
+  },
+  {
+    "title": "Tasks: mootdx-api Deployment [E101-S1]",
+    "path": "docs/deployment/mootdx/implementation_logs/E101/S1/task.html",
+    "type": "standard",
+    "service": "GLOBAL",
+    "last_modified": "2026-05-17 20:44",
+    "deprecated": false
+  },
+  {
+    "title": "Walkthrough - mootdx-api Deployment [E101-S1]",
+    "path": "docs/deployment/mootdx/implementation_logs/E101/S1/walkthrough.html",
+    "type": "standard",
+    "service": "GLOBAL",
+    "last_modified": "2026-05-17 20:44",
+    "deprecated": false
+  },
+  {
+    "title": "资源控制部署指南",
+    "path": "docs/guidelines/RESOURCE_CONTROL.html",
+    "type": "standard",
+    "service": "GLOBAL",
+    "last_modified": "2026-05-17 20:44",
+    "deprecated": false
+  },
+  {
+    "title": "股票数据源微服务开发规范",
+    "path": "docs/guidelines/开发规范.html",
+    "type": "standard",
+    "service": "GLOBAL",
+    "last_modified": "2026-05-17 20:44",
+    "deprecated": false
+  },
+  {
+    "title": "五维度数据深度补充计划",
+    "path": "docs/股票数据/数据回溯补充计划.html",
+    "type": "standard",
+    "service": "GLOBAL",
+    "last_modified": "2026-05-17 20:44",
+    "deprecated": false
+  },
+  {
+    "title": "指数与ETF数据补全实施方案",
+    "path": "docs/股票数据/指数与ETF补全实施方案.html",
+    "type": "standard",
+    "service": "GLOBAL",
+    "last_modified": "2026-05-17 20:44",
+    "deprecated": false
+  },
+  {
+    "title": "股东数据 API 接口文档",
+    "path": "docs/股票数据/五维度数据API.html",
+    "type": "standard",
+    "service": "GLOBAL",
+    "last_modified": "2026-05-17 20:44",
+    "deprecated": false
+  },
+  {
+    "title": "元数据管理 (issue_price, 申万行业)",
+    "path": "docs/股票数据/元数据管理.html",
+    "type": "standard",
+    "service": "GLOBAL",
+    "last_modified": "2026-05-17 20:44",
+    "deprecated": false
+  },
+  {
+    "title": "股东数据 数据库结构",
+    "path": "docs/股票数据/五维度数据库结构.html",
+    "type": "standard",
+    "service": "GLOBAL",
+    "last_modified": "2026-05-17 20:44",
+    "deprecated": false
+  },
+  {
+    "title": "早盘数据服务 (Pre-Market)",
+    "path": "docs/股票数据/早盘数据/早盘数据服务文档.html",
+    "type": "standard",
+    "service": "GLOBAL",
+    "last_modified": "2026-05-17 20:44",
+    "deprecated": false
+  },
+  {
+    "title": "股东数据同步任务指引",
+    "path": "docs/股票数据/股东/同步任务.html",
+    "type": "standard",
+    "service": "GLOBAL",
+    "last_modified": "2026-05-17 20:44",
+    "deprecated": false
+  },
+  {
+    "title": "五维度分析",
+    "path": "docs/股票数据/股东/五维度分析.html",
+    "type": "standard",
+    "service": "GLOBAL",
+    "last_modified": "2026-05-17 20:44",
+    "deprecated": false
+  },
+  {
+    "title": "股东数据 (Shareholder Data) 模块说明",
+    "path": "docs/股票数据/股东/README.html",
+    "type": "standard",
+    "service": "GLOBAL",
+    "last_modified": "2026-05-17 20:44",
+    "deprecated": false
+  },
+  {
+    "title": "股东数据源说明",
+    "path": "docs/股票数据/股东/数据源.html",
+    "type": "standard",
+    "service": "GLOBAL",
+    "last_modified": "2026-05-17 20:44",
+    "deprecated": false
+  },
+  {
+    "title": "停复牌数据文档",
+    "path": "docs/股票数据/停复牌/停复牌数据文档.html",
+    "type": "standard",
+    "service": "GLOBAL",
+    "last_modified": "2026-05-17 20:44",
+    "deprecated": false
+  },
+  {
+    "title": "信息维度 (Information Dimension)",
+    "path": "docs/股票数据/信息/README.html",
+    "type": "standard",
+    "service": "GLOBAL",
+    "last_modified": "2026-05-17 20:44",
+    "deprecated": false
+  },
+  {
+    "title": "股票微服务集群最终验收报告 (System Acceptance Report)",
+    "path": "docs/reports/功能验收报告.html",
+    "type": "standard",
+    "service": "GLOBAL",
+    "last_modified": "2026-05-17 20:44",
+    "deprecated": false
+  },
+  {
+    "title": "EPIC-002 数据源匹配度深度评估报告",
+    "path": "docs/reports/EPIC002_数据源匹配度评估.html",
+    "type": "standard",
+    "service": "GLOBAL",
+    "last_modified": "2026-05-17 20:44",
+    "deprecated": false
+  },
+  {
+    "title": "Epic E10: 开发者体验增强：双级文档门户与 SOP 自动化闭环",
+    "path": "docs/domains/infrastructure/portal_automation/design/draft_E10.html",
+    "type": "standard",
+    "service": "PORTAL_AUTOMATION",
+    "last_modified": "2026-05-17 20:44",
+    "deprecated": false
+  },
+  {
+    "title": "Epic E11: 文档体系标准化：基于功能领域的层级重构",
+    "path": "docs/domains/infrastructure/docs_standardization/design/draft_E11.html",
+    "type": "standard",
+    "service": "DOCS_STANDARDIZATION",
+    "last_modified": "2026-05-17 20:44",
+    "deprecated": false
+  },
+  {
+    "title": "Epic-Story 评审台",
+    "path": "docs/domains/infrastructure/docs_standardization/reviews/review_E11_20260515.html",
+    "type": "standard",
+    "service": "DOCS_STANDARDIZATION",
+    "last_modified": "2026-05-17 20:44",
+    "deprecated": false
+  },
+  {
+    "title": "A股盈利锚智能投研系统 - 架构与开发设计白皮书",
+    "path": "docs/epics/盈利锚落地设计.html",
+    "type": "standard",
+    "service": "GLOBAL",
+    "last_modified": "2026-05-17 20:44",
+    "deprecated": false
+  },
+  {
+    "title": "A股投资四锚框架之一：盈利锚完整体系",
+    "path": "docs/epics/盈利锚.html",
+    "type": "standard",
+    "service": "GLOBAL",
+    "last_modified": "2026-05-17 20:44",
+    "deprecated": false
+  },
+  {
+    "title": "K线同步锁冲突问题分析报告",
+    "path": "docs/bugfix/K线同步锁冲突问题分析.html",
+    "type": "standard",
+    "service": "GLOBAL",
+    "last_modified": "2026-05-17 20:44",
+    "deprecated": false
+  },
+  {
+    "title": "K线同步锁冲突问题修复报告",
+    "path": "docs/bugfix/K线同步锁冲突问题修复报告.html",
+    "type": "standard",
+    "service": "GLOBAL",
+    "last_modified": "2026-05-17 20:44",
+    "deprecated": false
+  },
+  {
+    "title": "审计数据基线不一致问题修复报告",
+    "path": "docs/bugfix/审计基线不一致问题修复.html",
+    "type": "standard",
+    "service": "GLOBAL",
+    "last_modified": "2026-05-17 20:44",
+    "deprecated": false
+  },
+  {
+    "title": "复权因子显示问题修复报告",
+    "path": "docs/bugfix/复权因子显示问题修复.html",
+    "type": "standard",
+    "service": "GLOBAL",
+    "last_modified": "2026-05-17 20:44",
+    "deprecated": false
+  },
+  {
+    "title": "Stock-Manager-API 质量控制报告",
+    "path": "docs/qc/stock-manager-api-qc-report.html",
+    "type": "standard",
+    "service": "GLOBAL",
+    "last_modified": "2026-05-17 20:44",
+    "deprecated": false
+  },
+  {
+    "title": "调度管理器开发日志 (Scheduler Manager Dev Log)",
+    "path": "docs/development/SCHEDULER_DEV_LOG.html",
+    "type": "standard",
+    "service": "GLOBAL",
+    "last_modified": "2026-05-17 20:44",
+    "deprecated": false
+  },
+  {
+    "title": "小程序云托管",
+    "path": "docs/development/小程序云托管.html",
+    "type": "standard",
+    "service": "GLOBAL",
+    "last_modified": "2026-05-17 20:44",
+    "deprecated": false
+  },
+  {
+    "title": "质量控制报告 - Scheduler Manager API 实现",
+    "path": "docs/development/QC_REPORT_20260115.html",
+    "type": "standard",
+    "service": "GLOBAL",
+    "last_modified": "2026-05-17 20:44",
+    "deprecated": false
+  },
+  {
+    "title": "知识库：微服务架构设计与指标计算标准",
+    "path": "docs/knowledge/system_architecture_and_calc_standards.html",
+    "type": "standard",
+    "service": "GLOBAL",
+    "last_modified": "2026-05-17 20:44",
+    "deprecated": false
+  },
+  {
+    "title": "知识库：股票 K 线与复权数据处理规范",
+    "path": "docs/knowledge/stock_data_standard.html",
+    "type": "standard",
+    "service": "GLOBAL",
+    "last_modified": "2026-05-17 20:44",
+    "deprecated": false
+  },
+  {
+    "title": "Epic-Story 评审台",
+    "path": "scf-collector/docs/features/kline_validation/design/review_E12_20260515.html",
+    "type": "standard",
+    "service": "KLINE_VALIDATION",
+    "last_modified": "2026-05-17 20:44",
+    "deprecated": false
+  },
+  {
+    "title": "E12: stock_kline_daily 历史数据校验与自动修复体系",
+    "path": "scf-collector/docs/features/kline_validation/design/draft_E12.html",
+    "type": "standard",
+    "service": "KLINE_VALIDATION",
+    "last_modified": "2026-05-17 20:44",
+    "deprecated": false
+  },
+  {
+    "title": "Implementation Plan - E12-S1: 全量数据像素级对账方案 (修订版)",
+    "path": "scf-collector/docs/features/kline_validation/implementation_logs/E12/S1/implementation_plan.html",
+    "type": "standard",
+    "service": "KLINE_VALIDATION",
+    "last_modified": "2026-05-17 20:44",
+    "deprecated": false
+  },
+  {
+    "title": "Task List - E12-S1-T1",
+    "path": "scf-collector/docs/features/kline_validation/implementation_logs/E12/S1/task.html",
+    "type": "standard",
+    "service": "KLINE_VALIDATION",
+    "last_modified": "2026-05-17 20:44",
+    "deprecated": false
+  },
+  {
+    "title": "[Epic E7] SCF 采集链路可靠性与审计校验增强",
+    "path": "scf-collector/docs/features/kline_management/design/E7_Reliability_Validation.html",
+    "type": "standard",
+    "service": "KLINE_MANAGEMENT",
+    "last_modified": "2026-05-17 20:44",
+    "deprecated": false
+  },
+  {
+    "title": "E7-S3 接口变更文档",
+    "path": "scf-collector/docs/features/kline_management/implementation_logs/E7/S3/API.html",
+    "type": "standard",
+    "service": "KLINE_MANAGEMENT",
+    "last_modified": "2026-05-17 20:44",
+    "deprecated": false
+  },
+  {
+    "title": "E7-S3 技术报告: 数据契约与归一化引擎增强",
+    "path": "scf-collector/docs/features/kline_management/implementation_logs/E7/S3/REPORT.html",
+    "type": "standard",
+    "service": "KLINE_MANAGEMENT",
+    "last_modified": "2026-05-17 20:44",
+    "deprecated": false
+  },
+  {
+    "title": "E7-S3: 字段完整性契约强制 (Data Contract)",
+    "path": "scf-collector/docs/features/kline_management/implementation_logs/E7/S3/implementation_plan.html",
+    "type": "standard",
+    "service": "KLINE_MANAGEMENT",
+    "last_modified": "2026-05-17 20:44",
+    "deprecated": false
+  },
+  {
+    "title": "task",
+    "path": "scf-collector/docs/features/kline_management/implementation_logs/E7/S3/task.html",
+    "type": "standard",
+    "service": "KLINE_MANAGEMENT",
+    "last_modified": "2026-05-17 20:44",
+    "deprecated": false
+  },
+  {
+    "title": "E7-S3 实施验收文档 (Walkthrough)",
+    "path": "scf-collector/docs/features/kline_management/implementation_logs/E7/S3/walkthrough.html",
+    "type": "standard",
+    "service": "KLINE_MANAGEMENT",
+    "last_modified": "2026-05-17 20:44",
+    "deprecated": false
+  },
+  {
+    "title": "技术报告 - E7-S4: 采集完整性熔断与全量备份源接管",
+    "path": "scf-collector/docs/features/kline_management/implementation_logs/E7/S4/REPORT.html",
+    "type": "standard",
+    "service": "KLINE_MANAGEMENT",
+    "last_modified": "2026-05-17 20:44",
+    "deprecated": false
+  },
+  {
+    "title": "E7-S4: 采集完整性校验与备份源接管 (Integrity & Fail-over) v2",
+    "path": "scf-collector/docs/features/kline_management/implementation_logs/E7/S4/implementation_plan.html",
+    "type": "standard",
+    "service": "KLINE_MANAGEMENT",
+    "last_modified": "2026-05-17 20:44",
+    "deprecated": false
+  },
+  {
+    "title": "task",
+    "path": "scf-collector/docs/features/kline_management/implementation_logs/E7/S4/task.html",
+    "type": "standard",
+    "service": "KLINE_MANAGEMENT",
+    "last_modified": "2026-05-17 20:44",
+    "deprecated": false
+  },
+  {
+    "title": "Walkthrough - E7-S4: 采集完整性校验与备份源接管",
+    "path": "scf-collector/docs/features/kline_management/implementation_logs/E7/S4/walkthrough.html",
+    "type": "standard",
+    "service": "KLINE_MANAGEMENT",
+    "last_modified": "2026-05-17 20:44",
+    "deprecated": false
+  },
+  {
+    "title": "API Changes - E7-S5: Trading Day Aware Trigger Control",
+    "path": "scf-collector/docs/features/kline_management/implementation_logs/E7/S5/API.html",
+    "type": "standard",
+    "service": "KLINE_MANAGEMENT",
+    "last_modified": "2026-05-17 20:44",
+    "deprecated": false
+  },
+  {
+    "title": "Implementation Report - E7-S5: Trading Day Aware Trigger Control",
+    "path": "scf-collector/docs/features/kline_management/implementation_logs/E7/S5/REPORT.html",
+    "type": "standard",
+    "service": "KLINE_MANAGEMENT",
+    "last_modified": "2026-05-17 20:44",
+    "deprecated": false
+  },
+  {
+    "title": "Implementation Plan - E7-S5: Trading Day Aware Trigger Control",
+    "path": "scf-collector/docs/features/kline_management/implementation_logs/E7/S5/implementation_plan.html",
+    "type": "standard",
+    "service": "KLINE_MANAGEMENT",
+    "last_modified": "2026-05-17 20:44",
+    "deprecated": false
+  },
+  {
+    "title": "Task List - E7-S5: Trading Day Aware Trigger Control",
+    "path": "scf-collector/docs/features/kline_management/implementation_logs/E7/S5/task.html",
+    "type": "standard",
+    "service": "KLINE_MANAGEMENT",
+    "last_modified": "2026-05-17 20:44",
+    "deprecated": false
+  },
+  {
+    "title": "Walkthrough - E7-S5: Trading Day Aware Trigger Control",
+    "path": "scf-collector/docs/features/kline_management/implementation_logs/E7/S5/walkthrough.html",
+    "type": "standard",
+    "service": "KLINE_MANAGEMENT",
+    "last_modified": "2026-05-17 20:44",
+    "deprecated": false
+  },
+  {
+    "title": "接口定义 - E7-S2: Shadow Audit 操作标准",
+    "path": "scf-collector/docs/features/kline_management/implementation_logs/E7/S2/API.html",
+    "type": "standard",
+    "service": "KLINE_MANAGEMENT",
+    "last_modified": "2026-05-17 20:44",
+    "deprecated": false
+  },
+  {
+    "title": "技术报告 - E7-S2: 影子审计系统量纲对齐与生产加固",
+    "path": "scf-collector/docs/features/kline_management/implementation_logs/E7/S2/REPORT.html",
+    "type": "standard",
+    "service": "KLINE_MANAGEMENT",
+    "last_modified": "2026-05-17 20:44",
+    "deprecated": false
+  },
+  {
+    "title": "避坑指南 - E7-S2: 影子审计系统实战踩坑记录",
+    "path": "scf-collector/docs/features/kline_management/implementation_logs/E7/S2/PITFALLS.html",
+    "type": "standard",
+    "service": "KLINE_MANAGEMENT",
+    "last_modified": "2026-05-17 20:44",
+    "deprecated": false
+  },
+  {
+    "title": "E7-S2: 影子审计与校验证据 (Shadow Audit Evidence) 实施方案 (v1.3)",
+    "path": "scf-collector/docs/features/kline_management/implementation_logs/E7/S2/implementation_plan.html",
+    "type": "standard",
+    "service": "KLINE_MANAGEMENT",
+    "last_modified": "2026-05-17 20:44",
+    "deprecated": false
+  },
+  {
+    "title": "Task List - E7-S2: Shadow Audit Production Hardening",
+    "path": "scf-collector/docs/features/kline_management/implementation_logs/E7/S2/task.html",
+    "type": "standard",
+    "service": "KLINE_MANAGEMENT",
+    "last_modified": "2026-05-17 20:44",
+    "deprecated": false
+  },
+  {
+    "title": "实施复盘 - E7-S2: 影子审计系统生产级加固",
+    "path": "scf-collector/docs/features/kline_management/implementation_logs/E7/S2/walkthrough.html",
+    "type": "standard",
+    "service": "KLINE_MANAGEMENT",
+    "last_modified": "2026-05-17 20:44",
+    "deprecated": false
+  },
+  {
+    "title": "API Documentation - stock-scf-meta",
+    "path": "scf-collector/docs/features/kline_management/implementation_logs/E7/S1/API.html",
+    "type": "standard",
+    "service": "KLINE_MANAGEMENT",
+    "last_modified": "2026-05-17 20:44",
+    "deprecated": false
+  },
+  {
+    "title": "Technical Report - E7-S1: Serverless Meta Foundation Implementation",
+    "path": "scf-collector/docs/features/kline_management/implementation_logs/E7/S1/REPORT.html",
+    "type": "standard",
+    "service": "KLINE_MANAGEMENT",
+    "last_modified": "2026-05-17 20:44",
+    "deprecated": false
+  },
+  {
+    "title": "E7-S1 实施闭坑指南 (Pitfall Avoidance Guide)",
+    "path": "scf-collector/docs/features/kline_management/implementation_logs/E7/S1/PITFALLS.html",
+    "type": "standard",
+    "service": "KLINE_MANAGEMENT",
+    "last_modified": "2026-05-17 20:44",
+    "deprecated": false
+  },
+  {
+    "title": "E7-S1: 基于死线的全量降级逻辑 (17:00 Fail-over) 实施方案",
+    "path": "scf-collector/docs/features/kline_management/implementation_logs/E7/S1/implementation_plan.html",
+    "type": "standard",
+    "service": "KLINE_MANAGEMENT",
+    "last_modified": "2026-05-17 20:44",
+    "deprecated": false
+  },
+  {
+    "title": "Task List: E7-S1 基于死线的全量降级逻辑",
+    "path": "scf-collector/docs/features/kline_management/implementation_logs/E7/S1/task.html",
+    "type": "standard",
+    "service": "KLINE_MANAGEMENT",
+    "last_modified": "2026-05-17 20:44",
+    "deprecated": false
+  },
+  {
+    "title": "Walkthrough: E7-S1 采集可靠性增强 (Phase 1)",
+    "path": "scf-collector/docs/features/kline_management/implementation_logs/E7/S1/walkthrough.html",
+    "type": "standard",
+    "service": "KLINE_MANAGEMENT",
+    "last_modified": "2026-05-17 20:44",
+    "deprecated": false
+  },
+  {
+    "title": "Epic E13: 全市场日 K 线采集源迁移：从 BaoStock 切换至 Tushare (全量回填版)",
+    "path": "scf-collector/docs/features/tushare_migration/design/draft_E13.html",
+    "type": "standard",
+    "service": "TUSHARE_MIGRATION",
+    "last_modified": "2026-05-17 20:44",
+    "deprecated": false
+  },
+  {
+    "title": "tusare_api",
+    "path": "scf-collector/docs/features/tushare_migration/design/tusare_api.html",
+    "type": "standard",
+    "service": "TUSHARE_MIGRATION",
+    "last_modified": "2026-05-17 20:44",
+    "deprecated": false
+  },
+  {
+    "title": "Epic-Story 评审台",
+    "path": "scf-collector/docs/features/tushare_migration/design/review_全市场日_K_线采集源迁移：从_20260516.html",
+    "type": "standard",
+    "service": "TUSHARE_MIGRATION",
+    "last_modified": "2026-05-17 20:44",
+    "deprecated": false
+  },
+  {
+    "title": "API 变更存证 (E13-S2)",
+    "path": "scf-collector/docs/features/tushare_migration/implementation_logs/E13/S2/API.html",
+    "type": "standard",
+    "service": "TUSHARE_MIGRATION",
+    "last_modified": "2026-05-17 20:44",
+    "deprecated": false
+  },
+  {
+    "title": "[Epic E8] 复权因子存储与计算方案重设计",
+    "path": "scf-collector/docs/features/financial_data/design/E8_adjust_factor.html",
+    "type": "standard",
+    "service": "FINANCIAL_DATA",
+    "last_modified": "2026-05-17 20:44",
+    "deprecated": false
+  },
+  {
+    "title": "Implementation Plan - E8-S3: 历史数据字段回填 (Historical Data Backfill)",
+    "path": "scf-collector/docs/features/financial_data/implementation_logs/E8/S3/implementation_plan.html",
+    "type": "standard",
+    "service": "FINANCIAL_DATA",
+    "last_modified": "2026-05-17 20:44",
+    "deprecated": false
+  },
+  {
+    "title": "Task List - E8-S3: 历史数据字段回填",
+    "path": "scf-collector/docs/features/financial_data/implementation_logs/E8/S3/task.html",
+    "type": "standard",
+    "service": "FINANCIAL_DATA",
+    "last_modified": "2026-05-17 20:44",
+    "deprecated": false
+  },
+  {
+    "title": "Walkthrough - E8-S3: 历史数据字段回填 (Historical Data Backfill)",
+    "path": "scf-collector/docs/features/financial_data/implementation_logs/E8/S3/walkthrough.html",
+    "type": "standard",
+    "service": "FINANCIAL_DATA",
+    "last_modified": "2026-05-17 20:44",
+    "deprecated": false
+  },
+  {
+    "title": "Implementation Plan - E8-S2: 字段废弃标记 (Deprecated Field Marking)",
+    "path": "scf-collector/docs/features/financial_data/implementation_logs/E8/S2/implementation_plan.html",
+    "type": "standard",
+    "service": "FINANCIAL_DATA",
+    "last_modified": "2026-05-17 20:44",
+    "deprecated": false
+  },
+  {
+    "title": "Task List - E8-S2: 字段废弃标记",
+    "path": "scf-collector/docs/features/financial_data/implementation_logs/E8/S2/task.html",
+    "type": "standard",
+    "service": "FINANCIAL_DATA",
+    "last_modified": "2026-05-17 20:44",
+    "deprecated": false
+  },
+  {
+    "title": "Walkthrough - E8-S2: 字段废弃标记 (Deprecated Field Marking)",
+    "path": "scf-collector/docs/features/financial_data/implementation_logs/E8/S2/walkthrough.html",
+    "type": "standard",
+    "service": "FINANCIAL_DATA",
+    "last_modified": "2026-05-17 20:44",
+    "deprecated": false
+  },
+  {
+    "title": "Implementation Plan - E8-S1: 变动检测写入 (Change-based Storage for Adj Factors)",
+    "path": "scf-collector/docs/features/financial_data/implementation_logs/E8/S1/implementation_plan.html",
+    "type": "standard",
+    "service": "FINANCIAL_DATA",
+    "last_modified": "2026-05-17 20:44",
+    "deprecated": false
+  },
+  {
+    "title": "Task List - E8-S1: 变动检测写入",
+    "path": "scf-collector/docs/features/financial_data/implementation_logs/E8/S1/task.html",
+    "type": "standard",
+    "service": "FINANCIAL_DATA",
+    "last_modified": "2026-05-17 20:44",
+    "deprecated": false
+  },
+  {
+    "title": "Walkthrough - E8-S1: 变动检测写入 (Change-based Storage)",
+    "path": "scf-collector/docs/features/financial_data/implementation_logs/E8/S1/walkthrough.html",
+    "type": "standard",
+    "service": "FINANCIAL_DATA",
+    "last_modified": "2026-05-17 20:44",
+    "deprecated": false
+  },
+  {
+    "title": "Epic 14: AI-Driven Policy Tracking System (MVP)",
+    "path": "scf-collector/docs/features/policy-tracker/design/draft_E14.html",
+    "type": "standard",
+    "service": "POLICY-TRACKER",
+    "last_modified": "2026-05-17 20:44",
+    "deprecated": false
+  },
+  {
+    "title": "Epic-Story 评审台",
+    "path": "scf-collector/docs/features/policy-tracker/design/review_Epic_14__AI-Dri_20260516.html",
+    "type": "standard",
+    "service": "POLICY-TRACKER",
+    "last_modified": "2026-05-17 20:44",
+    "deprecated": false
+  },
+  {
+    "title": "Epic E14-S2 宏观政策 AI 智能分析系统技术评审记录",
+    "path": "scf-collector/docs/features/policy-tracker/reviews/E14_S2_review_record.html",
+    "type": "standard",
+    "service": "POLICY-TRACKER",
+    "last_modified": "2026-05-17 20:44",
+    "deprecated": false
+  },
+  {
+    "title": "Epic E14-S2 宏观政策 AI 追踪系统异步事件与状态机接口契约",
+    "path": "scf-collector/docs/features/policy-tracker/implementation_logs/E14/S2/API.html",
+    "type": "standard",
+    "service": "POLICY-TRACKER",
+    "last_modified": "2026-05-17 20:44",
+    "deprecated": false
+  },
+  {
+    "title": "Epic E14-S2 A股宏观政策AI追踪分析系统",
+    "path": "scf-collector/docs/features/policy-tracker/implementation_logs/E14/S2/REPORT.html",
+    "type": "standard",
+    "service": "POLICY-TRACKER",
+    "last_modified": "2026-05-17 20:44",
+    "deprecated": false
+  },
+  {
+    "title": "🚀 Story 1 完工报告 - 数据采集层 (Path A)\n            Passed",
+    "path": "scf-collector/docs/features/policy-tracker/implementation_logs/E14/S1/REPORT.html",
+    "type": "standard",
+    "service": "POLICY-TRACKER",
+    "last_modified": "2026-05-17 20:44",
     "deprecated": false
   },
   {
@@ -2964,7 +2964,7 @@
     "path": "docs/design/复权因子/Adjfactor-in-klineDaily.html",
     "type": "standard",
     "service": "GLOBAL",
-    "last_modified": "2026-05-17 17:27",
+    "last_modified": "2026-05-17 17:21",
     "deprecated": false
   },
   {
@@ -2972,7 +2972,7 @@
     "path": "scf-collector/docs/done-list-tables.html",
     "type": "standard",
     "service": "scf-collector",
-    "last_modified": "2026-05-17 17:27",
+    "last_modified": "2026-05-17 17:21",
     "deprecated": false
   },
   {
@@ -2980,39 +2980,7 @@
     "path": "scf-collector/docs/features/kline_management/design/Adjfactor-in-klineDaily.html",
     "type": "standard",
     "service": "KLINE_MANAGEMENT",
-    "last_modified": "2026-05-17 17:27",
-    "deprecated": false
-  },
-  {
-    "title": "[E2] 历史数据回填 - 复权因子内嵌",
-    "path": "scf-collector/docs/features/kline_management/implementation_logs/E2/S1/implementation_plan.html",
-    "type": "standard",
-    "service": "KLINE_MANAGEMENT",
-    "last_modified": "2026-05-17 17:27",
-    "deprecated": false
-  },
-  {
-    "title": "task",
-    "path": "scf-collector/docs/features/kline_management/implementation_logs/E2/S1/task.html",
-    "type": "standard",
-    "service": "KLINE_MANAGEMENT",
-    "last_modified": "2026-05-17 17:27",
-    "deprecated": false
-  },
-  {
-    "title": "实施日志: [E2-S1] 因子 Forward-Fill 回填",
-    "path": "scf-collector/docs/features/kline_management/implementation_logs/E2/S1/walkthrough.html",
-    "type": "standard",
-    "service": "KLINE_MANAGEMENT",
-    "last_modified": "2026-05-17 17:27",
-    "deprecated": false
-  },
-  {
-    "title": "实施方案: [E3-S1] 每日 K 线与复权因子采集任务调整",
-    "path": "scf-collector/docs/features/kline_management/implementation_logs/E3/S1/implementation_plan.html",
-    "type": "standard",
-    "service": "KLINE_MANAGEMENT",
-    "last_modified": "2026-05-17 17:27",
+    "last_modified": "2026-05-17 17:21",
     "deprecated": false
   },
   {
@@ -3020,7 +2988,7 @@
     "path": "scf-collector/docs/features/kline_management/implementation_logs/E4/S1/API.html",
     "type": "standard",
     "service": "KLINE_MANAGEMENT",
-    "last_modified": "2026-05-17 17:27",
+    "last_modified": "2026-05-17 17:21",
     "deprecated": false
   },
   {
@@ -3028,7 +2996,7 @@
     "path": "scf-collector/docs/features/kline_management/implementation_logs/E4/S1/implementation_plan.html",
     "type": "standard",
     "service": "KLINE_MANAGEMENT",
-    "last_modified": "2026-05-17 17:27",
+    "last_modified": "2026-05-17 17:21",
     "deprecated": false
   },
   {
@@ -3036,15 +3004,39 @@
     "path": "scf-collector/docs/features/kline_management/implementation_logs/E4/S1/walkthrough.html",
     "type": "standard",
     "service": "KLINE_MANAGEMENT",
-    "last_modified": "2026-05-17 17:27",
+    "last_modified": "2026-05-17 17:21",
     "deprecated": false
   },
   {
-    "title": "[E3-S1-T6] 复权因子内嵌合并与云端三层容灾自愈系统验收报告",
-    "path": "scf-collector/docs/features/kline_management/implementation_logs/E3/S1/REPORT.html",
+    "title": "[E2] 历史数据回填 - 复权因子内嵌",
+    "path": "scf-collector/docs/features/kline_management/implementation_logs/E2/S1/implementation_plan.html",
     "type": "standard",
     "service": "KLINE_MANAGEMENT",
-    "last_modified": "2026-05-17 17:16",
+    "last_modified": "2026-05-17 17:21",
+    "deprecated": false
+  },
+  {
+    "title": "task",
+    "path": "scf-collector/docs/features/kline_management/implementation_logs/E2/S1/task.html",
+    "type": "standard",
+    "service": "KLINE_MANAGEMENT",
+    "last_modified": "2026-05-17 17:21",
+    "deprecated": false
+  },
+  {
+    "title": "实施日志: [E2-S1] 因子 Forward-Fill 回填",
+    "path": "scf-collector/docs/features/kline_management/implementation_logs/E2/S1/walkthrough.html",
+    "type": "standard",
+    "service": "KLINE_MANAGEMENT",
+    "last_modified": "2026-05-17 17:21",
+    "deprecated": false
+  },
+  {
+    "title": "实施方案: [E3-S1] 每日 K 线与复权因子采集任务调整",
+    "path": "scf-collector/docs/features/kline_management/implementation_logs/E3/S1/implementation_plan.html",
+    "type": "standard",
+    "service": "KLINE_MANAGEMENT",
+    "last_modified": "2026-05-17 17:21",
     "deprecated": false
   },
   {
@@ -3052,23 +3044,15 @@
     "path": "scf-collector/docs/features/kline_management/implementation_logs/E4/S1/REPORT.html",
     "type": "standard",
     "service": "KLINE_MANAGEMENT",
-    "last_modified": "2026-05-17 17:16",
+    "last_modified": "2026-05-17 16:20",
     "deprecated": false
   },
   {
-    "title": "Epic-Story 评审台",
-    "path": "scf-collector/docs/features/financial_data/implementation_logs/E8/review_E8.html",
-    "type": "standard",
-    "service": "FINANCIAL_DATA",
-    "last_modified": "2026-05-17 10:37",
-    "deprecated": false
-  },
-  {
-    "title": "Epic-Story 评审台 - E7-S2",
-    "path": "scf-collector/docs/features/kline_management/implementation_logs/E7/S2/review_E7_S2.html",
+    "title": "[E3-S1-T6] 复权因子内嵌合并与云端三层容灾自愈系统验收报告",
+    "path": "scf-collector/docs/features/kline_management/implementation_logs/E3/S1/REPORT.html",
     "type": "standard",
     "service": "KLINE_MANAGEMENT",
-    "last_modified": "2026-05-17 10:37",
+    "last_modified": "2026-05-17 11:13",
     "deprecated": false
   },
   {
@@ -3076,7 +3060,7 @@
     "path": "scf-collector/docs/features/kline_validation/implementation_logs/E12/CONCLUSION.html",
     "type": "standard",
     "service": "KLINE_VALIDATION",
-    "last_modified": "2026-05-17 10:37",
+    "last_modified": "2026-05-16 23:36",
     "deprecated": false
   },
   {
@@ -3084,15 +3068,7 @@
     "path": "scf-collector/docs/features/kline_validation/implementation_logs/E12/S1/REPORT.html",
     "type": "standard",
     "service": "KLINE_VALIDATION",
-    "last_modified": "2026-05-17 10:37",
-    "deprecated": false
-  },
-  {
-    "title": "E13-S1 实施报告 [已完成]",
-    "path": "scf-collector/docs/features/tushare_migration/implementation_logs/E13/S1/REPORT.html",
-    "type": "standard",
-    "service": "TUSHARE_MIGRATION",
-    "last_modified": "2026-05-17 10:37",
+    "last_modified": "2026-05-16 23:32",
     "deprecated": false
   },
   {
@@ -3100,7 +3076,31 @@
     "path": "scf-collector/docs/features/tushare_migration/implementation_logs/E13/S2/REPORT.html",
     "type": "standard",
     "service": "TUSHARE_MIGRATION",
-    "last_modified": "2026-05-17 10:37",
+    "last_modified": "2026-05-16 16:49",
+    "deprecated": false
+  },
+  {
+    "title": "E13-S1 实施报告 [已完成]",
+    "path": "scf-collector/docs/features/tushare_migration/implementation_logs/E13/S1/REPORT.html",
+    "type": "standard",
+    "service": "TUSHARE_MIGRATION",
+    "last_modified": "2026-05-16 16:49",
+    "deprecated": false
+  },
+  {
+    "title": "Epic-Story 评审台 - E7-S2",
+    "path": "scf-collector/docs/features/kline_management/implementation_logs/E7/S2/review_E7_S2.html",
+    "type": "standard",
+    "service": "KLINE_MANAGEMENT",
+    "last_modified": "2026-05-15 17:43",
+    "deprecated": false
+  },
+  {
+    "title": "Epic-Story 评审台",
+    "path": "scf-collector/docs/features/financial_data/implementation_logs/E8/review_E8.html",
+    "type": "standard",
+    "service": "FINANCIAL_DATA",
+    "last_modified": "2026-05-15 17:43",
     "deprecated": false
   }
 ]
