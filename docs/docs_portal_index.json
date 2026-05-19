@@ -4,7 +4,7 @@
     "path": "wxch-gateway/docs/features/wechat-gateway/design/implementation_logs/E23/re_sub_backslash_unescape.pitfall.html",
     "type": "pitfall",
     "service": "WECHAT-GATEWAY",
-    "last_modified": "2026-05-19 09:06",
+    "last_modified": "2026-05-19 10:50",
     "deprecated": false
   },
   {
@@ -128,123 +128,11 @@
     "deprecated": false
   },
   {
-    "title": "Epic E23-S8 每日格言打卡系统 HTTP REST API 接口契约 (API.md)",
-    "path": "wxch-gateway/docs/features/wechat-gateway/implementation_logs/E23/S8/API.html",
+    "title": "数据初始化 SQL",
+    "path": "docs/design/股市日记/表初始化.html",
     "type": "standard",
-    "service": "WECHAT-GATEWAY",
-    "last_modified": "2026-05-19 10:37",
-    "deprecated": false
-  },
-  {
-    "title": "E23-S3 格言打卡行为控制 API 交付报告",
-    "path": "wxch-gateway/docs/features/wechat-gateway/implementation_logs/E23/S3/walkthrough.html",
-    "type": "standard",
-    "service": "WECHAT-GATEWAY",
-    "last_modified": "2026-05-19 10:27",
-    "deprecated": false
-  },
-  {
-    "title": "E23-S5 每日格言收藏动作 API 交付报告",
-    "path": "wxch-gateway/docs/features/wechat-gateway/implementation_logs/E23/S5/walkthrough.html",
-    "type": "standard",
-    "service": "WECHAT-GATEWAY",
-    "last_modified": "2026-05-19 10:27",
-    "deprecated": false
-  },
-  {
-    "title": "E23-S6 每日格言屏蔽动作 API 交付报告",
-    "path": "wxch-gateway/docs/features/wechat-gateway/implementation_logs/E23/S6/walkthrough.html",
-    "type": "standard",
-    "service": "WECHAT-GATEWAY",
-    "last_modified": "2026-05-19 10:27",
-    "deprecated": false
-  },
-  {
-    "title": "E23-S7 格言打卡心得提交与日记关联 API 交付报告",
-    "path": "wxch-gateway/docs/features/wechat-gateway/implementation_logs/E23/S7/walkthrough.html",
-    "type": "standard",
-    "service": "WECHAT-GATEWAY",
-    "last_modified": "2026-05-19 10:27",
-    "deprecated": false
-  },
-  {
-    "title": "E23-S8 反思见解历史时间轴 API 交付报告",
-    "path": "wxch-gateway/docs/features/wechat-gateway/implementation_logs/E23/S8/walkthrough.html",
-    "type": "standard",
-    "service": "WECHAT-GATEWAY",
-    "last_modified": "2026-05-19 10:27",
-    "deprecated": false
-  },
-  {
-    "title": "E23-S2 每日格言智能推荐与日内幂等锁定 API 交付报告",
-    "path": "wxch-gateway/docs/features/wechat-gateway/implementation_logs/E23/S2/walkthrough.html",
-    "type": "standard",
-    "service": "WECHAT-GATEWAY",
-    "last_modified": "2026-05-19 10:19",
-    "deprecated": false
-  },
-  {
-    "title": "[Story E23-S2] 每日格言智能轮询与日内锁定 API · 实施计划书",
-    "path": "wxch-gateway/docs/features/wechat-gateway/implementation_logs/E23/S2/implementation_plan.html",
-    "type": "standard",
-    "service": "WECHAT-GATEWAY",
-    "last_modified": "2026-05-19 10:16",
-    "deprecated": false
-  },
-  {
-    "title": "Story E23-S1: 格言库建表与手工录入接口 · 交付验证报告",
-    "path": "wxch-gateway/docs/features/wechat-gateway/implementation_logs/E23/S1/walkthrough.html",
-    "type": "standard",
-    "service": "WECHAT-GATEWAY",
-    "last_modified": "2026-05-19 10:12",
-    "deprecated": false
-  },
-  {
-    "title": "[Epic E23] 每日格言打卡 · 后端系统设计与实施方案",
-    "path": "wxch-gateway/docs/features/wechat-gateway/design/draft_E23.html",
-    "type": "standard",
-    "service": "WECHAT-GATEWAY",
-    "last_modified": "2026-05-19 10:01",
-    "deprecated": false
-  },
-  {
-    "title": "Epic-Story 评审台",
-    "path": "wxch-gateway/docs/features/wechat-gateway/design/review_E23_20260519.html",
-    "type": "standard",
-    "service": "WECHAT-GATEWAY",
-    "last_modified": "2026-05-19 10:01",
-    "deprecated": false
-  },
-  {
-    "title": "[Epic E23] 每日格言打卡 · 完整前后端与数据库设计方案",
-    "path": "wxch-gateway/docs/features/wechat-gateway/design/maxim-check.html",
-    "type": "standard",
-    "service": "WECHAT-GATEWAY",
-    "last_modified": "2026-05-19 09:56",
-    "deprecated": false
-  },
-  {
-    "title": "Epic-Story 评审台",
-    "path": "wxch-gateway/docs/features/wechat-gateway/design/implementation_logs/E23/review_E23.html",
-    "type": "standard",
-    "service": "WECHAT-GATEWAY",
-    "last_modified": "2026-05-19 09:02",
-    "deprecated": false
-  },
-  {
-    "title": "Epic-Story 评审台",
-    "path": "wxch-gateway/docs/features/wechat-gateway/design/implementation_logs/E1/review_E1.html",
-    "type": "standard",
-    "service": "WECHAT-GATEWAY",
-    "last_modified": "2026-05-19 08:54",
-    "deprecated": false
-  },
-  {
-    "title": "[Epic E1] 股市日记 MVP · Epic 文档",
-    "path": "wxch-gateway/docs/features/wechat-gateway/design/diary-check.html",
-    "type": "standard",
-    "service": "WECHAT-GATEWAY",
-    "last_modified": "2026-05-19 08:22",
+    "service": "GLOBAL",
+    "last_modified": "2026-05-19 11:26",
     "deprecated": false
   },
   {
@@ -252,7 +140,127 @@
     "path": "wxch-gateway/docs/readme.html",
     "type": "standard",
     "service": "wxch-gateway",
-    "last_modified": "2026-05-19 08:18",
+    "last_modified": "2026-05-19 10:50",
+    "deprecated": false
+  },
+  {
+    "title": "[Epic E1] 股市日记 MVP · Epic 文档",
+    "path": "wxch-gateway/docs/features/wechat-gateway/design/diary-check.html",
+    "type": "standard",
+    "service": "WECHAT-GATEWAY",
+    "last_modified": "2026-05-19 10:50",
+    "deprecated": false
+  },
+  {
+    "title": "[Epic E23] 每日格言打卡 · 后端系统设计与实施方案",
+    "path": "wxch-gateway/docs/features/wechat-gateway/design/draft_E23.html",
+    "type": "standard",
+    "service": "WECHAT-GATEWAY",
+    "last_modified": "2026-05-19 10:50",
+    "deprecated": false
+  },
+  {
+    "title": "[Epic E23] 每日格言打卡 · 完整前后端与数据库设计方案",
+    "path": "wxch-gateway/docs/features/wechat-gateway/design/maxim-check.html",
+    "type": "standard",
+    "service": "WECHAT-GATEWAY",
+    "last_modified": "2026-05-19 10:50",
+    "deprecated": false
+  },
+  {
+    "title": "Epic-Story 评审台",
+    "path": "wxch-gateway/docs/features/wechat-gateway/design/review_E23_20260519.html",
+    "type": "standard",
+    "service": "WECHAT-GATEWAY",
+    "last_modified": "2026-05-19 10:50",
+    "deprecated": false
+  },
+  {
+    "title": "Epic-Story 评审台",
+    "path": "wxch-gateway/docs/features/wechat-gateway/design/implementation_logs/E1/review_E1.html",
+    "type": "standard",
+    "service": "WECHAT-GATEWAY",
+    "last_modified": "2026-05-19 10:50",
+    "deprecated": false
+  },
+  {
+    "title": "Epic-Story 评审台",
+    "path": "wxch-gateway/docs/features/wechat-gateway/design/implementation_logs/E23/review_E23.html",
+    "type": "standard",
+    "service": "WECHAT-GATEWAY",
+    "last_modified": "2026-05-19 10:50",
+    "deprecated": false
+  },
+  {
+    "title": "Story E23-S1: 格言库建表与手工录入接口 · 交付验证报告",
+    "path": "wxch-gateway/docs/features/wechat-gateway/implementation_logs/E23/S1/walkthrough.html",
+    "type": "standard",
+    "service": "WECHAT-GATEWAY",
+    "last_modified": "2026-05-19 10:50",
+    "deprecated": false
+  },
+  {
+    "title": "[Story E23-S2] 每日格言智能轮询与日内锁定 API · 实施计划书",
+    "path": "wxch-gateway/docs/features/wechat-gateway/implementation_logs/E23/S2/implementation_plan.html",
+    "type": "standard",
+    "service": "WECHAT-GATEWAY",
+    "last_modified": "2026-05-19 10:50",
+    "deprecated": false
+  },
+  {
+    "title": "E23-S2 每日格言智能推荐与日内幂等锁定 API 交付报告",
+    "path": "wxch-gateway/docs/features/wechat-gateway/implementation_logs/E23/S2/walkthrough.html",
+    "type": "standard",
+    "service": "WECHAT-GATEWAY",
+    "last_modified": "2026-05-19 10:50",
+    "deprecated": false
+  },
+  {
+    "title": "E23-S3 格言打卡行为控制 API 交付报告",
+    "path": "wxch-gateway/docs/features/wechat-gateway/implementation_logs/E23/S3/walkthrough.html",
+    "type": "standard",
+    "service": "WECHAT-GATEWAY",
+    "last_modified": "2026-05-19 10:50",
+    "deprecated": false
+  },
+  {
+    "title": "E23-S5 每日格言收藏动作 API 交付报告",
+    "path": "wxch-gateway/docs/features/wechat-gateway/implementation_logs/E23/S5/walkthrough.html",
+    "type": "standard",
+    "service": "WECHAT-GATEWAY",
+    "last_modified": "2026-05-19 10:50",
+    "deprecated": false
+  },
+  {
+    "title": "E23-S6 每日格言屏蔽动作 API 交付报告",
+    "path": "wxch-gateway/docs/features/wechat-gateway/implementation_logs/E23/S6/walkthrough.html",
+    "type": "standard",
+    "service": "WECHAT-GATEWAY",
+    "last_modified": "2026-05-19 10:50",
+    "deprecated": false
+  },
+  {
+    "title": "E23-S7 格言打卡心得提交与日记关联 API 交付报告",
+    "path": "wxch-gateway/docs/features/wechat-gateway/implementation_logs/E23/S7/walkthrough.html",
+    "type": "standard",
+    "service": "WECHAT-GATEWAY",
+    "last_modified": "2026-05-19 10:50",
+    "deprecated": false
+  },
+  {
+    "title": "Epic E23-S8 每日格言打卡系统 HTTP REST API 接口契约 (API.md)",
+    "path": "wxch-gateway/docs/features/wechat-gateway/implementation_logs/E23/S8/API.html",
+    "type": "standard",
+    "service": "WECHAT-GATEWAY",
+    "last_modified": "2026-05-19 10:50",
+    "deprecated": false
+  },
+  {
+    "title": "E23-S8 反思见解历史时间轴 API 交付报告",
+    "path": "wxch-gateway/docs/features/wechat-gateway/implementation_logs/E23/S8/walkthrough.html",
+    "type": "standard",
+    "service": "WECHAT-GATEWAY",
+    "last_modified": "2026-05-19 10:50",
     "deprecated": false
   },
   {
@@ -786,14 +794,6 @@
   {
     "title": "token",
     "path": "docs/design/股市日记/token.html",
-    "type": "standard",
-    "service": "GLOBAL",
-    "last_modified": "2026-05-16 19:07",
-    "deprecated": false
-  },
-  {
-    "title": "数据初始化 SQL",
-    "path": "docs/design/股市日记/表初始化.html",
     "type": "standard",
     "service": "GLOBAL",
     "last_modified": "2026-05-16 19:07",
