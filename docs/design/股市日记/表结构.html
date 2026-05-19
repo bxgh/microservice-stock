@@ -8,14 +8,14 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Noto+Serif+SC:wght@400;700;900&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
     
-    <!-- Libraries -->
-    <script src="https://lib.baomitu.com/marked/11.1.1/marked.min.js"></script>
-    <link rel="stylesheet" href="https://lib.baomitu.com/github-markdown-css/5.5.0/github-markdown-dark.min.css">
-    <script src="https://lib.baomitu.com/mermaid/10.9.0/mermaid.min.js"></script>
+    <!-- Local Offline Libraries -->
+    <script src="../../assets/js/marked.min.js"></script>
+    <link rel="stylesheet" href="../../assets/css/github-markdown-dark.css">
+    <script src="../../assets/js/mermaid.min.js"></script>
     
-    <!-- Syntax Highlighting -->
-    <link rel="stylesheet" href="https://lib.baomitu.com/highlight.js/11.9.0/styles/tokyo-night-dark.min.css">
-    <script src="https://lib.baomitu.com/highlight.js/11.9.0/highlight.min.js"></script>
+    <!-- Syntax Highlighting (Local) -->
+    <link rel="stylesheet" href="../../assets/css/tokyo-night-dark.min.css">
+    <script src="../../assets/js/highlight.min.js"></script>
     
     <style>
         :root {
@@ -280,7 +280,7 @@
 
     <div class="container">
         <header>
-            <div class="meta">GLOBAL | 2026-05-16 19:07</div>
+            <div class="meta">GLOBAL | 2026-05-19 11:30</div>
             <h1>MySQL 5.7 完整建表 DDL</h1>
         </header>
 
@@ -842,23 +842,26 @@ SHOW VARIABLES LIKE 'innodb_default_row_format';
 
 ---
 
-## 13 张表清单(最终版)
+## 14 张表清单(最终版)
 
-| 序 | 表名 | 行数预估(单用户) | 关键索引数 |
-|---|---|---|---|
-| 1 | `sys_user` | 1 | 5 |
-| 2 | `stock_info` | ~10000(全表) | 5 |
-| 3 | `diary_entry` | 100–5000 | 6 |
-| 4 | `diary_stock` | 200–15000 | 3 |
-| 5 | `diary_tag_dict` | 20–200 | 2 |
-| 6 | `diary_tag` | 200–10000 | 2 |
-| 7 | `diary_attachment` | 500–20000 | 3 |
-| 8 | `diary_export_task` | 10–500 | 2 |
-| 9 | `mp_account` | 0–5 | 3 |
-| 10 | `mp_publish_record` | 0–500 | 4 |
-| 11 | `mp_media_cache` | 0–5000 | 2 |
+| 序 | 表名 | 行数预估(单用户) | 关键索引数 | 表用途描述 (Table Purpose) |
+| :--- | :--- | :--- | :--- | :--- |
+| 1 | `sys_user` | 1 | 5 | **系统用户表**：存储微信小程序用户的 OpenID、UnionID、昵称、头像、等级及 JSON 偏好配置（如主题、老年模式）。 |
+| 2 | `stock_info` | ~10000 (全表) | 5 | **股票主数据表**：存储全市场（A股、港股、美股）的股票代码、拼音简写、所属行业、板块及上市状态。 |
+| 3 | `diary_entry` | 100–5000 | 6 | **日记主表**：存储用户复盘日记、投资计划、心得随笔等核心正文（Markdown）、情绪打标以及打卡关联快照 JSON。 |
+| 4 | `diary_stock` | 200–15000 | 3 | **日记股票关联表**：多对多映射，关联每篇日记所提及的股票标的，支持按股检索历史日记。 |
+| 5 | `diary_tag_dict` | 20–200 | 2 | **用户标签字典表**：管理系统内置和用户自定义的标签名称、分类和配色体系（如“错题本”、“违反纪律”）。 |
+| 6 | `diary_tag` | 200–10000 | 2 | **日记标签关联表**：多对多映射，存储单篇复盘日记打上的个性化多维属性标签。 |
+| 7 | `diary_attachment` | 500–20000 | 3 | **日记附件表**：存储日记中所上传的交割单图片、分析图表等静态资源的路径与类型元数据。 |
+| 8 | `diary_export_task` | 10–500 | 2 | **日记导出任务表**：记录用户申请将日记异步批量导出为 PDF/Markdown/Excel 的后台作业状态。 |
+| 9 | `mp_account` | 0–5 | 3 | **微信公众号授权表**：保存用户绑定并用于同步推送复盘草稿的微信服务号/订阅号授权信息。 |
+| 10 | `mp_publish_record` | 0–500 | 4 | **公众号同步历史表**：记录用户将特定股市日记推送至公众号草稿箱的流水与发布回执。 |
+| 11 | `mp_media_cache` | 0–5000 | 2 | **微信媒体缓存表**：缓存同步至微信服务器的图文素材图片 media_id，防重复上传，节省配额。 |
+| 12 | `diary_quote_lib` | 20–500 | 3 | **格言与金句词库表** *(E23新增)*：存储用户录入或粘贴收集的经典名言、大佬语录、自己写的金句以及曝光基础权重。 |
+| 13 | `diary_quote_user_state` | 20–500 | 3 | **用户格言个性化状态表** *(E23新增)*：存储用户对某条格言的收藏、屏蔽状态，以及曝光轮询和累计解读的次数。 |
+| 14 | `diary_checkin_lock` | 365 (按日累加) | 3 | **每日打卡任务锁定表** *(E23新增)*：实现凌晨 4:00 业务日期切分、名言日内防闪烁锁定及打卡防重复提交拦截。 |
 
-(实际是 11 张,我之前说 13 是把关联表多算了)
+*(注：在 Epic E23 格言打卡子系统上线后，新增了 3 张核心打卡业务表，目前系统共有 14 张物理表全面支持完整交易复盘和格言反思功能。)*
 
 ---
 
