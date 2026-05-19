@@ -128,16 +128,16 @@
     "deprecated": false
   },
   {
-    "title": "Implementation Plan - E15-S1: P0级行情池与两融指标采集模块",
-    "path": "scf-collector/docs/features/v0.2_data_onboarding/implementation_logs/E15/S1/implementation_plan.html",
+    "title": "Walkthrough - E15-S1: P0级行情池与两融指标采集模块",
+    "path": "scf-collector/docs/features/v0.2_data_onboarding/implementation_logs/E15/S1/walkthrough.html",
     "type": "standard",
     "service": "V0.2_DATA_ONBOARDING",
-    "last_modified": "2026-05-19 23:31",
+    "last_modified": "2026-05-19 23:53",
     "deprecated": false
   },
   {
-    "title": "Walkthrough - E15-S1: P0级行情池与两融指标采集模块",
-    "path": "scf-collector/docs/features/v0.2_data_onboarding/implementation_logs/E15/S1/walkthrough.html",
+    "title": "Implementation Plan - E15-S1: P0级行情池与两融指标采集模块",
+    "path": "scf-collector/docs/features/v0.2_data_onboarding/implementation_logs/E15/S1/implementation_plan.html",
     "type": "standard",
     "service": "V0.2_DATA_ONBOARDING",
     "last_modified": "2026-05-19 23:31",

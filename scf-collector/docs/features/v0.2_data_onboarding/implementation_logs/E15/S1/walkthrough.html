@@ -280,7 +280,7 @@
 
     <div class="container">
         <header>
-            <div class="meta">SCF-COLLECTOR | 2026-05-19 23:31</div>
+            <div class="meta">SCF-COLLECTOR | 2026-05-19 23:53</div>
             <h1>Walkthrough - E15-S1: P0级行情池与两融指标采集模块</h1>
         </header>
 
@@ -345,7 +345,21 @@ tests\test_e15_s1.py ....                                                [100%]
 - **[DB Auditor]**: 新增 DDL 脚本已放置在 `migrations/` 目录下，并使用 `Asia/Shanghai` 时区，严格包含尾部三件套及其索引，且无窗口函数或 CTE，完全兼容 MySQL 5.7。
 - **[Backend Engineer]**: 所有的 `op` 流程均在 `finally` 块中通过 `await DBManager.close_pool()` 安全释放连接池。在批量同步中内置 `0.5s` 平滑流控防止 IP 被封禁。
 - **[Data Quality Steward]**: 实现了百分比字段除以 100.0 的标准小数值转换，金额一律换算对齐为“元”单位，映射矩阵完美对齐。
-- **[QA/Test Engineer]**: 编写了高保真 Mock 测试，无需网络资源和真实数据库，在 2.53s 内实现 100% 逻辑覆盖，极速绿色通过。
+- **[QA/Test Engineer]**: 编写了高保真 Mock 测试，无需网络资源 and 真实数据库，在 2.53s 内实现 100% 逻辑覆盖，极速绿色通过。
+
+## Git 代码质控与提交说明
+
+- **代码质控排查**：
+  - 针对修改的 Python 模块（`tushare_cl.py`、`akshare_cl.py`、`dao.py`、`index.py`、`deploy.py`）运行了 `flake8` 静态代码质量审查。
+  - **关键隐患消除**：
+    1. 修复了 `dao.py` 中 `get_latest_margin_date` 使用 `datetime.date` 判断时 `datetime` 未导入的 `F821` 隐患。
+    2. 修复了 `tushare_cl.py` 中 `_fetch_suspend_d_sync` 函数重复定义导致的 `F811` 警告，将其重命名为 `_fetch_suspend_d_specific_sync` 保持语义独立。
+    3. 修复了 `akshare_cl.py` 中转换浮点数时 bare `except:` 的 `E722` 静态诊断，重构为 `except (ValueError, TypeError):` 提高异常防护精确度。
+- **Git 提交确认**：
+  - 将所有修改过的资产文件（包含新加入的 4 个 Timer 触发器、`AGENTS.md` 规约注入、新 DDL SQL 迁移、以及 Story 阶段状态存证 `state_E15.json` 等）进行全量暂存。
+  - 发起原子 Commit（已进入 master 树）：
+    *   **Commit 记录**：`[E15-S1-T1] feat: 完成两融、停牌、涨跌停与广度指标盘后采集与部署编排`
+
 </script>
 
     <script>
