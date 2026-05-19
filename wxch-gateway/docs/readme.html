@@ -1,0 +1,451 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WXCH Gateway: 微信云托管 API 网关与服务手册</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Noto+Serif+SC:wght@400;700;900&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    
+    <!-- Local Offline Libraries -->
+    <script src="../../docs/assets/js/marked.min.js"></script>
+    <link rel="stylesheet" href="../../docs/assets/css/github-markdown-dark.css">
+    <script src="../../docs/assets/js/mermaid.min.js"></script>
+    
+    <!-- Syntax Highlighting (Local) -->
+    <link rel="stylesheet" href="../../docs/assets/css/tokyo-night-dark.min.css">
+    <script src="../../docs/assets/js/highlight.min.js"></script>
+    
+    <style>
+        :root {
+            --bg: #0a0a0a;
+            --surface: #121212;
+            --surface-hover: #1a1a1a;
+            --border: #222222;
+            --accent: #eab308;
+            --accent-glow: rgba(234, 179, 8, 0.1);
+            --text-primary: #f1f5f9;
+            --text-secondary: #94a3b8;
+            --text-muted: #64748b;
+            --font-sans: 'Outfit', 'Noto Sans SC', -apple-system, sans-serif;
+            --font-serif: 'Noto Serif SC', serif;
+            --font-mono: 'JetBrains Mono', monospace;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background-color: var(--bg);
+            color: var(--text-primary);
+            font-family: var(--font-sans);
+            line-height: 1.7;
+            -webkit-font-smoothing: antialiased;
+            overflow-x: hidden;
+        }
+
+        /* Subtle background glow */
+        body::after {
+            content: '';
+            position: fixed;
+            top: 0;
+            right: 0;
+            width: 40vw;
+            height: 40vh;
+            background: radial-gradient(circle, var(--accent-glow) 0%, transparent 70%);
+            z-index: -1;
+            filter: blur(100px);
+            pointer-events: none;
+        }
+
+        .sidebar {
+            width: 260px;
+            height: 100vh;
+            position: fixed;
+            left: 0;
+            top: 0;
+            border-right: 1px solid var(--border);
+            background: var(--bg);
+            padding: 1.5rem;
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+            overflow-y: auto;
+            z-index: 100;
+        }
+
+        .nav-link {
+            color: var(--text-muted);
+            text-decoration: none;
+            font-size: 0.85rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            transition: color 0.2s;
+            padding: 0.5rem;
+            border-radius: 6px;
+        }
+        .nav-link:hover { color: var(--accent); background: var(--surface); }
+
+        .toc-title {
+            font-family: var(--font-serif);
+            font-size: 1rem;
+            color: var(--text-primary);
+            margin-bottom: 0.8rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding-left: 0.5rem;
+        }
+        .toc-title::before {
+            content: '';
+            width: 3px;
+            height: 1rem;
+            background: var(--accent);
+            border-radius: 2px;
+        }
+
+        .toc-list {
+            list-style: none;
+            display: flex;
+            flex-direction: column;
+            gap: 0.4rem;
+        }
+        .toc-item {
+            font-size: 0.8rem;
+            line-height: 1.3;
+        }
+        .toc-item a {
+            color: var(--text-muted);
+            text-decoration: none;
+            transition: all 0.2s;
+            display: block;
+            padding: 0.4rem 0.5rem;
+            border-radius: 4px;
+        }
+        .toc-item a:hover { color: var(--accent); background: var(--surface); }
+        .toc-item.level-3 { margin-left: 0.8rem; border-left: 1px solid var(--border); }
+
+        .container {
+            max-width: 860px;
+            margin: 0 auto 0 260px;
+            padding: 3rem 4rem;
+            animation: fadeIn 0.6s ease-out;
+        }
+
+        @media (max-width: 1024px) {
+            .sidebar { width: 220px; padding: 1rem; }
+            .container { margin-left: 220px; padding: 2rem; }
+        }
+
+        @media (max-width: 800px) {
+            .sidebar { position: static; width: 100%; height: auto; border-right: none; border-bottom: 1px solid var(--border); }
+            .container { margin-left: 0; padding: 1.5rem; }
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(5px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        header {
+            margin-bottom: 3rem;
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 1.5rem;
+        }
+
+        .meta {
+            font-family: var(--font-mono);
+            font-size: 0.75rem;
+            color: var(--accent);
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            margin-bottom: 0.8rem;
+            display: flex;
+            align-items: center;
+            gap: 0.8rem;
+        }
+
+        .meta::before {
+            content: '';
+            width: 20px;
+            height: 1px;
+            background-color: var(--accent);
+        }
+
+        h1 {
+            font-family: var(--font-serif);
+            font-size: 2.2rem;
+            font-weight: 900;
+            line-height: 1.2;
+            margin-bottom: 1rem;
+            color: var(--text-primary);
+        }
+
+        .markdown-body {
+            background: transparent !important;
+            color: var(--text-primary) !important;
+            font-family: var(--font-sans) !important;
+            font-size: 0.95rem !important;
+        }
+
+        .markdown-body h2 {
+            font-family: var(--font-serif);
+            font-size: 1.5rem !important;
+            color: var(--accent) !important;
+            border-bottom: 1px solid var(--border) !important;
+            padding-bottom: 0.5rem !important;
+            margin-top: 2.5rem !important;
+            scroll-margin-top: 1rem;
+        }
+
+        .markdown-body h3 {
+            font-family: var(--font-serif);
+            font-size: 1.25rem !important;
+            color: var(--text-primary) !important;
+            margin-top: 2rem !important;
+            scroll-margin-top: 1rem;
+        }
+
+        .markdown-body p, .markdown-body li {
+            font-size: 0.95rem !important;
+            color: var(--text-primary) !important;
+        }
+        
+        .markdown-body pre {
+            background-color: #1a1b26 !important; /* Match Tokyo Night Dark */
+            border: 1px solid var(--border);
+            border-radius: 8px !important;
+            padding: 0 !important; /* Code internal handles padding */
+            margin: 1.2rem 0 !important;
+            overflow: hidden;
+        }
+
+        .markdown-body pre code {
+            background-color: transparent !important;
+            padding: 1.2rem !important;
+            display: block;
+            font-family: var(--font-mono) !important;
+            font-size: 0.85rem !important;
+            line-height: 1.5;
+        }
+
+        .markdown-body blockquote {
+            border-left: 3px solid var(--accent) !important;
+            background: var(--surface);
+            padding: 0.8rem 1.2rem;
+            color: var(--text-secondary) !important;
+            margin: 1.2rem 0 !important;
+        }
+
+        .markdown-body table {
+            background: var(--surface);
+            font-size: 0.85rem !important;
+            margin: 1.2rem 0 !important;
+        }
+
+        footer {
+            margin-top: 4rem;
+            padding-top: 1.5rem;
+            border-top: 1px solid var(--border);
+            color: var(--text-muted);
+            font-size: 0.8rem;
+            text-align: center;
+        }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar { width: 5px; }
+        ::-webkit-scrollbar-track { background: var(--bg); }
+        ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+    </style>
+</head>
+<body>
+    <aside class="sidebar">
+        <a href="index.html" class="nav-link">
+            <span>←</span> 返回目录门户
+        </a>
+        
+        <div class="toc-container">
+            <h3 class="toc-title">文档导航</h3>
+            <ul class="toc-list" id="toc">
+                <!-- TOC items will be injected here -->
+            </ul>
+        </div>
+    </aside>
+
+    <div class="container">
+        <header>
+            <div class="meta">GLOBAL | 2026-05-19 08:18</div>
+            <h1>WXCH Gateway: 微信云托管 API 网关与服务手册</h1>
+        </header>
+
+        <article id="content" class="markdown-body">
+            <!-- Loading indicator -->
+            <p style="color: var(--text-muted)">正在解析文档内容...</p>
+        </article>
+
+        <footer>
+            &copy; 2026 MicroStock Project Docs | Generated by Antigravity
+        </footer>
+    </div>
+
+    <script id="markdown-raw" type="text/markdown"># WXCH Gateway: 微信云托管 API 网关与服务手册
+
+## 1. 文档索引 (Documentation Index)
+
+- **核心 API 调用指南**: [docs/api/WXCH_GATEWAY_USAGE.md](../../docs/api/WXCH_GATEWAY_USAGE.md) (接口参数、响应示例与小程序接入)
+- **股市日记 API 规格说明书**: [docs/api/api-spec-diary.md](../../docs/api/api-spec-diary.md) (股市日记功能专用)
+- **全局数据库字典**: [docs/standards/TABLES_INDEX.md](../../docs/standards/TABLES_INDEX.md) (数据实体物理对照)
+
+---
+
+## 2. 系统角色与架构
+
+`wxch-gateway` 是 A 股盘后分析系统的“用户侧网关”，运行在 **微信云托管 (WeChat CloudBase)** 生产环境下。
+
+- **核心职责**: 
+  - 为微信小程序客户端提供高并发、低延迟的 A 股股票数据 API。
+  - 处理微信静默登录与 JWT 鉴权管理。
+  - 为敏感操作（如股市日记写入与读取）提供异步数据库连接池支持。
+  - 执行客户端请求的字段规范化与异常脱敏，防止后端堆栈信息外泄。
+- **物理边界**: 运行于腾讯云 Serverless 容器环境，通过云托管 VPC 直连腾讯云内网 MySQL 5.7 数据库 (`172.17.0.10`)，绝不直接处理大内存高吞吐的数据采集或量化计算任务（耗时及重计算任务均通过消息队列接力至内网服务器）。
+
+### 2.1 目录结构
+
+服务设计与开发遵守 `AGENTS.md` 的规范：
+```
+wxch-gateway/
+├── app/                  # FastAPI 核心业务逻辑
+│   ├── api/              # API 路由与控制器 (v1)
+│   ├── core/             # 系统核心配置与安全策略
+│   ├── db/               # 异步数据库连接池 (aiomysql)
+│   └── models/           # Pydantic v2 数据模型与校验
+├── docs/                 # 文档资产区
+│   ├── readme.md         # 本手册
+│   └── features/         # 微服务专属特征目录
+│       └── wechat-gateway/
+│           ├── design/   # 详细设计稿 (Epic/Story Drafts)
+│           ├── reviews/  # 设计评审与反馈记录
+│           └── implementation_logs/ # 实施日志与对账存证
+└── scripts/              # 辅助运维与本地测试脚本
+```
+
+---
+
+## 3. 核心 API 服务矩阵
+
+本网关提供以下五大核心数据服务模块，全部遵循 `/api/v1/` 统一路由前缀：
+
+### 3.1 行情服务 (Quotes Engine)
+- **个股日 K 线**: `GET /api/v1/stocks/{code}/kline` (支持多格式代码转换，支持复权选择)
+- **实时五档快照**: `GET /api/v1/stocks/{code}/snapshot` (买卖盘口、估值指标与市值)
+- **个股当日分时**: `GET /api/v1/stocks/{code}/time_share` (当日分时点阵与均价)
+
+### 3.2 深度基本面服务 (Deep Fundamentals)
+- **业绩基本面**: `GET /api/v1/stocks/{code}/fundamentals` (机构评级与业绩预告)
+- **财务季报**: `GET /api/v1/stocks/{code}/financials` (核心利润表与 ROE 衍生指标)
+- **股权变动**: `GET /api/v1/stocks/{code}/shareholders` (历史股东户数与十大股东)
+
+### 3.3 用户与鉴权服务 (Auth & User Profile)
+- **静默登录**: `POST /api/v1/auth/login` (微信临时凭证无感登录，生成 JWT Token)
+- **个性化配置**: `GET / PUT /api/v1/user/profile` (个人中心、护眼/长辈模式与配置持久化)
+
+---
+
+## 4. 运维与测试指南
+
+### 4.1 本地测试运行
+在本地开发环境下，可使用虚拟环境并一键启动：
+```bash
+# 1. 安装项目依赖
+pip install -r requirements.txt
+
+# 2. 配置环境变量
+# 拷贝模板并填写腾讯云数据库直连信息
+copy .env.example .env
+
+# 3. 启动 FastAPI 热重载服务
+uvicorn app.main:app --host 0.0.0.0 --port 8006 --reload
+```
+
+### 4.2 自动化质量控制 (QC)
+上线部署前，必须在本地 Docker 沙盒中完成接口联调与防劣化回归测试：
+```bash
+# 执行 API 联调流水线校验
+python scripts/testing/test_api_flow.py
+```
+
+### 4.3 微信云托管部署
+服务已集成持续集成（CI）流水线：
+1. **代码合并**: 将开发完成的 Story 代码合并至主分支 `feat/wxch-gateway` 或 `master`。
+2. **流水线触发**: 提交推送至 Gitee 触发腾讯云托管自动化 Docker 镜像构建。
+3. **安全审计**: 构建机自动审计环境兼容性，拒绝任何不合规依赖包。
+4. **灰度发布**: 云托管控制台自动执行滚动灰度发布，确保用户侧无白屏影响。
+
+---
+
+**交付记录**:
+- **服务状态**: 🟢 活动中 (Active) · 微信云托管生产就绪
+- **最新版本**: v1.2.0
+- **主要维护人**: Antigravity AI
+- **最后更新日期**: 2026-05-18
+</script>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', async () => {
+            const rawMd = document.getElementById('markdown-raw').textContent;
+            const contentEl = document.getElementById('content');
+            const tocEl = document.getElementById('toc');
+            
+            // Set options for marked
+            marked.setOptions({
+                gfm: true,
+                breaks: true,
+                headerIds: true,
+                mangle: false,
+                highlight: function(code, lang) {
+                    const language = hljs.getLanguage(lang) ? lang : 'plaintext';
+                    return hljs.highlight(code, { language }).value;
+                }
+            });
+
+            // Parse Markdown
+            contentEl.innerHTML = marked.parse(rawMd);
+            
+            // Generate TOC
+            const headings = contentEl.querySelectorAll('h2, h3');
+            headings.forEach((h, index) => {
+                if (!h.id) h.id = 'heading-' + index;
+                
+                const li = document.createElement('li');
+                li.className = 'toc-item level-' + h.tagName.toLowerCase().charAt(1);
+                
+                const a = document.createElement('a');
+                a.href = '#' + h.id;
+                a.textContent = h.textContent;
+                
+                li.appendChild(a);
+                tocEl.appendChild(li);
+            });
+
+            // Handle Mermaid
+            if (window.mermaid) {
+                mermaid.initialize({ startOnLoad: false, theme: 'dark', useWorker: false });
+                document.querySelectorAll('pre code.language-mermaid').forEach(el => {
+                    const pre = el.parentElement;
+                    const div = document.createElement('div');
+                    div.className = 'mermaid';
+                    div.textContent = el.textContent;
+                    pre.parentElement.replaceChild(div, pre);
+                });
+                mermaid.run();
+            }
+        });
+    </script>
+</body>
+</html>

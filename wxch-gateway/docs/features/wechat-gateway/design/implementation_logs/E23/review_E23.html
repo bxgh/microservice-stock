@@ -1,0 +1,1367 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Epic-Story 评审台</title>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;500;700;900&family=Noto+Sans+SC:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500;700&display=swap"
+        rel="stylesheet">
+    <style>
+        :root {
+            --bg: #0e0d0b;
+            --bg-elev-1: #15130f;
+            --bg-elev-2: #1c1915;
+            --bg-elev-3: #2a2520;
+            --ink: #ede3cc;
+            --ink-dim: #ccc;
+            --ink-mute: #aaa;
+            --ink-whisper: #888;
+            --amber: #d4a23e;
+            --amber-bright: #f0c968;
+            --amber-soft: rgba(212, 162, 62, 0.18);
+            --status-strong: #8ab573;
+            --status-neutral: #c99339;
+            --status-alert: #d97a3d;
+            --status-weak: #c85a4a;
+            --status-cold: #6b8ca8;
+            --hair: #2a2520;
+            --font-serif: 'Noto Serif SC', 'Songti SC', serif;
+            --font-sans: 'Noto Sans SC', -apple-system, sans-serif;
+            --font-mono: 'JetBrains Mono', 'SF Mono', Consolas, monospace;
+            --fs-xs: 10px;
+            --fs-sm: 12px;
+            --fs-base: 13px;
+            --fs-md: 15px;
+            --fs-lg: 18px;
+            --fs-xl: 20px;
+            --fs-2xl: 22px;
+            --space-1: 2px;
+            --space-2: 4px;
+            --space-3: 8px;
+            --space-4: 12px;
+            --space-6: 16px;
+            --space-8: 24px;
+            --space-12: 32px;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        html,
+        body {
+            background: var(--bg);
+            color: var(--ink);
+            font-family: var(--font-sans);
+            font-size: var(--fs-base);
+            line-height: 1.6;
+            height: 100vh;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* noise */
+        body::before {
+            content: '';
+            position: fixed;
+            inset: 0;
+            pointer-events: none;
+            z-index: 999;
+            background: white;
+            mix-blend-mode: overlay;
+            opacity: 0.5;
+            filter: url(#noise);
+        }
+
+        /* TOP BAR */
+        .topbar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 var(--space-6);
+            height: 48px;
+            border-bottom: 1px solid var(--hair);
+            background: var(--bg-elev-1);
+            z-index: 100;
+        }
+
+        .topbar-left {
+            display: flex;
+            align-items: center;
+            gap: var(--space-4);
+        }
+
+        .topbar-brand {
+            font-family: var(--font-serif);
+            font-size: var(--fs-md);
+            color: var(--amber);
+            letter-spacing: 0.05em;
+        }
+
+        .topbar-sep {
+            width: 1px;
+            height: 20px;
+            background: var(--hair);
+        }
+
+        .topbar-doc {
+            font-size: var(--fs-sm);
+            color: var(--amber);
+            font-weight: 500;
+        }
+
+        .topbar-meta {
+            display: flex;
+            gap: var(--space-4);
+            margin-left: var(--space-2);
+            padding-left: var(--space-4);
+            border-left: 1px solid var(--hair);
+            font-family: var(--font-mono);
+            font-size: var(--fs-xs);
+            color: var(--ink-mute);
+        }
+
+        .topbar-meta-val {
+            color: var(--ink-dim);
+        }
+
+        .topbar-right {
+            display: flex;
+            align-items: center;
+            gap: var(--space-3);
+        }
+
+        .progress-wrap {
+            display: flex;
+            align-items: center;
+            gap: var(--space-2);
+        }
+
+        .progress-bar {
+            width: 120px;
+            height: 4px;
+            background: var(--hair);
+            border-radius: 2px;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: var(--amber);
+            border-radius: 2px;
+            transition: width 0.3s;
+        }
+
+        .progress-text {
+            font-family: var(--font-mono);
+            font-size: var(--fs-xs);
+            color: var(--ink-mute);
+        }
+
+        .btn {
+            font-family: var(--font-sans);
+            font-size: var(--fs-sm);
+            padding: 6px 14px;
+            border: 1px solid var(--hair);
+            background: var(--bg-elev-2);
+            color: var(--ink-dim);
+            cursor: pointer;
+            transition: all 0.15s;
+            letter-spacing: 0.02em;
+        }
+
+        .btn:hover {
+            border-color: var(--amber);
+            color: var(--amber);
+        }
+
+        .btn-primary {
+            border-color: var(--amber);
+            color: var(--amber);
+            background: var(--bg-elev-2);
+        }
+
+        .btn-primary:hover {
+            background: var(--bg-elev-3);
+            border-color: var(--amber-bright);
+        }
+
+        .btn-export {
+            width: 100%;
+            padding: 10px;
+            background: var(--bg-elev-2);
+            border: 1px solid var(--hair);
+            color: #d49a00;
+            cursor: pointer;
+            font-weight: 700;
+            margin-top: 10px;
+            transition: all 0.2s;
+            font-size: var(--fs-sm);
+        }
+
+        .btn-export:hover {
+            background: var(--bg-elev-3);
+            border-color: #d49a00;
+        }
+
+        /* LAYOUT */
+        .layout {
+            display: grid;
+            grid-template-columns: 240px 1fr 240px;
+            gap: 1px;
+            background: var(--hair);
+            flex: 1;
+            height: 0;
+            min-height: 0;
+            overflow: hidden;
+        }
+
+        /* SIDEBAR */
+        .sidebar {
+            background: var(--bg-elev-1);
+            overflow-y: auto;
+            height: 100%;
+        }
+
+        .sidebar-section {
+            border-bottom: 1px solid var(--hair);
+        }
+
+        .sidebar-heading {
+            padding: var(--space-3) var(--space-4);
+            font-size: var(--fs-xs);
+            color: var(--ink-mute);
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+        }
+
+        .nav-epic {
+            padding: var(--space-2) var(--space-4);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: var(--space-2);
+        }
+
+        .nav-epic:hover {
+            background: var(--bg-elev-2);
+        }
+
+        .nav-epic-title {
+            font-size: var(--fs-sm);
+            color: var(--ink-dim);
+            font-weight: 500;
+        }
+
+        .nav-epic-id {
+            font-family: var(--font-mono);
+            font-size: var(--fs-xs);
+            color: var(--amber);
+            min-width: 28px;
+        }
+
+        .nav-story {
+            padding: var(--space-1) var(--space-4);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: var(--space-2);
+            border-left: 2px solid transparent;
+            transition: all 0.2s;
+        }
+
+        .nav-story:hover {
+            background: var(--bg-elev-2);
+            color: var(--ink-dim);
+        }
+
+        .nav-story.active {
+            background: var(--amber-soft);
+            color: var(--amber);
+        }
+
+        .nav-story-dot {
+            width: 5px;
+            height: 5px;
+            border-radius: 50%;
+            background: var(--ink-whisper);
+            flex-shrink: 0;
+        }
+
+        .nav-story.active .nav-story-dot {
+            background: var(--amber);
+            box-shadow: 0 0 6px var(--amber);
+        }
+
+        .status-badge-xs {
+            font-family: var(--font-mono);
+            font-size: 10px;
+            padding: 1px 4px;
+            border-radius: 2px;
+            flex-shrink: 0;
+            text-transform: uppercase;
+        }
+
+        .badge-ok {
+            background: rgba(138, 181, 115, 0.15);
+            color: var(--status-strong);
+        }
+
+        .badge-no {
+            background: rgba(200, 90, 74, 0.15);
+            color: var(--status-weak);
+        }
+
+        .badge-q {
+            background: rgba(201, 147, 57, 0.15);
+            color: var(--status-neutral);
+        }
+
+        .badge-pending {
+            background: rgba(107, 140, 168, 0.15);
+            color: var(--status-cold);
+        }
+
+        /* MAIN */
+        .main { flex: 1; 
+            background: var(--bg);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .main-inner {
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            flex: 1;
+            overflow: hidden;
+        }
+
+        /* TABS */
+        .tabs {
+            display: flex;
+            border-bottom: 1px solid var(--hair);
+            background: var(--bg-elev-1);
+        }
+
+        .tab {
+            padding: 10px var(--space-6);
+            font-size: var(--fs-base);
+            color: var(--ink-mute);
+            cursor: pointer;
+            position: relative;
+            letter-spacing: 0.04em;
+            transition: all 0.2s;
+        }
+
+        .tab:hover {
+            color: var(--ink);
+        }
+
+        .tab.active {
+            color: #d49a00;
+            font-weight: 600;
+        }
+
+        .tab::after {
+            content: '';
+            position: absolute;
+            bottom: -1px;
+            left: var(--space-6);
+            right: var(--space-6);
+            height: 3px;
+            background: #d49a00;
+            transform: scaleX(0);
+            transition: transform 0.2s;
+        }
+
+        .tab.active::after {
+            transform: scaleX(1);
+        }
+
+        .tab-panel {
+            display: none;
+        }
+
+        .tab-panel.active {
+            display: block;
+        }
+
+        /* section headers */
+        .section-label {
+            font-size: var(--fs-xs);
+            color: var(--ink-mute);
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            margin: var(--space-6) var(--space-6) var(--space-2);
+        }
+
+        .info-block {
+            background: var(--bg-elev-1);
+            border: 1px solid var(--hair);
+            padding: var(--space-4);
+            margin: 0 var(--space-6) var(--space-4);
+            font-size: var(--fs-base);
+            color: var(--ink-dim);
+            line-height: 1.7;
+        }
+
+        /* STORY CARD */
+        .view-panel {
+            display: none;
+            flex-direction: column;
+            height: 100%;
+            overflow: hidden;
+        }
+
+        .view-panel.active {
+            display: flex;
+        }
+
+        .story-detail-header {
+            padding: var(--space-3) var(--space-6);
+            background: var(--bg-elev-2);
+            border-bottom: 1px solid var(--hair);
+            display: flex;
+            align-items: center;
+            gap: var(--space-4);
+        }
+
+        .story-id {
+            font-family: var(--font-mono);
+            font-size: var(--fs-xs);
+            color: var(--amber);
+        }
+
+        .story-title {
+            font-size: var(--fs-md);
+            font-weight: 700;
+            color: var(--ink);
+        }
+
+        .story-body {
+            background: var(--bg-elev-1);
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .story-tabs {
+            display: flex;
+            background: var(--bg-elev-2);
+            border-bottom: 1px solid var(--hair);
+            padding: 0 var(--space-4);
+            height: 32px;
+            align-items: center;
+            flex-shrink: 0;
+        }
+
+        .story-tab {
+            padding: 0 var(--space-3);
+            font-size: var(--fs-xs);
+            color: var(--ink-mute);
+            cursor: pointer;
+            border-bottom: 2px solid transparent;
+            height: 100%;
+            display: flex;
+            align-items: center;
+        }
+
+        .story-tab.active {
+            color: var(--amber);
+            border-bottom-color: var(--amber);
+        }
+
+        .story-tab-content {
+            display: none;
+            flex: 1;
+            overflow-y: auto;
+            overflow-x: hidden;
+            padding: var(--space-4);
+        }
+
+        .story-tab-content.active {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .content-well {
+            margin: var(--space-4) var(--space-6);
+            background: var(--bg-elev-1);
+            border: 1px solid var(--hair-bright);
+            border-radius: 8px;
+            overflow: hidden;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            min-height: 0;
+        }
+
+        .extra-section {
+            margin-top: var(--space-4);
+            padding-top: var(--space-4);
+            border-top: 1px dashed var(--hair);
+        }
+
+        .extra-section strong {
+            display: block;
+            margin-bottom: var(--space-2);
+            color: var(--amber);
+            font-size: var(--fs-xs);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .info-block {
+            padding: var(--space-4) var(--space-6);
+            color: var(--ink-dim);
+            font-size: var(--fs-base);
+            white-space: pre-wrap;
+            word-break: break-all;
+        }
+
+        /* AC & TASKS */
+        .subsection-title {
+            font-size: var(--fs-xs);
+            color: var(--ink-mute);
+            letter-spacing: 0.07em;
+            text-transform: uppercase;
+            margin-bottom: var(--space-3);
+            display: flex;
+            align-items: center;
+            gap: var(--space-2);
+        }
+
+        .subsection-title::after {
+            content: '';
+            flex: 1;
+            height: 1px;
+            background: var(--hair);
+        }
+
+        .task-item {
+            display: flex;
+            align-items: flex-start;
+            /* 改为 flex-start 以适应多行内容 */
+            padding: var(--space-4) var(--space-6);
+            border-bottom: 1px solid var(--hair);
+            gap: var(--space-4);
+            transition: background 0.15s;
+        }
+
+        .task-item.deleted .task-text {
+            text-decoration: line-through;
+            color: var(--ink);
+        }
+
+        .task-id {
+            font-family: var(--font-mono);
+            font-size: var(--fs-xs);
+            color: var(--ink-mute);
+            min-width: 80px;
+        }
+
+        .task-text {
+            flex: 1;
+            font-size: var(--fs-base);
+            color: var(--ink-dim);
+            /* white-space: pre-wrap; REMOVED as it breaks block elements inside */
+            word-break: break-word;
+        }
+
+        .code-wrapper {
+            position: relative;
+            background: #0b0b0b;
+            border: 1px solid var(--hair);
+            border-radius: 6px;
+            margin: var(--space-4) 0;
+            overflow: hidden;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4);
+        }
+
+        .code-wrapper::before {
+            content: attr(data-lang);
+            position: absolute;
+            top: 0;
+            right: 0;
+            padding: 2px 8px;
+            font-size: 10px;
+            font-family: var(--font-mono);
+            color: var(--amber);
+            background: rgba(212, 162, 62, 0.1);
+            border-bottom: 1px solid var(--hair);
+            border-left: 1px solid var(--hair);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            pointer-events: none;
+        }
+
+        .code-wrapper pre {
+            margin: 0;
+            padding: var(--space-4);
+            overflow-x: auto;
+            max-height: 400px;
+        }
+
+        .code-wrapper code {
+            font-family: var(--font-mono);
+            font-size: 13px;
+            line-height: 1.6;
+            color: #ffca28;
+            white-space: pre;
+        }
+
+        .inline-code {
+            font-family: var(--font-mono);
+            font-size: 0.9em;
+            background: rgba(212, 162, 62, 0.12);
+            color: var(--amber-bright);
+            padding: 2px 5px;
+            border-radius: 4px;
+            border: 1px solid rgba(212, 162, 62, 0.2);
+        }
+
+        .block-mermaid {
+            margin: var(--space-4) 0;
+            background: var(--bg-elev-1);
+            border: 1px solid var(--hair);
+            padding: var(--space-6);
+            border-radius: 6px;
+            text-align: center;
+        }
+
+        .block-mermaid svg {
+            max-width: 100%;
+            height: auto;
+        }
+
+        .copy-btn {
+            position: absolute;
+            bottom: 8px;
+            right: 8px;
+            padding: 4px 10px;
+            font-size: 11px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: var(--ink-whisper);
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.2s;
+            opacity: 0;
+        }
+
+        .code-wrapper:hover .copy-btn {
+            opacity: 1;
+        }
+
+        .copy-btn:hover {
+            background: var(--amber);
+            color: var(--bg);
+            border-color: var(--amber);
+        }
+
+        .task-del {
+            font-size: var(--fs-sm);
+            color: #888;
+            font-weight: 500;
+            cursor: pointer;
+            padding: 3px 12px;
+            border: 1px solid rgba(136, 136, 136, 0.2);
+            border-radius: 4px;
+            transition: all 0.2s;
+            background: rgba(0, 0, 0, 0.2);
+        }
+
+        .task-del:hover {
+            color: #ff4d4d;
+            background: rgba(200, 90, 74, 0.15);
+            border-color: var(--status-weak);
+        }
+
+        .task-add-row {
+            display: flex;
+            align-items: center;
+            gap: var(--space-2);
+            margin-top: var(--space-2);
+            padding: 4px 0;
+        }
+
+        .task-add-input {
+            flex: 1;
+            background: transparent;
+            border: none;
+            border-bottom: 1px dashed var(--hair);
+            color: var(--ink-dim);
+            font-size: var(--fs-sm);
+            outline: none;
+            padding: 4px 0;
+        }
+
+        .task-add-input:focus {
+            border-bottom-color: var(--amber);
+            color: var(--ink);
+        }
+
+        .task-add-btn {
+            color: var(--amber);
+            cursor: pointer;
+            font-size: var(--fs-xs);
+            font-weight: 700;
+            padding: 2px 8px;
+            border: 1px solid var(--amber-soft);
+            border-radius: 4px;
+        }
+
+        .ac-item {
+            border: 1px solid var(--hair);
+            margin-bottom: var(--space-3);
+            background: var(--bg-elev-2);
+        }
+
+        .ac-header {
+            display: flex;
+            align-items: center;
+            gap: var(--space-3);
+            padding: var(--space-3) var(--space-4);
+            border-bottom: 1px solid var(--hair);
+        }
+
+        .ac-id {
+            font-family: var(--font-mono);
+            font-size: var(--fs-xs);
+            color: var(--ink-mute);
+            min-width: 32px;
+        }
+
+        .ac-name {
+            flex: 1;
+            font-size: var(--fs-base);
+            font-weight: 500;
+        }
+
+        .ac-actions {
+            display: flex;
+            gap: var(--space-1);
+        }
+
+        .ac-btn {
+            font-size: var(--fs-xs);
+            font-weight: 700;
+            padding: 3px 10px;
+            border: 1px solid var(--hair);
+            background: var(--bg-elev-2);
+            color: var(--ink-mute);
+            cursor: pointer;
+            transition: all 0.15s;
+        }
+
+        .ac-btn-ok-hint {
+            color: var(--status-strong);
+            border-color: rgba(138, 181, 115, 0.2);
+        }
+
+        .ac-btn-q-hint {
+            color: var(--status-neutral);
+            border-color: rgba(201, 147, 57, 0.2);
+        }
+
+        .ac-btn.ac-ok {
+            background: var(--status-strong);
+            color: var(--bg);
+            border-color: var(--status-strong);
+        }
+
+        .ac-btn.ac-q {
+            background: var(--status-neutral);
+            color: var(--bg);
+            border-color: var(--status-neutral);
+        }
+
+        .ac-body {
+            padding: var(--space-4) 40px;
+            font-size: 14px;
+        }
+
+        .gwt-row {
+            display: grid;
+            grid-template-columns: 80px 1fr;
+            gap: var(--space-4);
+            margin-bottom: 8px;
+            color: var(--ink-dim);
+            line-height: 1.6;
+        }
+
+        .gwt-label {
+            font-family: var(--font-mono);
+            font-size: 11px;
+            color: var(--ink-whisper);
+            padding-top: 3px;
+            text-transform: uppercase;
+            letter-spacing: 0.12em;
+        }
+
+        /* RIGHT PANEL */
+        .rightpanel {
+            background: var(--bg-elev-1);
+            overflow-y: auto;
+            height: 100%;
+        }
+
+        .rp-section {
+            padding: var(--space-4);
+            border-bottom: 1px solid var(--hair);
+        }
+
+        .rp-title {
+            padding: var(--space-3) 0;
+            font-size: var(--fs-xs);
+            color: var(--ink-mute);
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+        }
+
+        .stat-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: var(--space-2);
+        }
+
+        .stat-label {
+            font-size: var(--fs-sm);
+            color: var(--ink-dim);
+        }
+
+        .stat-val {
+            font-family: var(--font-mono);
+            font-weight: 700;
+        }
+
+        .stat-ok {
+            color: var(--status-strong);
+        }
+
+        .stat-no {
+            color: var(--status-weak);
+        }
+
+        .stat-q {
+            color: var(--status-neutral);
+        }
+
+        .stat-cold {
+            color: var(--status-cold);
+        }
+
+        .risk-table,
+        .milestone-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: var(--fs-xs);
+            margin-bottom: var(--space-4);
+        }
+
+        .risk-table th,
+        .milestone-table th {
+            text-align: left;
+            padding: 8px;
+            color: var(--ink-mute);
+            border-bottom: 1px solid var(--hair);
+        }
+
+        .risk-table td,
+        .milestone-table td {
+            padding: 8px;
+            color: var(--ink-dim);
+            border-bottom: 1px solid var(--hair);
+        }
+
+        .ac-question {
+            margin-top: var(--space-4);
+            display: none;
+        }
+
+        .ac-question.visible {
+            display: block;
+        }
+
+        .ac-question-input {
+            width: 100%;
+            height: 80px;
+            background: var(--bg-elev-3);
+            border: 1px solid var(--hair);
+            color: var(--ink);
+            padding: var(--space-3);
+            font-family: var(--font-sans);
+            font-size: var(--fs-sm);
+            resize: none;
+            outline: none;
+            border-radius: 4px;
+        }
+
+        .ac-question-input:focus {
+            border-color: var(--amber);
+            background: var(--bg-elev-2);
+        }
+
+        .export-output {
+            margin-top: 10px;
+            background: #000;
+            padding: 10px;
+            font-family: var(--font-mono);
+            font-size: 10px;
+            color: #0f0;
+            white-space: pre-wrap;
+            display: none;
+        }
+
+        .export-output.visible {
+            display: block;
+        }
+
+        ::-webkit-scrollbar {
+            width: 4px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: var(--hair);
+        }
+    </style>
+</head>
+
+<body>
+    <svg style="position:fixed;width:0;height:0;pointer-events:none;">
+        <filter id="noise">
+            <feTurbulence type="fractalNoise" baseFrequency="0.85" numOctaves="2" />
+            <feColorMatrix values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 0.04 0" />
+        </filter>
+    </svg>
+
+    <div class="topbar">
+        <div class="topbar-left">
+            <div class="topbar-brand">◆ 评审台</div>
+            <div class="topbar-sep"></div>
+            <div class="topbar-doc" id="topbar-docname">...</div>
+            <div class="topbar-meta">
+                <span>版本 <span class="topbar-meta-val" id="topbar-version">v0.1</span></span>
+                <span>日期 <span class="topbar-meta-val" id="topbar-date">2026-05-14</span></span>
+            </div>
+        </div>
+        <div class="topbar-right">
+            <div class="progress-wrap">
+                <div class="progress-bar">
+                    <div class="progress-fill" id="progress-fill" style="width:0%"></div>
+                </div>
+                <div class="progress-text" id="progress-text">0 / 0 AC</div>
+            </div>
+            <button class="btn" onclick="location.reload()">重置</button>
+        </div>
+    </div>
+
+    <div class="layout">
+        <div class="sidebar">
+            <div class="sidebar-section">
+                <div class="sidebar-heading">文档结构</div>
+            </div>
+            <div id="nav-tree"></div>
+        </div>
+
+        <div class="main">
+            <div class="main-inner" id="main-content">
+                <!-- Views will be rendered here -->
+            </div>
+        </div>
+
+        <div class="rightpanel">
+            <div class="rp-section">
+                <div class="rp-title">审核统计</div>
+                <div class="stat-row"><span class="stat-label">AC 通过</span><span class="stat-val stat-ok"
+                        id="stat-ok">0</span></div>
+                <div class="stat-row"><span class="stat-label">AC 疑问</span><span class="stat-val stat-q"
+                        id="stat-q">0</span></div>
+                <div class="stat-row"><span class="stat-label">待审核</span><span class="stat-val stat-cold"
+                        id="stat-pending">0</span></div>
+            </div>
+            <div class="rp-section">
+                <div class="rp-title">操作</div>
+                <button class="btn-export" onclick="exportJSON()">▶ 导出审核 JSON</button>
+                <div class="export-output" id="export-output"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const DOC_DATA = {"epic_id": "E23", "title": "[Epic E23] 每日格言打卡 · 单独完整设计", "sections": [{"title": "背景与目标", "content": "格言打卡是 MVP 三个日打卡中<strong>门槛最低、最易坚持、长期价值最高</strong>的一项。看似简单（看一句话，写一段话），实则是<strong>投资体系内化</strong>的关键机制。", "stories": []}, {"title": "格言打卡子系统设计 (Maxim Check-in Subsystem)", "content": "", "stories": [{"id": "E23-S1", "title": "格言库内容与分类", "desc": "**作为** 用户  \n**我希望** 看到的格言有质量、有深度并自动分类  \n**以便** 每天都能引发新的思考，将外部大师智慧与个人反思相糅合", "tasks": [{"id": "T1", "text": "T1: 整理并构建含有 5 个分类的格言数据结构，支持经典名言、大佬语录、历史教训、用户摘录、自己写的金句"}, {"id": "T2", "text": "T2: 手工录入 50 条经典名言、20 条大佬语录和 10 条历史教训作为冷启动基础底座数据"}, {"id": "T3", "text": "T3: 开发“日记段落长按摘录”功能，支持用户直接将个人日记中的段落加入金句库，并回链原日记 ID"}, {"id": "T4", "text": "T4: 实现后台异步语义识别，当用户日记中包含“真正的 / 永远 / 必须”等断言式金句特征时，提示用户加入金句库"}], "acs": [{"id": "AC1", "title": "AC1 初始冷启动数据就绪", "given": "上线第一天格言数据库初始化完成", "when": "统计 <code class=\"inline-code\">diary_quote_lib</code> 记录总数时", "then": "系统应至少拥有 80 条（50经典 + 20大佬 + 10教训）的优质格言底座"}, {"id": "AC2", "title": "AC2 手动段落摘录金句", "given": "用户在某篇日记详情页中长按选中一段话", "when": "点击浮层菜单中的“加入金句”按钮时", "then": "该段落必须被成功添加到格言库，且其 <code class=\"inline-code\">category</code> 自动标记为 <code class=\"inline-code\">5</code> (自己写的金句)，并正确回链原日记 ID"}, {"id": "AC3", "title": "AC3 智能金句识别机制", "given": "用户保存了一篇含有“真正的止损是执行纪律”的交易日记", "when": "后端正则/语义分析组件执行时", "then": "应在月度限额内（每月最多 3 次）向用户推送一条加入金句库的确认提示"}]}, {"id": "E23-S2", "title": "每日格言轮询算法", "desc": "**作为** 用户  \n**我希望** 每天首次进入打卡时看到一条完全契合当日行情、且近期未曝光过的格言  \n**以便** 获得心灵共鸣并提升投资敏锐度", "tasks": [{"id": "T1", "text": "T1: 编写排重门禁逻辑，自动排除 30 天内已曝光过的格言、被标记“已掌握”的格言以及非启用状态的格言"}, {"id": "T2", "text": "T2: 编写基于大盘当日行情与情绪的动态加权打分算法，为大跌（恐惧类）、大涨（贪婪类）、震荡（耐心类）格言注入权重"}, {"id": "T3", "text": "T3: 编写 Top 10 随机轮询选择算法，确保候选集权重最大化的同时具备一定的惊喜感"}, {"id": "T4", "text": "T4: 编写凌晨 4:00 后台格言预生成机制，并在用户首次进入打卡时锁定该当日格言，防止重复计算和高峰网络延迟"}], "acs": [{"id": "AC1", "title": "AC1 30天内防重复曝光", "given": "用户连续打卡 30 天", "when": "每天生成当日格言时", "then": "这 30 天内获取的格言必须 100% 互不重复"}, {"id": "AC2", "title": "AC2 市场大跌恐惧加权", "given": "当日大盘暴跌 3% (符合大跌阈值)", "when": "系统计算当日格言加权打分时", "then": "包含“恐惧/贪婪”标签的经典格言其综合得分应自动获得 +15 情绪权重"}, {"id": "AC3", "title": "AC3 预生成与当日锁定", "given": "用户在 16:00 首次打开打卡页", "when": "退出并重新进入该页面时", "then": "展示的必须是同一条被锁定的当日格言，绝对不发生实时闪烁或重新抽取"}]}, {"id": "E23-S3", "title": "格言展示界面与上次见解", "desc": "**作为** 用户  \n**我希望** 格言展示富有排版仪式感，且在输入前能对照自己以前对该格言的感悟  \n**以便** 看清自己认知演进的轨迹，实现与“过去的自己”深度对话", "tasks": [{"id": "T1", "text": "T1: 设计采用 <code class=\"inline-code\">Noto Serif SC</code> 衬线字体的格言展示主卡片，配置精致的引号装饰与大白留边"}, {"id": "T2", "text": "T2: 在卡片顶部高亮渲染分类徽章，底部展示作者及来源信息"}, {"id": "T3", "text": "T3: 针对“自己写的金句”类型卡片，自动展示跳转回原日记的金色高亮链接"}, {"id": "T4", "text": "T4: 在输入框上方，自动拉取并高对比展示该用户上一次对该条格言写下的感悟见解"}], "acs": [{"id": "AC1", "title": "AC1 自己金句回链跳转", "given": "当前轮询展示的格言分类为“自己写的金句”", "when": "页面加载完成且用户点击来源链接时", "then": "系统应能顺畅跳转回该金句诞生的原日记详情页"}, {"id": "AC2", "title": "AC2 历史见解对照呈现", "given": "用户在 30 天前曾对格言 A 写过 60 字感悟", "when": "今日再次抽中格言 A 且用户点击输入框准备书写时", "then": "输入框上方必须以磨砂卡片形式完整且无截断地显示出那段“30天前写过的见解”"}]}, {"id": "E23-S4", "title": "见解输入引导与脚手架", "desc": "**作为** 用户  \n**我希望** 在书写见解时拥有针对性的 placeholder 问题引导和思考脚手架快捷词  \n**以便** 在卡壳时能迅速组织文字，输出高质量反思", "tasks": [{"id": "T1", "text": "T1: 根据 5 大格言分类，配置 4 套个性化占位符引导问题（如：“回头看自己写的话，今天还认同吗？”）"}, {"id": "T2", "text": "T2: 编写字数计算与门禁，设定最低 30 字强制门禁、50-100 字深度见解高亮，以及 500 字上限提示"}, {"id": "T3", "text": "T3: 在输入框下方设计 4 个思考脚手架快捷词 Chip（「举个例子」、「反对一下」、「联系当下」、「未来怎么做」）"}, {"id": "T4", "text": "T4: 实现点击快捷词 Chip 自动在光标位置插入引导句（如：“比如有一次，我...”）并自动聚焦"}], "acs": [{"id": "AC1", "title": "AC1 字数硬门禁校验", "given": "输入见解只有 15 个字", "when": "尝试点击提交打卡时", "then": "提交按钮必须保持灰色禁用状态，且字数实时计数器呈现警告红色"}, {"id": "AC2", "title": "AC2 脚手架快捷词插入", "given": "输入框当前聚焦且光标位于文本中间", "when": "点击「举个例子」快捷词 Chip 时", "then": "引导句“比如有一次，我...”应精准插入在光标处，且字数实时累加，按钮状态自动更新"}]}, {"id": "E23-S5", "title": "收藏与用户共建", "desc": "**作为** 用户  \n**我希望** 能一键收藏打动我的格言，并能随时自主添加新的投资格言  \n**以便** 让系统中的智慧库越来越个性化", "tasks": [{"id": "T1", "text": "T1: 在格言卡片下方设计“⭐ 收藏格言”按钮，支持收藏状态的实时双向切换"}, {"id": "T2", "text": "T2: 实现收藏状态持久化，被收藏的格言在算法加分中自动获得 +20 的高权重分"}, {"id": "T3", "text": "T3: 编写“我也想加一条”录入页面，支持用户输入 10-200 字的正文、作者、分类及来源"}], "acs": [{"id": "AC1", "title": "AC1 收藏状态持久化与加权", "given": "用户点击收藏当前格言", "when": "数据库更新成功后", "then": "再次触发计算该格言轮询得分时，其基础得分必须获得 +20 收藏加成，且页面展示为已收藏金色星星"}, {"id": "AC2", "title": "AC2 自主共建格言落库", "given": "录入一条巴菲特关于长寿的格言并提交", "when": "查询格言表 <code class=\"inline-code\">diary_quote_lib</code> 时", "then": "该记录的 <code class=\"inline-code\">owner_user_id</code> 必须为 <code class=\"inline-code\">1</code>，且下一交易日的轮询池能正常将其计入候选集"}]}, {"id": "E23-S6", "title": "跳过与拒绝机制", "desc": "**作为** 用户  \n**我希望** 能够跳过今天不感兴趣的格言，或永久屏蔽我不认同的理论  \n**以便** 拥有自主控制权，保持打卡的舒适度", "tasks": [{"id": "T1", "text": "T1: 页面右上角设计“跳过”按钮，点击跳过当日打卡不计入已做，且该格言在下一日优先重新展示"}, {"id": "T2", "text": "T2: 编写连续跳过惩罚逻辑，若同一条格言被连续跳过 3 次，将其权重降为 1 避免后续骚扰"}, {"id": "T3", "text": "T3: 编写长按“不喜欢这条”快捷屏蔽逻辑，将此格言对当前用户永久置为禁用状态"}], "acs": [{"id": "AC1", "title": "AC1 跳过保留与重新展出", "given": "用户今天对格言 A 选择了“跳过”", "when": "明天凌晨格言生成任务运行时", "then": "格言 A 必须作为超高优先级候选展示在明天的待办卡片中，给用户第二次重读的机会"}, {"id": "AC2", "title": "AC2 连续跳过触发自动降权", "given": "格言 A 已被用户连续 3 天点击“跳过”", "when": "第三天跳过操作成功后", "then": "该格言的 <code class=\"inline-code\">weight</code> 字段值应自动被惩罚自减，使其以后轮询中几乎不再出现"}, {"id": "AC3", "title": "AC3 永久屏蔽“不喜欢”", "given": "用户长按格言 B 并选择“不喜欢这条”", "when": "点击确认屏蔽时", "then": "<code class=\"inline-code\">diary_quote_lib</code> 中该格言针对当前用户的 <code class=\"inline-code\">status</code> 字段应置为 <code class=\"inline-code\">0</code> (禁用)，从此永久在曝光候选池中消隐"}]}, {"id": "E23-S7", "title": "打卡日记产物生成", "desc": "**作为** 用户  \n**我希望** 每次打卡的见解内容能自动生成一篇紧凑格式的精美随笔日记  \n**以便** 沉淀我的投资思考资产，并在主列表中能便捷回顾", "tasks": [{"id": "T1", "text": "T1: 编写打卡提交后的数据转换逻辑，自动将打卡内容拼装为 Markdown 格式的正文（带格言引用框和我的见解标题）"}, {"id": "T2", "text": "T2: 自动生成精炼标题，格式为：“格言 · [作者] · [格言开头前10字]”"}, {"id": "T3", "text": "T3: 将日记实体字段 <code class=\"inline-code\">is_checkin</code> 赋值为 <code class=\"inline-code\">1</code>，<code class=\"inline-code\">checkin_type</code> 赋值为 <code class=\"inline-code\">2</code>，<code class=\"inline-code\">entry_type</code> 设定为 <code class=\"inline-code\">5</code> (随笔类)"}, {"id": "T4", "text": "T4: 实现大盘当日数据快照的自动拉取，并将其作为 meta 存入日记的 JSON 字段中"}], "acs": [{"id": "AC1", "title": "AC1 随笔日记落库验证", "given": "打卡感悟提交成功", "when": "查询日记表 <code class=\"inline-code\">diary_entry</code> 最新一条数据时", "then": "该记录的 <code class=\"inline-code\">is_checkin</code> 必须为 <code class=\"inline-code\">1</code>，<code class=\"inline-code\">checkin_type</code> 为 <code class=\"inline-code\">2</code>，且正文内容为标准的 Markdown 拼接结构"}, {"id": "AC2", "title": "AC2 历史行情快照存证", "given": "大跌当日提交了格言打卡", "when": "查询该生成的随笔日记 <code class=\"inline-code\">meta</code> 字段时", "then": "JSON 结构中必须精准存储了当时上证指数的跌幅百分比数值，保障事后复盘的环境追溯"}]}, {"id": "E23-S8", "title": "历史见解聚合回看", "desc": "**作为** 用户  \n**我希望** 能够在一页中查看我对同一条格言在不同时期写下的所有反思感悟  \n**以便** 极其直观地目睹自己交易哲学的演进与心智成长", "tasks": [{"id": "T1", "text": "T1: 页面右上角设计“我和这句话的故事”按钮，点击跳转至见解聚合时间轴页面"}, {"id": "T2", "text": "T2: 编写时间轴数据聚合接口，根据当前 <code class=\"inline-code\">quote_id</code> 倒序拉取该用户的所有历史格言打卡随笔日记"}, {"id": "T3", "text": "T3: 在聚合页面顶部，渲染聚合统计文案（如：“你已对这条格言写过 5 次见解，跨度 3 个月”）"}, {"id": "T4", "text": "T4: 每一个见解卡片上，高亮呈现当时发表见解时的日期以及随文存证的大盘涨跌行情"}], "acs": [{"id": "AC1", "title": "AC1 见解时间轴对账", "given": "用户对格言 A 曾分别在 3 月、4 月、5 月写过 3 次感悟", "when": "点击进入该格言的“我和这句话的故事”故事集页面时", "then": "页面必须倒序呈现 3 条打卡记录卡片，清晰印证每一个时期的主观思考与客观市场环境的对比"}]}]}, {"title": "变更记录", "content": "| 日期 | 版本 | 说明 |\n|---|---|---|\n| 2026-05-19 | v1.0 | 精细化拆解 E2-S3 每日格言打卡 Story，规范 Given-When-Then，补充 DDL 建表。 |", "stories": []}], "tbds": []};
+
+        const state = {
+            acStatus: {},
+            acQuestions: {},
+            taskDeleted: {},
+            storySubTabState: {},
+            addedTasks: {},
+            activeViewId: 'sec-0',
+            tbdResolved: {},
+            tbdResponses: {}
+        };
+
+        function init() {
+            document.getElementById('topbar-docname').textContent = DOC_DATA.title;
+            document.getElementById('topbar-version').textContent = DOC_DATA.version;
+            document.getElementById('topbar-date').textContent = DOC_DATA.date;
+
+            renderNavTree();
+            renderMainContent();
+            updateStats();
+
+            // 初始化 Mermaid
+            if (window.mermaid) {
+                mermaid.initialize({ useWorker: false,  
+                    startOnLoad: false, 
+                    theme: 'dark',
+                    useWorker: false 
+                });
+                mermaid.init(undefined, document.querySelectorAll('.mermaid'));
+            }
+        }
+
+        function renderNavTree() {
+            const tree = document.getElementById('nav-tree');
+            let html = '';
+
+            DOC_DATA.sections.forEach((section, sIdx) => {
+                if (section.title === '待确认事项') return;
+                const isActive = state.activeViewId === `sec-${sIdx}`;
+                html += `<div class="sidebar-section">
+                    <div class="nav-story ${isActive ? 'active' : ''}" onclick="selectView('sec-${sIdx}')">
+                        <div class="nav-story-dot"></div>
+                        <span style="font-weight:600;font-size:var(--fs-xs)">${section.title}</span>
+                    </div>`;
+
+                section.stories.forEach(story => {
+                    const st = getStoryStatus(story.id);
+                    const bc = st === 'ok' ? 'badge-ok' : st === 'no' ? 'badge-no' : st === 'q' ? 'badge-q' : 'badge-pending';
+                    const isActiveStory = state.activeViewId === story.id;
+                    html += `<div class="nav-story ${isActiveStory ? 'active' : ''}" style="padding-left:32px" onclick="selectView('${story.id}')">
+                        <div class="nav-story-dot" style="opacity:0.5"></div>
+                        <span style="flex:1;font-size:var(--fs-xs)">${story.id}</span>
+                        <span class="status-badge-xs ${bc}">${st}</span>
+                    </div>`;
+                });
+
+                html += `</div>`;
+            });
+
+            if (DOC_DATA.tbds && DOC_DATA.tbds.length > 0) {
+                const isActiveTbd = state.activeViewId === 'tbd';
+                html += `<div class="sidebar-section">
+                    <div class="nav-story ${isActiveTbd ? 'active' : ''}" onclick="selectView('tbd')">
+                        <div class="nav-story-dot"></div>
+                        <span style="font-weight:600;font-size:var(--fs-xs)">待确认事项</span>
+                    </div>
+                </div>`;
+            }
+
+            tree.innerHTML = html;
+        }
+
+        function renderRiskTable() {
+            const tbody = document.querySelector('#risk-table tbody');
+            tbody.innerHTML = DOC_DATA.risks.map(r => `<tr><td>${r.risk}</td><td>${r.impact}</td><td>${r.prob}</td><td>${r.mitigation}</td></tr>`).join('');
+        }
+
+        function renderMilestoneTable() {
+            const tbody = document.querySelector('#milestone-table tbody');
+            tbody.innerHTML = DOC_DATA.milestones.map(m => `<tr><td>${m.name}</td><td>${m.date}</td><td>${m.deliverable}</td></tr>`).join('');
+        }
+
+        function renderMainContent() {
+            const container = document.getElementById('main-content');
+            let html = '';
+
+            DOC_DATA.sections.forEach((section, sIdx) => {
+                if (section.title === '待确认事项') return;
+                // Section Panel
+                html += `<div class="view-panel ${state.activeViewId === `sec-${sIdx}` ? 'active' : ''}" id="view-sec-${sIdx}">
+                    <div class="story-detail-header"><span class="story-title">${section.title}</span></div>
+                    <div class="content-well">
+                        <div class="story-tab-content active"><div class="info-block">${section.content}</div></div>
+                    </div>
+                </div>`;
+
+                // Story Panels within this section
+                section.stories.forEach(story => {
+                    html += renderStoryView(story);
+                });
+            });
+
+            if (DOC_DATA.tbds && DOC_DATA.tbds.length > 0) {
+                html += `<div class="view-panel ${state.activeViewId === 'tbd' ? 'active' : ''}" id="view-tbd">
+                    <div class="story-detail-header"><span class="story-title">待确认事项</span></div>
+                    <div class="content-well">
+                        <div class="story-tab-content active" style="padding: var(--space-6)">
+                            ${DOC_DATA.tbds.map(t => `
+                                <div class="tbd-item-wrap" style="margin-bottom:24px">
+                                    <div class="task-item" style="border:none;padding:8px 0">
+                                        <input type="checkbox" style="width:16px;height:16px" ${state.tbdResolved[t.id] ? 'checked' : ''} onchange="state.tbdResolved['${t.id}']=this.checked;updateStats()">
+                                        <span style="font-family:var(--font-mono);font-size:var(--fs-xs);color:var(--amber);margin:0 12px">${t.id}</span>
+                                        <span style="flex:1;font-size:var(--fs-base);color:var(--ink);font-weight:600">${t.text}</span>
+                                    </div>
+                                    <div style="padding-left:40px;margin-top:8px">
+                                        <textarea class="ac-question-input" style="height:60px" placeholder="在此输入确认结论/回复..." onchange="state.tbdResponses['${t.id}']=this.value;updateStats()">${state.tbdResponses[t.id] || ''}</textarea>
+                                    </div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                </div>`;
+            }
+
+            container.innerHTML = html;
+        }
+
+        function renderStoryView(story) {
+            const isActive = state.activeViewId === story.id;
+            const activeSubTab = state.storySubTabState[story.id] || 'tasks';
+
+            return `<div class="view-panel ${isActive ? 'active' : ''}" id="view-${story.id}">
+                <div class="story-detail-header">
+                    <span class="story-id">${story.id}</span>
+                    <span class="story-title">${story.title}</span>
+                </div>
+                <div class="story-body">
+                    <div class="story-tabs">
+                        <div class="story-tab ${activeSubTab === 'tasks' ? 'active' : ''}" onclick="switchSubTab('${story.id}', 'tasks')">任务清单</div>
+                        ${story.acs.map((ac, idx) => `
+                            <div class="story-tab ${activeSubTab === 'ac-' + ac.id ? 'active' : ''}" onclick="switchSubTab('${story.id}', 'ac-${ac.id}')">
+                                AC ${idx + 1}
+                            </div>
+                        `).join('')}
+                    </div>
+                    
+                    <div class="content-well">
+                        <div class="story-tab-content ${activeSubTab === 'tasks' ? 'active' : ''}" id="stc-${story.id}-tasks">
+                            ${story.desc ? `<div class="info-block" style="margin:0 0 var(--space-4); border:none; border-bottom:1px solid var(--hair)">${story.desc}</div>` : ''}
+                            <div id="tasks-${story.id}">
+                                ${story.tasks.map(t => `<div class="task-item ${state.taskDeleted[t.id] ? 'deleted' : ''}" id="task-${t.id}"><div class="task-id">${t.id}</div><div class="task-text">${t.text}</div><div class="task-del" onclick="toggleTask('${t.id}')">${state.taskDeleted[t.id] ? '恢复' : '移除'}</div></div>`).join('')}
+                            </div>
+                            <div class="task-add-row">
+                                <input type="text" class="task-add-input" id="add-input-${story.id}" placeholder="添加新任务..." onkeyup="if(event.key==='Enter') addTask('${story.id}')">
+                                <div class="task-add-btn" onclick="addTask('${story.id}')">+ 添加</div>
+                            </div>
+                        </div>
+
+                        ${story.acs.map(ac => `
+                            <div class="story-tab-content ${activeSubTab === 'ac-' + ac.id ? 'active' : ''}" id="stc-${story.id}-ac-${ac.id}">
+                                ${renderAC(story.id, ac)}
+                            </div>`).join('')}
+                    </div>
+                </div>
+            </div>`;
+        }
+
+        function renderAC(storyId, ac) {
+            const key = `${storyId}-${ac.id}`, status = state.acStatus[key] || null;
+            return `<div class="ac-item" id="ac-${key}">
+                <div class="ac-header">
+                    <span class="ac-id">${ac.id}</span>
+                    <span class="ac-name">${ac.title}</span>
+                    <div class="ac-actions">
+                        <button class="ac-btn ac-btn-ok-hint ${status === 'ok' ? 'ac-ok' : ''}" onclick="setAC('${key}','ok')">✓ 通过</button>
+                        <button class="ac-btn ac-btn-q-hint ${status === 'q' ? 'ac-q' : ''}" onclick="setAC('${key}','q')">⚠ 疑问</button>
+                    </div>
+                </div>
+                <div class="ac-body">
+                    <div class="gwt-row"><div class="gwt-label">Given</div><div>${ac.given}</div></div>
+                    <div class="gwt-row"><div class="gwt-label">When</div><div>${ac.when}</div></div>
+                    <div class="gwt-row"><div class="gwt-label">Then</div><div>${ac.then}</div></div>
+                    <div class="ac-question ${status === 'q' ? 'visible' : ''}" id="acq-${key}">
+                        <textarea class="ac-question-input" placeholder="疑问内容..." onchange="state.acQuestions['${key}']=this.value;updateStats()">${state.acQuestions[key] || ''}</textarea>
+                    </div>
+                </div>
+            </div>`;
+        }
+
+        function getStoryStatus(storyId) {
+            const story = findStory(storyId);
+            if (!story) return 'pending';
+            const acs = story.acs.map(ac => state.acStatus[`${storyId}-${ac.id}`]);
+            if (acs.includes('no')) return 'no';
+            if (acs.includes('q')) return 'q';
+            if (acs.every(s => s === 'ok')) return 'ok';
+            return 'pending';
+        }
+
+        function setAC(key, status) {
+            const prev = state.acStatus[key];
+            state.acStatus[key] = prev === status ? null : status;
+            const qArea = document.getElementById(`acq-${key}`);
+            if (qArea) {
+                if (state.acStatus[key] === 'q') qArea.classList.add('visible');
+                else qArea.classList.remove('visible');
+            }
+            updateStats();
+        }
+
+        function toggleTask(taskId) {
+            state.taskDeleted[taskId] = !state.taskDeleted[taskId];
+            renderNavTree();
+            updateStats();
+        }
+
+        function selectView(viewId) {
+            state.activeViewId = viewId;
+            document.querySelectorAll('.view-panel').forEach(c => c.classList.remove('active'));
+            const card = document.getElementById(`view-${viewId}`);
+            if (card) card.classList.add('active');
+            renderNavTree();
+        }
+
+        function switchSubTab(storyId, tabId) {
+            state.storySubTabState[storyId] = tabId;
+            renderMainContent();
+        }
+
+        function addTask(storyId) {
+            const input = document.getElementById(`add-input-${storyId}`);
+            const text = input.value.trim();
+            if (!text) return;
+            if (!state.addedTasks[storyId]) state.addedTasks[storyId] = [];
+            state.addedTasks[storyId].push(text);
+            input.value = '';
+            renderTasks(storyId);
+        }
+
+        function removeAddedTask(storyId, idx) {
+            state.addedTasks[storyId].splice(idx, 1);
+            renderTasks(storyId);
+        }
+
+        function renderTasks(storyId) {
+            const story = findStory(storyId);
+            const container = document.getElementById(`tasks-${storyId}`);
+            let html = story.tasks.map(t => `<div class="task-item ${state.taskDeleted[t.id] ? 'deleted' : ''}" id="task-${t.id}"><span class="task-id">${t.id}</span><span class="task-text">${t.text}</span><span class="task-del" onclick="toggleTask('${t.id}')">${state.taskDeleted[t.id] ? '恢复' : '移除'}</span></div>`).join('');
+            html += (state.addedTasks[storyId] || []).map((t, idx) => `<div class="task-item" id="added-${storyId}-${idx}"><span class="task-id">NEW</span><span class="task-text">${t}</span><span class="task-del" onclick="removeAddedTask('${storyId}', ${idx})">删除</span></div>`).join('');
+            container.innerHTML = html;
+        }
+
+        function findStory(storyId) {
+            for (let section of DOC_DATA.sections) {
+                const s = section.stories.find(s => s.id === storyId);
+                if (s) return s;
+            }
+            return null;
+        }
+
+        function switchTab(el, panelId) {
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+            el.classList.add('active'); document.getElementById(panelId).classList.add('active');
+        }
+
+        function updateStats() {
+            let ok = 0, q = 0, totalAC = 0;
+            DOC_DATA.sections.forEach(section => {
+                section.stories.forEach(s => {
+                    s.acs.forEach(ac => {
+                        totalAC++;
+                        const st = state.acStatus[`${s.id}-${ac.id}`];
+                        if (st === 'ok') ok++;
+                        else if (st === 'q') q++;
+                    });
+                });
+            });
+            document.getElementById('progress-fill').style.width = (totalAC ? (ok / totalAC * 100) : 0) + '%';
+            document.getElementById('progress-text').textContent = `${ok} / ${totalAC} AC`;
+            document.getElementById('stat-ok').textContent = ok;
+            document.getElementById('stat-q').textContent = q;
+            document.getElementById('stat-pending').textContent = totalAC - ok - q;
+            renderNavTree();
+        }
+
+        function exportJSON() {
+            try {
+                const output = {
+                    doc: DOC_DATA.doc_id || "Unknown",
+                    audit_date: new Date().toISOString(),
+                    results: Object.keys(state.acStatus || {}).map(key => {
+                        const parts = key.split('-');
+                        return {
+                            story: parts[0],
+                            ac: parts[1],
+                            status: state.acStatus[key]
+                        };
+                    }),
+                    questions: state.acQuestions || {},
+                    deleted_tasks: state.taskDeleted || {},
+                    added_tasks: state.addedTasks || {},
+                    tbd_resolved: state.tbdResolved || {},
+                    tbd_responses: state.tbdResponses || {},
+                    agent_instruction: "请根据上述评审结果更新文档。1. 对于标记为 'q' 的条目，参考 questions 修改；2. 对于 deleted_tasks 为 true 的任务，从文档中移除；3. 对于 added_tasks 中的内容，作为新任务插入到对应 Story 的任务清单中；4. 对于 tbd_resolved 为 true 的 TBD 项，将其标记为 [x]，并在其下方以引用块形式插入对应的 tbd_responses。"
+                };
+
+                const json = JSON.stringify(output, null, 2);
+                console.log("Exporting JSON:", json);
+
+                const outEl = document.getElementById('export-output');
+                if (outEl) {
+                    outEl.textContent = json;
+                    outEl.classList.add('visible');
+                    outEl.scrollIntoView({ behavior: 'smooth' });
+                }
+
+                // 尝试复制到剪贴板，带 fallback
+                if (navigator.clipboard && navigator.clipboard.writeText) {
+                    navigator.clipboard.writeText(json).then(() => {
+                        const btn = document.querySelector('.btn-export');
+                        const originalText = btn.textContent;
+                        btn.textContent = '✓ 已复制到剪贴板';
+                        btn.style.color = 'var(--status-strong)';
+                        btn.style.borderColor = 'var(--status-strong)';
+                        setTimeout(() => {
+                            btn.textContent = originalText;
+                            btn.style.color = '';
+                            btn.style.borderColor = '';
+                        }, 2000);
+                    }).catch(err => {
+                        console.error('Clipboard error:', err);
+                        alert('JSON 已在右侧面板下方生成，请手动复制。');
+                    });
+                } else {
+                    alert('JSON 已在右侧面板下方生成，请手动复制。');
+                }
+            } catch (e) {
+                console.error("Export Error:", e);
+                alert("导出失败: " + e.message);
+            }
+        }
+
+        function copyCode(btn) {
+            const code = btn.parentElement.querySelector('code').innerText;
+            navigator.clipboard.writeText(code).then(() => {
+                const originalText = btn.textContent;
+                btn.textContent = 'Copied!';
+                btn.style.color = 'var(--status-strong)';
+                setTimeout(() => {
+                    btn.textContent = originalText;
+                    btn.style.color = '';
+                }, 2000);
+            });
+        }
+
+        init();
+    </script>
+    <script src="https://lib.baomitu.com/mermaid/10.9.0/mermaid.min.js"></script>
+</body>
+
+</html>

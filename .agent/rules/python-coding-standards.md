@@ -44,6 +44,9 @@ You are an expert Python Backend Engineer specializing in financial data systems
 - **Timezone**: **ALWAYS** use `Asia/Shanghai` (CST).
 - **Date Handling**: Be careful when comparing dates in different formats (YYYYMMDD vs YYYY-MM-DD). Use `meta_trading_calendar` for trade date logic.
 
+## 5. String Manipulation & Templating
+- **Template Safety**: **NEVER** pass a string directly into `re.sub` as the `repl` parameter if it contains backslashes or user-controlled escape sequences (such as serialized JSON strings or file paths). **ALWAYS** wrap the replacement in a lambda function (e.g., `re.sub(pattern, lambda m: payload, template)`) to prevent Python from interpreting backslashes.
+
 # Testing Guidelines
 - **Framework**: Pytest + pytest-asyncio
 - **Mandatory QC**:

@@ -1,0 +1,608 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>[Epic E23] 每日格言打卡 · 单独完整设计</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Noto+Serif+SC:wght@400;700;900&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    
+    <!-- Local Offline Libraries -->
+    <script src="../../../../../docs/assets/js/marked.min.js"></script>
+    <link rel="stylesheet" href="../../../../../docs/assets/css/github-markdown-dark.css">
+    <script src="../../../../../docs/assets/js/mermaid.min.js"></script>
+    
+    <!-- Syntax Highlighting (Local) -->
+    <link rel="stylesheet" href="../../../../../docs/assets/css/tokyo-night-dark.min.css">
+    <script src="../../../../../docs/assets/js/highlight.min.js"></script>
+    
+    <style>
+        :root {
+            --bg: #0a0a0a;
+            --surface: #121212;
+            --surface-hover: #1a1a1a;
+            --border: #222222;
+            --accent: #eab308;
+            --accent-glow: rgba(234, 179, 8, 0.1);
+            --text-primary: #f1f5f9;
+            --text-secondary: #94a3b8;
+            --text-muted: #64748b;
+            --font-sans: 'Outfit', 'Noto Sans SC', -apple-system, sans-serif;
+            --font-serif: 'Noto Serif SC', serif;
+            --font-mono: 'JetBrains Mono', monospace;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background-color: var(--bg);
+            color: var(--text-primary);
+            font-family: var(--font-sans);
+            line-height: 1.7;
+            -webkit-font-smoothing: antialiased;
+            overflow-x: hidden;
+        }
+
+        /* Subtle background glow */
+        body::after {
+            content: '';
+            position: fixed;
+            top: 0;
+            right: 0;
+            width: 40vw;
+            height: 40vh;
+            background: radial-gradient(circle, var(--accent-glow) 0%, transparent 70%);
+            z-index: -1;
+            filter: blur(100px);
+            pointer-events: none;
+        }
+
+        .sidebar {
+            width: 260px;
+            height: 100vh;
+            position: fixed;
+            left: 0;
+            top: 0;
+            border-right: 1px solid var(--border);
+            background: var(--bg);
+            padding: 1.5rem;
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+            overflow-y: auto;
+            z-index: 100;
+        }
+
+        .nav-link {
+            color: var(--text-muted);
+            text-decoration: none;
+            font-size: 0.85rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            transition: color 0.2s;
+            padding: 0.5rem;
+            border-radius: 6px;
+        }
+        .nav-link:hover { color: var(--accent); background: var(--surface); }
+
+        .toc-title {
+            font-family: var(--font-serif);
+            font-size: 1rem;
+            color: var(--text-primary);
+            margin-bottom: 0.8rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding-left: 0.5rem;
+        }
+        .toc-title::before {
+            content: '';
+            width: 3px;
+            height: 1rem;
+            background: var(--accent);
+            border-radius: 2px;
+        }
+
+        .toc-list {
+            list-style: none;
+            display: flex;
+            flex-direction: column;
+            gap: 0.4rem;
+        }
+        .toc-item {
+            font-size: 0.8rem;
+            line-height: 1.3;
+        }
+        .toc-item a {
+            color: var(--text-muted);
+            text-decoration: none;
+            transition: all 0.2s;
+            display: block;
+            padding: 0.4rem 0.5rem;
+            border-radius: 4px;
+        }
+        .toc-item a:hover { color: var(--accent); background: var(--surface); }
+        .toc-item.level-3 { margin-left: 0.8rem; border-left: 1px solid var(--border); }
+
+        .container {
+            max-width: 860px;
+            margin: 0 auto 0 260px;
+            padding: 3rem 4rem;
+            animation: fadeIn 0.6s ease-out;
+        }
+
+        @media (max-width: 1024px) {
+            .sidebar { width: 220px; padding: 1rem; }
+            .container { margin-left: 220px; padding: 2rem; }
+        }
+
+        @media (max-width: 800px) {
+            .sidebar { position: static; width: 100%; height: auto; border-right: none; border-bottom: 1px solid var(--border); }
+            .container { margin-left: 0; padding: 1.5rem; }
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(5px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        header {
+            margin-bottom: 3rem;
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 1.5rem;
+        }
+
+        .meta {
+            font-family: var(--font-mono);
+            font-size: 0.75rem;
+            color: var(--accent);
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            margin-bottom: 0.8rem;
+            display: flex;
+            align-items: center;
+            gap: 0.8rem;
+        }
+
+        .meta::before {
+            content: '';
+            width: 20px;
+            height: 1px;
+            background-color: var(--accent);
+        }
+
+        h1 {
+            font-family: var(--font-serif);
+            font-size: 2.2rem;
+            font-weight: 900;
+            line-height: 1.2;
+            margin-bottom: 1rem;
+            color: var(--text-primary);
+        }
+
+        .markdown-body {
+            background: transparent !important;
+            color: var(--text-primary) !important;
+            font-family: var(--font-sans) !important;
+            font-size: 0.95rem !important;
+        }
+
+        .markdown-body h2 {
+            font-family: var(--font-serif);
+            font-size: 1.5rem !important;
+            color: var(--accent) !important;
+            border-bottom: 1px solid var(--border) !important;
+            padding-bottom: 0.5rem !important;
+            margin-top: 2.5rem !important;
+            scroll-margin-top: 1rem;
+        }
+
+        .markdown-body h3 {
+            font-family: var(--font-serif);
+            font-size: 1.25rem !important;
+            color: var(--text-primary) !important;
+            margin-top: 2rem !important;
+            scroll-margin-top: 1rem;
+        }
+
+        .markdown-body p, .markdown-body li {
+            font-size: 0.95rem !important;
+            color: var(--text-primary) !important;
+        }
+        
+        .markdown-body pre {
+            background-color: #1a1b26 !important; /* Match Tokyo Night Dark */
+            border: 1px solid var(--border);
+            border-radius: 8px !important;
+            padding: 0 !important; /* Code internal handles padding */
+            margin: 1.2rem 0 !important;
+            overflow: hidden;
+        }
+
+        .markdown-body pre code {
+            background-color: transparent !important;
+            padding: 1.2rem !important;
+            display: block;
+            font-family: var(--font-mono) !important;
+            font-size: 0.85rem !important;
+            line-height: 1.5;
+        }
+
+        .markdown-body blockquote {
+            border-left: 3px solid var(--accent) !important;
+            background: var(--surface);
+            padding: 0.8rem 1.2rem;
+            color: var(--text-secondary) !important;
+            margin: 1.2rem 0 !important;
+        }
+
+        .markdown-body table {
+            background: var(--surface);
+            font-size: 0.85rem !important;
+            margin: 1.2rem 0 !important;
+        }
+
+        footer {
+            margin-top: 4rem;
+            padding-top: 1.5rem;
+            border-top: 1px solid var(--border);
+            color: var(--text-muted);
+            font-size: 0.8rem;
+            text-align: center;
+        }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar { width: 5px; }
+        ::-webkit-scrollbar-track { background: var(--bg); }
+        ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+    </style>
+</head>
+<body>
+    <aside class="sidebar">
+        <a href="index.html" class="nav-link">
+            <span>←</span> 返回目录门户
+        </a>
+        
+        <div class="toc-container">
+            <h3 class="toc-title">文档导航</h3>
+            <ul class="toc-list" id="toc">
+                <!-- TOC items will be injected here -->
+            </ul>
+        </div>
+    </aside>
+
+    <div class="container">
+        <header>
+            <div class="meta">GLOBAL | 2026-05-19 08:48</div>
+            <h1>[Epic E23] 每日格言打卡 · 单独完整设计</h1>
+        </header>
+
+        <article id="content" class="markdown-body">
+            <!-- Loading indicator -->
+            <p style="color: var(--text-muted)">正在解析文档内容...</p>
+        </article>
+
+        <footer>
+            &copy; 2026 MicroStock Project Docs | Generated by Antigravity
+        </footer>
+    </div>
+
+    <script id="markdown-raw" type="text/markdown"># [Epic E23] 每日格言打卡 · 单独完整设计
+
+## 背景与目标
+
+格言打卡是 MVP 三个日打卡中**门槛最低、最易坚持、长期价值最高**的一项。看似简单（看一句话，写一段话），实则是**投资体系内化**的关键机制。
+
+### 设计原则
+- **主动训练**：不是被动“鸡汤推送”，而是“思考肌肉训练”。
+- **真实连接**：不是被动接受名言，而是把名言**变成自己的经历**。
+- **沉淀积累**：不是单纯消费内容，而是**沉淀个人智慧**（自己写过的金句也能成为以后的格言）。
+
+### 业务范围
+- 格言库管理、每日智能轮询算法、见解输入脚手架、收藏机制、共建机制、历史见解回看。
+
+### 非目标 (MVP 不做)
+- 不做格言搜索或分类浏览，由系统进行全自动智能轮询，避免挑选疲劳。
+- 不做格言评论与点赞互动，保持 MVP 阶段的纯粹自用属性。
+- 不做每日格言推送通知，减少用户被动打扰，用户自然登录进入即可。
+
+---
+
+## 格言打卡子系统设计 (Maxim Check-in Subsystem)
+
+### E23-S1 格言库内容与分类
+**作为** 用户  
+**我希望** 看到的格言有质量、有深度并自动分类  
+**以便** 每天都能引发新的思考，将外部大师智慧与个人反思相糅合
+
+#### 任务
+- [ ] T1: 整理并构建含有 5 个分类的格言数据结构，支持经典名言、大佬语录、历史教训、用户摘录、自己写的金句
+- [ ] T2: 手工录入 50 条经典名言、20 条大佬语录和 10 条历史教训作为冷启动基础底座数据
+- [ ] T3: 开发“日记段落长按摘录”功能，支持用户直接将个人日记中的段落加入金句库，并回链原日记 ID
+- [ ] T4: 实现后台异步语义识别，当用户日记中包含“真正的 / 永远 / 必须”等断言式金句特征时，提示用户加入金句库
+
+#### 验收标准 (AC)
+##### AC1 初始冷启动数据就绪
+- **Given** 上线第一天格言数据库初始化完成
+- **When** 统计 `diary_quote_lib` 记录总数时
+- **Then** 系统应至少拥有 80 条（50经典 + 20大佬 + 10教训）的优质格言底座
+
+##### AC2 手动段落摘录金句
+- **Given** 用户在某篇日记详情页中长按选中一段话
+- **When** 点击浮层菜单中的“加入金句”按钮时
+- **Then** 该段落必须被成功添加到格言库，且其 `category` 自动标记为 `5` (自己写的金句)，并正确回链原日记 ID
+
+##### AC3 智能金句识别机制
+- **Given** 用户保存了一篇含有“真正的止损是执行纪律”的交易日记
+- **When** 后端正则/语义分析组件执行时
+- **Then** 应在月度限额内（每月最多 3 次）向用户推送一条加入金句库的确认提示
+
+---
+
+### E23-S2 每日格言轮询算法
+**作为** 用户  
+**我希望** 每天首次进入打卡时看到一条完全契合当日行情、且近期未曝光过的格言  
+**以便** 获得心灵共鸣并提升投资敏锐度
+
+#### 任务
+- [ ] T1: 编写排重门禁逻辑，自动排除 30 天内已曝光过的格言、被标记“已掌握”的格言以及非启用状态的格言
+- [ ] T2: 编写基于大盘当日行情与情绪的动态加权打分算法，为大跌（恐惧类）、大涨（贪婪类）、震荡（耐心类）格言注入权重
+- [ ] T3: 编写 Top 10 随机轮询选择算法，确保候选集权重最大化的同时具备一定的惊喜感
+- [ ] T4: 编写凌晨 4:00 后台格言预生成机制，并在用户首次进入打卡时锁定该当日格言，防止重复计算和高峰网络延迟
+
+#### 验收标准 (AC)
+##### AC1 30天内防重复曝光
+- **Given** 用户连续打卡 30 天
+- **When** 每天生成当日格言时
+- **Then** 这 30 天内获取的格言必须 100% 互不重复
+
+##### AC2 市场大跌恐惧加权
+- **Given** 当日大盘暴跌 3% (符合大跌阈值)
+- **When** 系统计算当日格言加权打分时
+- **Then** 包含“恐惧/贪婪”标签的经典格言其综合得分应自动获得 +15 情绪权重
+
+##### AC3 预生成与当日锁定
+- **Given** 用户在 16:00 首次打开打卡页
+- **When** 退出并重新进入该页面时
+- **Then** 展示的必须是同一条被锁定的当日格言，绝对不发生实时闪烁或重新抽取
+
+---
+
+### E23-S3 格言展示界面与上次见解
+**作为** 用户  
+**我希望** 格言展示富有排版仪式感，且在输入前能对照自己以前对该格言的感悟  
+**以便** 看清自己认知演进的轨迹，实现与“过去的自己”深度对话
+
+#### 任务
+- [ ] T1: 设计采用 `Noto Serif SC` 衬线字体的格言展示主卡片，配置精致的引号装饰与大白留边
+- [ ] T2: 在卡片顶部高亮渲染分类徽章，底部展示作者及来源信息
+- [ ] T3: 针对“自己写的金句”类型卡片，自动展示跳转回原日记的金色高亮链接
+- [ ] T4: 在输入框上方，自动拉取并高对比展示该用户上一次对该条格言写下的感悟见解
+
+#### 验收标准 (AC)
+##### AC1 自己金句回链跳转
+- **Given** 当前轮询展示的格言分类为“自己写的金句”
+- **When** 页面加载完成且用户点击来源链接时
+- **Then** 系统应能顺畅跳转回该金句诞生的原日记详情页
+
+##### AC2 历史见解对照呈现
+- **Given** 用户在 30 天前曾对格言 A 写过 60 字感悟
+- **When** 今日再次抽中格言 A 且用户点击输入框准备书写时
+- **Then** 输入框上方必须以磨砂卡片形式完整且无截断地显示出那段“30天前写过的见解”
+
+---
+
+### E23-S4 见解输入引导与脚手架
+**作为** 用户  
+**我希望** 在书写见解时拥有针对性的 placeholder 问题引导和思考脚手架快捷词  
+**以便** 在卡壳时能迅速组织文字，输出高质量反思
+
+#### 任务
+- [ ] T1: 根据 5 大格言分类，配置 4 套个性化占位符引导问题（如：“回头看自己写的话，今天还认同吗？”）
+- [ ] T2: 编写字数计算与门禁，设定最低 30 字强制门禁、50-100 字深度见解高亮，以及 500 字上限提示
+- [ ] T3: 在输入框下方设计 4 个思考脚手架快捷词 Chip（「举个例子」、「反对一下」、「联系当下」、「未来怎么做」）
+- [ ] T4: 实现点击快捷词 Chip 自动在光标位置插入引导句（如：“比如有一次，我...”）并自动聚焦
+
+#### 验收标准 (AC)
+##### AC1 字数硬门禁校验
+- **Given** 输入见解只有 15 个字
+- **When** 尝试点击提交打卡时
+- **Then** 提交按钮必须保持灰色禁用状态，且字数实时计数器呈现警告红色
+
+##### AC2 脚手架快捷词插入
+- **Given** 输入框当前聚焦且光标位于文本中间
+- **When** 点击「举个例子」快捷词 Chip 时
+- **Then** 引导句“比如有一次，我...”应精准插入在光标处，且字数实时累加，按钮状态自动更新
+
+---
+
+### E23-S5 收藏与用户共建
+**作为** 用户  
+**我希望** 能一键收藏打动我的格言，并能随时自主添加新的投资格言  
+**以便** 让系统中的智慧库越来越个性化
+
+#### 任务
+- [ ] T1: 在格言卡片下方设计“⭐ 收藏格言”按钮，支持收藏状态的实时双向切换
+- [ ] T2: 实现收藏状态持久化，被收藏的格言在算法加分中自动获得 +20 的高权重分
+- [ ] T3: 编写“我也想加一条”录入页面，支持用户输入 10-200 字的正文、作者、分类及来源
+
+#### 验收标准 (AC)
+##### AC1 收藏状态持久化与加权
+- **Given** 用户点击收藏当前格言
+- **When** 数据库更新成功后
+- **Then** 再次触发计算该格言轮询得分时，其基础得分必须获得 +20 收藏加成，且页面展示为已收藏金色星星
+
+##### AC2 自主共建格言落库
+- **Given** 录入一条巴菲特关于长寿的格言并提交
+- **When** 查询格言表 `diary_quote_lib` 时
+- **Then** 该记录的 `owner_user_id` 必须为 `1`，且下一交易日的轮询池能正常将其计入候选集
+
+---
+
+### E23-S6 跳过与拒绝机制
+**作为** 用户  
+**我希望** 能够跳过今天不感兴趣的格言，或永久屏蔽我不认同的理论  
+**以便** 拥有自主控制权，保持打卡的舒适度
+
+#### 任务
+- [ ] T1: 页面右上角设计“跳过”按钮，点击跳过当日打卡不计入已做，且该格言在下一日优先重新展示
+- [ ] T2: 编写连续跳过惩罚逻辑，若同一条格言被连续跳过 3 次，将其权重降为 1 避免后续骚扰
+- [ ] T3: 编写长按“不喜欢这条”快捷屏蔽逻辑，将此格言对当前用户永久置为禁用状态
+
+#### 验收标准 (AC)
+##### AC1 跳过保留与重新展出
+- **Given** 用户今天对格言 A 选择了“跳过”
+- **When** 明天凌晨格言生成任务运行时
+- **Then** 格言 A 必须作为超高优先级候选展示在明天的待办卡片中，给用户第二次重读的机会
+
+##### AC2 连续跳过触发自动降权
+- **Given** 格言 A 已被用户连续 3 天点击“跳过”
+- **When** 第三天跳过操作成功后
+- **Then** 该格言的 `weight` 字段值应自动被惩罚自减，使其以后轮询中几乎不再出现
+
+##### AC3 永久屏蔽“不喜欢”
+- **Given** 用户长按格言 B 并选择“不喜欢这条”
+- **When** 点击确认屏蔽时
+- **Then** `diary_quote_lib` 中该格言针对当前用户的 `status` 字段应置为 `0` (禁用)，从此永久在曝光候选池中消隐
+
+---
+
+### E23-S7 打卡日记产物生成
+**作为** 用户  
+**我希望** 每次打卡的见解内容能自动生成一篇紧凑格式的精美随笔日记  
+**以便** 沉淀我的投资思考资产，并在主列表中能便捷回顾
+
+#### 任务
+- [ ] T1: 编写打卡提交后的数据转换逻辑，自动将打卡内容拼装为 Markdown 格式的正文（带格言引用框和我的见解标题）
+- [ ] T2: 自动生成精炼标题，格式为：“格言 · [作者] · [格言开头前10字]”
+- [ ] T3: 将日记实体字段 `is_checkin` 赋值为 `1`，`checkin_type` 赋值为 `2`，`entry_type` 设定为 `5` (随笔类)
+- [ ] T4: 实现大盘当日数据快照的自动拉取，并将其作为 meta 存入日记的 JSON 字段中
+
+#### 验收标准 (AC)
+##### AC1 随笔日记落库验证
+- **Given** 打卡感悟提交成功
+- **When** 查询日记表 `diary_entry` 最新一条数据时
+- **Then** 该记录的 `is_checkin` 必须为 `1`，`checkin_type` 为 `2`，且正文内容为标准的 Markdown 拼接结构
+
+##### AC2 历史行情快照存证
+- **Given** 大跌当日提交了格言打卡
+- **When** 查询该生成的随笔日记 `meta` 字段时
+- **Then** JSON 结构中必须精准存储了当时上证指数的跌幅百分比数值，保障事后复盘的环境追溯
+
+---
+
+### E23-S8 历史见解聚合回看
+**作为** 用户  
+**我希望** 能够在一页中查看我对同一条格言在不同时期写下的所有反思感悟  
+**以便** 极其直观地目睹自己交易哲学的演进与心智成长
+
+#### 任务
+- [ ] T1: 页面右上角设计“我和这句话的故事”按钮，点击跳转至见解聚合时间轴页面
+- [ ] T2: 编写时间轴数据聚合接口，根据当前 `quote_id` 倒序拉取该用户的所有历史格言打卡随笔日记
+- [ ] T3: 在聚合页面顶部，渲染聚合统计文案（如：“你已对这条格言写过 5 次见解，跨度 3 个月”）
+- [ ] T4: 每一个见解卡片上，高亮呈现当时发表见解时的日期以及随文存证的大盘涨跌行情
+
+#### 验收标准 (AC)
+##### AC1 见解时间轴对账
+- **Given** 用户对格言 A 曾分别在 3 月、4 月、5 月写过 3 次感悟
+- **When** 点击进入该格言的“我和这句话的故事”故事集页面时
+- **Then** 页面必须倒序呈现 3 条打卡记录卡片，清晰印证每一个时期的主观思考与客观市场环境的对比
+
+---
+
+## 数据结构 (Database DDL Schema)
+
+### 格言字典表 `diary_quote_lib`
+```sql
+CREATE TABLE `diary_quote_lib` (
+  `id` bigint(20) NOT NULL AUTO_INCREMENT COMMENT '格言唯一主键',
+  `owner_user_id` bigint(20) DEFAULT NULL COMMENT 'NULL表示系统公共格言; 有值表示用户个性化共建金句',
+  `content` text NOT NULL COMMENT '格言正文',
+  `source_author` varchar(64) DEFAULT NULL COMMENT '格言原作者(巴菲特、芒格等)',
+  `source_book` varchar(128) DEFAULT NULL COMMENT '来源书籍或文章标题',
+  `category` tinyint(4) NOT NULL DEFAULT '1' COMMENT '1=经典名言, 2=大佬语录, 3=历史教训, 4=用户摘录, 5=自己写的金句',
+  `weight` int(11) NOT NULL DEFAULT '50' COMMENT '轮询基础权重(1-100)',
+  `status` tinyint(4) NOT NULL DEFAULT '1' COMMENT '1=启用, 0=对当前用户永久禁用屏蔽',
+  `expose_count` int(11) NOT NULL DEFAULT '0' COMMENT '累计曝光轮询次数',
+  `insight_count` int(11) NOT NULL DEFAULT '0' COMMENT '用户累计针对该格言写过的见解感悟数',
+  `deep_insight_count` int(11) NOT NULL DEFAULT '0' COMMENT '字数超过50字的深度见解感悟次数',
+  `last_exposed_at` timestamp NULL DEFAULT NULL COMMENT '最近一次被曝光的时间戳',
+  `source_diary_id` bigint(20) DEFAULT NULL COMMENT '来源日记ID(仅当category=5自己写的金句时必填)',
+  `meta` json DEFAULT NULL COMMENT '扩展字段，存放标签分类或关联情绪数组',
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `updated_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  `is_deleted` tinyint(4) NOT NULL DEFAULT '0' COMMENT '逻辑删除标识',
+  PRIMARY KEY (`id`),
+  KEY `idx_user_cat` (`owner_user_id`, `category`),
+  KEY `idx_weight_exposed` (`weight`, `last_exposed_at`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='系统格言与个人金句词库表';
+```
+
+---
+
+## 变更记录
+
+| 日期 | 版本 | 说明 |
+|---|---|---|
+| 2026-05-19 | v1.0 | 精细化拆解 E2-S3 每日格言打卡 Story，规范 Given-When-Then，补充 DDL 建表。 |</script>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', async () => {
+            const rawMd = document.getElementById('markdown-raw').textContent;
+            const contentEl = document.getElementById('content');
+            const tocEl = document.getElementById('toc');
+            
+            // Set options for marked
+            marked.setOptions({
+                gfm: true,
+                breaks: true,
+                headerIds: true,
+                mangle: false,
+                highlight: function(code, lang) {
+                    const language = hljs.getLanguage(lang) ? lang : 'plaintext';
+                    return hljs.highlight(code, { language }).value;
+                }
+            });
+
+            // Parse Markdown
+            contentEl.innerHTML = marked.parse(rawMd);
+            
+            // Generate TOC
+            const headings = contentEl.querySelectorAll('h2, h3');
+            headings.forEach((h, index) => {
+                if (!h.id) h.id = 'heading-' + index;
+                
+                const li = document.createElement('li');
+                li.className = 'toc-item level-' + h.tagName.toLowerCase().charAt(1);
+                
+                const a = document.createElement('a');
+                a.href = '#' + h.id;
+                a.textContent = h.textContent;
+                
+                li.appendChild(a);
+                tocEl.appendChild(li);
+            });
+
+            // Handle Mermaid
+            if (window.mermaid) {
+                mermaid.initialize({ startOnLoad: false, theme: 'dark', useWorker: false });
+                document.querySelectorAll('pre code.language-mermaid').forEach(el => {
+                    const pre = el.parentElement;
+                    const div = document.createElement('div');
+                    div.className = 'mermaid';
+                    div.textContent = el.textContent;
+                    pre.parentElement.replaceChild(div, pre);
+                });
+                mermaid.run();
+            }
+        });
+    </script>
+</body>
+</html>

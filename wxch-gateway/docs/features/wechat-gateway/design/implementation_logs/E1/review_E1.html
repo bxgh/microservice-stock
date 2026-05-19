@@ -1,0 +1,1428 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Epic-Story 评审台</title>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;500;700;900&family=Noto+Sans+SC:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500;700&display=swap"
+        rel="stylesheet">
+    <style>
+        :root {
+            --bg: #0e0d0b;
+            --bg-elev-1: #15130f;
+            --bg-elev-2: #1c1915;
+            --bg-elev-3: #2a2520;
+            --ink: #ede3cc;
+            --ink-dim: #ccc;
+            --ink-mute: #aaa;
+            --ink-whisper: #888;
+            --amber: #d4a23e;
+            --amber-bright: #f0c968;
+            --amber-soft: rgba(212, 162, 62, 0.18);
+            --status-strong: #8ab573;
+            --status-neutral: #c99339;
+            --status-alert: #d97a3d;
+            --status-weak: #c85a4a;
+            --status-cold: #6b8ca8;
+            --hair: #2a2520;
+            --font-serif: 'Noto Serif SC', 'Songti SC', serif;
+            --font-sans: 'Noto Sans SC', -apple-system, sans-serif;
+            --font-mono: 'JetBrains Mono', 'SF Mono', Consolas, monospace;
+            --fs-xs: 10px;
+            --fs-sm: 12px;
+            --fs-base: 13px;
+            --fs-md: 15px;
+            --fs-lg: 18px;
+            --fs-xl: 20px;
+            --fs-2xl: 22px;
+            --space-1: 2px;
+            --space-2: 4px;
+            --space-3: 8px;
+            --space-4: 12px;
+            --space-6: 16px;
+            --space-8: 24px;
+            --space-12: 32px;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        html,
+        body {
+            background: var(--bg);
+            color: var(--ink);
+            font-family: var(--font-sans);
+            font-size: var(--fs-base);
+            line-height: 1.6;
+            height: 100vh;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* noise */
+        body::before {
+            content: '';
+            position: fixed;
+            inset: 0;
+            pointer-events: none;
+            z-index: 999;
+            background: white;
+            mix-blend-mode: overlay;
+            opacity: 0.5;
+            filter: url(#noise);
+        }
+
+        /* TOP BAR */
+        .topbar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 var(--space-6);
+            height: 48px;
+            border-bottom: 1px solid var(--hair);
+            background: var(--bg-elev-1);
+            z-index: 100;
+        }
+
+        .topbar-left {
+            display: flex;
+            align-items: center;
+            gap: var(--space-4);
+        }
+
+        .topbar-brand {
+            font-family: var(--font-serif);
+            font-size: var(--fs-md);
+            color: var(--amber);
+            letter-spacing: 0.05em;
+        }
+
+        .topbar-sep {
+            width: 1px;
+            height: 20px;
+            background: var(--hair);
+        }
+
+        .topbar-doc {
+            font-size: var(--fs-sm);
+            color: var(--amber);
+            font-weight: 500;
+        }
+
+        .topbar-meta {
+            display: flex;
+            gap: var(--space-4);
+            margin-left: var(--space-2);
+            padding-left: var(--space-4);
+            border-left: 1px solid var(--hair);
+            font-family: var(--font-mono);
+            font-size: var(--fs-xs);
+            color: var(--ink-mute);
+        }
+
+        .topbar-meta-val {
+            color: var(--ink-dim);
+        }
+
+        .topbar-right {
+            display: flex;
+            align-items: center;
+            gap: var(--space-3);
+        }
+
+        .progress-wrap {
+            display: flex;
+            align-items: center;
+            gap: var(--space-2);
+        }
+
+        .progress-bar {
+            width: 120px;
+            height: 4px;
+            background: var(--hair);
+            border-radius: 2px;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: var(--amber);
+            border-radius: 2px;
+            transition: width 0.3s;
+        }
+
+        .progress-text {
+            font-family: var(--font-mono);
+            font-size: var(--fs-xs);
+            color: var(--ink-mute);
+        }
+
+        .btn {
+            font-family: var(--font-sans);
+            font-size: var(--fs-sm);
+            padding: 6px 14px;
+            border: 1px solid var(--hair);
+            background: var(--bg-elev-2);
+            color: var(--ink-dim);
+            cursor: pointer;
+            transition: all 0.15s;
+            letter-spacing: 0.02em;
+        }
+
+        .btn:hover {
+            border-color: var(--amber);
+            color: var(--amber);
+        }
+
+        .btn-primary {
+            border-color: var(--amber);
+            color: var(--amber);
+            background: var(--bg-elev-2);
+        }
+
+        .btn-primary:hover {
+            background: var(--bg-elev-3);
+            border-color: var(--amber-bright);
+        }
+
+        .btn-export {
+            width: 100%;
+            padding: 10px;
+            background: var(--bg-elev-2);
+            border: 1px solid var(--hair);
+            color: #d49a00;
+            cursor: pointer;
+            font-weight: 700;
+            margin-top: 10px;
+            transition: all 0.2s;
+            font-size: var(--fs-sm);
+        }
+
+        .btn-export:hover {
+            background: var(--bg-elev-3);
+            border-color: #d49a00;
+        }
+
+        /* LAYOUT */
+        .layout {
+            display: grid;
+            grid-template-columns: 240px 1fr 240px;
+            gap: 1px;
+            background: var(--hair);
+            flex: 1;
+            height: 0;
+            min-height: 0;
+            overflow: hidden;
+        }
+
+        /* SIDEBAR */
+        .sidebar {
+            background: var(--bg-elev-1);
+            overflow-y: auto;
+            height: 100%;
+        }
+
+        .sidebar-section {
+            border-bottom: 1px solid var(--hair);
+        }
+
+        .sidebar-heading {
+            padding: var(--space-3) var(--space-4);
+            font-size: var(--fs-xs);
+            color: var(--ink-mute);
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+        }
+
+        .nav-epic {
+            padding: var(--space-2) var(--space-4);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: var(--space-2);
+        }
+
+        .nav-epic:hover {
+            background: var(--bg-elev-2);
+        }
+
+        .nav-epic-title {
+            font-size: var(--fs-sm);
+            color: var(--ink-dim);
+            font-weight: 500;
+        }
+
+        .nav-epic-id {
+            font-family: var(--font-mono);
+            font-size: var(--fs-xs);
+            color: var(--amber);
+            min-width: 28px;
+        }
+
+        .nav-story {
+            padding: var(--space-1) var(--space-4);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: var(--space-2);
+            border-left: 2px solid transparent;
+            transition: all 0.2s;
+        }
+
+        .nav-story:hover {
+            background: var(--bg-elev-2);
+            color: var(--ink-dim);
+        }
+
+        .nav-story.active {
+            background: var(--amber-soft);
+            color: var(--amber);
+        }
+
+        .nav-story-dot {
+            width: 5px;
+            height: 5px;
+            border-radius: 50%;
+            background: var(--ink-whisper);
+            flex-shrink: 0;
+        }
+
+        .nav-story.active .nav-story-dot {
+            background: var(--amber);
+            box-shadow: 0 0 6px var(--amber);
+        }
+
+        .status-badge-xs {
+            font-family: var(--font-mono);
+            font-size: 10px;
+            padding: 1px 4px;
+            border-radius: 2px;
+            flex-shrink: 0;
+            text-transform: uppercase;
+        }
+
+        .badge-ok {
+            background: rgba(138, 181, 115, 0.15);
+            color: var(--status-strong);
+        }
+
+        .badge-no {
+            background: rgba(200, 90, 74, 0.15);
+            color: var(--status-weak);
+        }
+
+        .badge-q {
+            background: rgba(201, 147, 57, 0.15);
+            color: var(--status-neutral);
+        }
+
+        .badge-pending {
+            background: rgba(107, 140, 168, 0.15);
+            color: var(--status-cold);
+        }
+
+        /* MAIN */
+        .main { flex: 1; 
+            background: var(--bg);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .main-inner {
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            flex: 1;
+            overflow: hidden;
+        }
+
+        /* TABS */
+        .tabs {
+            display: flex;
+            border-bottom: 1px solid var(--hair);
+            background: var(--bg-elev-1);
+        }
+
+        .tab {
+            padding: 10px var(--space-6);
+            font-size: var(--fs-base);
+            color: var(--ink-mute);
+            cursor: pointer;
+            position: relative;
+            letter-spacing: 0.04em;
+            transition: all 0.2s;
+        }
+
+        .tab:hover {
+            color: var(--ink);
+        }
+
+        .tab.active {
+            color: #d49a00;
+            font-weight: 600;
+        }
+
+        .tab::after {
+            content: '';
+            position: absolute;
+            bottom: -1px;
+            left: var(--space-6);
+            right: var(--space-6);
+            height: 3px;
+            background: #d49a00;
+            transform: scaleX(0);
+            transition: transform 0.2s;
+        }
+
+        .tab.active::after {
+            transform: scaleX(1);
+        }
+
+        .tab-panel {
+            display: none;
+        }
+
+        .tab-panel.active {
+            display: block;
+        }
+
+        /* section headers */
+        .section-label {
+            font-size: var(--fs-xs);
+            color: var(--ink-mute);
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            margin: var(--space-6) var(--space-6) var(--space-2);
+        }
+
+        .info-block {
+            background: var(--bg-elev-1);
+            border: 1px solid var(--hair);
+            padding: var(--space-4);
+            margin: 0 var(--space-6) var(--space-4);
+            font-size: var(--fs-base);
+            color: var(--ink-dim);
+            line-height: 1.7;
+        }
+
+        /* STORY CARD */
+        .view-panel {
+            display: none;
+            flex-direction: column;
+            height: 100%;
+            overflow: hidden;
+        }
+
+        .view-panel.active {
+            display: flex;
+        }
+
+        .story-detail-header {
+            padding: var(--space-3) var(--space-6);
+            background: var(--bg-elev-2);
+            border-bottom: 1px solid var(--hair);
+            display: flex;
+            align-items: center;
+            gap: var(--space-4);
+        }
+
+        .story-id {
+            font-family: var(--font-mono);
+            font-size: var(--fs-xs);
+            color: var(--amber);
+        }
+
+        .story-title {
+            font-size: var(--fs-md);
+            font-weight: 700;
+            color: var(--ink);
+        }
+
+        .story-body {
+            background: var(--bg-elev-1);
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .story-tabs {
+            display: flex;
+            background: var(--bg-elev-2);
+            border-bottom: 1px solid var(--hair);
+            padding: 0 var(--space-4);
+            height: 32px;
+            align-items: center;
+            flex-shrink: 0;
+        }
+
+        .story-tab {
+            padding: 0 var(--space-3);
+            font-size: var(--fs-xs);
+            color: var(--ink-mute);
+            cursor: pointer;
+            border-bottom: 2px solid transparent;
+            height: 100%;
+            display: flex;
+            align-items: center;
+        }
+
+        .story-tab.active {
+            color: var(--amber);
+            border-bottom-color: var(--amber);
+        }
+
+        .story-tab-content {
+            display: none;
+            flex: 1;
+            overflow-y: auto;
+            overflow-x: hidden;
+            padding: var(--space-4);
+        }
+
+        .story-tab-content.active {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .content-well {
+            margin: var(--space-4) var(--space-6);
+            background: var(--bg-elev-1);
+            border: 1px solid var(--hair-bright);
+            border-radius: 8px;
+            overflow: hidden;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            min-height: 0;
+        }
+
+        .extra-section {
+            margin-top: var(--space-4);
+            padding-top: var(--space-4);
+            border-top: 1px dashed var(--hair);
+        }
+
+        .extra-section strong {
+            display: block;
+            margin-bottom: var(--space-2);
+            color: var(--amber);
+            font-size: var(--fs-xs);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .info-block {
+            padding: var(--space-4) var(--space-6);
+            color: var(--ink-dim);
+            font-size: var(--fs-base);
+            white-space: pre-wrap;
+            word-break: break-all;
+        }
+
+        /* AC & TASKS */
+        .subsection-title {
+            font-size: var(--fs-xs);
+            color: var(--ink-mute);
+            letter-spacing: 0.07em;
+            text-transform: uppercase;
+            margin-bottom: var(--space-3);
+            display: flex;
+            align-items: center;
+            gap: var(--space-2);
+        }
+
+        .subsection-title::after {
+            content: '';
+            flex: 1;
+            height: 1px;
+            background: var(--hair);
+        }
+
+        .task-item {
+            display: flex;
+            align-items: flex-start;
+            /* 改为 flex-start 以适应多行内容 */
+            padding: var(--space-4) var(--space-6);
+            border-bottom: 1px solid var(--hair);
+            gap: var(--space-4);
+            transition: background 0.15s;
+        }
+
+        .task-item.deleted .task-text {
+            text-decoration: line-through;
+            color: var(--ink);
+        }
+
+        .task-id {
+            font-family: var(--font-mono);
+            font-size: var(--fs-xs);
+            color: var(--ink-mute);
+            min-width: 80px;
+        }
+
+        .task-text {
+            flex: 1;
+            font-size: var(--fs-base);
+            color: var(--ink-dim);
+            /* white-space: pre-wrap; REMOVED as it breaks block elements inside */
+            word-break: break-word;
+        }
+
+        .code-wrapper {
+            position: relative;
+            background: #0b0b0b;
+            border: 1px solid var(--hair);
+            border-radius: 6px;
+            margin: var(--space-4) 0;
+            overflow: hidden;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4);
+        }
+
+        .code-wrapper::before {
+            content: attr(data-lang);
+            position: absolute;
+            top: 0;
+            right: 0;
+            padding: 2px 8px;
+            font-size: 10px;
+            font-family: var(--font-mono);
+            color: var(--amber);
+            background: rgba(212, 162, 62, 0.1);
+            border-bottom: 1px solid var(--hair);
+            border-left: 1px solid var(--hair);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            pointer-events: none;
+        }
+
+        .code-wrapper pre {
+            margin: 0;
+            padding: var(--space-4);
+            overflow-x: auto;
+            max-height: 400px;
+        }
+
+        .code-wrapper code {
+            font-family: var(--font-mono);
+            font-size: 13px;
+            line-height: 1.6;
+            color: #ffca28;
+            white-space: pre;
+        }
+
+        .inline-code {
+            font-family: var(--font-mono);
+            font-size: 0.9em;
+            background: rgba(212, 162, 62, 0.12);
+            color: var(--amber-bright);
+            padding: 2px 5px;
+            border-radius: 4px;
+            border: 1px solid rgba(212, 162, 62, 0.2);
+        }
+
+        .block-mermaid {
+            margin: var(--space-4) 0;
+            background: var(--bg-elev-1);
+            border: 1px solid var(--hair);
+            padding: var(--space-6);
+            border-radius: 6px;
+            text-align: center;
+        }
+
+        .block-mermaid svg {
+            max-width: 100%;
+            height: auto;
+        }
+
+        .copy-btn {
+            position: absolute;
+            bottom: 8px;
+            right: 8px;
+            padding: 4px 10px;
+            font-size: 11px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: var(--ink-whisper);
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.2s;
+            opacity: 0;
+        }
+
+        .code-wrapper:hover .copy-btn {
+            opacity: 1;
+        }
+
+        .copy-btn:hover {
+            background: var(--amber);
+            color: var(--bg);
+            border-color: var(--amber);
+        }
+
+        .task-del {
+            font-size: var(--fs-sm);
+            color: #888;
+            font-weight: 500;
+            cursor: pointer;
+            padding: 3px 12px;
+            border: 1px solid rgba(136, 136, 136, 0.2);
+            border-radius: 4px;
+            transition: all 0.2s;
+            background: rgba(0, 0, 0, 0.2);
+        }
+
+        .task-del:hover {
+            color: #ff4d4d;
+            background: rgba(200, 90, 74, 0.15);
+            border-color: var(--status-weak);
+        }
+
+        .task-add-row {
+            display: flex;
+            align-items: center;
+            gap: var(--space-2);
+            margin-top: var(--space-2);
+            padding: 4px 0;
+        }
+
+        .task-add-input {
+            flex: 1;
+            background: transparent;
+            border: none;
+            border-bottom: 1px dashed var(--hair);
+            color: var(--ink-dim);
+            font-size: var(--fs-sm);
+            outline: none;
+            padding: 4px 0;
+        }
+
+        .task-add-input:focus {
+            border-bottom-color: var(--amber);
+            color: var(--ink);
+        }
+
+        .task-add-btn {
+            color: var(--amber);
+            cursor: pointer;
+            font-size: var(--fs-xs);
+            font-weight: 700;
+            padding: 2px 8px;
+            border: 1px solid var(--amber-soft);
+            border-radius: 4px;
+        }
+
+        .ac-item {
+            border: 1px solid var(--hair);
+            margin-bottom: var(--space-3);
+            background: var(--bg-elev-2);
+        }
+
+        .ac-header {
+            display: flex;
+            align-items: center;
+            gap: var(--space-3);
+            padding: var(--space-3) var(--space-4);
+            border-bottom: 1px solid var(--hair);
+        }
+
+        .ac-id {
+            font-family: var(--font-mono);
+            font-size: var(--fs-xs);
+            color: var(--ink-mute);
+            min-width: 32px;
+        }
+
+        .ac-name {
+            flex: 1;
+            font-size: var(--fs-base);
+            font-weight: 500;
+        }
+
+        .ac-actions {
+            display: flex;
+            gap: var(--space-1);
+        }
+
+        .ac-btn {
+            font-size: var(--fs-xs);
+            font-weight: 700;
+            padding: 3px 10px;
+            border: 1px solid var(--hair);
+            background: var(--bg-elev-2);
+            color: var(--ink-mute);
+            cursor: pointer;
+            transition: all 0.15s;
+        }
+
+        .ac-btn-ok-hint {
+            color: var(--status-strong);
+            border-color: rgba(138, 181, 115, 0.2);
+        }
+
+        .ac-btn-q-hint {
+            color: var(--status-neutral);
+            border-color: rgba(201, 147, 57, 0.2);
+        }
+
+        .ac-btn.ac-ok {
+            background: var(--status-strong);
+            color: var(--bg);
+            border-color: var(--status-strong);
+        }
+
+        .ac-btn.ac-q {
+            background: var(--status-neutral);
+            color: var(--bg);
+            border-color: var(--status-neutral);
+        }
+
+        .ac-body {
+            padding: var(--space-4) 40px;
+            font-size: 14px;
+        }
+
+        .gwt-row {
+            display: grid;
+            grid-template-columns: 80px 1fr;
+            gap: var(--space-4);
+            margin-bottom: 8px;
+            color: var(--ink-dim);
+            line-height: 1.6;
+        }
+
+        .gwt-label {
+            font-family: var(--font-mono);
+            font-size: 11px;
+            color: var(--ink-whisper);
+            padding-top: 3px;
+            text-transform: uppercase;
+            letter-spacing: 0.12em;
+        }
+
+        /* RIGHT PANEL */
+        .rightpanel {
+            background: var(--bg-elev-1);
+            overflow-y: auto;
+            height: 100%;
+        }
+
+        .rp-section {
+            padding: var(--space-4);
+            border-bottom: 1px solid var(--hair);
+        }
+
+        .rp-title {
+            padding: var(--space-3) 0;
+            font-size: var(--fs-xs);
+            color: var(--ink-mute);
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+        }
+
+        .stat-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: var(--space-2);
+        }
+
+        .stat-label {
+            font-size: var(--fs-sm);
+            color: var(--ink-dim);
+        }
+
+        .stat-val {
+            font-family: var(--font-mono);
+            font-weight: 700;
+        }
+
+        .stat-ok {
+            color: var(--status-strong);
+        }
+
+        .stat-no {
+            color: var(--status-weak);
+        }
+
+        .stat-q {
+            color: var(--status-neutral);
+        }
+
+        .stat-cold {
+            color: var(--status-cold);
+        }
+
+        .risk-table,
+        .milestone-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: var(--fs-xs);
+            margin-bottom: var(--space-4);
+        }
+
+        .risk-table th,
+        .milestone-table th {
+            text-align: left;
+            padding: 8px;
+            color: var(--ink-mute);
+            border-bottom: 1px solid var(--hair);
+        }
+
+        .risk-table td,
+        .milestone-table td {
+            padding: 8px;
+            color: var(--ink-dim);
+            border-bottom: 1px solid var(--hair);
+        }
+
+        .ac-question {
+            margin-top: var(--space-4);
+            display: none;
+        }
+
+        .ac-question.visible {
+            display: block;
+        }
+
+        .ac-question-input {
+            width: 100%;
+            height: 80px;
+            background: var(--bg-elev-3);
+            border: 1px solid var(--hair);
+            color: var(--ink);
+            padding: var(--space-3);
+            font-family: var(--font-sans);
+            font-size: var(--fs-sm);
+            resize: none;
+            outline: none;
+            border-radius: 4px;
+        }
+
+        .ac-question-input:focus {
+            border-color: var(--amber);
+            background: var(--bg-elev-2);
+        }
+
+        .export-output {
+            margin-top: 10px;
+            background: #000;
+            padding: 10px;
+            font-family: var(--font-mono);
+            font-size: 10px;
+            color: #0f0;
+            white-space: pre-wrap;
+            display: none;
+        }
+
+        .export-output.visible {
+            display: block;
+        }
+
+        ::-webkit-scrollbar {
+            width: 4px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: var(--hair);
+        }
+    </style>
+</head>
+
+<body>
+    <svg style="position:fixed;width:0;height:0;pointer-events:none;">
+        <filter id="noise">
+            <feTurbulence type="fractalNoise" baseFrequency="0.85" numOctaves="2" />
+            <feColorMatrix values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 0.04 0" />
+        </filter>
+    </svg>
+
+    <div class="topbar">
+        <div class="topbar-left">
+            <div class="topbar-brand">◆ 评审台</div>
+            <div class="topbar-sep"></div>
+            <div class="topbar-doc" id="topbar-docname">...</div>
+            <div class="topbar-meta">
+                <span>版本 <span class="topbar-meta-val" id="topbar-version">v0.1</span></span>
+                <span>日期 <span class="topbar-meta-val" id="topbar-date">2026-05-14</span></span>
+            </div>
+        </div>
+        <div class="topbar-right">
+            <div class="progress-wrap">
+                <div class="progress-bar">
+                    <div class="progress-fill" id="progress-fill" style="width:0%"></div>
+                </div>
+                <div class="progress-text" id="progress-text">0 / 0 AC</div>
+            </div>
+            <button class="btn" onclick="location.reload()">重置</button>
+        </div>
+    </div>
+
+    <div class="layout">
+        <div class="sidebar">
+            <div class="sidebar-section">
+                <div class="sidebar-heading">文档结构</div>
+            </div>
+            <div id="nav-tree"></div>
+        </div>
+
+        <div class="main">
+            <div class="main-inner" id="main-content">
+                <!-- Views will be rendered here -->
+            </div>
+        </div>
+
+        <div class="rightpanel">
+            <div class="rp-section">
+                <div class="rp-title">审核统计</div>
+                <div class="stat-row"><span class="stat-label">AC 通过</span><span class="stat-val stat-ok"
+                        id="stat-ok">0</span></div>
+                <div class="stat-row"><span class="stat-label">AC 疑问</span><span class="stat-val stat-q"
+                        id="stat-q">0</span></div>
+                <div class="stat-row"><span class="stat-label">待审核</span><span class="stat-val stat-cold"
+                        id="stat-pending">0</span></div>
+            </div>
+            <div class="rp-section">
+                <div class="rp-title">操作</div>
+                <button class="btn-export" onclick="exportJSON()">▶ 导出审核 JSON</button>
+                <div class="export-output" id="export-output"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const DOC_DATA = {"epic_id": "E1", "title": "[Epic E1] 股市日记 MVP · Epic 文档", "sections": [{"title": "背景", "content": "本文档定义自用股市日记应用的最小可用版本（MVP），以打破“持有惯性”等认知陷阱，培养每日大盘体感。", "stories": []}, {"title": "E1 日记本体 (Core Diary Functions)", "content": "", "stories": [{"id": "E1-S1", "title": "日记编辑器", "desc": "**作为** 用户  
+**我希望** 在手机上快速记录投资想法  
+**以便** 不让灵光一现的思考消失", "tasks": [{"id": "T1", "text": "T1: 基于 Taro Textarea 开发 Markdown 源码编辑器，支持多端平滑输入"}, {"id": "T2", "text": "T2: 设计键盘上方悬浮快捷工具栏，集成（股票 / 标签 / 心情 / 模板 / 预览 / 图片）操作入口"}, {"id": "T3", "text": "T3: 实现草稿自动防丢机制，防抖时间设定为 800ms 自动保存至本地 Storage"}, {"id": "T4", "text": "T4: 进入编辑页时前置检测草稿，存在则弹窗询问用户&quot;恢复草稿&quot;还是&quot;放弃并新建&quot;"}, {"id": "T5", "text": "T5: 在编辑器底部实时统计并呈现字数，提供输入流畅度保障"}], "acs": [{"id": "AC1", "title": "AC1 编辑器启动聚焦与键盘弹起", "given": "从小程序任意页面进入日记编辑器", "when": "页面初始化打开时", "then": "输入框应立即自动聚焦，虚拟键盘无延迟弹起"}, {"id": "AC2", "title": "AC2 意外退出后的草稿恢复提示", "given": "用户在输入大段文字中突然杀掉微信进程或闪退", "when": "重新进入编辑器页面时", "then": "系统应展示二次弹窗，询问恢复未保存草稿或放弃，确认后能完美回填文字"}, {"id": "AC3", "title": "AC3 极速输入响应性能", "given": "连续输入或粘贴 5000 字的长篇日记", "when": "持续敲击键盘输入时", "then": "输入框 P90 渲染响应延迟必须小于 100ms，确保不出现输入粘滞卡顿"}]}, {"id": "E1-S2", "title": "日记类型与模板", "desc": "**作为** 用户  
+**我希望** 针对不同的交易复盘场景使用预设模板  
+**以便** 无需每次从空白文档开始撰写", "tasks": [{"id": "T1", "text": "T1: 定义 6 种日记类型枚举：盘前展望、盘中异动、盘后复盘、周度复盘、个股深入研究、日常随笔"}, {"id": "T2", "text": "T2: 编写 6 套场景模板作为前端常量静态资源，防止云端请求失败引起的白屏"}, {"id": "T3", "text": "T3: 设计模板选择抽屉，以 2 列网格方式展示并提供便捷预览"}, {"id": "T4", "text": "T4: 在模板渲染引擎中支持 <code class=\"inline-code\">{{date}}</code> 与 <code class=\"inline-code\">{{time}}</code> 占位符的自动动态替换"}, {"id": "T5", "text": "T5: 选中模板时，若编辑器全文为空则直接替换，若非空则在当前光标位置插入"}], "acs": [{"id": "AC1", "title": "AC1 空白文档整篇替换验证", "given": "编辑器当前没有任何文本内容", "when": "点击选择预设“盘后复盘”模板时", "then": "模板正文应整篇填充满输入框，并且所有的动态占位符（如日期）已替换完成"}, {"id": "AC2", "title": "AC2 非空文档光标无缝插入", "given": "编辑器中已有用户手动录入的 100 字文本", "when": "点击插入特定快捷模板时", "then": "模板内容必须精准插入在当前光标聚焦处，原有的 100 字文本保持不变且不移位"}, {"id": "AC3", "title": "AC3 动态占位符变量注入", "given": "用户选择的模板正文中包含 <code class=\"inline-code\">{{date}}</code> 字符串", "when": "模板被注入至编辑器时", "then": "占位符必须被动态渲染替换为当日真实的 <code class=\"inline-code\">YYYY-MM-DD</code> 格式日期"}]}, {"id": "E1-S3", "title": "股票引用", "desc": "**作为** 用户  
+**我希望** 在日记正文中快速 @ 关联具体股票  
+**以便** 后续能够按股票反向溯源所有关联日记", "tasks": [{"id": "T1", "text": "T1: 键盘悬浮工具栏点击 <code class=\"inline-code\">$</code> 按钮，唤起股票精准搜索半屏抽屉"}, {"id": "T2", "text": "T2: 实现抽屉自动聚焦输入框，提升单手操作效率"}, {"id": "T3", "text": "T3: 默认展示“最近搜索过的股票”及“自选股列表”"}, {"id": "T4", "text": "T4: 实现对股票代码、中文名称、拼音首字母缩写的实时模糊匹配，数据源拉自 <code class=\"inline-code\">dim_stock_basic</code>"}, {"id": "T5", "text": "T5: 选中股票后在光标处插入专用语法标记 <code class=\"inline-code\">$贵州茅台(600519.SH) </code>，末尾自动追加空格"}, {"id": "T6", "text": "T6: 在日记保存的 API 服务层，解析并持久化关联信息至 <code class=\"inline-code\">diary_stock</code> 关系表"}], "acs": [{"id": "AC1", "title": "AC1 股票模糊及拼音缩写检索", "given": "股票搜索框中输入拼音缩写 <code class=\"inline-code\">mt</code>", "when": "触发输入后 200ms 内", "then": "检索结果必须命中并优先展示「贵州茅台 (600519.SH)」、「美团-W (03690.HK)」或「美的集团 (000333.SZ)」"}, {"id": "AC2", "title": "AC2 股票代码精准匹配置顶", "given": "股票搜索框中输入精准前缀代码 <code class=\"inline-code\">600519</code>", "when": "输入立即触发实时检索时", "then": "「贵州茅台」必须在检索结果列表中位列第一，无其他杂质干扰"}, {"id": "AC3", "title": "AC3 选中插入及光标自动空格", "given": "选中检索出的茅台股票", "when": "点击确定插入时", "then": "搜索抽屉应立即关闭，正文光标聚焦在 <code class=\"inline-code\">$贵州茅台(600519.SH) </code> 字符之后且自动追加一个半角空格，防止后续输入粘连"}, {"id": "AC4", "title": "AC4 数据物理关联对账", "given": "日记接口接收保存请求并成功响应", "when": "直连数据库查询 <code class=\"inline-code\">diary_stock</code> 表时", "then": "必须产生一条关联了当前日记 ID 与 <code class=\"inline-code\">600519.SH</code> 的有效记录，且审计字段齐全"}]}, {"id": "E1-S4", "title": "标签", "desc": "**作为** 用户  
+**我希望** 方便地给日记打上自定义标签  
+**以便** 沉淀投资知识并形成个人交易系统", "tasks": [{"id": "T1", "text": "T1: 悬浮工具栏点击 <code class=\"inline-code\">#</code> 按钮，直接在光标处插入 <code class=\"inline-code\">#</code> 标签符号"}, {"id": "T2", "text": "T2: 接口保存时，在后端使用正则解析引擎自动提取日记正文中的所有 <code class=\"inline-code\">#xxx</code> 标签"}, {"id": "T3", "text": "T3: 若解析到新的未知标签，自动将标签字典记录写入 <code class=\"inline-code\">diary_tag_dict</code>"}, {"id": "T4", "text": "T4: 系统预置 10 个经典高频标签（如：错题本、违反纪律、价值投资、情绪失控等）作为冷启动底座"}, {"id": "T5", "text": "T5: 自动维护日记与标签的多对多关联表 <code class=\"inline-code\">diary_tag</code>"}], "acs": [{"id": "AC1", "title": "AC1 正文新标签自动提取入库", "given": "编写一篇含有 <code class=\"inline-code\">#错题本</code> 的交易总结日记", "when": "保存接口调用成功后", "then": "数据库 <code class=\"inline-code\">diary_tag_dict</code> 应幂等新增“错题本”词条，且 <code class=\"inline-code\">diary_tag</code> 建立此日记与该标签的映射关系"}, {"id": "AC2", "title": "AC2 重复标签幂等关联", "given": "用户在同一篇日记正文中写了 3 次 <code class=\"inline-code\">#错题本</code> 字符", "when": "日记保存并解析落库时", "then": "<code class=\"inline-code\">diary_tag</code> 关联表中只允许产生 1 条当前日记与“错题本”标签的关联记录，杜绝垃圾数据"}, {"id": "AC3", "title": "AC3 日记物理软删除时关联同步清理", "given": "用户点击删除某篇已打标签的日记", "when": "确认删除逻辑执行时", "then": "<code class=\"inline-code\">diary_tag</code> 关联表中该日记对应的所有关联映射记录应同步物理清理或被软删除过滤，维持引用完整性"}]}, {"id": "E1-S5", "title": "心情打标", "desc": "**作为** 用户  
+**我希望** 给每篇日记打上主观情绪评级  
+**以便** 在周度/月度复盘中科学识别情绪化决策（贪婪或恐惧）", "tasks": [{"id": "T1", "text": "T1: 悬浮工具栏点击“情绪心情”唤起半屏选择器"}, {"id": "T2", "text": "T2: 强制预置 6 种经典股市交易情绪枚举：冷静、兴奋、焦虑、恐惧、贪婪、困惑"}, {"id": "T3", "text": "T3: 为每种情绪配置生动的辅助描述（如：“恐惧：内心极为煎熬，产生无理割肉冲动”）"}, {"id": "T4", "text": "T4: 将选中值持久化保存至 <code class=\"inline-code\">diary_entry.mood</code> 字段中"}, {"id": "T5", "text": "T5: 在日记详情展示页、列表卡片上增加对应的精美情绪 Chip 组件"}], "acs": [{"id": "AC1", "title": "AC1 情绪标志位绑定落库", "given": "用户在编辑器中为主观情绪勾选了“恐惧”", "when": "保存接口提交落库时", "then": "物理表 <code class=\"inline-code\">diary_entry</code> 中该记录的 <code class=\"inline-code\">mood</code> 字段值必须精准为 <code class=\"inline-code\">4</code>（对应恐惧枚举）"}, {"id": "AC2", "title": "AC2 情绪选填缺省值支持", "given": "用户在写一篇盘中异动日记时未勾选任何主观情绪", "when": "保存接口提交落库时", "then": "数据库 <code class=\"inline-code\">diary_entry.mood</code> 必须存为 <code class=\"inline-code\">NULL</code>，绝不因为缺省字段而报错或强插默认值"}, {"id": "AC3", "title": "AC3 情绪标签在列表与卡片正常渲染", "given": "页面渲染日记列表", "when": "从数据库中查询到 <code class=\"inline-code\">mood</code> 字段不为 <code class=\"inline-code\">NULL</code> 的日记时", "then": "对应日记卡片必须高亮渲染呈现精美的情绪徽章 Chip，帮助一眼定位波动情绪"}]}, {"id": "E1-S6", "title": "图片附件", "desc": "**作为** 用户  
+**我希望** 在日记中直接插入当前的自选 K 线截图、交易委单截图或研报图表  
+**以便** 复盘时图文并茂、有图有真相", "tasks": [{"id": "T1", "text": "T1: 工具栏点击“图片”唤起系统相册或相机，采用 <code class=\"inline-code\">Taro.chooseMedia</code> 限制单次最多可批量上传 9 张"}, {"id": "T2", "text": "T2: 为防高昂的带宽与存储损耗，在客户端使用 HTML5 Canvas 机制执行图像等比压缩，最长边控制在 1920px 且质量降为 75"}, {"id": "T3", "text": "T3: 后端提供短期腾讯云 COS STS 临时上传凭证，客户端直传云存储（COS/OSS）"}, {"id": "T4", "text": "T4: 上传成功后在正文光标处自动插入 Markdown <code class=\"inline-code\">![](cos://[key])</code>，渲染器自动解析补全 CDN 加速前缀"}, {"id": "T5", "text": "T5: 设计上传骨架占位图与加载状态指示，并支持单张上传失败重试"}, {"id": "T6", "text": "T6: 将图片元信息及 COS Key 记录到系统物理表 <code class=\"inline-code\">diary_attachment</code> 中"}], "acs": [{"id": "AC1", "title": "AC1 异步多图并行上传不阻塞编辑", "given": "一次性从手机相册中勾选 3 张 K 线大图上传", "when": "上传任务进入网络等待队列时", "then": "编辑器正文必须立即显示 3 个灰色带 loading 动效的图片占位符，且用户可以继续顺畅输入文字，不出现界面冻结"}, {"id": "AC2", "title": "AC2 上传失败支持单张重试", "given": "其中第二张图片因网络波动导致上传失败", "when": "占位符转为“上传失败”红色感叹号状态且用户点击此失败占位符时", "then": "系统应立即再次触发该单张图片的重试上传逻辑，无需用户重新选图"}, {"id": "AC3", "title": "AC3 渲染预览无缝解析为真实 URL", "given": "3 张图片全部上传成功，COS 密钥已注入正文", "when": "点击编辑器右上角的“预览”按钮时", "then": "正文中的 <code class=\"inline-code\">![](cos://...)</code> 标记必须被完美解析并补全为腾讯云 CDN 的完整安全链接，且能流畅显示出高清图片"}]}, {"id": "E1-S7", "title": "日记列表", "desc": "**作为** 用户  
+**我希望** 以极简、精美的时间线结构浏览过往记录  
+**以便** 快速重温和梳理过往的投资心路", "tasks": [{"id": "T1", "text": "T1: 列表数据接口及前端卡片展示默认采用 <code class=\"inline-code\">entry_date DESC</code> 强交易日倒序排列"}, {"id": "T2", "text": "T2: 引入“交易日分组”设计，每一天的所有日记归于同一个精美的日期分隔条下"}, {"id": "T3", "text": "T3: 每一个日记列表卡片渲染：日记类型徽章、精确分秒时间、定制大标题、字数限制摘要、关联股票 chip、心情 emoji chip"}, {"id": "T4", "text": "T4: 卡片左侧增加宽度为 2px 的渐变色条，色条颜色完全根据日记类型枚举自动渲染绑定"}, {"id": "T5", "text": "T5: 在列表顶部设计横向滚动类型筛选 chip（包含：全部、盘前、盘后、个股研究、周复盘等）"}, {"id": "T6", "text": "T6: 结合 Taro 自带 API 实现手势下拉刷新与上拉滚动加载，每页默认读取 20 条，杜绝大数据一次性加载崩溃"}, {"id": "T7", "text": "T7: 卡片配置标准唯一的路由 ID，点击完美跳转对应的详情阅读页"}], "acs": [{"id": "AC1", "title": "AC1 大列表极速首屏渲染", "given": "数据库中已沉淀 100 篇带有图片的日记", "when": "用户切到日记 Tab 首次加载列表时", "then": "首屏首帧渲染完成时间（P90）必须控制在 500ms 以内，无明显的闪烁或假死"}, {"id": "AC2", "title": "AC2 分类动态筛选过滤", "given": "顶部筛选区当前选中为“个股研究”", "when": "筛选点击生效时", "then": "下方列表必须秒级刷新并仅展示“个股研究”类型的卡片，底部上拉加载只加载此类型记录"}, {"id": "AC3", "title": "AC3 空状态引导性展示", "given": "首次注册登录系统，个人日记数据库完全为空", "when": "进入列表展示页面时", "then": "必须呈现一张极具高级感的暖色调空状态插画，提示引导文案并居中提供“写下第一篇思考”的金色圆角按钮"}]}, {"id": "E1-S8", "title": "日记详情", "desc": "**作为** 用户  
+**我希望** 以如同精美图书排版一般的样式阅读自己的每一篇日记  
+**以便** 重温思考时获得最佳视觉享受", "tasks": [{"id": "T1", "text": "T1: 编写基于 marked.js 的高性能 Markdown 解析组件，将其转换为 React 原生组件树渲染，杜绝直接注入 <code class=\"inline-code\">dangerouslySetInnerHTML</code> 引入的安全风险"}, {"id": "T2", "text": "T2: 对标题、段落、列表、加粗、引用块、图片附件进行精细的 CSS 琥珀金/暗黑主题样式配置"}, {"id": "T3", "text": "T3: 将 <code class=\"inline-code\">$股票名称(代码)$</code> 渲染为精致的股票微型 Chip 卡片，支持点击（V2 阶段跳转）"}, {"id": "T4", "text": "T4: 实现对图片附件的点击调用 <code class=\"inline-code\">Taro.previewImage</code> 实现真机高保真大图预览和手势缩放"}, {"id": "T5", "text": "T5: 详情页面底部固定毛玻璃悬浮操作条，提供“编辑日记”与“安全删除”两个交互入口"}, {"id": "T6", "text": "T6: 顶部高亮呈现：日记核心分类、发布分秒、情绪打标、日记字数统计"}], "acs": [{"id": "AC1", "title": "AC1 富文本排版与交互支持", "given": "详情页面包含一张 K 线图片", "when": "页面加载并滚动到相应区域，且用户点击该图时", "then": "图片应优雅懒加载，点击后立即唤起原生全屏大图预览模式，支持双指自由缩放"}, {"id": "AC2", "title": "AC2 股票专用 chip 格式化解析", "given": "日记正文中含有 <code class=\"inline-code\">$贵州茅台(600519.SH) </code> 字符", "when": "详情页解析并渲染完成时", "then": "该字符必须被渲染为一个精致的金色小卡片（包含股票名称和代码徽标），不出现裸露的 raw markdown 文本"}, {"id": "AC3", "title": "AC3 日记物理软删除", "given": "点击悬浮条上的“删除”按钮", "when": "触发二次警告确认且点击“确认删除”后", "then": "接口应在物理库表执行软删除（更新 <code class=\"inline-code\">is_deleted=1</code> 及 <code class=\"inline-code\">deleted_at=CURRENT_TIMESTAMP</code>），且自动平滑回退至列表页，列表中此条卡片立即消失"}]}]}, {"title": "E2 打卡督促 (Check-in & Reminders)", "content": "", "stories": [{"id": "E2-S1", "title": "打卡入口", "desc": "**作为** 用户  
+**我希望** 进入日记主页就能第一眼看到今天最重要的待打卡项  
+**以便** 每天无压、无感地维持投资复盘行为", "tasks": [{"id": "T1", "text": "T1: 在日记列表顶部固定划定一片“打卡督促区”，卡片默认半透明磨砂设计，与整体界面高度统一"}, {"id": "T2", "text": "T2: 默认推送 3 项每日必做打卡流：盘后行情解读、格言感悟、持仓审视三问"}, {"id": "T3", "text": "T3: 当凌晨任务挑选出“历史决策回溯”候选日记时，单独新增一栏“时光回溯验证”打卡卡片"}, {"id": "T4", "text": "T4: 已完成的打卡项在卡片中高亮划掉并显示金色勾，未完成项支持点击直达打卡子流程"}, {"id": "T5", "text": "T5: 当所有待做项全部完成时，打卡区自动高度折叠为一行精美文案：“今日功课已满，非常棒！”"}, {"id": "T6", "text": "T6: 小程序底部导航栏 Tab 挂红点，实时统计并显示未做打卡项的累加数量，未做数等于 0 时自动消隐"}, {"id": "T7", "text": "T7: <strong>跨夜时间判定</strong>：为照顾深度交易爱好者的作息，凌晨 4:00 前的打卡一律归属前一交易日，4:00 后归属当日"}], "acs": [{"id": "AC1", "title": "AC1 临界跨夜时间点归属判定", "given": "当前时钟为 23:30", "when": "打开打卡模块时", "then": "待办卡片应判定为“今天”，完成打卡写入的 <code class=\"inline-code\">entry_date</code> 格式化为当日日期"}, {"id": "AC2", "title": "AC2 凌晨跨夜交易日切分", "given": "当前时钟为凌晨 2:00（符合盘后深夜复盘习惯）", "when": "撰写并提交持仓自查日记时", "then": "产生的日记其业务日期 <code class=\"inline-code\">entry_date</code> 必须被精准标记为前一天的日期，绝对不能被计入新的一天"}, {"id": "AC3", "title": "AC3 零干扰极简打卡卡片", "given": "连续 3 天因为出差没有进行打卡", "when": "重新进入小程序主页时", "then": "打卡看板应清爽呈现，只有最新的今日卡片或必要的补签卡，绝不弹窗轰炸、也绝无任何烦人的红点强迫症干扰"}]}, {"id": "E2-S2", "title": "盘后行情解读打卡", "desc": "**作为** 用户  
+**我希望** 盘后系统将大盘核心涨跌数据汇总好，我只需要补充一句话定性分析  
+**以便** 每天用 1 分钟快速建立极具敏锐度的市场大个体感", "tasks": [{"id": "T1", "text": "T1: 设定开放门禁，每日 15:30（收盘后且统计数据已出）之后方可开放打卡入口"}, {"id": "T2", "text": "T2: 数据拉取：每日盘后从 <code class=\"inline-code\">dim_daily_market_summary</code> 及大盘指数日线表拉取最新行情"}, {"id": "T3", "text": "T3: 卡片上半部以数据面板展示 6 大硬性指标：上证/深证/创业板指数涨跌幅、涨/跌/平家数、涨停/跌停数、北向资金流向、两市总成交额、领涨领跌行业 Top 3"}, {"id": "T4", "text": "T4: 用户在下方输入框填写 30–100 字的个人主观行情解读与操作定性"}, {"id": "T5", "text": "T5: 提供定性标签浮层（包含：震荡、普涨、普跌、二八分化、风格切换），支持多选打标"}, {"id": "T6", "text": "T6: 提交数据保存为标准化日记实体，并将 <code class=\"inline-code\">is_checkin</code> 置为 <code class=\"inline-code\">1</code>，<code class=\"inline-code\">checkin_type</code> 置为 <code class=\"inline-code\">1</code>"}, {"id": "T7", "text": "T7: 将 6 大硬性行情指标打包为 JSON 存入 <code class=\"inline-code\">diary_entry.meta</code> 审计字段，防止历史数据变更引起的快照失效"}], "acs": [{"id": "AC1", "title": "AC1 盘中未收盘门禁阻断", "given": "当前时钟为下午 13:00（尚未收盘）", "when": "尝试点击“盘后行情解读”打卡入口时", "then": "系统应展示柔和 Toast 提示：“交易尚未结束，请在 15:30 以后进行市场解读”"}, {"id": "AC2", "title": "AC2 盘后数据看板显示", "given": "当前时钟为下午 16:00", "when": "点击打卡入口进入行情解读页时", "then": "页面上半部的行情面板必须能够拉出最新的两市数据、涨跌停数、行业 Top 3 并精准排版渲染"}, {"id": "AC3", "title": "AC3 大盘数据快照生成日记", "given": "录入了 40 字的主观行情点评并勾选了“二八分化”标签", "when": "点击确认提交时", "then": "主页打卡卡片立即划掉，且列表中成功生成一条类型为“盘后复盘”、内容拼装大盘快照的合法日记"}, {"id": "AC4", "title": "AC4 总结字数限制强校验", "given": "在行情定性文本框中只草率录入了 10 个字", "when": "尝试点击提交按钮时", "then": "系统应展示错误 Toast 提示：“主观解读是市场体感的核心，请至少输入 30 字”"}]}, {"id": "E2-S3", "title": "格言 + 见解打卡", "desc": "**作为** 用户  
+**我希望** 每日盘后读一条精选的投资格言并写下对它的理解或对应的亏损经历  
+**以便** 随着时间推移，将大师的智慧内化为个人交易铁律
+<div class='extra-section'><strong>格言库低重复曝光轮询规则</strong>
+- 综合格言自身的收藏状态、历史曝光天数进行排序轮询：
+  - <code class=\"inline-code\">Sort_Key = weight * (days_since_last_exposed / 30.0)</code>
+  - 每天计算并提取 Top 10，然后从这 10 条里由客户端产生真随机数提取 1 条，保障即使收藏权重极高，3 个月内也不会产生任何重复曝光。
+  - 特殊判定：若用户连续 5 次对此格言写下大于 50 字的深度见解，系统将此格言在其个人模型中自动降权（判定为该智慧已完全掌握，自动减少以后的曝光）。</div>", "tasks": [{"id": "T1", "text": "T1: 每次打开此项打卡时，系统使用定制的低重复曝光算法从 <code class=\"inline-code\">diary_quote_lib</code> 挑选 1 条格言"}, {"id": "T2", "text": "T2: 页面完美呈现格言内容、格言出处、经典分类标签，并在底部设计优雅的名著边框装饰"}, {"id": "T3", "text": "T3: 如果以前对该格言发表过感悟，在输入框上方显示作为“历史对照”，感受个人认知成长"}, {"id": "T4", "text": "T4: 用户在输入框中书写个人见解或真实踩坑反思（要求字数限制在 30 字以上）"}, {"id": "T5", "text": "T5: 提供一键“加星收藏格言”入口，以提高该格言在以后的随机抽中权重"}, {"id": "T6", "text": "T6: 长按格言可唤起“我也要加一条”和“内容报错”小组件，鼓励用户持续共建格言库"}, {"id": "T7", "text": "T7: 保存为日记实体（<code class=\"inline-code\">checkin_type</code> 赋值为 <code class=\"inline-code\">2</code>，并在 <code class=\"inline-code\">checkin_target_id</code> 记录格言库唯一 ID）"}], "acs": [{"id": "AC1", "title": "AC1 经典格言初始冷启动轮询", "given": "首次使用小程序且格言库完成冷启动注入", "when": "进入格言打卡页面时", "then": "轮询机制应保证展示出来的第一条是具有较高默认权重的顶级投资名言（如巴菲特关于滚雪球的论述）"}, {"id": "AC2", "title": "AC2 避免短期高频重复曝光", "given": "格言 A 曾在 7 天前的打卡中被用户阅读并写下感悟", "when": "今天再次点击进入格言打卡时", "then": "格言挑选器必须有 90% 以上的数学概率将格言 A 排除在外，避免产生高频重复和阅读疲劳"}, {"id": "AC3", "title": "AC3 深度反思见解累加计数", "given": "用户认真书写了 55 字的见解并成功提交", "when": "后端 API 接口完成数据保存时", "then": "对应格言行记录中的 <code class=\"inline-code\">accumulated_insight_count</code> 必须幂等自增 1，为以后的熟练降权提供支持"}]}, {"id": "E2-S4", "title": "持仓自查打卡", "desc": "**作为** 用户  
+**我希望** 系统每 3 天强迫我审视一只我当前持有的股票  
+**以便** 战胜盲目自信的“持有惯性”与主观规避浮亏的认知盲区
+<div class='extra-section'><strong>抽签门禁与降级防抱死规则</strong>
+- 冷却期：刚自查过的股票在 14 天内绝不重复抽取，避免过度骚扰。
+- 当真实持仓总数少于 3 只时，为防止样本池枯竭，系统自动混合从用户的“自选股列表 (<code class=\"inline-code\">app_my_watchlist</code>)”中按相同算法进行辅助抽取。
+- <strong>降级防抱死红线</strong>：若持仓与自选股列表均为空，此项待办卡片在日记主页必须自动优雅隐藏，且对应打卡接口返回 <code class=\"inline-code\">200 OK</code> 伴随状态码 <code class=\"inline-code\">&quot;BYPASS&quot;</code>，严防前端产生不可逆的白屏死锁。</div>", "tasks": [{"id": "T1", "text": "T1: 抽签算法：按“上次自查时间”升序排序，并且浮亏最严重的股优先排列（浮亏是最高警报，浮亏股优先自查）"}, {"id": "T2", "text": "T2: 在持仓素材卡上高对比呈现核心数据：持仓代码/名称、申万一级行业、真实持仓成本、当前市价、当前浮盈/浮亏比例、累计持仓天数、估值指标（PE-TTM / PB / 行业 PE 历史百分位分位数）"}, {"id": "T3", "text": "T3: 行情与估值指标直接动态复用 <code class=\"inline-code\">dwd_stock_indicator</code> 和 <code class=\"inline-code\">dwd_stock_daily</code>，不耗费任何额外抓取带宽"}, {"id": "T4", "text": "T4: 系统锁定 3 大核心拷问问题，每问分配独立的多行输入框：
+  - 问题一：「如果今天你口袋里全是现金，你还会以当前的价格买入这只股票吗？」
+  - 问题二：「最坏情况下你准备承受这只股票亏损到多少钱？你的止损纪律是什么？」
+  - 问题三：「当初你买入它的投资逻辑，在今天看来是否依然完全成立？有无逻辑漂移？」"}, {"id": "T5", "text": "T5: 强校验每问输入字数不得低于 20 字，拒绝敷衍了事"}, {"id": "T6", "text": "T6: 点击保存生成一条类型为“个股自查”的标准化日记（<code class=\"inline-code\">checkin_type</code> 赋值为 <code class=\"inline-code\">3</code>，并在关联表 <code class=\"inline-code\">diary_stock</code> 建立该日记与自查股票的唯一物理映射）"}, {"id": "T7", "text": "T7: 数据落库成功后，将当前持仓股在 <code class=\"inline-code\">app_my_portfolio</code> 中的“上次自查时间”字段更新为当前时间戳，进入下一次冷却循环"}], "acs": [{"id": "AC1", "title": "AC1 浮亏股自查极高优先级", "given": "持仓列表中拥有 5 只股票，其中 A 股浮盈 10%，B 股浮亏 12%，且都没有进行过自查", "when": "点击待办卡片进入持仓自查时", "then": "浮亏 12% 的 B 股必须被抽中作为自查对象，强制用户直面亏损决策"}, {"id": "AC2", "title": "AC2 抽签跳过规则", "given": "用户觉得今日持仓 B 股波动过大，点击卡片右上角的“跳过此股”按钮", "when": "跳过动作被触发时", "then": "页面应平滑动画切换回列表，且 B 股自查时间戳在内存中更新，系统至少在 7 天内绝不再抽取 B 股，保证操作灵活性"}, {"id": "AC3", "title": "AC3 结构化问答日记生成", "given": "用户极其认真地回答了三问（每问 25 字以上）并点击提交", "when": "点击查看产生的详情日记时", "then": "日记排版必须呈现出美美的 Q&amp;A 问答排版样式（如带引用块的问答框），内容结构完整，且股票关联 chip 指向明确"}]}, {"id": "E2-S5", "title": "历史回溯打卡", "desc": "**作为** 用户  
+**我希望** 系统在特定时间节点（30/60/90 天前）将我的个股研究与大盘判断日记翻出来，让我拿着当前结果去复盘验证  
+**以便** 形成“决策—结果—反思”的完整闭环，从历史正确中提炼纪律，从历史错误中纠正偏见
+<div class='extra-section'><strong>冷启动策略</strong>
+- <strong>系统上线 30 天内</strong>：由于没有任何历史日记沉淀，本凌晨挑选任务即使运行，也默认不产生任何候选。小程序主页此卡片自动隐藏，不打扰用户。</div>", "tasks": [{"id": "T1", "text": "T1: 每日凌晨 03:00 执行定时后台任务，从数据库中挑选适合当日回溯的候选日记。挑选规则优先级：
+  - 优先级一：个股研究类日记 + 距当日时间正好为 30/60/90 天 + 关联股票近 5 日内产生剧烈异动（累计涨跌幅绝对值 &gt; 5%）
+  - 优先级二：含有 <code class=\"inline-code\">#错题本</code> 标签的日记 + 距当日时间大于等于 30 天
+  - 优先级三：随机抽取个股研究类日记 + 距当日时间大于等于 30 天"}, {"id": "T2", "text": "T2: 严格流控限制：每位用户每天最多且仅允许触发 1 次时光回溯待办。单篇日记一生最多只允许被验证回溯 3 次（即 30天、60天、90天节点）"}, {"id": "T3", "text": "T3: 时光回溯页：展示原日记的开头 200 字摘要、原日记的精准类型及发表时间，并列出当时所有的关联股票"}, {"id": "T4", "text": "T4: 动态数据透视：系统根据日记日期与当前日期，自动计算原股票在此期间的“累计涨跌幅%”、“期间振幅（最高/最低价）”，以及是否触及用户当时在正文中提及的预警价格（基于简单正则与 K 线匹配）"}, {"id": "T5", "text": "T5: 提供三选一的直观表态按钮：「✓ 当时判断对」、「✗ 当时判断错」、「— 不好说」"}, {"id": "T6", "text": "T6: 强制要求用户输入不少于 80 字的“决策事后反思”，迫使深度思考"}, {"id": "T7", "text": "T7: 保存后生成“时光回溯”专用日记（<code class=\"inline-code\">checkin_type</code> 赋值为 <code class=\"inline-code\">5</code>，<code class=\"inline-code\">checkin_target_id</code> 记录被回溯原日记的唯一 ID）"}, {"id": "T8", "text": "T8: 原日记表中对应的 <code class=\"inline-code\">backtrack_count</code> 统计加 1，并在详情页显著呈现：“该决策已被您时光回溯复盘过 N 次”"}], "acs": [{"id": "AC1", "title": "AC1 关键剧烈异动股反向挑选", "given": "30 天前录入了一篇个股研究日记并关联了“贵州茅台 (600519.SH)”，而茅台在最近 5 天内暴涨了 8%", "when": "凌晨挑选任务执行，且用户在次日打开小程序时", "then": "该篇茅台研究日记必须在“时光回溯”待办卡片中被高亮挑出，督促用户进行结果验证"}, {"id": "AC2", "title": "AC2 回溯反思关联计数同步", "given": "在回溯验证页勾选了“当时判断对”并录入了 100 字的事后深刻总结", "when": "点击提交并完成持久化时", "then": "被回溯的原日记记录之 <code class=\"inline-code\">backtrack_count</code> 必须从 0 变更为 1，且数据库新生成一条关联日记记录，保持对账一致"}, {"id": "AC3", "title": "AC3 冷启动未满周期豁免显示", "given": "用户注册使用本系统仅仅 15 天", "when": "每天早上进入主页查看打卡督促区时", "then": "时光回溯卡片绝对不能被渲染展示出来，接口静默返回空，保障顺滑的前端初体验"}]}]}, {"title": "E3 数据基础 (Data & Tables)", "content": "", "stories": [{"id": "E3-S1", "title": "本系统表", "desc": "**作为** 系统管理员  
+**我希望** 初始化日记系统的物理数据表  
+**以便** 支撑日记、标签、心情、格言和附件的安全存储", "tasks": [{"id": "T1", "text": "T1: 创建用户主表 <code class=\"inline-code\">sys_user</code>，用于保存最基础的单用户元数据"}, {"id": "T2", "text": "T2: 创建日记实体主表 <code class=\"inline-code\">diary_entry</code>，并包含打卡标识 <code class=\"inline-code\">is_checkin</code>、<code class=\"inline-code\">checkin_type</code> 与 <code class=\"inline-code\">checkin_target_id</code> 等核心状态列"}, {"id": "T3", "text": "T3: 创建日记与股票关联映射关系表 <code class=\"inline-code\">diary_stock</code>，支持快速索引"}, {"id": "T4", "text": "T4: 创建自定义标签字典字典表 <code class=\"inline-code\">diary_tag_dict</code>"}, {"id": "T5", "text": "T5: 创建日记与标签关联映射表 <code class=\"inline-code\">diary_tag</code>"}, {"id": "T6", "text": "T6: 创建附件存储表 <code class=\"inline-code\">diary_attachment</code>，存放 COS Key 与缩略图状态"}, {"id": "T7", "text": "T7: 创建经典投资格言库表 <code class=\"inline-code\">diary_quote_lib</code>，提供冷启动字段"}], "acs": [{"id": "AC1", "title": "AC1 物理表连通性与 DDL 验证", "given": "在 MySQL 5.7 实例上成功执行所有的数据库迁移脚本", "when": "使用标准 <code class=\"inline-code\">SHOW TABLES</code> 语句或连接池查询时", "then": "必须能够精准检索到以上 7 张新建的物理表，且每一个表都包含 <code class=\"inline-code\">created_at</code>、<code class=\"inline-code\">updated_at</code>、<code class=\"inline-code\">is_deleted</code> 的尾部三件套审计列和正确索引"}]}, {"id": "E3-S2", "title": "复用已有库表", "desc": "**作为** 系统开发人员  
+**我希望** 完美复用已存在的 A 股行情与财务指标数据库表  
+**以便** 杜绝冗余的数据存储，降低云端接口开发成本", "tasks": [{"id": "T1", "text": "T1: 在股票智能搜索组件中，复用已就绪的股票基础字典表 <code class=\"inline-code\">dim_stock_basic</code>"}, {"id": "T2", "text": "T2: 在时光回溯的累计涨幅计算中，复用已就绪的历史日 K 线行情表 <code class=\"inline-code\">dwd_stock_daily</code>"}, {"id": "T3", "text": "T3: 在盘后复盘大盘指标拉取中，复用已就绪的指数日线表 <code class=\"inline-code\">dwd_index_daily</code>"}, {"id": "T4", "text": "T4: 在持仓自查的估值分位数现算中，复用已就绪的个股衍生指标表 <code class=\"inline-code\">dwd_stock_indicator</code>"}, {"id": "T5", "text": "T5: 在盘后打卡的数据看板展示中，复用已就绪的大盘每日小结表 <code class=\"inline-code\">dim_daily_market_summary</code>"}, {"id": "T6", "text": "T6: 在持仓审视三问自查抽查中，直接连接并复用已存在的个人持仓表 <code class=\"inline-code\">app_my_portfolio</code> 与自选股表 <code class=\"inline-code\">app_my_watchlist</code>"}, {"id": "T7", "text": "T7: 在盘后打卡北向资金流向分析中，复用已就绪的北向资金日明细表 <code class=\"inline-code\">dwd_north_money</code>"}, {"id": "T8", "text": "T8: 在行业领涨领跌分析中，复用已就绪的行业日行情表 <code class=\"inline-code\">dwd_industry_daily</code>"}], "acs": [{"id": "AC1", "title": "AC1 数据源跨表查询性能审计", "given": "从 <code class=\"inline-code\">diary_entry</code> 通过 <code class=\"inline-code\">diary_stock</code> 强联结查询 <code class=\"inline-code\">dwd_stock_daily</code> 与 <code class=\"inline-code\">dim_stock_basic</code>", "when": "接口以异步连接池（aiomysql）拉取并计算 30 天回溯数据时", "then": "接口整体耗时（P95）必须小于 300ms，且连接池在并发下不产生任何 Broken Pipe 或锁耗尽故障"}]}, {"id": "E3-S3", "title": "初始化数据", "desc": "**作为** 系统开发人员  
+**我希望** 初始化系统基础参数、常用标签以及精选经典格言库  
+**以便** 系统上线即可正常运转并提供优质体验", "tasks": [{"id": "T1", "text": "T1: 向用户主表 <code class=\"inline-code\">sys_user</code> 写入首条初始化记录 (user_id=1, username=&quot;散户张三&quot;)"}, {"id": "T2", "text": "T2: 向标签字典 <code class=\"inline-code\">diary_tag_dict</code> 初始化写入 10 个精选投资常用标签"}, {"id": "T3", "text": "T3: 向格言库 <code class=\"inline-code\">diary_quote_lib</code> 插入 50 条冷启动精选投资名言"}, {"id": "T4", "text": "T4: 编写一键执行的 SQL 初始化初始化脚本用于开发和生产一键就绪"}], "acs": [{"id": "AC1", "title": "AC1 初始记录行数审计", "given": "数据库初始化完成", "when": "查询格言与标签行数", "then": "<code class=\"inline-code\">diary_quote_lib</code> 记录数等于 50，<code class=\"inline-code\">diary_tag_dict</code> 记录数等于 10"}]}]}, {"title": "E4 个人中心 (Profile Settings)", "content": "", "stories": [{"id": "E4-S1", "title": "我的（最简版）", "desc": "**作为** 用户  
+**我希望** 拥有一个清爽精炼的个人中心  
+**以便** 快速核对我的日记统计指标、外观主题及软件基本信息", "tasks": [{"id": "T1", "text": "T1: 页面渲染个人高对比金边头像、主观昵称（绑定默认单用户 <code class=\"inline-code\">user_id=1</code> 的元数据）"}, {"id": "T2", "text": "T2: 从数据库动态检索并实时统计三大核心指标：已记录日记总数（篇）、累计复盘字数（字）、加入系统天数（天）"}, {"id": "T3", "text": "T3: 提供“外观主题设置”入口，可平滑切换“琥珀深金”与“极简白”等主题（默认保持琥珀金深色 Fintech 美学）"}, {"id": "T4", "text": "T4: 设计“关于”菜单展示页，清晰列明当前 MVP 的软件版本号及简洁的开发者版权标识"}], "acs": [{"id": "AC1", "title": "AC1 用户统计指标对账", "given": "数据库中当前已成功持久化了 10 篇日记、累计复盘字数正好是 3000 字", "when": "切换并进入到“我的”页面时", "then": "看板指标必须精准对齐显示为：“日记 10 篇”，“字数 3000 字”，且数字排版绝对不出现截断或溢出"}]}]}, {"title": "E5 MVP 范围明确划定 (Project Scopes)", "content": "", "stories": [{"id": "E5-S1", "title": "包含", "desc": "**作为** 项目负责人  
+**我希望** 明确 MVP 包含的内容边界  
+**以便** 聚焦资源确保首版高质量交付", "tasks": [{"id": "T1", "text": "T1: 明确 MVP 包含日记编辑器核心特性"}, {"id": "T2", "text": "T2: 明确 MVP 包含日记列表与详情阅读页"}, {"id": "T3", "text": "T3: 明确 MVP 包含 4 大精选督促打卡流"}], "acs": [{"id": "AC1", "title": "AC1 功能核准对比", "given": "MVP 开发就绪", "when": "检查代码提交时", "then": "必须涵盖完整的编辑器、打卡流及个人中心"}]}, {"id": "E5-S2", "title": "不包含", "desc": "**作为** 项目负责人  
+**我希望** 显式划定延期开发的功能列表  
+**以便** 杜绝需求蔓延并按时发布", "tasks": [{"id": "T1", "text": "T1: 显式将公众号自动同步发布功能延后至 V3"}, {"id": "T2", "text": "T2: 显式将 PDF/Markdown 外部导出延后至 V2"}, {"id": "T3", "text": "T3: 显式将复盘看板与股票反查接口延后至 V2"}], "acs": [{"id": "AC1", "title": "AC1 反模式及延期功能代码隔离审计", "given": "MVP 发布测试", "when": "扫描代码库时", "then": "不应包含任何关于公众号同步或 PDF 导出的冗余半成品逻辑"}]}, {"id": "E5-S3", "title": "工期估算", "desc": "**作为** 项目负责人  
+**我希望** 精准把控各个 Epic 实施的时间成本  
+**以便** 规划后续上线进度", "tasks": [{"id": "T1", "text": "T1: 估算日记本体 Epic 1 工时在 18–22 天"}, {"id": "T2", "text": "T2: 估算打卡督促 Epic 2 工时在 10–12 天"}, {"id": "T3", "text": "T3: 估算数据基础 Epic 3 工时在 2–3 天"}, {"id": "T4", "text": "T4: 估算联调与真机测试工时在 5–7 天"}], "acs": [{"id": "AC1", "title": "AC1 进度控制基线审计", "given": "项目开始实施", "when": "追踪整体交付时间时", "then": "必须紧密对齐 37–46 天的总包工期基线"}]}]}, {"title": "E6 关键风险评估 (Risk Mitigation)", "content": "", "stories": [{"id": "E6-S1", "title": "关键风险评估", "desc": "**作为** 项目负责人  
+**我希望** 对技术难点和依赖进行前置风险防范  
+**以便** 确保系统不会因为网络、权限或数据源问题而瘫痪", "tasks": [{"id": "T1", "text": "T1: 制定日记中价格正则提取的校验规则以应对解析误差"}, {"id": "T2", "text": "T2: 初始化录入 50 条经典名言确保格言冷启动可用"}, {"id": "T3", "text": "T3: 将持仓自查机制解耦为可选机制以应对 portfolio 数据为空的情况"}, {"id": "T4", "text": "T4: 增加图片 COS 上传 STS 代理认证的健壮性"}], "acs": [{"id": "AC1", "title": "AC1 极端异常场景防抱死审计", "given": "数据库中个人持仓表 <code class=\"inline-code\">app_my_portfolio</code> 恰好完全为空且未维护", "when": "今日打卡任务调度器计算持仓审视三问待做卡片时", "then": "页面能优雅隐藏自查卡片或自动降级为自选股抽查，绝不引发前端任何未捕获异常而导致白屏崩溃，接口表现良好"}]}]}, {"title": "待确认事项", "content": "- TBD-1 图片 COS 的 STS 临时认证接口是否需要独立的加密通道？
+- TBD-2 多端同步下字数统计在客户端算还是服务器算？
+- TBD-3 琥珀深金主题的十六进制调色盘变量需要与 MiniProgram 的系统皮肤对齐。", "stories": []}], "tbds": [{"id": "TBD-1", "text": "- TBD-1 图片 COS 的 STS 临时认证接口是否需要独立的加密通道？"}, {"id": "TBD-2", "text": "- TBD-2 多端同步下字数统计在客户端算还是服务器算？"}, {"id": "TBD-3", "text": "- TBD-3 琥珀深金主题的十六进制调色盘变量需要与 MiniProgram 的系统皮肤对齐。"}]};
+
+        const state = {
+            acStatus: {},
+            acQuestions: {},
+            taskDeleted: {},
+            storySubTabState: {},
+            addedTasks: {},
+            activeViewId: 'sec-0',
+            tbdResolved: {},
+            tbdResponses: {}
+        };
+
+        function init() {
+            document.getElementById('topbar-docname').textContent = DOC_DATA.title;
+            document.getElementById('topbar-version').textContent = DOC_DATA.version;
+            document.getElementById('topbar-date').textContent = DOC_DATA.date;
+
+            renderNavTree();
+            renderMainContent();
+            updateStats();
+
+            // 初始化 Mermaid
+            if (window.mermaid) {
+                mermaid.initialize({ useWorker: false,  
+                    startOnLoad: false, 
+                    theme: 'dark',
+                    useWorker: false 
+                });
+                mermaid.init(undefined, document.querySelectorAll('.mermaid'));
+            }
+        }
+
+        function renderNavTree() {
+            const tree = document.getElementById('nav-tree');
+            let html = '';
+
+            DOC_DATA.sections.forEach((section, sIdx) => {
+                if (section.title === '待确认事项') return;
+                const isActive = state.activeViewId === `sec-${sIdx}`;
+                html += `<div class="sidebar-section">
+                    <div class="nav-story ${isActive ? 'active' : ''}" onclick="selectView('sec-${sIdx}')">
+                        <div class="nav-story-dot"></div>
+                        <span style="font-weight:600;font-size:var(--fs-xs)">${section.title}</span>
+                    </div>`;
+
+                section.stories.forEach(story => {
+                    const st = getStoryStatus(story.id);
+                    const bc = st === 'ok' ? 'badge-ok' : st === 'no' ? 'badge-no' : st === 'q' ? 'badge-q' : 'badge-pending';
+                    const isActiveStory = state.activeViewId === story.id;
+                    html += `<div class="nav-story ${isActiveStory ? 'active' : ''}" style="padding-left:32px" onclick="selectView('${story.id}')">
+                        <div class="nav-story-dot" style="opacity:0.5"></div>
+                        <span style="flex:1;font-size:var(--fs-xs)">${story.id}</span>
+                        <span class="status-badge-xs ${bc}">${st}</span>
+                    </div>`;
+                });
+
+                html += `</div>`;
+            });
+
+            if (DOC_DATA.tbds && DOC_DATA.tbds.length > 0) {
+                const isActiveTbd = state.activeViewId === 'tbd';
+                html += `<div class="sidebar-section">
+                    <div class="nav-story ${isActiveTbd ? 'active' : ''}" onclick="selectView('tbd')">
+                        <div class="nav-story-dot"></div>
+                        <span style="font-weight:600;font-size:var(--fs-xs)">待确认事项</span>
+                    </div>
+                </div>`;
+            }
+
+            tree.innerHTML = html;
+        }
+
+        function renderRiskTable() {
+            const tbody = document.querySelector('#risk-table tbody');
+            tbody.innerHTML = DOC_DATA.risks.map(r => `<tr><td>${r.risk}</td><td>${r.impact}</td><td>${r.prob}</td><td>${r.mitigation}</td></tr>`).join('');
+        }
+
+        function renderMilestoneTable() {
+            const tbody = document.querySelector('#milestone-table tbody');
+            tbody.innerHTML = DOC_DATA.milestones.map(m => `<tr><td>${m.name}</td><td>${m.date}</td><td>${m.deliverable}</td></tr>`).join('');
+        }
+
+        function renderMainContent() {
+            const container = document.getElementById('main-content');
+            let html = '';
+
+            DOC_DATA.sections.forEach((section, sIdx) => {
+                if (section.title === '待确认事项') return;
+                // Section Panel
+                html += `<div class="view-panel ${state.activeViewId === `sec-${sIdx}` ? 'active' : ''}" id="view-sec-${sIdx}">
+                    <div class="story-detail-header"><span class="story-title">${section.title}</span></div>
+                    <div class="content-well">
+                        <div class="story-tab-content active"><div class="info-block">${section.content}</div></div>
+                    </div>
+                </div>`;
+
+                // Story Panels within this section
+                section.stories.forEach(story => {
+                    html += renderStoryView(story);
+                });
+            });
+
+            if (DOC_DATA.tbds && DOC_DATA.tbds.length > 0) {
+                html += `<div class="view-panel ${state.activeViewId === 'tbd' ? 'active' : ''}" id="view-tbd">
+                    <div class="story-detail-header"><span class="story-title">待确认事项</span></div>
+                    <div class="content-well">
+                        <div class="story-tab-content active" style="padding: var(--space-6)">
+                            ${DOC_DATA.tbds.map(t => `
+                                <div class="tbd-item-wrap" style="margin-bottom:24px">
+                                    <div class="task-item" style="border:none;padding:8px 0">
+                                        <input type="checkbox" style="width:16px;height:16px" ${state.tbdResolved[t.id] ? 'checked' : ''} onchange="state.tbdResolved['${t.id}']=this.checked;updateStats()">
+                                        <span style="font-family:var(--font-mono);font-size:var(--fs-xs);color:var(--amber);margin:0 12px">${t.id}</span>
+                                        <span style="flex:1;font-size:var(--fs-base);color:var(--ink);font-weight:600">${t.text}</span>
+                                    </div>
+                                    <div style="padding-left:40px;margin-top:8px">
+                                        <textarea class="ac-question-input" style="height:60px" placeholder="在此输入确认结论/回复..." onchange="state.tbdResponses['${t.id}']=this.value;updateStats()">${state.tbdResponses[t.id] || ''}</textarea>
+                                    </div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                </div>`;
+            }
+
+            container.innerHTML = html;
+        }
+
+        function renderStoryView(story) {
+            const isActive = state.activeViewId === story.id;
+            const activeSubTab = state.storySubTabState[story.id] || 'tasks';
+
+            return `<div class="view-panel ${isActive ? 'active' : ''}" id="view-${story.id}">
+                <div class="story-detail-header">
+                    <span class="story-id">${story.id}</span>
+                    <span class="story-title">${story.title}</span>
+                </div>
+                <div class="story-body">
+                    <div class="story-tabs">
+                        <div class="story-tab ${activeSubTab === 'tasks' ? 'active' : ''}" onclick="switchSubTab('${story.id}', 'tasks')">任务清单</div>
+                        ${story.acs.map((ac, idx) => `
+                            <div class="story-tab ${activeSubTab === 'ac-' + ac.id ? 'active' : ''}" onclick="switchSubTab('${story.id}', 'ac-${ac.id}')">
+                                AC ${idx + 1}
+                            </div>
+                        `).join('')}
+                    </div>
+                    
+                    <div class="content-well">
+                        <div class="story-tab-content ${activeSubTab === 'tasks' ? 'active' : ''}" id="stc-${story.id}-tasks">
+                            ${story.desc ? `<div class="info-block" style="margin:0 0 var(--space-4); border:none; border-bottom:1px solid var(--hair)">${story.desc}</div>` : ''}
+                            <div id="tasks-${story.id}">
+                                ${story.tasks.map(t => `<div class="task-item ${state.taskDeleted[t.id] ? 'deleted' : ''}" id="task-${t.id}"><div class="task-id">${t.id}</div><div class="task-text">${t.text}</div><div class="task-del" onclick="toggleTask('${t.id}')">${state.taskDeleted[t.id] ? '恢复' : '移除'}</div></div>`).join('')}
+                            </div>
+                            <div class="task-add-row">
+                                <input type="text" class="task-add-input" id="add-input-${story.id}" placeholder="添加新任务..." onkeyup="if(event.key==='Enter') addTask('${story.id}')">
+                                <div class="task-add-btn" onclick="addTask('${story.id}')">+ 添加</div>
+                            </div>
+                        </div>
+
+                        ${story.acs.map(ac => `
+                            <div class="story-tab-content ${activeSubTab === 'ac-' + ac.id ? 'active' : ''}" id="stc-${story.id}-ac-${ac.id}">
+                                ${renderAC(story.id, ac)}
+                            </div>`).join('')}
+                    </div>
+                </div>
+            </div>`;
+        }
+
+        function renderAC(storyId, ac) {
+            const key = `${storyId}-${ac.id}`, status = state.acStatus[key] || null;
+            return `<div class="ac-item" id="ac-${key}">
+                <div class="ac-header">
+                    <span class="ac-id">${ac.id}</span>
+                    <span class="ac-name">${ac.title}</span>
+                    <div class="ac-actions">
+                        <button class="ac-btn ac-btn-ok-hint ${status === 'ok' ? 'ac-ok' : ''}" onclick="setAC('${key}','ok')">✓ 通过</button>
+                        <button class="ac-btn ac-btn-q-hint ${status === 'q' ? 'ac-q' : ''}" onclick="setAC('${key}','q')">⚠ 疑问</button>
+                    </div>
+                </div>
+                <div class="ac-body">
+                    <div class="gwt-row"><div class="gwt-label">Given</div><div>${ac.given}</div></div>
+                    <div class="gwt-row"><div class="gwt-label">When</div><div>${ac.when}</div></div>
+                    <div class="gwt-row"><div class="gwt-label">Then</div><div>${ac.then}</div></div>
+                    <div class="ac-question ${status === 'q' ? 'visible' : ''}" id="acq-${key}">
+                        <textarea class="ac-question-input" placeholder="疑问内容..." onchange="state.acQuestions['${key}']=this.value;updateStats()">${state.acQuestions[key] || ''}</textarea>
+                    </div>
+                </div>
+            </div>`;
+        }
+
+        function getStoryStatus(storyId) {
+            const story = findStory(storyId);
+            if (!story) return 'pending';
+            const acs = story.acs.map(ac => state.acStatus[`${storyId}-${ac.id}`]);
+            if (acs.includes('no')) return 'no';
+            if (acs.includes('q')) return 'q';
+            if (acs.every(s => s === 'ok')) return 'ok';
+            return 'pending';
+        }
+
+        function setAC(key, status) {
+            const prev = state.acStatus[key];
+            state.acStatus[key] = prev === status ? null : status;
+            const qArea = document.getElementById(`acq-${key}`);
+            if (qArea) {
+                if (state.acStatus[key] === 'q') qArea.classList.add('visible');
+                else qArea.classList.remove('visible');
+            }
+            updateStats();
+        }
+
+        function toggleTask(taskId) {
+            state.taskDeleted[taskId] = !state.taskDeleted[taskId];
+            renderNavTree();
+            updateStats();
+        }
+
+        function selectView(viewId) {
+            state.activeViewId = viewId;
+            document.querySelectorAll('.view-panel').forEach(c => c.classList.remove('active'));
+            const card = document.getElementById(`view-${viewId}`);
+            if (card) card.classList.add('active');
+            renderNavTree();
+        }
+
+        function switchSubTab(storyId, tabId) {
+            state.storySubTabState[storyId] = tabId;
+            renderMainContent();
+        }
+
+        function addTask(storyId) {
+            const input = document.getElementById(`add-input-${storyId}`);
+            const text = input.value.trim();
+            if (!text) return;
+            if (!state.addedTasks[storyId]) state.addedTasks[storyId] = [];
+            state.addedTasks[storyId].push(text);
+            input.value = '';
+            renderTasks(storyId);
+        }
+
+        function removeAddedTask(storyId, idx) {
+            state.addedTasks[storyId].splice(idx, 1);
+            renderTasks(storyId);
+        }
+
+        function renderTasks(storyId) {
+            const story = findStory(storyId);
+            const container = document.getElementById(`tasks-${storyId}`);
+            let html = story.tasks.map(t => `<div class="task-item ${state.taskDeleted[t.id] ? 'deleted' : ''}" id="task-${t.id}"><span class="task-id">${t.id}</span><span class="task-text">${t.text}</span><span class="task-del" onclick="toggleTask('${t.id}')">${state.taskDeleted[t.id] ? '恢复' : '移除'}</span></div>`).join('');
+            html += (state.addedTasks[storyId] || []).map((t, idx) => `<div class="task-item" id="added-${storyId}-${idx}"><span class="task-id">NEW</span><span class="task-text">${t}</span><span class="task-del" onclick="removeAddedTask('${storyId}', ${idx})">删除</span></div>`).join('');
+            container.innerHTML = html;
+        }
+
+        function findStory(storyId) {
+            for (let section of DOC_DATA.sections) {
+                const s = section.stories.find(s => s.id === storyId);
+                if (s) return s;
+            }
+            return null;
+        }
+
+        function switchTab(el, panelId) {
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+            el.classList.add('active'); document.getElementById(panelId).classList.add('active');
+        }
+
+        function updateStats() {
+            let ok = 0, q = 0, totalAC = 0;
+            DOC_DATA.sections.forEach(section => {
+                section.stories.forEach(s => {
+                    s.acs.forEach(ac => {
+                        totalAC++;
+                        const st = state.acStatus[`${s.id}-${ac.id}`];
+                        if (st === 'ok') ok++;
+                        else if (st === 'q') q++;
+                    });
+                });
+            });
+            document.getElementById('progress-fill').style.width = (totalAC ? (ok / totalAC * 100) : 0) + '%';
+            document.getElementById('progress-text').textContent = `${ok} / ${totalAC} AC`;
+            document.getElementById('stat-ok').textContent = ok;
+            document.getElementById('stat-q').textContent = q;
+            document.getElementById('stat-pending').textContent = totalAC - ok - q;
+            renderNavTree();
+        }
+
+        function exportJSON() {
+            try {
+                const output = {
+                    doc: DOC_DATA.doc_id || "Unknown",
+                    audit_date: new Date().toISOString(),
+                    results: Object.keys(state.acStatus || {}).map(key => {
+                        const parts = key.split('-');
+                        return {
+                            story: parts[0],
+                            ac: parts[1],
+                            status: state.acStatus[key]
+                        };
+                    }),
+                    questions: state.acQuestions || {},
+                    deleted_tasks: state.taskDeleted || {},
+                    added_tasks: state.addedTasks || {},
+                    tbd_resolved: state.tbdResolved || {},
+                    tbd_responses: state.tbdResponses || {},
+                    agent_instruction: "请根据上述评审结果更新文档。1. 对于标记为 'q' 的条目，参考 questions 修改；2. 对于 deleted_tasks 为 true 的任务，从文档中移除；3. 对于 added_tasks 中的内容，作为新任务插入到对应 Story 的任务清单中；4. 对于 tbd_resolved 为 true 的 TBD 项，将其标记为 [x]，并在其下方以引用块形式插入对应的 tbd_responses。"
+                };
+
+                const json = JSON.stringify(output, null, 2);
+                console.log("Exporting JSON:", json);
+
+                const outEl = document.getElementById('export-output');
+                if (outEl) {
+                    outEl.textContent = json;
+                    outEl.classList.add('visible');
+                    outEl.scrollIntoView({ behavior: 'smooth' });
+                }
+
+                // 尝试复制到剪贴板，带 fallback
+                if (navigator.clipboard && navigator.clipboard.writeText) {
+                    navigator.clipboard.writeText(json).then(() => {
+                        const btn = document.querySelector('.btn-export');
+                        const originalText = btn.textContent;
+                        btn.textContent = '✓ 已复制到剪贴板';
+                        btn.style.color = 'var(--status-strong)';
+                        btn.style.borderColor = 'var(--status-strong)';
+                        setTimeout(() => {
+                            btn.textContent = originalText;
+                            btn.style.color = '';
+                            btn.style.borderColor = '';
+                        }, 2000);
+                    }).catch(err => {
+                        console.error('Clipboard error:', err);
+                        alert('JSON 已在右侧面板下方生成，请手动复制。');
+                    });
+                } else {
+                    alert('JSON 已在右侧面板下方生成，请手动复制。');
+                }
+            } catch (e) {
+                console.error("Export Error:", e);
+                alert("导出失败: " + e.message);
+            }
+        }
+
+        function copyCode(btn) {
+            const code = btn.parentElement.querySelector('code').innerText;
+            navigator.clipboard.writeText(code).then(() => {
+                const originalText = btn.textContent;
+                btn.textContent = 'Copied!';
+                btn.style.color = 'var(--status-strong)';
+                setTimeout(() => {
+                    btn.textContent = originalText;
+                    btn.style.color = '';
+                }, 2000);
+            });
+        }
+
+        init();
+    </script>
+    <script src="https://lib.baomitu.com/mermaid/10.9.0/mermaid.min.js"></script>
+</body>
+
+</html>
